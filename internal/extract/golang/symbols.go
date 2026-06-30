@@ -10,14 +10,10 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-// typeQualifier renders package references as their import path for stable,
-// machine-independent type strings.
-func typeQualifier(p *types.Package) string { return p.Path() }
-
-func typeString(t types.Type) string { return types.TypeString(t, typeQualifier) }
-
 // typeStringLocal renders a type without qualifying names from currentPkg, so
-// receiver types appear as "*Accumulator" rather than "*example.com/pkg.Accumulator".
+// same-package types appear as "*Accumulator" rather than
+// "*example.com/pkg.Accumulator", while cross-package types are fully
+// import-path-qualified for stable, machine-independent strings.
 func typeStringLocal(t types.Type, currentPkg *types.Package) string {
 	return types.TypeString(t, func(p *types.Package) string {
 		if p == currentPkg {
@@ -77,9 +73,9 @@ func funcSymbol(p *packages.Package, fd *ast.FuncDecl, moduleDir string) (schema
 		Doc:             schema.Doc{Raw: strings.TrimSpace(fd.Doc.Text()), Format: "godoc"},
 		Complexity:      schema.DeferredComplexity(),
 		Signature: &schema.Signature{
-			Params:     tupleParams(sig.Params()),
-			Returns:    tupleParams(sig.Results()),
-			TypeParams: typeParams(sig.TypeParams()),
+			Params:     tupleParams(sig.Params(), p.Types),
+			Returns:    tupleParams(sig.Results(), p.Types),
+			TypeParams: typeParams(sig.TypeParams(), p.Types),
 			Receiver:   recv,
 			Variadic:   sig.Variadic(),
 		},
@@ -98,23 +94,23 @@ func funcSymbol(p *packages.Package, fd *ast.FuncDecl, moduleDir string) (schema
 // recvBase strips leading "*" so methods own the bare type name.
 func recvBase(recvType string) string { return strings.TrimPrefix(recvType, "*") }
 
-func tupleParams(t *types.Tuple) []schema.Param {
+func tupleParams(t *types.Tuple, pkg *types.Package) []schema.Param {
 	out := make([]schema.Param, 0, t.Len())
 	for i := 0; i < t.Len(); i++ {
 		v := t.At(i)
-		out = append(out, schema.Param{Name: v.Name(), Type: typeString(v.Type())})
+		out = append(out, schema.Param{Name: v.Name(), Type: typeStringLocal(v.Type(), pkg)})
 	}
 	return out
 }
 
-func typeParams(tp *types.TypeParamList) []schema.TypeParam {
+func typeParams(tp *types.TypeParamList, pkg *types.Package) []schema.TypeParam {
 	if tp == nil {
 		return nil
 	}
 	out := make([]schema.TypeParam, 0, tp.Len())
 	for i := 0; i < tp.Len(); i++ {
 		p := tp.At(i)
-		out = append(out, schema.TypeParam{Name: p.Obj().Name(), Constraint: typeString(p.Constraint())})
+		out = append(out, schema.TypeParam{Name: p.Obj().Name(), Constraint: typeStringLocal(p.Constraint(), pkg)})
 	}
 	return out
 }

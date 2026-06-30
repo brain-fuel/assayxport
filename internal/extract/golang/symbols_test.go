@@ -1,6 +1,10 @@
 package golang
 
-import "testing"
+import (
+	"testing"
+
+	"goforge.dev/assayxport/internal/schema"
+)
 
 func findSym(pkgs []symPkg, pkgID, id string) *sym {
 	for _, p := range pkgs {
@@ -88,6 +92,38 @@ func TestMethodReceiver(t *testing.T) {
 	push := findSym(pkgs, "example.com/sample/calc", "Accumulator.Push")
 	if push == nil || push.kind != "method" || push.recv != "*Accumulator" {
 		t.Fatalf("Accumulator.Push = %+v (want method recv *Accumulator)", push)
+	}
+}
+
+func TestSamePackageTypeUnqualified(t *testing.T) {
+	pkgs, err := New().Extract("testdata/sample")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cloneSym *schema.Symbol
+	for i := range pkgs {
+		if pkgs[i].ID != "example.com/sample/calc" {
+			continue
+		}
+		for j := range pkgs[i].Symbols {
+			if pkgs[i].Symbols[j].Name == "Clone" {
+				cloneSym = &pkgs[i].Symbols[j]
+				break
+			}
+		}
+	}
+	if cloneSym == nil {
+		t.Fatal("Clone symbol not found in example.com/sample/calc")
+	}
+	sig := cloneSym.Signature
+	if sig == nil || len(sig.Params) != 1 || len(sig.Returns) != 1 {
+		t.Fatalf("Clone signature unexpected: %+v", sig)
+	}
+	if got := sig.Params[0].Type; got != "*Accumulator" {
+		t.Errorf("Clone param type = %q, want %q", got, "*Accumulator")
+	}
+	if got := sig.Returns[0].Type; got != "*Accumulator" {
+		t.Errorf("Clone return type = %q, want %q", got, "*Accumulator")
 	}
 }
 

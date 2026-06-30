@@ -32,3 +32,6 @@ func (a *Accumulator) Push(v int) int {
 	a.total += v
 	return a.total
 }
+
+// Clone returns a copy of a.
+func Clone(a *Accumulator) *Accumulator { c := *a; return &c }
