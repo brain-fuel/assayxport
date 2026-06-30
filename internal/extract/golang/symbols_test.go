@@ -186,3 +186,31 @@ func TestDefinedType(t *testing.T) {
 		t.Fatalf("Celsius kind=%q typeKind=%q underlying=%q ok=%v", k, tk, under, ok)
 	}
 }
+
+func TestAliasType(t *testing.T) {
+	k, tk, _, _, _, ok := findFull(t, "example.com/sample/calc", "Counter")
+	if !ok {
+		t.Fatal("Counter symbol not found")
+	}
+	if k != "type" || tk != "alias" {
+		t.Fatalf("Counter kind=%q typeKind=%q, want kind=type typeKind=alias", k, tk)
+	}
+}
+
+func TestSpanEmbeddedAndMultiName(t *testing.T) {
+	// Embedded field: Span.Point
+	k, _, _, typ, owner, ok := findFull(t, "example.com/sample/calc", "Span.Point")
+	if !ok || k != "field" || typ != "Point" || owner != "Span" {
+		t.Fatalf("Span.Point kind=%q type=%q owner=%q ok=%v, want field Point Span", k, typ, owner, ok)
+	}
+	// Multi-name field Lo
+	k, _, _, typ, owner, ok = findFull(t, "example.com/sample/calc", "Span.Lo")
+	if !ok || k != "field" || typ != "int" || owner != "Span" {
+		t.Fatalf("Span.Lo kind=%q type=%q owner=%q ok=%v, want field int Span", k, typ, owner, ok)
+	}
+	// Multi-name field Hi
+	k, _, _, typ, owner, ok = findFull(t, "example.com/sample/calc", "Span.Hi")
+	if !ok || k != "field" || typ != "int" || owner != "Span" {
+		t.Fatalf("Span.Hi kind=%q type=%q owner=%q ok=%v, want field int Span", k, typ, owner, ok)
+	}
+}

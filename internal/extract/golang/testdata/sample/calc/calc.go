@@ -56,3 +56,12 @@ type Adder interface {
 
 // Celsius is a defined numeric type.
 type Celsius float64
+
+// Counter is an alias for Accumulator.
+type Counter = Accumulator
+
+// Span is a labeled range with an embedded Point origin.
+type Span struct {
+	Point      // embedded
+	Lo, Hi int // multi-name field
+}

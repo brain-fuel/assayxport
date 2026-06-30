@@ -65,12 +65,13 @@ func typeSymbols(p *packages.Package, gd *ast.GenDecl, ts *ast.TypeSpec, moduleD
 	tk := "defined"
 	if ts.Assign.IsValid() {
 		tk = "alias"
-	}
-	switch underlying.(type) {
-	case *types.Struct:
-		tk = "struct"
-	case *types.Interface:
-		tk = "interface"
+	} else {
+		switch underlying.(type) {
+		case *types.Struct:
+			tk = "struct"
+		case *types.Interface:
+			tk = "interface"
+		}
 	}
 
 	sym := schema.Symbol{
