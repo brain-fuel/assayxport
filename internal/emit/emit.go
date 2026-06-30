@@ -5,9 +5,11 @@ package emit
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"goforge.dev/assayxport/internal/schema"
 )
@@ -20,6 +22,18 @@ func shardPath(pkgDir string) string {
 		return shardDir + "/_root.json"
 	}
 	return shardDir + "/" + filepath.ToSlash(pkgDir) + ".json"
+}
+
+// sanitizeID replaces path-unsafe characters in a package ID with underscores,
+// producing a safe filename component for collision-disambiguation suffixes.
+func sanitizeID(id string) string {
+	return strings.Map(func(r rune) rune {
+		switch r {
+		case '/', '\\', ':', '*', '?', '"', '<', '>', '|', ' ':
+			return '_'
+		}
+		return r
+	}, id)
 }
 
 // Manifest builds the index and shard set from packages, sorting
@@ -36,6 +50,16 @@ func Manifest(pkgs []schema.Package, module string, languages []string) (schema.
 		Module:        module,
 	}
 	shards := make(map[string]schema.Shard, len(sorted))
+
+	// used tracks shard paths already assigned in this call. For Go packages
+	// collisions cannot occur: the go tool silently ignores _-prefixed dirs, so
+	// no real Go package can have Path="_root" and collide with the root shard.
+	// Other languages (Python, Java, etc.) share this emit package and may
+	// produce the same computed path for two distinct packages. We disambiguate
+	// losslessly and deterministically by appending __<sanitized-id> to the
+	// conflicting path. Normal (non-colliding) cases produce the exact same
+	// paths as before, keeping existing golden tests stable.
+	used := make(map[string]bool, len(sorted))
 
 	for _, p := range sorted {
 		syms := append([]schema.Symbol(nil), p.Symbols...)
@@ -56,6 +80,14 @@ func Manifest(pkgs []schema.Package, module string, languages []string) (schema.
 			}
 		}
 		sp := shardPath(p.Path)
+		if used[sp] {
+			base := sp[:len(sp)-len(".json")]
+			sp = base + "__" + sanitizeID(p.ID) + ".json"
+			for i := 2; used[sp]; i++ {
+				sp = fmt.Sprintf("%s__%s_%d.json", base, sanitizeID(p.ID), i)
+			}
+		}
+		used[sp] = true
 		idx.Packages = append(idx.Packages, schema.PackageEntry{
 			ID:              p.ID,
 			Language:        p.Language,
@@ -88,7 +120,10 @@ func marshal(v any) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// WriteDir writes the index and all shards under outDir.
+// WriteDir writes the index and all shards under outDir, then removes any
+// stale *.json files inside <outDir>/.assayxport/ that are not among the
+// shards just written. Only files inside .assayxport/ are ever deleted;
+// assayxport.json (in outDir itself) is never touched.
 func WriteDir(outDir string, idx schema.Index, shards map[string]schema.Shard) error {
 	idxBytes, err := marshal(idx)
 	if err != nil {
@@ -102,7 +137,9 @@ func WriteDir(outDir string, idx schema.Index, shards map[string]schema.Shard) e
 		paths = append(paths, p)
 	}
 	sort.Strings(paths)
+	written := make(map[string]bool, len(paths))
 	for _, p := range paths {
+		written[p] = true
 		full := filepath.Join(outDir, filepath.FromSlash(p))
 		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
 			return err
@@ -112,6 +149,29 @@ func WriteDir(outDir string, idx schema.Index, shards map[string]schema.Shard) e
 			return err
 		}
 		if err := os.WriteFile(full, b, 0o644); err != nil {
+			return err
+		}
+	}
+	// Prune stale shards: walk .assayxport/ and delete any *.json file not in
+	// the written set. Empty subdirectories are left in place.
+	shardRoot := filepath.Join(outDir, shardDir)
+	if _, err := os.Stat(shardRoot); err == nil {
+		if err := filepath.Walk(shardRoot, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.IsDir() || filepath.Ext(path) != ".json" {
+				return nil
+			}
+			rel, err := filepath.Rel(outDir, path)
+			if err != nil {
+				return err
+			}
+			if !written[filepath.ToSlash(rel)] {
+				return os.Remove(path)
+			}
+			return nil
+		}); err != nil {
 			return err
 		}
 	}
