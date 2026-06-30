@@ -471,9 +471,9 @@
           "type": "int"
         },
         {
-          "id": "Adder.Add",
-          "name": "Add",
-          "kind": "method",
+          "id": "Adder",
+          "name": "Adder",
+          "kind": "type",
           "visibility": "exported",
           "visibility_idiom": "capitalized",
           "location": {
@@ -481,6 +481,31 @@
             "line": 52,
             "col": 6,
             "end_line": 55
+          },
+          "doc": {
+            "raw": "Adder is anything that can add.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "interface",
+          "underlying": "interface{Add(a int, b int) int}"
+        },
+        {
+          "id": "Adder.Add",
+          "name": "Add",
+          "kind": "method",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 54,
+            "col": 2,
+            "end_line": 54
           },
           "owner": "Adder",
           "doc": {
@@ -513,31 +538,6 @@
             "type_params": null,
             "variadic": false
           }
-        },
-        {
-          "id": "Adder",
-          "name": "Adder",
-          "kind": "type",
-          "visibility": "exported",
-          "visibility_idiom": "capitalized",
-          "location": {
-            "file": "calc/calc.go",
-            "line": 52,
-            "col": 6,
-            "end_line": 55
-          },
-          "doc": {
-            "raw": "Adder is anything that can add.",
-            "format": "godoc"
-          },
-          "is_entrypoint": false,
-          "complexity": {
-            "time": null,
-            "space": null,
-            "method": "deferred"
-          },
-          "type_kind": "interface",
-          "underlying": "interface{Add(a int, b int) int}"
         },
         {
           "id": "Celsius",

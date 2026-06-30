@@ -125,5 +125,9 @@ func entrypointHow(p *packages.Package, moduleDir string) string {
 	if err != nil {
 		return "go run " + filepath.ToSlash(dir)
 	}
-	return "go run ./" + filepath.ToSlash(rel)
+	slashRel := filepath.ToSlash(rel)
+	if slashRel == "." || slashRel == "" {
+		return "go run ."
+	}
+	return "go run ./" + slashRel
 }

@@ -35,7 +35,7 @@ func run(args []string) error {
 	// "scan ./pkg --out /tmp/x" works alongside "scan --out /tmp/x ./pkg".
 	remaining := args[1:]
 	path := "."
-	if len(remaining) > 0 && remaining[0] != "--" && remaining[0][0] != '-' {
+	if len(remaining) > 0 && remaining[0] != "--" && remaining[0] != "" && remaining[0][0] != '-' {
 		path = remaining[0]
 		remaining = remaining[1:]
 	}

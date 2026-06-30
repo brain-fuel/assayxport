@@ -143,16 +143,28 @@ func fieldSymbol(p *packages.Package, node ast.Node, name, typ, owner, moduleDir
 
 func interfaceMethods(p *packages.Package, ts *ast.TypeSpec, it *types.Interface, owner, moduleDir string) []schema.Symbol {
 	var out []schema.Symbol
+	iface, _ := ts.Type.(*ast.InterfaceType)
 	for i := 0; i < it.NumExplicitMethods(); i++ {
 		m := it.ExplicitMethod(i)
 		sig, _ := m.Type().(*types.Signature)
+		// Use the method's own AST field position; fall back to the TypeSpec
+		// for embedded/promoted methods that have no direct field entry.
+		loc := locationOf(p.Fset, ts, moduleDir)
+		if iface != nil {
+			for _, field := range iface.Methods.List {
+				if len(field.Names) > 0 && field.Names[0].Name == m.Name() {
+					loc = locationOf(p.Fset, field, moduleDir)
+					break
+				}
+			}
+		}
 		s := schema.Symbol{
 			ID:              owner + "." + m.Name(),
 			Name:            m.Name(),
 			Kind:            "method",
 			Visibility:      visibility(m.Name()),
 			VisibilityIdiom: "capitalized",
-			Location:        locationOf(p.Fset, ts, moduleDir),
+			Location:        loc,
 			Owner:           owner,
 			Doc:             schema.Doc{Raw: "", Format: "godoc"},
 			Complexity:      schema.DeferredComplexity(),
