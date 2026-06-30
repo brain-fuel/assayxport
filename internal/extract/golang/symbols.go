@@ -23,22 +23,205 @@ func typeStringLocal(t types.Type, currentPkg *types.Package) string {
 	})
 }
 
-// extractSymbols walks one package and returns its callable symbols (func,
-// method) in source order. Type/const/var are added in Task 4.
+// extractSymbols walks one package and returns all symbols in source order.
 func extractSymbols(p *packages.Package, moduleDir string) []schema.Symbol {
 	var syms []schema.Symbol
 	for _, file := range p.Syntax {
 		for _, decl := range file.Decls {
-			fd, ok := decl.(*ast.FuncDecl)
-			if !ok {
-				continue
-			}
-			if s, ok := funcSymbol(p, fd, moduleDir); ok {
-				syms = append(syms, s)
+			switch d := decl.(type) {
+			case *ast.FuncDecl:
+				if s, ok := funcSymbol(p, d, moduleDir); ok {
+					syms = append(syms, s)
+				}
+			case *ast.GenDecl:
+				syms = append(syms, genSymbols(p, d, moduleDir)...)
 			}
 		}
 	}
 	return syms
+}
+
+// genSymbols handles type/const/var declarations and their owned members.
+func genSymbols(p *packages.Package, gd *ast.GenDecl, moduleDir string) []schema.Symbol {
+	var out []schema.Symbol
+	for _, spec := range gd.Specs {
+		switch sp := spec.(type) {
+		case *ast.TypeSpec:
+			out = append(out, typeSymbols(p, gd, sp, moduleDir)...)
+		case *ast.ValueSpec:
+			out = append(out, valueSymbols(p, gd, sp, moduleDir)...)
+		}
+	}
+	return out
+}
+
+func typeSymbols(p *packages.Package, gd *ast.GenDecl, ts *ast.TypeSpec, moduleDir string) []schema.Symbol {
+	obj, _ := p.TypesInfo.Defs[ts.Name].(*types.TypeName)
+	if obj == nil {
+		return nil
+	}
+	name := ts.Name.Name
+	underlying := obj.Type().Underlying()
+	tk := "defined"
+	if ts.Assign.IsValid() {
+		tk = "alias"
+	}
+	switch underlying.(type) {
+	case *types.Struct:
+		tk = "struct"
+	case *types.Interface:
+		tk = "interface"
+	}
+
+	sym := schema.Symbol{
+		ID:              name,
+		Name:            name,
+		Kind:            "type",
+		Visibility:      visibility(name),
+		VisibilityIdiom: "capitalized",
+		Location:        locationOf(p.Fset, ts, moduleDir),
+		Doc:             schema.Doc{Raw: docText(ts.Doc, gd.Doc), Format: "godoc"},
+		Complexity:      schema.DeferredComplexity(),
+		TypeKind:        tk,
+		Underlying:      typeStringLocal(underlying, p.Types),
+	}
+	out := []schema.Symbol{sym}
+
+	switch u := underlying.(type) {
+	case *types.Struct:
+		out = append(out, structFields(p, ts, u, name, moduleDir)...)
+	case *types.Interface:
+		out = append(out, interfaceMethods(p, ts, u, name, moduleDir)...)
+	}
+	return out
+}
+
+func structFields(p *packages.Package, ts *ast.TypeSpec, st *types.Struct, owner, moduleDir string) []schema.Symbol {
+	var out []schema.Symbol
+	stype, ok := ts.Type.(*ast.StructType)
+	if !ok {
+		return out
+	}
+	idx := 0
+	for _, field := range stype.Fields.List {
+		names := field.Names
+		if len(names) == 0 { // embedded
+			if idx < st.NumFields() {
+				f := st.Field(idx)
+				out = append(out, fieldSymbol(p, field, f.Name(), typeStringLocal(f.Type(), p.Types), owner, moduleDir))
+				idx++
+			}
+			continue
+		}
+		for range names {
+			if idx >= st.NumFields() {
+				break
+			}
+			f := st.Field(idx)
+			out = append(out, fieldSymbol(p, field, f.Name(), typeStringLocal(f.Type(), p.Types), owner, moduleDir))
+			idx++
+		}
+	}
+	return out
+}
+
+func fieldSymbol(p *packages.Package, node ast.Node, name, typ, owner, moduleDir string) schema.Symbol {
+	return schema.Symbol{
+		ID:              owner + "." + name,
+		Name:            name,
+		Kind:            "field",
+		Visibility:      visibility(name),
+		VisibilityIdiom: "capitalized",
+		Location:        locationOf(p.Fset, node, moduleDir),
+		Owner:           owner,
+		Doc:             schema.Doc{Raw: fieldDoc(node), Format: "godoc"},
+		Complexity:      schema.DeferredComplexity(),
+		Type:            typ,
+	}
+}
+
+func interfaceMethods(p *packages.Package, ts *ast.TypeSpec, it *types.Interface, owner, moduleDir string) []schema.Symbol {
+	var out []schema.Symbol
+	for i := 0; i < it.NumExplicitMethods(); i++ {
+		m := it.ExplicitMethod(i)
+		sig, _ := m.Type().(*types.Signature)
+		s := schema.Symbol{
+			ID:              owner + "." + m.Name(),
+			Name:            m.Name(),
+			Kind:            "method",
+			Visibility:      visibility(m.Name()),
+			VisibilityIdiom: "capitalized",
+			Location:        locationOf(p.Fset, ts, moduleDir),
+			Owner:           owner,
+			Doc:             schema.Doc{Raw: "", Format: "godoc"},
+			Complexity:      schema.DeferredComplexity(),
+		}
+		if sig != nil {
+			s.Signature = &schema.Signature{
+				Params:     tupleParams(sig.Params(), p.Types),
+				Returns:    tupleParams(sig.Results(), p.Types),
+				TypeParams: typeParams(sig.TypeParams(), p.Types),
+				Variadic:   sig.Variadic(),
+			}
+		}
+		out = append(out, s)
+	}
+	return out
+}
+
+func valueSymbols(p *packages.Package, gd *ast.GenDecl, vs *ast.ValueSpec, moduleDir string) []schema.Symbol {
+	kind := "var"
+	if gd.Tok == token.CONST {
+		kind = "const"
+	}
+	var out []schema.Symbol
+	for _, ident := range vs.Names {
+		if ident.Name == "_" {
+			continue
+		}
+		obj := p.TypesInfo.Defs[ident]
+		if obj == nil {
+			continue
+		}
+		out = append(out, schema.Symbol{
+			ID:              ident.Name,
+			Name:            ident.Name,
+			Kind:            kind,
+			Visibility:      visibility(ident.Name),
+			VisibilityIdiom: "capitalized",
+			Location:        locationOf(p.Fset, ident, moduleDir),
+			Doc:             schema.Doc{Raw: docText(vs.Doc, gd.Doc), Format: "godoc"},
+			Complexity:      schema.DeferredComplexity(),
+			Type:            typeStringLocal(obj.Type(), p.Types),
+		})
+	}
+	return out
+}
+
+// docText prefers the spec's own doc, falling back to the GenDecl's doc.
+func docText(specDoc, genDoc *ast.CommentGroup) string {
+	if specDoc != nil && strings.TrimSpace(specDoc.Text()) != "" {
+		return strings.TrimSpace(specDoc.Text())
+	}
+	if genDoc != nil {
+		return strings.TrimSpace(genDoc.Text())
+	}
+	return ""
+}
+
+// fieldDoc returns a struct field's doc or line comment, if any.
+func fieldDoc(node ast.Node) string {
+	f, ok := node.(*ast.Field)
+	if !ok {
+		return ""
+	}
+	if f.Doc != nil && strings.TrimSpace(f.Doc.Text()) != "" {
+		return strings.TrimSpace(f.Doc.Text())
+	}
+	if f.Comment != nil {
+		return strings.TrimSpace(f.Comment.Text())
+	}
+	return ""
 }
 
 func funcSymbol(p *packages.Package, fd *ast.FuncDecl, moduleDir string) (schema.Symbol, bool) {

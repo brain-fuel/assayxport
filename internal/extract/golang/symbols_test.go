@@ -134,3 +134,55 @@ func TestEntrypoint(t *testing.T) {
 		t.Fatalf("main = %+v (want entrypoint how=go run ./cmd/tool)", main)
 	}
 }
+
+func findFull(t *testing.T, pkgID, id string) (kind, typeKind, underlying, typ, owner string, found bool) {
+	t.Helper()
+	pkgs, err := New().Extract("testdata/sample")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range pkgs {
+		if p.ID != pkgID {
+			continue
+		}
+		for _, s := range p.Symbols {
+			if s.ID == id {
+				return s.Kind, s.TypeKind, s.Underlying, s.Type, s.Owner, true
+			}
+		}
+	}
+	return "", "", "", "", "", false
+}
+
+func TestConstAndVar(t *testing.T) {
+	if k, _, _, typ, _, ok := findFull(t, "example.com/sample/calc", "MaxInt"); !ok || k != "const" || typ == "" {
+		t.Fatalf("MaxInt kind=%q type=%q ok=%v", k, typ, ok)
+	}
+	if k, _, _, _, _, ok := findFull(t, "example.com/sample/calc", "Default"); !ok || k != "var" {
+		t.Fatalf("Default kind=%q ok=%v", k, ok)
+	}
+}
+
+func TestStructAndField(t *testing.T) {
+	if k, tk, _, _, _, ok := findFull(t, "example.com/sample/calc", "Point"); !ok || k != "type" || tk != "struct" {
+		t.Fatalf("Point kind=%q typeKind=%q ok=%v", k, tk, ok)
+	}
+	if k, _, _, typ, owner, ok := findFull(t, "example.com/sample/calc", "Point.X"); !ok || k != "field" || typ != "int" || owner != "Point" {
+		t.Fatalf("Point.X kind=%q type=%q owner=%q ok=%v", k, typ, owner, ok)
+	}
+}
+
+func TestInterfaceAndMethod(t *testing.T) {
+	if k, tk, _, _, _, ok := findFull(t, "example.com/sample/calc", "Adder"); !ok || k != "type" || tk != "interface" {
+		t.Fatalf("Adder kind=%q typeKind=%q ok=%v", k, tk, ok)
+	}
+	if k, _, _, _, owner, ok := findFull(t, "example.com/sample/calc", "Adder.Add"); !ok || k != "method" || owner != "Adder" {
+		t.Fatalf("Adder.Add kind=%q owner=%q ok=%v", k, owner, ok)
+	}
+}
+
+func TestDefinedType(t *testing.T) {
+	if k, tk, under, _, _, ok := findFull(t, "example.com/sample/calc", "Celsius"); !ok || k != "type" || tk != "defined" || under != "float64" {
+		t.Fatalf("Celsius kind=%q typeKind=%q underlying=%q ok=%v", k, tk, under, ok)
+	}
+}

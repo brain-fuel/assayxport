@@ -35,3 +35,24 @@ func (a *Accumulator) Push(v int) int {
 
 // Clone returns a copy of a.
 func Clone(a *Accumulator) *Accumulator { c := *a; return &c }
+
+// MaxInt is the largest representable sample value.
+const MaxInt = 1<<31 - 1
+
+// Default is the zero accumulator.
+var Default = Accumulator{}
+
+// Point is a 2D point.
+type Point struct {
+	X int // X coordinate.
+	Y int // Y coordinate.
+}
+
+// Adder is anything that can add.
+type Adder interface {
+	// Add returns the sum.
+	Add(a, b int) int
+}
+
+// Celsius is a defined numeric type.
+type Celsius float64
