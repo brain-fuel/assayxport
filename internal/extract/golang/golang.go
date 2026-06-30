@@ -8,9 +8,13 @@ import (
 	"sort"
 	"strings"
 
+	"goforge.dev/assayxport/internal/extract"
 	"goforge.dev/assayxport/internal/schema"
 	"golang.org/x/tools/go/packages"
 )
+
+// Compile-time assertion: *Extractor must satisfy extract.Extractor.
+var _ extract.Extractor = (*Extractor)(nil)
 
 // Extractor is the Go language extractor.
 type Extractor struct{}
@@ -27,6 +31,10 @@ const loadMode = packages.NeedName | packages.NeedFiles | packages.NeedSyntax |
 
 // Extract loads ./... under root and returns packages sorted by import path.
 func (e *Extractor) Extract(root string) ([]schema.Package, error) {
+	// Abs-resolve so module-relative paths are always correct.
+	if abs, err := filepath.Abs(root); err == nil {
+		root = abs
+	}
 	cfg := &packages.Config{
 		Mode:  loadMode,
 		Dir:   root,
@@ -57,10 +65,10 @@ func (e *Extractor) Extract(root string) ([]schema.Package, error) {
 			Language: "go",
 			Name:     p.Name,
 			Doc:      packageDoc(p),
-			// Path filled below once moduleDir is known.
+			// Path and Symbols filled below once moduleDir is known.
 		})
 	}
-	// Compute each package's module-relative directory.
+	// Compute each package's module-relative directory and extract symbols.
 	for i, p := range loaded {
 		dir := packageDir(p)
 		rel, err := filepath.Rel(moduleDir, dir)
@@ -68,6 +76,7 @@ func (e *Extractor) Extract(root string) ([]schema.Package, error) {
 			rel = filepath.Base(dir)
 		}
 		out[i].Path = filepath.ToSlash(rel)
+		out[i].Symbols = extractSymbols(p, moduleDir)
 	}
 
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
@@ -90,4 +99,27 @@ func packageDoc(p *packages.Package) string {
 		}
 	}
 	return ""
+}
+
+// filepathRel is filepath.Rel, isolated so both files in this package share one impl.
+func filepathRel(base, target string) (string, error) { return filepath.Rel(base, target) }
+
+// relFile returns the module-relative POSIX path of an absolute file path.
+func relFile(absFile, moduleDir string) string {
+	rel, err := filepathRel(moduleDir, absFile)
+	if err != nil {
+		return filepath.ToSlash(absFile)
+	}
+	return filepath.ToSlash(rel)
+}
+
+// entrypointHow renders the `go run` invocation for a main package, using its
+// module-relative directory (e.g. "go run ./cmd/tool").
+func entrypointHow(p *packages.Package, moduleDir string) string {
+	dir := packageDir(p)
+	rel, err := filepathRel(moduleDir, dir)
+	if err != nil {
+		return "go run " + filepath.ToSlash(dir)
+	}
+	return "go run ./" + filepath.ToSlash(rel)
 }
