@@ -1,0 +1,740 @@
+{
+  "index": {
+    "schema_version": "1",
+    "tool": "assayxport",
+    "languages": [
+      "go"
+    ],
+    "root": ".",
+    "module": "example.com/sample",
+    "packages": [
+      {
+        "id": "example.com/sample/calc",
+        "language": "go",
+        "path": "calc",
+        "name": "calc",
+        "doc": "Package calc does sample arithmetic for assayxport extractor tests.",
+        "symbol_count": 21,
+        "entrypoint_count": 0,
+        "shard": ".assayxport/calc.json"
+      },
+      {
+        "id": "example.com/sample/cmd/tool",
+        "language": "go",
+        "path": "cmd/tool",
+        "name": "main",
+        "doc": "Command tool is a sample entrypoint for assayxport extractor tests.",
+        "symbol_count": 1,
+        "entrypoint_count": 1,
+        "shard": ".assayxport/cmd/tool.json"
+      }
+    ]
+  },
+  "shards": {
+    ".assayxport/calc.json": {
+      "schema_version": "1",
+      "package": {
+        "id": "example.com/sample/calc",
+        "language": "go",
+        "path": "calc",
+        "name": "calc",
+        "doc": "Package calc does sample arithmetic for assayxport extractor tests."
+      },
+      "symbols": [
+        {
+          "id": "Add",
+          "name": "Add",
+          "kind": "func",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 5,
+            "col": 1,
+            "end_line": 5
+          },
+          "doc": {
+            "raw": "Add returns a + b.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "a",
+                "type": "int"
+              },
+              {
+                "name": "b",
+                "type": "int"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "int"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "sub",
+          "name": "sub",
+          "kind": "func",
+          "visibility": "unexported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 8,
+            "col": 1,
+            "end_line": 8
+          },
+          "doc": {
+            "raw": "sub returns a - b. Unexported on purpose.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "a",
+                "type": "int"
+              },
+              {
+                "name": "b",
+                "type": "int"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "int"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Sum",
+          "name": "Sum",
+          "kind": "func",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 11,
+            "col": 1,
+            "end_line": 17
+          },
+          "doc": {
+            "raw": "Sum returns the total of xs.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "xs",
+                "type": "[]int"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "int"
+              }
+            ],
+            "type_params": null,
+            "variadic": true
+          }
+        },
+        {
+          "id": "Max",
+          "name": "Max",
+          "kind": "func",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 20,
+            "col": 1,
+            "end_line": 25
+          },
+          "doc": {
+            "raw": "Max returns the larger of a and b for any ordered type.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "a",
+                "type": "T"
+              },
+              {
+                "name": "b",
+                "type": "T"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "T"
+              }
+            ],
+            "type_params": [
+              {
+                "name": "T",
+                "constraint": "int | float64"
+              }
+            ],
+            "variadic": false
+          }
+        },
+        {
+          "id": "Accumulator",
+          "name": "Accumulator",
+          "kind": "type",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 28,
+            "col": 6,
+            "end_line": 28
+          },
+          "doc": {
+            "raw": "Accumulator sums pushed values.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "struct",
+          "underlying": "struct{total int}"
+        },
+        {
+          "id": "Accumulator.total",
+          "name": "total",
+          "kind": "field",
+          "visibility": "unexported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 28,
+            "col": 26,
+            "end_line": 28
+          },
+          "owner": "Accumulator",
+          "doc": {
+            "raw": "",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type": "int"
+        },
+        {
+          "id": "Accumulator.Push",
+          "name": "Push",
+          "kind": "method",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 31,
+            "col": 1,
+            "end_line": 34
+          },
+          "owner": "Accumulator",
+          "doc": {
+            "raw": "Push adds v to the accumulator and returns the new total.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "v",
+                "type": "int"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "int"
+              }
+            ],
+            "type_params": null,
+            "receiver": {
+              "name": "a",
+              "type": "*Accumulator"
+            },
+            "variadic": false
+          }
+        },
+        {
+          "id": "Clone",
+          "name": "Clone",
+          "kind": "func",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 37,
+            "col": 1,
+            "end_line": 37
+          },
+          "doc": {
+            "raw": "Clone returns a copy of a.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "a",
+                "type": "*Accumulator"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "*Accumulator"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "MaxInt",
+          "name": "MaxInt",
+          "kind": "const",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 40,
+            "col": 7,
+            "end_line": 40
+          },
+          "doc": {
+            "raw": "MaxInt is the largest representable sample value.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type": "untyped int"
+        },
+        {
+          "id": "Default",
+          "name": "Default",
+          "kind": "var",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 43,
+            "col": 5,
+            "end_line": 43
+          },
+          "doc": {
+            "raw": "Default is the zero accumulator.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type": "Accumulator"
+        },
+        {
+          "id": "Point",
+          "name": "Point",
+          "kind": "type",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 46,
+            "col": 6,
+            "end_line": 49
+          },
+          "doc": {
+            "raw": "Point is a 2D point.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "struct",
+          "underlying": "struct{X int; Y int}"
+        },
+        {
+          "id": "Point.X",
+          "name": "X",
+          "kind": "field",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 47,
+            "col": 2,
+            "end_line": 47
+          },
+          "owner": "Point",
+          "doc": {
+            "raw": "X coordinate.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type": "int"
+        },
+        {
+          "id": "Point.Y",
+          "name": "Y",
+          "kind": "field",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 48,
+            "col": 2,
+            "end_line": 48
+          },
+          "owner": "Point",
+          "doc": {
+            "raw": "Y coordinate.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type": "int"
+        },
+        {
+          "id": "Adder.Add",
+          "name": "Add",
+          "kind": "method",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 52,
+            "col": 6,
+            "end_line": 55
+          },
+          "owner": "Adder",
+          "doc": {
+            "raw": "",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "a",
+                "type": "int"
+              },
+              {
+                "name": "b",
+                "type": "int"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "int"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Adder",
+          "name": "Adder",
+          "kind": "type",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 52,
+            "col": 6,
+            "end_line": 55
+          },
+          "doc": {
+            "raw": "Adder is anything that can add.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "interface",
+          "underlying": "interface{Add(a int, b int) int}"
+        },
+        {
+          "id": "Celsius",
+          "name": "Celsius",
+          "kind": "type",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 58,
+            "col": 6,
+            "end_line": 58
+          },
+          "doc": {
+            "raw": "Celsius is a defined numeric type.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "defined",
+          "underlying": "float64"
+        },
+        {
+          "id": "Counter",
+          "name": "Counter",
+          "kind": "type",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 61,
+            "col": 6,
+            "end_line": 61
+          },
+          "doc": {
+            "raw": "Counter is an alias for Accumulator.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "alias",
+          "underlying": "struct{total int}"
+        },
+        {
+          "id": "Span",
+          "name": "Span",
+          "kind": "type",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 64,
+            "col": 6,
+            "end_line": 67
+          },
+          "doc": {
+            "raw": "Span is a labeled range with an embedded Point origin.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "struct",
+          "underlying": "struct{Point; Lo int; Hi int}"
+        },
+        {
+          "id": "Span.Point",
+          "name": "Point",
+          "kind": "field",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 65,
+            "col": 2,
+            "end_line": 65
+          },
+          "owner": "Span",
+          "doc": {
+            "raw": "embedded",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type": "Point"
+        },
+        {
+          "id": "Span.Hi",
+          "name": "Hi",
+          "kind": "field",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 66,
+            "col": 2,
+            "end_line": 66
+          },
+          "owner": "Span",
+          "doc": {
+            "raw": "multi-name field",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type": "int"
+        },
+        {
+          "id": "Span.Lo",
+          "name": "Lo",
+          "kind": "field",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "calc/calc.go",
+            "line": 66,
+            "col": 2,
+            "end_line": 66
+          },
+          "owner": "Span",
+          "doc": {
+            "raw": "multi-name field",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type": "int"
+        }
+      ]
+    },
+    ".assayxport/cmd/tool.json": {
+      "schema_version": "1",
+      "package": {
+        "id": "example.com/sample/cmd/tool",
+        "language": "go",
+        "path": "cmd/tool",
+        "name": "main",
+        "doc": "Command tool is a sample entrypoint for assayxport extractor tests."
+      },
+      "symbols": [
+        {
+          "id": "main",
+          "name": "main",
+          "kind": "func",
+          "visibility": "unexported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/main.go",
+            "line": 4,
+            "col": 1,
+            "end_line": 4
+          },
+          "doc": {
+            "raw": "",
+            "format": "godoc"
+          },
+          "is_entrypoint": true,
+          "invocation": {
+            "kind": "binary",
+            "how": "go run ./cmd/tool"
+          },
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [],
+            "returns": [],
+            "type_params": null,
+            "variadic": false
+          }
+        }
+      ]
+    }
+  }
+}

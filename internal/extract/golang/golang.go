@@ -17,10 +17,13 @@ import (
 var _ extract.Extractor = (*Extractor)(nil)
 
 // Extractor is the Go language extractor.
-type Extractor struct{}
+type Extractor struct{ module string }
 
 // New returns a Go extractor.
 func New() *Extractor { return &Extractor{} }
+
+// Module returns the module path discovered by the most recent Extract call.
+func (e *Extractor) Module() string { return e.module }
 
 // Language reports the language id.
 func (*Extractor) Language() string { return "go" }
@@ -59,6 +62,7 @@ func (e *Extractor) Extract(root string) ([]schema.Package, error) {
 	for _, p := range loaded {
 		if p.Module != nil {
 			moduleDir = p.Module.Dir
+			e.module = p.Module.Path
 		}
 		out = append(out, schema.Package{
 			ID:       p.PkgPath,
