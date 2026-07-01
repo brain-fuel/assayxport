@@ -1,0 +1,162 @@
+// Package ts is assayxport's in-house tree-sitter layer. It exposes a small,
+// stable API for parsing source code into syntax trees and walking them.
+//
+// The third-party tree-sitter implementation is referenced ONLY in this file,
+// so downstream packages depend on this API rather than on the library. The
+// backing runtime is github.com/odvcencio/gotreesitter, a pure-Go (cgo-free)
+// tree-sitter runtime that ships built-in language grammars, including Python.
+package ts
+
+import (
+	"fmt"
+	"sync"
+
+	gts "github.com/odvcencio/gotreesitter"
+	"github.com/odvcencio/gotreesitter/grammars"
+)
+
+// Language selects a grammar.
+type Language int
+
+const (
+	// Python selects the tree-sitter Python grammar.
+	Python Language = iota
+)
+
+// pythonLang holds the lazily-initialized Python grammar. Loading the grammar
+// (decoding the embedded grammar blob) is a one-time cost done under sync.Once.
+var (
+	pythonOnce sync.Once
+	pythonLang *gts.Language
+)
+
+func python() *gts.Language {
+	pythonOnce.Do(func() {
+		pythonLang = grammars.PythonLanguage()
+	})
+	return pythonLang
+}
+
+// Tree is a parsed syntax tree. It keeps the source bytes and grammar alongside
+// the root node so nodes can slice text and resolve field names.
+type Tree struct {
+	tree *gts.Tree
+	lang *gts.Language
+	src  []byte
+}
+
+// Node is a lightweight handle into a Tree. A zero Node (or one wrapping a nil
+// underlying node) reports IsNull() == true.
+type Node struct {
+	n    *gts.Node
+	lang *gts.Language
+}
+
+// Parse parses src under lang. It is deterministic for equal input. Parse is
+// safe for sequential use; the underlying parser is created per call and not
+// shared across goroutines.
+func Parse(lang Language, src []byte) (*Tree, error) {
+	var g *gts.Language
+	switch lang {
+	case Python:
+		g = python()
+	default:
+		return nil, fmt.Errorf("ts: unsupported language %d", int(lang))
+	}
+	if g == nil {
+		return nil, fmt.Errorf("ts: grammar unavailable for language %d", int(lang))
+	}
+
+	p := gts.NewParser(g)
+	tree, err := p.Parse(src)
+	if err != nil {
+		return nil, fmt.Errorf("ts: parse failed: %w", err)
+	}
+	if tree == nil {
+		return nil, fmt.Errorf("ts: parse produced no tree")
+	}
+	return &Tree{tree: tree, lang: g, src: src}, nil
+}
+
+// Root returns the root node of the tree.
+func (t *Tree) Root() Node {
+	return Node{n: t.tree.RootNode(), lang: t.lang}
+}
+
+// IsNull reports whether the node is absent (e.g. a missing field child).
+func (n Node) IsNull() bool { return n.n == nil }
+
+// Type returns the tree-sitter node type, e.g. "function_definition".
+func (n Node) Type() string {
+	if n.n == nil {
+		return ""
+	}
+	return n.n.Type(n.lang)
+}
+
+// NamedChildCount returns the number of named children.
+func (n Node) NamedChildCount() int {
+	if n.n == nil {
+		return 0
+	}
+	return n.n.NamedChildCount()
+}
+
+// NamedChild returns the i-th named child. If i is out of range the returned
+// Node reports IsNull() == true.
+func (n Node) NamedChild(i int) Node {
+	if n.n == nil {
+		return Node{lang: n.lang}
+	}
+	return Node{n: n.n.NamedChild(i), lang: n.lang}
+}
+
+// ChildByFieldName returns the child under field f (e.g. "name", "parameters",
+// "body", "return_type") and whether it was found.
+func (n Node) ChildByFieldName(f string) (Node, bool) {
+	if n.n == nil {
+		return Node{lang: n.lang}, false
+	}
+	c := n.n.ChildByFieldName(f, n.lang)
+	if c == nil {
+		return Node{lang: n.lang}, false
+	}
+	return Node{n: c, lang: n.lang}, true
+}
+
+// StartLine returns the 1-based line of the node's start.
+func (n Node) StartLine() int {
+	if n.n == nil {
+		return 0
+	}
+	return int(n.n.StartPoint().Row) + 1
+}
+
+// StartCol returns the 1-based column of the node's start.
+func (n Node) StartCol() int {
+	if n.n == nil {
+		return 0
+	}
+	return int(n.n.StartPoint().Column) + 1
+}
+
+// EndLine returns the 1-based line of the node's end.
+func (n Node) EndLine() int {
+	if n.n == nil {
+		return 0
+	}
+	return int(n.n.EndPoint().Row) + 1
+}
+
+// Content returns the exact source slice spanning this node.
+func (n Node) Content(src []byte) string {
+	if n.n == nil {
+		return ""
+	}
+	start := int(n.n.StartByte())
+	end := int(n.n.EndByte())
+	if start < 0 || end > len(src) || start > end {
+		return ""
+	}
+	return string(src[start:end])
+}
