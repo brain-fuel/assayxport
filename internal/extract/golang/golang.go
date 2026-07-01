@@ -69,7 +69,8 @@ func (e *Extractor) Extract(root string) ([]schema.Package, error) {
 			Language: "go",
 			Name:     p.Name,
 			Doc:      packageDoc(p),
-			// Path and Symbols filled below once moduleDir is known.
+			Level:    "package",
+			// Path, Symbols, and entrypoint fields filled below once moduleDir is known.
 		})
 	}
 	// Compute each package's module-relative directory and extract symbols.
@@ -81,6 +82,10 @@ func (e *Extractor) Extract(root string) ([]schema.Package, error) {
 		}
 		out[i].Path = filepath.ToSlash(rel)
 		out[i].Symbols = extractSymbols(p, moduleDir)
+		if p.Name == "main" {
+			out[i].IsEntrypoint = true
+			out[i].Invocation = &schema.Invocation{Kind: "binary", How: entrypointHow(p, moduleDir)}
+		}
 	}
 
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })

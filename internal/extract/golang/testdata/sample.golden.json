@@ -14,6 +14,7 @@
         "path": "calc",
         "name": "calc",
         "doc": "Package calc does sample arithmetic for assayxport extractor tests.",
+        "level": "package",
         "symbol_count": 21,
         "entrypoint_count": 0,
         "shard": ".assayxport/calc.json"
@@ -24,6 +25,12 @@
         "path": "cmd/tool",
         "name": "main",
         "doc": "Command tool is a sample entrypoint for assayxport extractor tests.",
+        "level": "package",
+        "is_entrypoint": true,
+        "invocation": {
+          "kind": "binary",
+          "how": "go run ./cmd/tool"
+        },
         "symbol_count": 1,
         "entrypoint_count": 1,
         "shard": ".assayxport/cmd/tool.json"
@@ -38,7 +45,8 @@
         "language": "go",
         "path": "calc",
         "name": "calc",
-        "doc": "Package calc does sample arithmetic for assayxport extractor tests."
+        "doc": "Package calc does sample arithmetic for assayxport extractor tests.",
+        "level": "package"
       },
       "symbols": [
         {
@@ -698,7 +706,13 @@
         "language": "go",
         "path": "cmd/tool",
         "name": "main",
-        "doc": "Command tool is a sample entrypoint for assayxport extractor tests."
+        "doc": "Command tool is a sample entrypoint for assayxport extractor tests.",
+        "level": "package",
+        "is_entrypoint": true,
+        "invocation": {
+          "kind": "binary",
+          "how": "go run ./cmd/tool"
+        }
       },
       "symbols": [
         {

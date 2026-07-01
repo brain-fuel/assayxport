@@ -49,10 +49,46 @@ func samplePkgs() []schema.Package {
 		},
 		{
 			ID: "example.com/s/a", Language: "go", Path: "a", Name: "a", Doc: "Package a.",
+			Level:        "package",
+			Members:      []string{"x.y"},
+			IsEntrypoint: true,
+			Invocation:   &schema.Invocation{Kind: "binary", How: "go run ./a"},
 			Symbols: []schema.Symbol{{ID: "Main", Name: "main", Kind: "func", Visibility: "unexported",
 				VisibilityIdiom: "capitalized", Location: schema.Location{File: "a/a.go", Line: 1, Col: 1, EndLine: 1},
 				Complexity: schema.DeferredComplexity(), Doc: schema.Doc{Format: "godoc"}, IsEntrypoint: true}},
 		},
+	}
+}
+
+func TestManifestCopiesPackageUnitFields(t *testing.T) {
+	idx, shards := Manifest(samplePkgs(), "example.com/s", []string{"go"})
+	// idx.Packages[0] is example.com/s/a (sorted by ID).
+	pe := idx.Packages[0]
+	if pe.Level != "package" {
+		t.Errorf("PackageEntry.Level = %q, want %q", pe.Level, "package")
+	}
+	if len(pe.Members) != 1 || pe.Members[0] != "x.y" {
+		t.Errorf("PackageEntry.Members = %v, want [x.y]", pe.Members)
+	}
+	if !pe.IsEntrypoint {
+		t.Errorf("PackageEntry.IsEntrypoint = false, want true")
+	}
+	if pe.Invocation == nil || pe.Invocation.Kind != "binary" || pe.Invocation.How != "go run ./a" {
+		t.Errorf("PackageEntry.Invocation = %+v, want {binary, go run ./a}", pe.Invocation)
+	}
+	// The shard's PackageInfo must also carry Level and Members.
+	pi := shards[pe.Shard].Package
+	if pi.Level != "package" {
+		t.Errorf("PackageInfo.Level = %q, want %q", pi.Level, "package")
+	}
+	if len(pi.Members) != 1 || pi.Members[0] != "x.y" {
+		t.Errorf("PackageInfo.Members = %v, want [x.y]", pi.Members)
+	}
+	if !pi.IsEntrypoint {
+		t.Errorf("PackageInfo.IsEntrypoint = false, want true")
+	}
+	if pi.Invocation == nil || pi.Invocation.Kind != "binary" || pi.Invocation.How != "go run ./a" {
+		t.Errorf("PackageInfo.Invocation = %+v, want {binary, go run ./a}", pi.Invocation)
 	}
 }
 
