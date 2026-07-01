@@ -86,8 +86,9 @@ type Symbol struct {
 	Underlying string     `json:"underlying,omitempty"`
 	Type       string     `json:"type,omitempty"`
 
-	InAll      *bool    `json:"in_all,omitempty"`
-	Decorators []string `json:"decorators,omitempty"`
+	InAll       *bool    `json:"in_all,omitempty"`
+	Decorators  []string `json:"decorators,omitempty"`
+	Annotations []string `json:"annotations,omitempty"`
 }
 
 // Signature describes a func or method.
