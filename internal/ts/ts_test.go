@@ -40,7 +40,6 @@ func TestParseJava(t *testing.T) {
 	}
 }
 
-
 func TestParseDeterministic(t *testing.T) {
 	src := []byte("class C:\n    def m(self):\n        pass\n")
 	a, err := Parse(Python, src)

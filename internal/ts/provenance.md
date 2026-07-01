@@ -60,7 +60,8 @@ transitive dep were removed by `go mod tidy` after the switch.
   lazily decodes an embedded grammar blob shipped inside the library module.
 - **Embedded blob:** `grammars/grammar_blobs/java.bin` inside
   `github.com/odvcencio/gotreesitter@v0.20.7`.
-  - size: ~46 KB
+  - size: 46587 bytes
+  - sha256: `530c7257b13e1ce356edd251cac347b5e41f04f74343473c72f43bf1177ffa9c`
   - (Record of the upstream module's embedded artifact for auditing; the blob lives in
     the module cache, not in this repo.)
 - **tree-sitter language ABI version:** 15 (same ABI as Python).
