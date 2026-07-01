@@ -1,0 +1,674 @@
+{
+  "index": {
+    "schema_version": "1",
+    "tool": "assayxport",
+    "languages": [
+      "java"
+    ],
+    "root": ".",
+    "packages": [
+      {
+        "id": "com.foo",
+        "language": "java",
+        "path": "com/foo",
+        "name": "foo",
+        "doc": "The com.foo package.",
+        "level": "package",
+        "members": [
+          "com.foo.Bar",
+          "com.foo.Point",
+          "com.foo.sub"
+        ],
+        "symbol_count": 0,
+        "entrypoint_count": 0,
+        "shard": ".assayxport/com/foo.json"
+      },
+      {
+        "id": "com.foo.Bar",
+        "language": "java",
+        "path": "com/foo/Bar.java",
+        "name": "Bar",
+        "doc": "",
+        "level": "module",
+        "is_entrypoint": true,
+        "invocation": {
+          "kind": "class",
+          "how": "java com.foo.Bar"
+        },
+        "symbol_count": 12,
+        "entrypoint_count": 1,
+        "shard": ".assayxport/com/foo/Bar.java.json"
+      },
+      {
+        "id": "com.foo.Point",
+        "language": "java",
+        "path": "com/foo/Point.java",
+        "name": "Point",
+        "doc": "",
+        "level": "module",
+        "symbol_count": 5,
+        "entrypoint_count": 0,
+        "shard": ".assayxport/com/foo/Point.java.json"
+      },
+      {
+        "id": "com.foo.sub",
+        "language": "java",
+        "path": "com/foo/sub",
+        "name": "sub",
+        "doc": "",
+        "level": "package",
+        "members": [
+          "com.foo.sub.Leaf"
+        ],
+        "symbol_count": 0,
+        "entrypoint_count": 0,
+        "shard": ".assayxport/com/foo/sub.json"
+      },
+      {
+        "id": "com.foo.sub.Leaf",
+        "language": "java",
+        "path": "com/foo/sub/Leaf.java",
+        "name": "Leaf",
+        "doc": "",
+        "level": "module",
+        "symbol_count": 1,
+        "entrypoint_count": 0,
+        "shard": ".assayxport/com/foo/sub/Leaf.java.json"
+      }
+    ]
+  },
+  "shards": {
+    ".assayxport/com/foo.json": {
+      "schema_version": "1",
+      "package": {
+        "id": "com.foo",
+        "language": "java",
+        "path": "com/foo",
+        "name": "foo",
+        "doc": "The com.foo package.",
+        "level": "package",
+        "members": [
+          "com.foo.Bar",
+          "com.foo.Point",
+          "com.foo.sub"
+        ]
+      },
+      "symbols": null
+    },
+    ".assayxport/com/foo/Bar.java.json": {
+      "schema_version": "1",
+      "package": {
+        "id": "com.foo.Bar",
+        "language": "java",
+        "path": "com/foo/Bar.java",
+        "name": "Bar",
+        "doc": "",
+        "level": "module",
+        "is_entrypoint": true,
+        "invocation": {
+          "kind": "class",
+          "how": "java com.foo.Bar"
+        }
+      },
+      "symbols": [
+        {
+          "id": "Bar",
+          "name": "Bar",
+          "kind": "type",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Bar.java",
+            "line": 5,
+            "col": 1,
+            "end_line": 30
+          },
+          "doc": {
+            "raw": "Bar is the primary type.",
+            "format": "javadoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [],
+            "returns": [],
+            "type_params": [
+              {
+                "name": "T",
+                "constraint": ""
+              }
+            ],
+            "variadic": false
+          },
+          "type_kind": "class",
+          "annotations": [
+            "Deprecated"
+          ]
+        },
+        {
+          "id": "Bar.count",
+          "name": "count",
+          "kind": "field",
+          "visibility": "private",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Bar.java",
+            "line": 7,
+            "col": 17,
+            "end_line": 7
+          },
+          "owner": "Bar",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type": "int"
+        },
+        {
+          "id": "Bar.name",
+          "name": "name",
+          "kind": "field",
+          "visibility": "protected",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Bar.java",
+            "line": 8,
+            "col": 22,
+            "end_line": 8
+          },
+          "owner": "Bar",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type": "String"
+        },
+        {
+          "id": "Bar.Bar",
+          "name": "Bar",
+          "kind": "constructor",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Bar.java",
+            "line": 11,
+            "col": 5,
+            "end_line": 13
+          },
+          "owner": "Bar",
+          "doc": {
+            "raw": "Builds a Bar.",
+            "format": "javadoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "count",
+                "type": "int"
+              }
+            ],
+            "returns": [],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Bar.getCount",
+          "name": "getCount",
+          "kind": "method",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Bar.java",
+            "line": 16,
+            "col": 5,
+            "end_line": 19
+          },
+          "owner": "Bar",
+          "doc": {
+            "raw": "Returns the count.",
+            "format": "javadoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": null,
+            "returns": [
+              {
+                "name": "",
+                "type": "int"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          },
+          "annotations": [
+            "Override"
+          ]
+        },
+        {
+          "id": "Bar.RATIO",
+          "name": "RATIO",
+          "kind": "field",
+          "visibility": "package-private",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Bar.java",
+            "line": 21,
+            "col": 25,
+            "end_line": 21
+          },
+          "owner": "Bar",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type": "double"
+        },
+        {
+          "id": "Bar.Inner",
+          "name": "Inner",
+          "kind": "type",
+          "visibility": "package-private",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Bar.java",
+            "line": 23,
+            "col": 5,
+            "end_line": 25
+          },
+          "owner": "Bar",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "interface"
+        },
+        {
+          "id": "Bar.Inner.ping",
+          "name": "ping",
+          "kind": "method",
+          "visibility": "package-private",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Bar.java",
+            "line": 24,
+            "col": 9,
+            "end_line": 24
+          },
+          "owner": "Bar.Inner",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": null,
+            "returns": [],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Bar.main",
+          "name": "main",
+          "kind": "method",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Bar.java",
+            "line": 27,
+            "col": 5,
+            "end_line": 29
+          },
+          "owner": "Bar",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": true,
+          "invocation": {
+            "kind": "class",
+            "how": "java com.foo.Bar"
+          },
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "args",
+                "type": "String[]"
+              }
+            ],
+            "returns": [],
+            "type_params": null,
+            "variadic": false,
+            "modifiers": [
+              "static"
+            ]
+          }
+        },
+        {
+          "id": "Color",
+          "name": "Color",
+          "kind": "type",
+          "visibility": "package-private",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Bar.java",
+            "line": 32,
+            "col": 1,
+            "end_line": 32
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "enum"
+        },
+        {
+          "id": "Color.GREEN",
+          "name": "GREEN",
+          "kind": "enum-constant",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Bar.java",
+            "line": 32,
+            "col": 19,
+            "end_line": 32
+          },
+          "owner": "Color",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          }
+        },
+        {
+          "id": "Color.RED",
+          "name": "RED",
+          "kind": "enum-constant",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Bar.java",
+            "line": 32,
+            "col": 14,
+            "end_line": 32
+          },
+          "owner": "Color",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          }
+        }
+      ]
+    },
+    ".assayxport/com/foo/Point.java.json": {
+      "schema_version": "1",
+      "package": {
+        "id": "com.foo.Point",
+        "language": "java",
+        "path": "com/foo/Point.java",
+        "name": "Point",
+        "doc": "",
+        "level": "module"
+      },
+      "symbols": [
+        {
+          "id": "Point",
+          "name": "Point",
+          "kind": "type",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Point.java",
+            "line": 4,
+            "col": 1,
+            "end_line": 4
+          },
+          "doc": {
+            "raw": "A value record for a 2-D point.",
+            "format": "javadoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "record"
+        },
+        {
+          "id": "Marker",
+          "name": "Marker",
+          "kind": "type",
+          "visibility": "package-private",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Point.java",
+            "line": 7,
+            "col": 1,
+            "end_line": 7
+          },
+          "doc": {
+            "raw": "Custom marker annotation.",
+            "format": "javadoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "annotation"
+        },
+        {
+          "id": "Logger",
+          "name": "Logger",
+          "kind": "type",
+          "visibility": "package-private",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Point.java",
+            "line": 10,
+            "col": 1,
+            "end_line": 13
+          },
+          "doc": {
+            "raw": "Logger with implements and varargs.",
+            "format": "javadoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "class"
+        },
+        {
+          "id": "Logger.run",
+          "name": "run",
+          "kind": "method",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Point.java",
+            "line": 11,
+            "col": 5,
+            "end_line": 11
+          },
+          "owner": "Logger",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": null,
+            "returns": [],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Logger.log",
+          "name": "log",
+          "kind": "method",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Point.java",
+            "line": 12,
+            "col": 5,
+            "end_line": 12
+          },
+          "owner": "Logger",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "",
+                "type": "..."
+              }
+            ],
+            "returns": [],
+            "type_params": null,
+            "variadic": false
+          }
+        }
+      ]
+    },
+    ".assayxport/com/foo/sub.json": {
+      "schema_version": "1",
+      "package": {
+        "id": "com.foo.sub",
+        "language": "java",
+        "path": "com/foo/sub",
+        "name": "sub",
+        "doc": "",
+        "level": "package",
+        "members": [
+          "com.foo.sub.Leaf"
+        ]
+      },
+      "symbols": null
+    },
+    ".assayxport/com/foo/sub/Leaf.java.json": {
+      "schema_version": "1",
+      "package": {
+        "id": "com.foo.sub.Leaf",
+        "language": "java",
+        "path": "com/foo/sub/Leaf.java",
+        "name": "Leaf",
+        "doc": "",
+        "level": "module"
+      },
+      "symbols": [
+        {
+          "id": "Leaf",
+          "name": "Leaf",
+          "kind": "type",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/sub/Leaf.java",
+            "line": 2,
+            "col": 1,
+            "end_line": 2
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "class"
+        }
+      ]
+    }
+  }
+}
