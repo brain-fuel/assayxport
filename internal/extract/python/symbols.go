@@ -48,7 +48,7 @@ func moduleSymbols(relFile string, src []byte) (syms []schema.Symbol, moduleDoc 
 			if s, ok := assignmentVariable(child, "", src, relFile); ok {
 				syms = append(syms, s)
 			}
-		case "function_definition":
+		case "function_definition", "async_function_definition":
 			syms = append(syms, funcSymbol(child, "", src, relFile, nil, isAsyncDef(child, src)))
 		case "class_definition":
 			syms = append(syms, classSymbols(child, src, relFile, nil)...)
@@ -57,10 +57,10 @@ func moduleSymbols(relFile string, src []byte) (syms []schema.Symbol, moduleDoc 
 			if def.IsNull() {
 				continue
 			}
-			switch def.Type() {
-			case "function_definition":
+			switch {
+			case isFuncDef(def.Type()):
 				syms = append(syms, funcSymbol(def, "", src, relFile, decorators, isAsyncDef(def, src)))
-			case "class_definition":
+			case def.Type() == "class_definition":
 				syms = append(syms, classSymbols(def, src, relFile, decorators)...)
 			}
 		case "if_statement":
@@ -151,11 +151,11 @@ func classSymbols(node ts.Node, src []byte, relFile string, decorators []string)
 	for i := 0; i < body.NamedChildCount(); i++ {
 		member := body.NamedChild(i)
 		switch member.Type() {
-		case "function_definition":
+		case "function_definition", "async_function_definition":
 			out = append(out, funcSymbol(member, name, src, relFile, nil, isAsyncDef(member, src)))
 		case "decorated_definition":
 			decos, def := unwrapDecorated(member, src)
-			if def.Type() == "function_definition" {
+			if isFuncDef(def.Type()) {
 				out = append(out, funcSymbol(def, name, src, relFile, decos, isAsyncDef(def, src)))
 			}
 		case "assignment":
@@ -250,8 +250,20 @@ func hasDecorator(decorators []string, name string) bool {
 	return false
 }
 
-// isAsyncDef reports whether a function_definition is declared async.
+// isFuncDef reports whether a node is a function definition. The pinned
+// gotreesitter grammar emits "function_definition" for both sync and async
+// defs, but the canonical tree-sitter-python grammar uses a dedicated
+// "async_function_definition" type in some versions; accept both so a future
+// grammar bump cannot silently drop async functions.
+func isFuncDef(t string) bool {
+	return t == "function_definition" || t == "async_function_definition"
+}
+
+// isAsyncDef reports whether a function definition is declared async.
 func isAsyncDef(node ts.Node, src []byte) bool {
+	if node.Type() == "async_function_definition" {
+		return true
+	}
 	return strings.HasPrefix(strings.TrimSpace(node.Content(src)), "async")
 }
 
