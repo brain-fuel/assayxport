@@ -1,0 +1,59 @@
+// Package java extracts a Java source tree into assayxport's schema.
+package java
+
+import (
+	"io/fs"
+	"path/filepath"
+	"sort"
+	"strings"
+)
+
+type javaFile struct {
+	Abs string
+	Rel string
+}
+
+// buildDirs are directory names that hold generated or compiled output and are
+// never part of the source API surface.
+var buildDirs = map[string]bool{
+	"target": true, // Maven
+	"build":  true, // Gradle
+	"out":    true, // IntelliJ
+	"bin":    true, // Eclipse
+}
+
+// discover enumerates .java files under root, sorted by relative POSIX path.
+// Dot-directories and common build-output directories are skipped.
+func discover(root string) ([]javaFile, error) {
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+	var out []javaFile
+	err = filepath.WalkDir(absRoot, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			base := d.Name()
+			if path != absRoot && (strings.HasPrefix(base, ".") || buildDirs[base]) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(d.Name(), ".java") {
+			return nil
+		}
+		rel, err := filepath.Rel(absRoot, path)
+		if err != nil {
+			return err
+		}
+		out = append(out, javaFile{Abs: path, Rel: filepath.ToSlash(rel)})
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Rel < out[j].Rel })
+	return out, nil
+}
