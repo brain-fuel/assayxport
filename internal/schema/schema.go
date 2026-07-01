@@ -17,14 +17,18 @@ type Index struct {
 
 // PackageEntry is one package's summary in the index, pointing at its shard.
 type PackageEntry struct {
-	ID              string `json:"id"`
-	Language        string `json:"language"`
-	Path            string `json:"path"`
-	Name            string `json:"name"`
-	Doc             string `json:"doc"`
-	SymbolCount     int    `json:"symbol_count"`
-	EntrypointCount int    `json:"entrypoint_count"`
-	Shard           string `json:"shard"`
+	ID              string      `json:"id"`
+	Language        string      `json:"language"`
+	Path            string      `json:"path"`
+	Name            string      `json:"name"`
+	Doc             string      `json:"doc"`
+	Level           string      `json:"level,omitempty"`
+	Members         []string    `json:"members,omitempty"`
+	IsEntrypoint    bool        `json:"is_entrypoint,omitempty"`
+	Invocation      *Invocation `json:"invocation,omitempty"`
+	SymbolCount     int         `json:"symbol_count"`
+	EntrypointCount int         `json:"entrypoint_count"`
+	Shard           string      `json:"shard"`
 }
 
 // Shard is one package's full symbol listing, written to .assayxport/<dir>.json.
@@ -36,22 +40,30 @@ type Shard struct {
 
 // PackageInfo identifies a package inside its shard.
 type PackageInfo struct {
-	ID       string `json:"id"`
-	Language string `json:"language"`
-	Path     string `json:"path"`
-	Name     string `json:"name"`
-	Doc      string `json:"doc"`
+	ID           string      `json:"id"`
+	Language     string      `json:"language"`
+	Path         string      `json:"path"`
+	Name         string      `json:"name"`
+	Doc          string      `json:"doc"`
+	Level        string      `json:"level,omitempty"`
+	Members      []string    `json:"members,omitempty"`
+	IsEntrypoint bool        `json:"is_entrypoint,omitempty"`
+	Invocation   *Invocation `json:"invocation,omitempty"`
 }
 
 // Package is the in-memory result an Extractor returns for one package.
 // It carries everything needed to build both the index entry and the shard.
 type Package struct {
-	ID       string
-	Language string
-	Path     string
-	Name     string
-	Doc      string
-	Symbols  []Symbol
+	ID           string
+	Language     string
+	Path         string
+	Name         string
+	Doc          string
+	Level        string
+	Members      []string
+	IsEntrypoint bool
+	Invocation   *Invocation
+	Symbols      []Symbol
 }
 
 // Symbol is one named declaration. Signature is set only for func/method;

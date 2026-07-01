@@ -1,1 +1,1 @@
-"""Package pkg.sub."""
+"""Sub-package pkg.sub."""

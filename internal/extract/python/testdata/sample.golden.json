@@ -1,0 +1,467 @@
+{
+  "index": {
+    "schema_version": "1",
+    "tool": "assayxport",
+    "languages": [
+      "python"
+    ],
+    "root": ".",
+    "packages": [
+      {
+        "id": "pkg",
+        "language": "python",
+        "path": "pkg",
+        "name": "pkg",
+        "doc": "Package pkg: widget utilities.",
+        "level": "package",
+        "members": [
+          "pkg.mod",
+          "pkg.sub"
+        ],
+        "symbol_count": 2,
+        "entrypoint_count": 0,
+        "shard": ".assayxport/pkg.json"
+      },
+      {
+        "id": "pkg.mod",
+        "language": "python",
+        "path": "pkg/mod.py",
+        "name": "mod",
+        "doc": "Module pkg.mod: main module.",
+        "level": "module",
+        "is_entrypoint": true,
+        "invocation": {
+          "kind": "module",
+          "how": "python -m pkg.mod"
+        },
+        "symbol_count": 8,
+        "entrypoint_count": 1,
+        "shard": ".assayxport/pkg/mod.py.json"
+      },
+      {
+        "id": "pkg.sub",
+        "language": "python",
+        "path": "pkg/sub",
+        "name": "sub",
+        "doc": "Sub-package pkg.sub.",
+        "level": "package",
+        "members": [
+          "pkg.sub.leaf"
+        ],
+        "symbol_count": 0,
+        "entrypoint_count": 0,
+        "shard": ".assayxport/pkg/sub.json"
+      },
+      {
+        "id": "pkg.sub.leaf",
+        "language": "python",
+        "path": "pkg/sub/leaf.py",
+        "name": "leaf",
+        "doc": "Module pkg.sub.leaf.",
+        "level": "module",
+        "symbol_count": 0,
+        "entrypoint_count": 0,
+        "shard": ".assayxport/pkg/sub/leaf.py.json"
+      },
+      {
+        "id": "script",
+        "language": "python",
+        "path": "script.py",
+        "name": "script",
+        "doc": "Top-level script.",
+        "level": "module",
+        "symbol_count": 0,
+        "entrypoint_count": 0,
+        "shard": ".assayxport/script.py.json"
+      }
+    ]
+  },
+  "shards": {
+    ".assayxport/pkg.json": {
+      "schema_version": "1",
+      "package": {
+        "id": "pkg",
+        "language": "python",
+        "path": "pkg",
+        "name": "pkg",
+        "doc": "Package pkg: widget utilities.",
+        "level": "package",
+        "members": [
+          "pkg.mod",
+          "pkg.sub"
+        ]
+      },
+      "symbols": [
+        {
+          "id": "VERSION",
+          "name": "VERSION",
+          "kind": "variable",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/__init__.py",
+            "line": 3,
+            "col": 1,
+            "end_line": 3
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          }
+        },
+        {
+          "id": "create",
+          "name": "create",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/__init__.py",
+            "line": 6,
+            "col": 1,
+            "end_line": 8
+          },
+          "doc": {
+            "raw": "Create a new pkg instance.",
+            "format": "docstring"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": null,
+            "returns": null,
+            "type_params": null,
+            "variadic": false
+          }
+        }
+      ]
+    },
+    ".assayxport/pkg/mod.py.json": {
+      "schema_version": "1",
+      "package": {
+        "id": "pkg.mod",
+        "language": "python",
+        "path": "pkg/mod.py",
+        "name": "mod",
+        "doc": "Module pkg.mod: main module.",
+        "level": "module",
+        "is_entrypoint": true,
+        "invocation": {
+          "kind": "module",
+          "how": "python -m pkg.mod"
+        }
+      },
+      "symbols": [
+        {
+          "id": "_private",
+          "name": "_private",
+          "kind": "variable",
+          "visibility": "unexported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/mod.py",
+            "line": 5,
+            "col": 1,
+            "end_line": 5
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "in_all": false
+        },
+        {
+          "id": "AsyncWorker",
+          "name": "AsyncWorker",
+          "kind": "class",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/mod.py",
+            "line": 8,
+            "col": 1,
+            "end_line": 24
+          },
+          "doc": {
+            "raw": "An async worker class.",
+            "format": "docstring"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "in_all": true
+        },
+        {
+          "id": "AsyncWorker.count",
+          "name": "count",
+          "kind": "variable",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/mod.py",
+            "line": 11,
+            "col": 5,
+            "end_line": 11
+          },
+          "owner": "AsyncWorker",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          }
+        },
+        {
+          "id": "AsyncWorker.__init__",
+          "name": "__init__",
+          "kind": "method",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/mod.py",
+            "line": 13,
+            "col": 5,
+            "end_line": 15
+          },
+          "owner": "AsyncWorker",
+          "doc": {
+            "raw": "Initialize worker.",
+            "format": "docstring"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "self",
+                "type": ""
+              }
+            ],
+            "returns": null,
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "AsyncWorker.label",
+          "name": "label",
+          "kind": "property",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/mod.py",
+            "line": 18,
+            "col": 5,
+            "end_line": 20
+          },
+          "owner": "AsyncWorker",
+          "doc": {
+            "raw": "Worker label.",
+            "format": "docstring"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "self",
+                "type": ""
+              }
+            ],
+            "returns": null,
+            "type_params": null,
+            "variadic": false
+          },
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "id": "AsyncWorker.run",
+          "name": "run",
+          "kind": "method",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/mod.py",
+            "line": 22,
+            "col": 5,
+            "end_line": 24
+          },
+          "owner": "AsyncWorker",
+          "doc": {
+            "raw": "Run the worker asynchronously.",
+            "format": "docstring"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "self",
+                "type": ""
+              }
+            ],
+            "returns": null,
+            "type_params": null,
+            "variadic": false,
+            "modifiers": [
+              "async"
+            ]
+          }
+        },
+        {
+          "id": "fetch",
+          "name": "fetch",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/mod.py",
+            "line": 27,
+            "col": 1,
+            "end_line": 29
+          },
+          "doc": {
+            "raw": "Fetch a URL asynchronously.",
+            "format": "docstring"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "url",
+                "type": "str"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "str"
+              }
+            ],
+            "type_params": null,
+            "variadic": false,
+            "modifiers": [
+              "async"
+            ]
+          },
+          "in_all": false
+        },
+        {
+          "id": "main",
+          "name": "main",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/mod.py",
+            "line": 32,
+            "col": 1,
+            "end_line": 34
+          },
+          "doc": {
+            "raw": "Entry point.",
+            "format": "docstring"
+          },
+          "is_entrypoint": true,
+          "invocation": {
+            "kind": "module",
+            "how": "python -m pkg.mod"
+          },
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": null,
+            "returns": null,
+            "type_params": null,
+            "variadic": false
+          },
+          "in_all": true
+        }
+      ]
+    },
+    ".assayxport/pkg/sub.json": {
+      "schema_version": "1",
+      "package": {
+        "id": "pkg.sub",
+        "language": "python",
+        "path": "pkg/sub",
+        "name": "sub",
+        "doc": "Sub-package pkg.sub.",
+        "level": "package",
+        "members": [
+          "pkg.sub.leaf"
+        ]
+      },
+      "symbols": null
+    },
+    ".assayxport/pkg/sub/leaf.py.json": {
+      "schema_version": "1",
+      "package": {
+        "id": "pkg.sub.leaf",
+        "language": "python",
+        "path": "pkg/sub/leaf.py",
+        "name": "leaf",
+        "doc": "Module pkg.sub.leaf.",
+        "level": "module"
+      },
+      "symbols": null
+    },
+    ".assayxport/script.py.json": {
+      "schema_version": "1",
+      "package": {
+        "id": "script",
+        "language": "python",
+        "path": "script.py",
+        "name": "script",
+        "doc": "Top-level script.",
+        "level": "module"
+      },
+      "symbols": null
+    }
+  }
+}

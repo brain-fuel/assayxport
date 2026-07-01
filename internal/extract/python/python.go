@@ -1,0 +1,148 @@
+// Package python implements the assayxport Extractor for Python source trees.
+// It produces one schema.Package per .py module (level "module") and one per
+// package directory containing an __init__.py (level "package").
+package python
+
+import (
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	"goforge.dev/assayxport/internal/schema"
+)
+
+// Extractor implements extract.Extractor for Python.
+type Extractor struct{}
+
+// New returns a new Python Extractor.
+func New() *Extractor { return &Extractor{} }
+
+// Language returns "python".
+func (*Extractor) Language() string { return "python" }
+
+// Extract discovers all .py files under root and returns one schema.Package
+// per module and one per package directory. Units are sorted by ID.
+func (*Extractor) Extract(root string) ([]schema.Package, error) {
+	files, err := discover(root)
+	if err != nil {
+		return nil, err
+	}
+
+	moduleUnits := make(map[string]schema.Package)  // moduleID -> Package
+	packageUnits := make(map[string]schema.Package) // packageID -> Package
+
+	for _, f := range files {
+		src, rerr := os.ReadFile(f.Abs)
+		if rerr != nil {
+			return nil, rerr
+		}
+		syms, moduleDoc, _, hasMain, serr := moduleSymbols(f.Rel, src)
+		if serr != nil {
+			return nil, serr
+		}
+
+		if f.IsInit {
+			// Package unit: symbols come from __init__.py itself.
+			name := lastSegment(f.PackageID)
+			dir := filepath.ToSlash(filepath.Dir(f.Rel))
+			if dir == "." {
+				dir = ""
+			}
+			pkg := schema.Package{
+				ID:       f.PackageID,
+				Language: "python",
+				Path:     dir,
+				Name:     name,
+				Level:    "package",
+				Doc:      moduleDoc,
+				Symbols:  syms,
+			}
+			packageUnits[f.PackageID] = pkg
+		} else {
+			// Module unit.
+			name := lastSegment(f.ModuleID)
+			mod := schema.Package{
+				ID:       f.ModuleID,
+				Language: "python",
+				Path:     f.Rel,
+				Name:     name,
+				Level:    "module",
+				Doc:      moduleDoc,
+				Symbols:  syms,
+			}
+			if hasMain {
+				mod.IsEntrypoint = true
+				mod.Invocation = &schema.Invocation{
+					Kind: "module",
+					How:  "python -m " + f.ModuleID,
+				}
+				// Mark the top-level def main symbol as an entrypoint too.
+				for i := range mod.Symbols {
+					s := &mod.Symbols[i]
+					if s.Name == "main" && s.Kind == "function" && s.Owner == "" {
+						s.IsEntrypoint = true
+						s.Invocation = &schema.Invocation{
+							Kind: "module",
+							How:  "python -m " + f.ModuleID,
+						}
+					}
+				}
+			}
+			moduleUnits[f.ModuleID] = mod
+		}
+	}
+
+	// Compute Members for each package unit: direct child modules and sub-packages.
+	// "Direct child" means the child ID has exactly one more dotted segment.
+	for pkgID, pkg := range packageUnits {
+		var members []string
+		for modID := range moduleUnits {
+			if isDirectChild(pkgID, modID) {
+				members = append(members, modID)
+			}
+		}
+		for subID := range packageUnits {
+			if subID != pkgID && isDirectChild(pkgID, subID) {
+				members = append(members, subID)
+			}
+		}
+		sort.Strings(members)
+		pkg.Members = members
+		packageUnits[pkgID] = pkg
+	}
+
+	// Collect all units and sort by ID for stable output.
+	out := make([]schema.Package, 0, len(moduleUnits)+len(packageUnits))
+	for _, p := range moduleUnits {
+		out = append(out, p)
+	}
+	for _, p := range packageUnits {
+		out = append(out, p)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out, nil
+}
+
+// isDirectChild reports whether childID is a direct child of parentID in
+// dotted-path terms: parentID is a proper prefix and no further dots follow.
+func isDirectChild(parentID, childID string) bool {
+	if parentID == "" {
+		return !strings.Contains(childID, ".")
+	}
+	prefix := parentID + "."
+	if !strings.HasPrefix(childID, prefix) {
+		return false
+	}
+	rest := childID[len(prefix):]
+	return rest != "" && !strings.Contains(rest, ".")
+}
+
+// lastSegment returns the last dotted segment of a dotted-path id,
+// or the whole string if there are no dots.
+func lastSegment(dotted string) string {
+	if i := strings.LastIndex(dotted, "."); i >= 0 {
+		return dotted[i+1:]
+	}
+	return dotted
+}

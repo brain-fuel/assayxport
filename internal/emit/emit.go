@@ -94,14 +94,28 @@ func Manifest(pkgs []schema.Package, module string, languages []string) (schema.
 			Path:            p.Path,
 			Name:            p.Name,
 			Doc:             p.Doc,
+			Level:           p.Level,
+			Members:         p.Members,
+			IsEntrypoint:    p.IsEntrypoint,
+			Invocation:      p.Invocation,
 			SymbolCount:     len(syms),
 			EntrypointCount: entrypoints,
 			Shard:           sp,
 		})
 		shards[sp] = schema.Shard{
 			SchemaVersion: schema.Version,
-			Package:       schema.PackageInfo{ID: p.ID, Language: p.Language, Path: p.Path, Name: p.Name, Doc: p.Doc},
-			Symbols:       syms,
+			Package: schema.PackageInfo{
+				ID:           p.ID,
+				Language:     p.Language,
+				Path:         p.Path,
+				Name:         p.Name,
+				Doc:          p.Doc,
+				Level:        p.Level,
+				Members:      p.Members,
+				IsEntrypoint: p.IsEntrypoint,
+				Invocation:   p.Invocation,
+			},
+			Symbols: syms,
 		}
 	}
 	return idx, shards
