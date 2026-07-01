@@ -21,6 +21,8 @@ type Language int
 const (
 	// Python selects the tree-sitter Python grammar.
 	Python Language = iota
+	// Java selects the tree-sitter Java grammar.
+	Java
 )
 
 // pythonLang holds the lazily-initialized Python grammar. Loading the grammar
@@ -35,6 +37,20 @@ func python() *gts.Language {
 		pythonLang = grammars.PythonLanguage()
 	})
 	return pythonLang
+}
+
+// javaLang holds the lazily-initialized Java grammar, decoded once under
+// sync.Once (mirrors python()).
+var (
+	javaOnce sync.Once
+	javaLang *gts.Language
+)
+
+func java() *gts.Language {
+	javaOnce.Do(func() {
+		javaLang = grammars.JavaLanguage()
+	})
+	return javaLang
 }
 
 // Tree is a parsed syntax tree. It keeps the source bytes and grammar alongside
@@ -60,6 +76,8 @@ func Parse(lang Language, src []byte) (*Tree, error) {
 	switch lang {
 	case Python:
 		g = python()
+	case Java:
+		g = java()
 	default:
 		return nil, fmt.Errorf("ts: unsupported language %d", int(lang))
 	}

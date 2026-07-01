@@ -28,6 +28,19 @@ func TestParsePythonFunction(t *testing.T) {
 	}
 }
 
+func TestParseJava(t *testing.T) {
+	src := []byte("package com.foo;\npublic class Bar { public int x() { return 1; } }\n")
+	tree, err := Parse(Java, src)
+	if err != nil {
+		t.Fatalf("Parse(Java): %v", err)
+	}
+	root := tree.Root()
+	if root.IsNull() || root.NamedChildCount() == 0 {
+		t.Fatalf("empty Java tree: type=%q count=%d", root.Type(), root.NamedChildCount())
+	}
+}
+
+
 func TestParseDeterministic(t *testing.T) {
 	src := []byte("class C:\n    def m(self):\n        pass\n")
 	a, err := Parse(Python, src)
