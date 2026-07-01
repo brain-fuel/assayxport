@@ -37,6 +37,8 @@ func (*Extractor) Extract(root string) ([]schema.Package, error) {
 		if rerr != nil {
 			return nil, rerr
 		}
+		// The discarded return is the __all__ membership set, already stamped
+		// onto each symbol's InAll inside moduleSymbols; not needed at unit level.
 		syms, moduleDoc, _, hasMain, serr := moduleSymbols(f.Rel, src)
 		if serr != nil {
 			return nil, serr
@@ -95,7 +97,10 @@ func (*Extractor) Extract(root string) ([]schema.Package, error) {
 
 	// Compute Members for each package unit: direct child modules and sub-packages.
 	// "Direct child" means the child ID has exactly one more dotted segment.
-	for pkgID, pkg := range packageUnits {
+	// Collect the computed member lists first, then apply, so we never write to
+	// packageUnits while ranging over it.
+	memberLists := make(map[string][]string, len(packageUnits))
+	for pkgID := range packageUnits {
 		var members []string
 		for modID := range moduleUnits {
 			if isDirectChild(pkgID, modID) {
@@ -108,6 +113,10 @@ func (*Extractor) Extract(root string) ([]schema.Package, error) {
 			}
 		}
 		sort.Strings(members)
+		memberLists[pkgID] = members
+	}
+	for pkgID, members := range memberLists {
+		pkg := packageUnits[pkgID]
 		pkg.Members = members
 		packageUnits[pkgID] = pkg
 	}
