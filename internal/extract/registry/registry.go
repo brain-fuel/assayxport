@@ -7,13 +7,14 @@ import (
 
 	"goforge.dev/assayxport/internal/extract"
 	"goforge.dev/assayxport/internal/extract/golang"
+	"goforge.dev/assayxport/internal/extract/java"
 	"goforge.dev/assayxport/internal/extract/python"
 	"goforge.dev/assayxport/internal/schema"
 )
 
-// All returns every registered extractor (go, python), in a stable order.
+// All returns every registered extractor (go, java, python), in a stable order.
 func All() []extract.Extractor {
-	return []extract.Extractor{golang.New(), python.New()}
+	return []extract.Extractor{golang.New(), java.New(), python.New()}
 }
 
 // Select returns the extractors whose Language() is in langs; error if any
