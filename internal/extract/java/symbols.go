@@ -72,7 +72,6 @@ func compilationUnit(relFile string, src []byte) (cuResult, error) {
 			if _, ok := typeDeclTypes[child.Type()]; ok {
 				syms := typeSymbols(child, "", src, relFile, pendingDoc)
 				res.Syms = append(res.Syms, syms...)
-				pendingDoc = schema.Doc{}
 
 				// main detection is anchored to the top-level type only: a main
 				// inside a nested type does not set the unit entrypoint in SP3.
@@ -84,6 +83,9 @@ func compilationUnit(relFile string, src []byte) (cuResult, error) {
 					}
 				}
 			}
+			// Any non-comment sibling (type declaration, import, etc.) ends the
+			// scope of a pending Javadoc.
+			pendingDoc = schema.Doc{}
 		}
 	}
 
@@ -140,6 +142,8 @@ func typeSymbols(node ts.Node, ownerPrefix string, src []byte, relFile string, d
 			if raw := javadocText(member, src); raw != "" {
 				pendingDoc = schema.Doc{Raw: raw, Format: "javadoc"}
 			}
+		case "line_comment":
+			// a line comment does not end a pending Javadoc
 		case "method_declaration":
 			out = append(out, methodSymbol(member, id, src, relFile, pendingDoc))
 			pendingDoc = schema.Doc{}
@@ -155,8 +159,10 @@ func typeSymbols(node ts.Node, ownerPrefix string, src []byte, relFile string, d
 		default:
 			if _, ok := typeDeclTypes[member.Type()]; ok {
 				out = append(out, typeSymbols(member, id, src, relFile, pendingDoc)...)
-				pendingDoc = schema.Doc{}
 			}
+			// Any other member (static/instance initializer, etc.) ends the
+			// scope of a pending Javadoc.
+			pendingDoc = schema.Doc{}
 		}
 	}
 	return out
@@ -233,7 +239,7 @@ func fieldSymbols(node ts.Node, owner string, src []byte, relFile string, doc sc
 			Kind:            "field",
 			Visibility:      vis,
 			VisibilityIdiom: "access-modifier",
-			Location:        locationOf(node, relFile),
+			Location:        locationOf(c, relFile),
 			Owner:           owner,
 			Doc:             doc,
 			Complexity:      schema.DeferredComplexity(),
@@ -322,6 +328,14 @@ func javaModifiers(mods ts.Node, src []byte) []string {
 	return out
 }
 
+// simpleName returns the last dotted segment of a name, or the whole string.
+func simpleName(name string) string {
+	if i := strings.LastIndex(name, "."); i >= 0 {
+		return name[i+1:]
+	}
+	return name
+}
+
 // annotationNames returns bare annotation names (arguments dropped) from the
 // modifiers node, in source order.
 func annotationNames(mods ts.Node, src []byte) []string {
@@ -332,7 +346,9 @@ func annotationNames(mods ts.Node, src []byte) []string {
 	for i := 0; i < mods.NamedChildCount(); i++ {
 		c := mods.NamedChild(i)
 		if c.Type() == "annotation" || c.Type() == "marker_annotation" {
-			out = append(out, fieldText(c, "name", src))
+			// A fully-qualified annotation (@java.lang.Override) reduces to its
+			// simple name.
+			out = append(out, simpleName(fieldText(c, "name", src)))
 		}
 	}
 	return out
