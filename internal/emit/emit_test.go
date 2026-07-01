@@ -64,6 +64,9 @@ func TestManifestCopiesPackageUnitFields(t *testing.T) {
 	idx, shards := Manifest(samplePkgs(), "example.com/s", []string{"go"})
 	// idx.Packages[0] is example.com/s/a (sorted by ID).
 	pe := idx.Packages[0]
+	if pe.ID != "example.com/s/a" {
+		t.Fatalf("Packages[0].ID = %q, want example.com/s/a (test probes the wrong entry)", pe.ID)
+	}
 	if pe.Level != "package" {
 		t.Errorf("PackageEntry.Level = %q, want %q", pe.Level, "package")
 	}
