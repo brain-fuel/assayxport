@@ -24,19 +24,23 @@ func moduleSymbols(relFile string, src []byte) (syms []schema.Symbol, moduleDoc 
 	}
 	root := tree.Root()
 
+	// A leading license/header comment pushes the module docstring off named
+	// index 0; the docstring is the first non-comment statement.
+	docIdx := firstNonCommentIndex(root)
+
 	n := root.NamedChildCount()
 	for i := 0; i < n; i++ {
 		child := root.NamedChild(i)
 		switch child.Type() {
 		case "string":
-			// Module docstring: the first statement, if it is a string.
-			if i == 0 && moduleDoc == "" {
+			// Module docstring: the first (non-comment) statement, if a string.
+			if i == docIdx && moduleDoc == "" {
 				moduleDoc = stringText(child, src)
 			}
 		case "expression_statement":
 			// Canonical grammar wraps a bare string here; support it too.
 			if inner := firstNamedString(child); !inner.IsNull() {
-				if i == 0 && moduleDoc == "" {
+				if i == docIdx && moduleDoc == "" {
 					moduleDoc = stringText(inner, src)
 				}
 			}
@@ -51,7 +55,7 @@ func moduleSymbols(relFile string, src []byte) (syms []schema.Symbol, moduleDoc 
 		case "function_definition", "async_function_definition":
 			syms = append(syms, funcSymbol(child, "", src, relFile, nil, isAsyncDef(child, src)))
 		case "class_definition":
-			syms = append(syms, classSymbols(child, src, relFile, nil)...)
+			syms = append(syms, classSymbols(child, src, relFile, nil, "")...)
 		case "decorated_definition":
 			decorators, def := unwrapDecorated(child, src)
 			if def.IsNull() {
@@ -61,7 +65,7 @@ func moduleSymbols(relFile string, src []byte) (syms []schema.Symbol, moduleDoc 
 			case isFuncDef(def.Type()):
 				syms = append(syms, funcSymbol(def, "", src, relFile, decorators, isAsyncDef(def, src)))
 			case def.Type() == "class_definition":
-				syms = append(syms, classSymbols(def, src, relFile, decorators)...)
+				syms = append(syms, classSymbols(def, src, relFile, decorators, "")...)
 			}
 		case "if_statement":
 			if isMainGuard(child, src) {
@@ -128,16 +132,24 @@ func funcSymbol(node ts.Node, owner string, src []byte, relFile string, decorato
 }
 
 // classSymbols builds the class Symbol plus symbols for its members (methods,
-// properties, and class-attribute variables), all owned by the class.
-func classSymbols(node ts.Node, src []byte, relFile string, decorators []string) []schema.Symbol {
+// properties, class-attribute variables, and nested classes), all owned by the
+// class. ownerPrefix is the enclosing class's fully-qualified id ("" at module
+// level); it makes nested classes and their members carry dotted ids/owners,
+// e.g. Outer.Inner and Outer.Inner.method.
+func classSymbols(node ts.Node, src []byte, relFile string, decorators []string, ownerPrefix string) []schema.Symbol {
 	name := fieldText(node, "name", src)
+	id := name
+	if ownerPrefix != "" {
+		id = ownerPrefix + "." + name
+	}
 	class := schema.Symbol{
-		ID:              name,
+		ID:              id,
 		Name:            name,
 		Kind:            "class",
 		Visibility:      pyVisibility(name),
 		VisibilityIdiom: "underscore",
 		Location:        locationOf(node, relFile),
+		Owner:           ownerPrefix,
 		Doc:             bodyDoc(node, src),
 		Complexity:      schema.DeferredComplexity(),
 		Decorators:      decorators,
@@ -148,18 +160,28 @@ func classSymbols(node ts.Node, src []byte, relFile string, decorators []string)
 	if !ok {
 		return out
 	}
+	// Members are owned by this class's fully-qualified id.
+	memberOwner := id
 	for i := 0; i < body.NamedChildCount(); i++ {
 		member := body.NamedChild(i)
 		switch member.Type() {
 		case "function_definition", "async_function_definition":
-			out = append(out, funcSymbol(member, name, src, relFile, nil, isAsyncDef(member, src)))
+			out = append(out, funcSymbol(member, memberOwner, src, relFile, nil, isAsyncDef(member, src)))
+		case "class_definition":
+			out = append(out, classSymbols(member, src, relFile, nil, memberOwner)...)
 		case "decorated_definition":
 			decos, def := unwrapDecorated(member, src)
-			if isFuncDef(def.Type()) {
-				out = append(out, funcSymbol(def, name, src, relFile, decos, isAsyncDef(def, src)))
+			if def.IsNull() {
+				continue
+			}
+			switch {
+			case isFuncDef(def.Type()):
+				out = append(out, funcSymbol(def, memberOwner, src, relFile, decos, isAsyncDef(def, src)))
+			case def.Type() == "class_definition":
+				out = append(out, classSymbols(def, src, relFile, decos, memberOwner)...)
 			}
 		case "assignment":
-			if s, ok := assignmentVariable(member, name, src, relFile); ok {
+			if s, ok := assignmentVariable(member, memberOwner, src, relFile); ok {
 				out = append(out, s)
 			}
 		}
@@ -274,6 +296,9 @@ func isMainGuard(node ts.Node, src []byte) bool {
 		return false
 	}
 	norm := strings.Join(strings.Fields(cond.Content(src)), "")
+	// Normalize the quote character so single- and double-quoted guards
+	// (`'__main__'` and `"__main__"`) both match.
+	norm = strings.ReplaceAll(norm, "'", `"`)
 	return norm == `__name__=="__main__"` || norm == `"__main__"==__name__`
 }
 
@@ -324,7 +349,12 @@ func bodyDoc(node ts.Node, src []byte) schema.Doc {
 	if !ok || body.NamedChildCount() == 0 {
 		return schema.Doc{}
 	}
-	first := body.NamedChild(0)
+	// A leading comment inside the body pushes the docstring off index 0.
+	idx := firstNonCommentIndex(body)
+	if idx >= body.NamedChildCount() {
+		return schema.Doc{}
+	}
+	first := body.NamedChild(idx)
 	if first.Type() == "string" {
 		return schema.Doc{Raw: stringText(first, src), Format: "docstring"}
 	}
@@ -334,6 +364,20 @@ func bodyDoc(node ts.Node, src []byte) schema.Doc {
 		}
 	}
 	return schema.Doc{}
+}
+
+// firstNonCommentIndex returns the named-child index of the first statement
+// that is not a `comment`. If every named child is a comment (or there are
+// none) it returns NamedChildCount(). Leading license/header comments must not
+// hide a following docstring.
+func firstNonCommentIndex(node ts.Node) int {
+	n := node.NamedChildCount()
+	for i := 0; i < n; i++ {
+		if node.NamedChild(i).Type() != "comment" {
+			return i
+		}
+	}
+	return n
 }
 
 // firstNamedString returns the first named child of type string, or a null node.

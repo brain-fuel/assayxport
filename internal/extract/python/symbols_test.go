@@ -76,4 +76,37 @@ func TestModuleSymbols(t *testing.T) {
 	if c := get(vs, "Widget.count"); c == nil || c.kind != "variable" || c.owner != "Widget" {
 		t.Fatalf("Widget.count = %+v (want class attribute variable)", c)
 	}
+	// Finding 1: nested class + its members appear with dotted owners.
+	if o := get(vs, "Outer"); o == nil || o.kind != "class" || o.owner != "" {
+		t.Fatalf("Outer = %+v (want top-level class)", o)
+	}
+	if in := get(vs, "Outer.Inner"); in == nil || in.kind != "class" || in.owner != "Outer" {
+		t.Fatalf("Outer.Inner = %+v (want nested class owned by Outer)", in)
+	}
+	if p := get(vs, "Outer.Inner.ping"); p == nil || p.kind != "method" || p.owner != "Outer.Inner" {
+		t.Fatalf("Outer.Inner.ping = %+v (want method owned by Outer.Inner)", p)
+	}
+	// Finding 3: docstring preceded by a leading comment is still captured.
+	if d := get(vs, "documented"); d == nil || d.doc != "Documented via comment-preceded docstring." {
+		t.Fatalf("documented = %+v (want comment-preceded docstring captured)", d)
+	}
+}
+
+// TestMainGuardSingleQuote covers Finding 2: a single-quoted __main__ guard is
+// detected just like the double-quoted form.
+func TestMainGuardSingleQuote(t *testing.T) {
+	src := []byte("def main():\n    pass\n\n\nif __name__ == '__main__':\n    main()\n")
+	syms, _, _, hasMain, err := moduleSymbols("guard.py", src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasMain {
+		t.Fatal("single-quote __main__ guard not detected")
+	}
+	// The double-quote form must still work.
+	src2 := []byte("if __name__ == \"__main__\":\n    pass\n")
+	if _, _, _, hasMain2, err := moduleSymbols("guard2.py", src2); err != nil || !hasMain2 {
+		t.Fatalf("double-quote guard: hasMain=%v err=%v", hasMain2, err)
+	}
+	_ = syms
 }

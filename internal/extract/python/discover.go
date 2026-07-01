@@ -42,7 +42,7 @@ func discover(root string) ([]pyFile, error) {
 		if err != nil {
 			return err
 		}
-		mod, pkg, isInit := dottedPath(filepath.Dir(path), d.Name())
+		mod, pkg, isInit := dottedPath(filepath.Dir(path), d.Name(), absRoot)
 		out = append(out, pyFile{
 			Abs:       path,
 			Rel:       filepath.ToSlash(rel),
@@ -61,12 +61,17 @@ func discover(root string) ([]pyFile, error) {
 
 // dottedPath climbs package dirs (those with __init__.py) to build the dotted
 // module id, the containing package id, and whether the file is __init__.py.
-func dottedPath(dir, filename string) (moduleID, packageID string, isInit bool) {
+// The climb is bounded by absRoot: the scan root and any ancestor above it are
+// never folded into an id, so host directory names outside the scan cannot leak
+// in (determinism / "no host data"). A scan root that is itself a package dir
+// therefore does not contribute its basename to module ids.
+func dottedPath(dir, filename, absRoot string) (moduleID, packageID string, isInit bool) {
 	isInit = filename == "__init__.py"
-	// Collect ancestor package names while each dir has __init__.py.
+	// Collect ancestor package names while each dir (strictly below absRoot)
+	// has __init__.py.
 	var names []string
 	d := dir
-	for isPackageDir(d) {
+	for d != absRoot && isPackageDir(d) {
 		names = append(names, filepath.Base(d))
 		parent := filepath.Dir(d)
 		if parent == d {

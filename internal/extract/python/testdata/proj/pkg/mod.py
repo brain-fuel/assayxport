@@ -24,6 +24,17 @@ class AsyncWorker:
         pass
 
 
+class Outer:
+    """Outer container."""
+
+    class Inner:
+        """Nested inner class."""
+
+        def ping(self):
+            """Ping the inner."""
+            pass
+
+
 async def fetch(url: str) -> str:
     """Fetch a URL asynchronously."""
     pass

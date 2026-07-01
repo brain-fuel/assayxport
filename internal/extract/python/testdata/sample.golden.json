@@ -8,6 +8,22 @@
     "root": ".",
     "packages": [
       {
+        "id": "entry",
+        "language": "python",
+        "path": "entry.py",
+        "name": "entry",
+        "doc": "Module entry: single-quote guard entrypoint.",
+        "level": "module",
+        "is_entrypoint": true,
+        "invocation": {
+          "kind": "module",
+          "how": "python -m entry"
+        },
+        "symbol_count": 1,
+        "entrypoint_count": 1,
+        "shard": ".assayxport/entry.py.json"
+      },
+      {
         "id": "pkg",
         "language": "python",
         "path": "pkg",
@@ -34,7 +50,7 @@
           "kind": "module",
           "how": "python -m pkg.mod"
         },
-        "symbol_count": 8,
+        "symbol_count": 11,
         "entrypoint_count": 1,
         "shard": ".assayxport/pkg/mod.py.json"
       },
@@ -77,6 +93,57 @@
     ]
   },
   "shards": {
+    ".assayxport/entry.py.json": {
+      "schema_version": "1",
+      "package": {
+        "id": "entry",
+        "language": "python",
+        "path": "entry.py",
+        "name": "entry",
+        "doc": "Module entry: single-quote guard entrypoint.",
+        "level": "module",
+        "is_entrypoint": true,
+        "invocation": {
+          "kind": "module",
+          "how": "python -m entry"
+        }
+      },
+      "symbols": [
+        {
+          "id": "main",
+          "name": "main",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "entry.py",
+            "line": 5,
+            "col": 1,
+            "end_line": 7
+          },
+          "doc": {
+            "raw": "Run the entry module.",
+            "format": "docstring"
+          },
+          "is_entrypoint": true,
+          "invocation": {
+            "kind": "module",
+            "how": "python -m entry"
+          },
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": null,
+            "returns": null,
+            "type_params": null,
+            "variadic": false
+          }
+        }
+      ]
+    },
     ".assayxport/pkg.json": {
       "schema_version": "1",
       "package": {
@@ -346,6 +413,89 @@
           }
         },
         {
+          "id": "Outer",
+          "name": "Outer",
+          "kind": "class",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/mod.py",
+            "line": 27,
+            "col": 1,
+            "end_line": 35
+          },
+          "doc": {
+            "raw": "Outer container.",
+            "format": "docstring"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "in_all": false
+        },
+        {
+          "id": "Outer.Inner",
+          "name": "Inner",
+          "kind": "class",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/mod.py",
+            "line": 30,
+            "col": 5,
+            "end_line": 35
+          },
+          "owner": "Outer",
+          "doc": {
+            "raw": "Nested inner class.",
+            "format": "docstring"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          }
+        },
+        {
+          "id": "Outer.Inner.ping",
+          "name": "ping",
+          "kind": "method",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/mod.py",
+            "line": 33,
+            "col": 9,
+            "end_line": 35
+          },
+          "owner": "Outer.Inner",
+          "doc": {
+            "raw": "Ping the inner.",
+            "format": "docstring"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "self",
+                "type": ""
+              }
+            ],
+            "returns": null,
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
           "id": "fetch",
           "name": "fetch",
           "kind": "function",
@@ -353,9 +503,9 @@
           "visibility_idiom": "underscore",
           "location": {
             "file": "pkg/mod.py",
-            "line": 27,
+            "line": 38,
             "col": 1,
-            "end_line": 29
+            "end_line": 40
           },
           "doc": {
             "raw": "Fetch a URL asynchronously.",
@@ -396,9 +546,9 @@
           "visibility_idiom": "underscore",
           "location": {
             "file": "pkg/mod.py",
-            "line": 32,
+            "line": 43,
             "col": 1,
-            "end_line": 34
+            "end_line": 45
           },
           "doc": {
             "raw": "Entry point.",

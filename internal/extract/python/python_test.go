@@ -20,6 +20,18 @@ func pkgByID(ps []schema.Package, id string) *schema.Package {
 	return nil
 }
 
+func symByID(p *schema.Package, id string) *schema.Symbol {
+	if p == nil {
+		return nil
+	}
+	for i := range p.Symbols {
+		if p.Symbols[i].ID == id {
+			return &p.Symbols[i]
+		}
+	}
+	return nil
+}
+
 func TestExtractUnits(t *testing.T) {
 	ps, err := New().Extract("testdata/proj")
 	if err != nil {
@@ -58,6 +70,47 @@ func TestExtractUnits(t *testing.T) {
 	sub := pkgByID(ps, "pkg.sub")
 	if sub == nil || sub.Level != "package" {
 		t.Fatalf("pkg.sub unit = %+v", sub)
+	}
+	// Finding 1 (end-to-end): nested class in pkg.mod carries dotted owners.
+	if in := symByID(mod, "Outer.Inner"); in == nil || in.Kind != "class" || in.Owner != "Outer" {
+		t.Fatalf("pkg.mod Outer.Inner = %+v (want nested class owned by Outer)", in)
+	}
+	if ping := symByID(mod, "Outer.Inner.ping"); ping == nil || ping.Kind != "method" || ping.Owner != "Outer.Inner" {
+		t.Fatalf("pkg.mod Outer.Inner.ping = %+v (want method owned by Outer.Inner)", ping)
+	}
+	// Finding 2 (end-to-end): single-quote guard module is an entrypoint,
+	// and its module docstring survives a leading license comment (Finding 3).
+	entry := pkgByID(ps, "entry")
+	if entry == nil || !entry.IsEntrypoint {
+		t.Fatalf("entry unit = %+v (want single-quote-guard entrypoint)", entry)
+	}
+	if entry.Doc != "Module entry: single-quote guard entrypoint." {
+		t.Fatalf("entry.Doc = %q (want comment-preceded module docstring)", entry.Doc)
+	}
+	if em := symByID(entry, "main"); em == nil || !em.IsEntrypoint {
+		t.Fatalf("entry.main = %+v (want entrypoint symbol)", em)
+	}
+}
+
+// TestDoubleRunByteIdentical covers the spec's determinism deliverable: two
+// full extract+emit passes over the Python fixture produce byte-identical output.
+func TestDoubleRunByteIdentical(t *testing.T) {
+	run := func() []byte {
+		ps, err := New().Extract("testdata/proj")
+		if err != nil {
+			t.Fatal(err)
+		}
+		idx, shards := emit.Manifest(ps, "", []string{"python"})
+		out, err := emit.Combined(idx, shards)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+	a := run()
+	b := run()
+	if string(a) != string(b) {
+		t.Fatalf("Python extract+emit not byte-identical across runs")
 	}
 }
 

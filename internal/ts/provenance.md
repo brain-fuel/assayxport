@@ -8,7 +8,7 @@ Python tasks depend on the stable API in `ts.go`, never on the library directly.
 
 - **Chosen library:** `github.com/odvcencio/gotreesitter` v0.20.7 (the brief's *fallback*).
 - **Runtime model:** pure-Go, **cgo-free** tree-sitter runtime. No WASM runtime, no
-  C toolchain, no shared objects — the parser and grammars are plain Go.
+  C toolchain, no shared objects; the parser and grammars are plain Go.
 - **License:** see the module's `LICENSE`.
 
 ### Why the fallback and not the primary (`github.com/malivvan/tree-sitter`)
@@ -18,7 +18,7 @@ and its source, and rejected for three concrete reasons:
 
 1. **No Python accessor.** It statically links grammars into a single embedded
    `lib/ts.wasm` and exposes only `LanguageC()` / `LanguageCpp()`. There is **no
-   grammar-from-bytes / load-from-WASM API** the brief hoped for — grammars are
+   grammar-from-bytes / load-from-WASM API** the brief hoped for; grammars are
    compiled into `ts.wasm` at build time via a `zig cc` + codegen Makefile step.
    Adding Python would require forking the library, editing the Makefile, and
    rebuilding the WASM with the vendored `src/python` sources.
@@ -38,7 +38,7 @@ transitive dep were removed by `go mod tidy` after the switch.
 
 ## Python grammar
 
-- **Built-in — not vendored.** No `python.wasm` (or any grammar file) is vendored
+- **Built-in, not vendored.** No `python.wasm` (or any grammar file) is vendored
   into this repo. The `grammars/` directory referenced by the brief is therefore
   intentionally absent.
 - Obtained at runtime via `grammars.PythonLanguage()`, which lazily decodes an

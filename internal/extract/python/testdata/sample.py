@@ -34,5 +34,22 @@ class Widget:
         return None
 
 
+class Outer:
+    """Outer class."""
+
+    class Inner:
+        """Inner class."""
+
+        def ping(self):
+            """Ping."""
+            return "pong"
+
+
+def documented():
+    # leading comment before the docstring
+    """Documented via comment-preceded docstring."""
+    return 1
+
+
 if __name__ == "__main__":
     make("x")
