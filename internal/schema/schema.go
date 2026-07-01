@@ -73,6 +73,9 @@ type Symbol struct {
 	TypeKind   string     `json:"type_kind,omitempty"`
 	Underlying string     `json:"underlying,omitempty"`
 	Type       string     `json:"type,omitempty"`
+
+	InAll      *bool    `json:"in_all,omitempty"`
+	Decorators []string `json:"decorators,omitempty"`
 }
 
 // Signature describes a func or method.
@@ -82,6 +85,7 @@ type Signature struct {
 	TypeParams []TypeParam `json:"type_params"`
 	Receiver   *Param      `json:"receiver,omitempty"`
 	Variadic   bool        `json:"variadic"`
+	Modifiers  []string    `json:"modifiers,omitempty"`
 }
 
 // Param is one parameter, result, or receiver. Name may be empty.
