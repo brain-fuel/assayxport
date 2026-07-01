@@ -31,11 +31,16 @@ func Select(langs []string) ([]extract.Extractor, error) {
 	}
 	sort.Strings(available)
 	var out []extract.Extractor
+	seen := map[string]bool{}
 	for _, l := range langs {
 		e, ok := byLang[l]
 		if !ok {
 			return nil, fmt.Errorf("unknown language %q; available: %v", l, available)
 		}
+		if seen[l] {
+			continue // ignore repeated --lang so output is not duplicated
+		}
+		seen[l] = true
 		out = append(out, e)
 	}
 	return out, nil

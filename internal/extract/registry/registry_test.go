@@ -19,6 +19,16 @@ func TestSelectSubset(t *testing.T) {
 	}
 }
 
+func TestSelectDedupsRepeatedLang(t *testing.T) {
+	exts, err := Select([]string{"go", "go"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(exts) != 1 {
+		t.Fatalf("Select([go, go]) = %d extractors, want 1 (deduped)", len(exts))
+	}
+}
+
 func TestAllRegistered(t *testing.T) {
 	langs := map[string]bool{}
 	for _, e := range All() {
