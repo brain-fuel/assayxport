@@ -62,7 +62,7 @@ func (*Extractor) Extract(root string) ([]schema.Package, error) {
 				pkg.ID = res.PackageName
 				pkg.Language = "java"
 				pkg.Level = "package"
-				pkg.Name = lastSegment(res.PackageName)
+				pkg.Name = simpleName(res.PackageName)
 				pkg.Doc = res.PackageDoc
 				packageUnits[res.PackageName] = pkg
 				pkgDir[res.PackageName] = dir
@@ -89,14 +89,16 @@ func (*Extractor) Extract(root string) ([]schema.Package, error) {
 			if res.PackageName != "" {
 				fqcn = res.PackageName + "." + res.MainType
 			}
-			inv := &schema.Invocation{Kind: "class", How: "java " + fqcn}
+			how := "java " + fqcn
 			mod.IsEntrypoint = true
-			mod.Invocation = inv
+			// The module unit and the stamped main symbol each get their own
+			// Invocation value (same fields) to avoid sharing one pointer.
+			mod.Invocation = &schema.Invocation{Kind: "class", How: how}
 			for i := range mod.Symbols {
 				s := &mod.Symbols[i]
 				if s.Kind == "method" && s.Name == "main" && s.Owner == res.MainType {
 					s.IsEntrypoint = true
-					s.Invocation = inv
+					s.Invocation = &schema.Invocation{Kind: "class", How: how}
 				}
 			}
 		}
@@ -110,7 +112,7 @@ func (*Extractor) Extract(root string) ([]schema.Package, error) {
 					ID:       res.PackageName,
 					Language: "java",
 					Level:    "package",
-					Name:     lastSegment(res.PackageName),
+					Name:     simpleName(res.PackageName),
 				}
 			}
 			if !pkgHasInfo[res.PackageName] {
@@ -168,12 +170,4 @@ func isDirectChild(parentID, childID string) bool {
 	}
 	rest := childID[len(prefix):]
 	return rest != "" && !strings.Contains(rest, ".")
-}
-
-// lastSegment returns the last dotted segment, or the whole string if none.
-func lastSegment(dotted string) string {
-	if i := strings.LastIndex(dotted, "."); i >= 0 {
-		return dotted[i+1:]
-	}
-	return dotted
 }

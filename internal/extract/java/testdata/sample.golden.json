@@ -15,6 +15,7 @@
         "doc": "The com.foo package.",
         "level": "package",
         "members": [
+          "com.foo.App",
           "com.foo.Bar",
           "com.foo.Point",
           "com.foo.sub"
@@ -22,6 +23,22 @@
         "symbol_count": 0,
         "entrypoint_count": 0,
         "shard": ".assayxport/com/foo.json"
+      },
+      {
+        "id": "com.foo.App",
+        "language": "java",
+        "path": "com/foo/App.java",
+        "name": "App",
+        "doc": "",
+        "level": "module",
+        "is_entrypoint": true,
+        "invocation": {
+          "kind": "class",
+          "how": "java com.foo.App"
+        },
+        "symbol_count": 2,
+        "entrypoint_count": 1,
+        "shard": ".assayxport/com/foo/App.java.json"
       },
       {
         "id": "com.foo.Bar",
@@ -46,7 +63,7 @@
         "name": "Point",
         "doc": "",
         "level": "module",
-        "symbol_count": 5,
+        "symbol_count": 9,
         "entrypoint_count": 0,
         "shard": ".assayxport/com/foo/Point.java.json"
       },
@@ -88,12 +105,97 @@
         "doc": "The com.foo package.",
         "level": "package",
         "members": [
+          "com.foo.App",
           "com.foo.Bar",
           "com.foo.Point",
           "com.foo.sub"
         ]
       },
       "symbols": null
+    },
+    ".assayxport/com/foo/App.java.json": {
+      "schema_version": "1",
+      "package": {
+        "id": "com.foo.App",
+        "language": "java",
+        "path": "com/foo/App.java",
+        "name": "App",
+        "doc": "",
+        "level": "module",
+        "is_entrypoint": true,
+        "invocation": {
+          "kind": "class",
+          "how": "java com.foo.App"
+        }
+      },
+      "symbols": [
+        {
+          "id": "App",
+          "name": "App",
+          "kind": "type",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/App.java",
+            "line": 4,
+            "col": 1,
+            "end_line": 8
+          },
+          "doc": {
+            "raw": "App uses a varargs main entrypoint.",
+            "format": "javadoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "class"
+        },
+        {
+          "id": "App.main",
+          "name": "main",
+          "kind": "method",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/App.java",
+            "line": 5,
+            "col": 5,
+            "end_line": 7
+          },
+          "owner": "App",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": true,
+          "invocation": {
+            "kind": "class",
+            "how": "java com.foo.App"
+          },
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "args",
+                "type": "String..."
+              }
+            ],
+            "returns": [],
+            "type_params": null,
+            "variadic": false,
+            "modifiers": [
+              "static"
+            ]
+          }
+        }
+      ]
     },
     ".assayxport/com/foo/Bar.java.json": {
       "schema_version": "1",
@@ -504,6 +606,56 @@
           "type_kind": "record"
         },
         {
+          "id": "Point.x",
+          "name": "x",
+          "kind": "field",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Point.java",
+            "line": 4,
+            "col": 21,
+            "end_line": 4
+          },
+          "owner": "Point",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type": "int"
+        },
+        {
+          "id": "Point.y",
+          "name": "y",
+          "kind": "field",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Point.java",
+            "line": 4,
+            "col": 28,
+            "end_line": 4
+          },
+          "owner": "Point",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type": "int"
+        },
+        {
           "id": "Marker",
           "name": "Marker",
           "kind": "type",
@@ -513,7 +665,7 @@
             "file": "com/foo/Point.java",
             "line": 7,
             "col": 1,
-            "end_line": 7
+            "end_line": 9
           },
           "doc": {
             "raw": "Custom marker annotation.",
@@ -528,6 +680,41 @@
           "type_kind": "annotation"
         },
         {
+          "id": "Marker.value",
+          "name": "value",
+          "kind": "method",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Point.java",
+            "line": 8,
+            "col": 5,
+            "end_line": 8
+          },
+          "owner": "Marker",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [],
+            "returns": [
+              {
+                "name": "",
+                "type": "String"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
           "id": "Logger",
           "name": "Logger",
           "kind": "type",
@@ -535,9 +722,9 @@
           "visibility_idiom": "access-modifier",
           "location": {
             "file": "com/foo/Point.java",
-            "line": 10,
+            "line": 12,
             "col": 1,
-            "end_line": 13
+            "end_line": 16
           },
           "doc": {
             "raw": "Logger with implements and varargs.",
@@ -559,9 +746,9 @@
           "visibility_idiom": "access-modifier",
           "location": {
             "file": "com/foo/Point.java",
-            "line": 11,
+            "line": 13,
             "col": 5,
-            "end_line": 11
+            "end_line": 13
           },
           "owner": "Logger",
           "doc": {
@@ -589,9 +776,9 @@
           "visibility_idiom": "access-modifier",
           "location": {
             "file": "com/foo/Point.java",
-            "line": 12,
+            "line": 14,
             "col": 5,
-            "end_line": 12
+            "end_line": 14
           },
           "owner": "Logger",
           "doc": {
@@ -607,12 +794,52 @@
           "signature": {
             "params": [
               {
-                "name": "",
-                "type": "..."
+                "name": "args",
+                "type": "String..."
               }
             ],
             "returns": [],
             "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Logger.sortIt",
+          "name": "sortIt",
+          "kind": "method",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Point.java",
+            "line": 15,
+            "col": 5,
+            "end_line": 15
+          },
+          "owner": "Logger",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "a",
+                "type": "T"
+              }
+            ],
+            "returns": [],
+            "type_params": [
+              {
+                "name": "T",
+                "constraint": "extends Comparable<T>"
+              }
+            ],
             "variadic": false
           }
         }

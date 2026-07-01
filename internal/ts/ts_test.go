@@ -38,6 +38,21 @@ func TestParseJava(t *testing.T) {
 	if root.IsNull() || root.NamedChildCount() == 0 {
 		t.Fatalf("empty Java tree: type=%q count=%d", root.Type(), root.NamedChildCount())
 	}
+	if root.Type() != "program" {
+		t.Fatalf("root type = %q, want program", root.Type())
+	}
+	// A class_declaration must be present so a future grammar swap can't silently
+	// regress the node shape the Java extractor relies on.
+	found := false
+	for i := 0; i < root.NamedChildCount(); i++ {
+		if root.NamedChild(i).Type() == "class_declaration" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("no class_declaration among %d top-level nodes", root.NamedChildCount())
+	}
 }
 
 func TestParseDeterministic(t *testing.T) {

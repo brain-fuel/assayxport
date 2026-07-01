@@ -127,6 +127,14 @@ func typeSymbols(node ts.Node, ownerPrefix string, src []byte, relFile string, d
 	}
 	out := []schema.Symbol{typeSym}
 
+	// A record keeps its components in a "parameters" (formal_parameters) child of
+	// the record_declaration, not in the body. Each component is public API (an
+	// implicit accessor plus a final field), so emit each as a public field member
+	// in source order.
+	if node.Type() == "record_declaration" {
+		out = append(out, recordComponents(node, id, src, relFile)...)
+	}
+
 	body, ok := node.ChildByFieldName("body")
 	if !ok {
 		return out
@@ -155,6 +163,9 @@ func typeSymbols(node ts.Node, ownerPrefix string, src []byte, relFile string, d
 			pendingDoc = schema.Doc{}
 		case "enum_constant":
 			out = append(out, enumConstantSymbol(member, id, src, relFile, pendingDoc))
+			pendingDoc = schema.Doc{}
+		case "annotation_type_element_declaration":
+			out = append(out, annotationElementSymbol(member, id, src, relFile, pendingDoc))
 			pendingDoc = schema.Doc{}
 		default:
 			if _, ok := typeDeclTypes[member.Type()]; ok {
@@ -264,6 +275,63 @@ func enumConstantSymbol(node ts.Node, owner string, src []byte, relFile string, 
 		Owner:           owner,
 		Doc:             doc,
 		Complexity:      schema.DeferredComplexity(),
+		Annotations:     annotationNames(mods, src),
+	}
+}
+
+// recordComponents builds a public field Symbol for each component in a
+// record_declaration's "parameters" (formal_parameters) child, in source order.
+func recordComponents(node ts.Node, owner string, src []byte, relFile string) []schema.Symbol {
+	params, ok := node.ChildByFieldName("parameters")
+	if !ok {
+		return nil
+	}
+	var out []schema.Symbol
+	for i := 0; i < params.NamedChildCount(); i++ {
+		c := params.NamedChild(i)
+		if c.Type() != "formal_parameter" {
+			continue
+		}
+		name := fieldText(c, "name", src)
+		out = append(out, schema.Symbol{
+			ID:              owner + "." + name,
+			Name:            name,
+			Kind:            "field",
+			Visibility:      "public", // record components are public API.
+			VisibilityIdiom: "access-modifier",
+			Location:        locationOf(c, relFile),
+			Owner:           owner,
+			Complexity:      schema.DeferredComplexity(),
+			Type:            fieldText(c, "type", src),
+		})
+	}
+	return out
+}
+
+// annotationElementSymbol builds a method Symbol for an
+// annotation_type_element_declaration (an element of an @interface). The node
+// exposes "name" and "type" fields (probe, 2026-07-01); elements take no
+// parameters and are implicitly public.
+func annotationElementSymbol(node ts.Node, owner string, src []byte, relFile string, doc schema.Doc) schema.Symbol {
+	name := fieldText(node, "name", src)
+	mods := modifiersChild(node)
+	sig := &schema.Signature{
+		Params:     []schema.Param{},
+		Returns:    returnType(node, src),
+		TypeParams: nil,
+		Modifiers:  javaModifiers(mods, src),
+	}
+	return schema.Symbol{
+		ID:              owner + "." + name,
+		Name:            name,
+		Kind:            "method",
+		Visibility:      "public", // annotation elements are implicitly public.
+		VisibilityIdiom: "access-modifier",
+		Location:        locationOf(node, relFile),
+		Owner:           owner,
+		Doc:             doc,
+		Complexity:      schema.DeferredComplexity(),
+		Signature:       sig,
 		Annotations:     annotationNames(mods, src),
 	}
 }
@@ -382,8 +450,9 @@ func javadocText(comment ts.Node, src []byte) string {
 	return strings.Join(cleaned, "\n")
 }
 
-// paramList extracts parameters from the "parameters" (formal_parameters) child,
-// one Param per formal_parameter/spread_parameter using its type and name fields.
+// paramList extracts parameters from the "parameters" (formal_parameters) child.
+// A formal_parameter carries "type" and "name" fields directly; a spread_parameter
+// (varargs) does not (see spreadParam).
 func paramList(node ts.Node, src []byte) []schema.Param {
 	pnode, ok := node.ChildByFieldName("parameters")
 	if !ok {
@@ -392,17 +461,37 @@ func paramList(node ts.Node, src []byte) []schema.Param {
 	var out []schema.Param
 	for i := 0; i < pnode.NamedChildCount(); i++ {
 		c := pnode.NamedChild(i)
-		if c.Type() != "formal_parameter" && c.Type() != "spread_parameter" {
-			continue
+		switch c.Type() {
+		case "formal_parameter":
+			out = append(out, schema.Param{Name: fieldText(c, "name", src), Type: fieldText(c, "type", src)})
+		case "spread_parameter":
+			out = append(out, spreadParam(c, src))
 		}
-		typ := fieldText(c, "type", src)
-		// A spread_parameter (varargs) renders its type as `T...`.
-		if c.Type() == "spread_parameter" && !strings.HasSuffix(typ, "...") {
-			typ += "..."
-		}
-		out = append(out, schema.Param{Name: fieldText(c, "name", src), Type: typ})
 	}
 	return out
+}
+
+// spreadParam builds the Param for a varargs spread_parameter. The node has no
+// "type" or "name" field (probe, 2026-07-01): the name lives in its
+// variable_declarator child's "name" field, and the base type is the named child
+// that is neither "modifiers" nor "variable_declarator". The rendered type is the
+// base type followed by "..." (e.g. String... -> {name:"args", type:"String..."}).
+func spreadParam(node ts.Node, src []byte) schema.Param {
+	var name, base string
+	for i := 0; i < node.NamedChildCount(); i++ {
+		c := node.NamedChild(i)
+		switch c.Type() {
+		case "modifiers":
+			// final/annotations on a varargs parameter carry no type or name.
+		case "variable_declarator":
+			name = fieldText(c, "name", src)
+		default:
+			if base == "" {
+				base = c.Content(src)
+			}
+		}
+	}
+	return schema.Param{Name: name, Type: base + "..."}
 }
 
 // returnType returns the method's return type as a single result Param. It is an

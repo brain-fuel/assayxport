@@ -80,14 +80,70 @@ func TestAdditionalCoverage(t *testing.T) {
 		t.Fatalf("Marker sym = %+v, want type_kind=annotation", markerSym)
 	}
 
-	// Check varargs: Logger.log param type must contain "...".
+	// Check varargs: Logger.log(String... args) must keep name and base type.
 	logSym := symByID(mod.Symbols, "Logger.log")
-	if logSym == nil || logSym.Signature == nil || len(logSym.Signature.Params) == 0 {
-		t.Fatalf("Logger.log sym = %+v, want varargs param", logSym)
+	if logSym == nil || logSym.Signature == nil || len(logSym.Signature.Params) != 1 {
+		t.Fatalf("Logger.log sym = %+v, want one varargs param", logSym)
 	}
-	pt := logSym.Signature.Params[0].Type
-	if !strings.Contains(pt, "...") {
-		t.Fatalf("Logger.log param type = %q, want ... (varargs)", pt)
+	p := logSym.Signature.Params[0]
+	if p.Name != "args" || p.Type != "String..." {
+		t.Fatalf("Logger.log param = %+v, want {name:args type:String...}", p)
+	}
+	if !strings.Contains(p.Type, "...") {
+		t.Fatalf("Logger.log param type = %q, want ... (varargs)", p.Type)
+	}
+
+	// Record components appear as public field members with their written type.
+	for _, id := range []string{"Point.x", "Point.y"} {
+		f := symByID(mod.Symbols, id)
+		if f == nil || f.Kind != "field" || f.Type != "int" || f.Visibility != "public" {
+			t.Fatalf("record component %s = %+v, want public int field", id, f)
+		}
+	}
+
+	// Annotation element Marker.value is captured as a public method.
+	valueSym := symByID(mod.Symbols, "Marker.value")
+	if valueSym == nil || valueSym.Kind != "method" || valueSym.Visibility != "public" {
+		t.Fatalf("Marker.value = %+v, want public method", valueSym)
+	}
+	if valueSym.Signature == nil || len(valueSym.Signature.Returns) != 1 || valueSym.Signature.Returns[0].Type != "String" {
+		t.Fatalf("Marker.value signature = %+v, want String return", valueSym.Signature)
+	}
+
+	// Bounded generic: Logger.sortIt<T extends Comparable<T>>.
+	sortSym := symByID(mod.Symbols, "Logger.sortIt")
+	if sortSym == nil || sortSym.Signature == nil || len(sortSym.Signature.TypeParams) != 1 {
+		t.Fatalf("Logger.sortIt = %+v, want one type param", sortSym)
+	}
+	tp := sortSym.Signature.TypeParams[0]
+	if tp.Name != "T" || tp.Constraint != "extends Comparable<T>" {
+		t.Fatalf("Logger.sortIt type param = %+v, want T extends Comparable<T>", tp)
+	}
+}
+
+func TestMainVarargsEntrypoint(t *testing.T) {
+	ps, err := New().Extract("testdata/proj")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// App declares public static void main(String... args): a varargs entrypoint.
+	mod := pkgByID(ps, "com.foo.App")
+	if mod == nil || mod.Level != "module" {
+		t.Fatalf("com.foo.App unit = %+v", mod)
+	}
+	if !mod.IsEntrypoint || mod.Invocation == nil || mod.Invocation.How != "java com.foo.App" {
+		t.Fatalf("com.foo.App entrypoint = %v / %+v", mod.IsEntrypoint, mod.Invocation)
+	}
+	main := symByID(mod.Symbols, "App.main")
+	if main == nil || !main.IsEntrypoint || main.Invocation == nil || main.Invocation.How != "java com.foo.App" {
+		t.Fatalf("App.main = %+v (want stamped entrypoint)", main)
+	}
+	if len(main.Signature.Params) != 1 || main.Signature.Params[0].Type != "String..." {
+		t.Fatalf("App.main params = %+v, want one String... param", main.Signature.Params)
+	}
+	// The module unit and the main symbol must not share one Invocation pointer.
+	if mod.Invocation == main.Invocation {
+		t.Fatal("module and main symbol share one *Invocation")
 	}
 }
 

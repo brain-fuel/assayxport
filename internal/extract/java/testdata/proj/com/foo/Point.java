@@ -4,10 +4,13 @@ package com.foo;
 public record Point(int x, int y) {}
 
 /** Custom marker annotation. */
-@interface Marker {}
+@interface Marker {
+    String value();
+}
 
 /** Logger with implements and varargs. */
 class Logger implements Runnable {
     public void run() {}
     public void log(String... args) {}
+    public <T extends Comparable<T>> void sortIt(T a) {}
 }
