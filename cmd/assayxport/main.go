@@ -1,4 +1,4 @@
-// Command assayxport scans a Go codebase and writes a deterministic JSON
+// Command assayxport scans a source tree and writes a deterministic JSON
 // manifest (assayxport.json + .assayxport/ shards) of its API and docs.
 package main
 
@@ -9,7 +9,17 @@ import (
 
 	"goforge.dev/assayxport/internal/emit"
 	"goforge.dev/assayxport/internal/extract/golang"
+	"goforge.dev/assayxport/internal/extract/registry"
 )
+
+// stringsFlag is a repeatable string flag that collects values into a slice.
+type stringsFlag []string
+
+func (s *stringsFlag) String() string { return fmt.Sprintf("%v", []string(*s)) }
+func (s *stringsFlag) Set(v string) error {
+	*s = append(*s, v)
+	return nil
+}
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
@@ -23,6 +33,8 @@ func run(args []string) error {
 	out := fs.String("out", "", "output directory (default: scan path)")
 	stdout := fs.Bool("stdout", false, "print combined JSON to stdout; write no files")
 	quiet := fs.Bool("quiet", false, "suppress progress on stderr")
+	var langs stringsFlag
+	fs.Var(&langs, "lang", "language to scan (repeatable; default: all)")
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "usage: assayxport scan [path] [flags]")
 		fs.PrintDefaults()
@@ -47,12 +59,27 @@ func run(args []string) error {
 		path = fs.Arg(0)
 	}
 
-	ex := golang.New()
-	pkgs, err := ex.Extract(path)
+	exts, err := registry.Select(langs)
 	if err != nil {
 		return err
 	}
-	idx, shards := emit.Manifest(pkgs, ex.Module(), []string{"go"})
+	pkgs, languages, err := registry.Run(exts, path)
+	if err != nil {
+		return err
+	}
+
+	// Derive module hint from the Go extractor if it was used.
+	// Module() is only populated after Extract runs, so we read it from
+	// the same extractor instance that registry.Run called Extract on.
+	module := ""
+	for _, e := range exts {
+		if ge, ok := e.(*golang.Extractor); ok {
+			module = ge.Module()
+			break
+		}
+	}
+
+	idx, shards := emit.Manifest(pkgs, module, languages)
 
 	if *stdout {
 		b, err := emit.Combined(idx, shards)
