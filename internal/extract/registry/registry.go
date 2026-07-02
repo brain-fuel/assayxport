@@ -2,6 +2,7 @@
 package registry
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 
@@ -49,18 +50,30 @@ func Select(langs []string) ([]extract.Extractor, error) {
 
 // Run executes each extractor over root and returns the merged packages plus
 // the sorted set of languages that produced at least one package.
+//
+// A single extractor's failure does not abort the scan: in a polyglot tree, a
+// Go loader error (e.g. a directory that is not a Go module) must not suppress
+// the Python and Java results. Per-extractor errors are collected and returned
+// ONLY when no extractor produced any package, so a genuinely broken
+// single-language scan still fails cleanly while a mixed tree yields what
+// succeeded.
 func Run(exts []extract.Extractor, root string) ([]schema.Package, []string, error) {
 	var pkgs []schema.Package
 	langSet := map[string]bool{}
+	var errs []error
 	for _, e := range exts {
 		got, err := e.Extract(root)
 		if err != nil {
-			return nil, nil, err
+			errs = append(errs, fmt.Errorf("%s: %w", e.Language(), err))
+			continue
 		}
 		if len(got) > 0 {
 			langSet[e.Language()] = true
 		}
 		pkgs = append(pkgs, got...)
+	}
+	if len(pkgs) == 0 && len(errs) > 0 {
+		return nil, nil, errors.Join(errs...)
 	}
 	var languages []string
 	for l := range langSet {

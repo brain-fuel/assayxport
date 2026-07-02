@@ -42,3 +42,16 @@ func TestGoComplexity(t *testing.T) {
 		}
 	}
 }
+
+// TestExtractNoGoFilesEmpty confirms a tree with no .go files yields an empty
+// result (not a go/packages "no main module" error), so a default polyglot
+// scan of a Python- or Java-only repo is not aborted by the Go extractor.
+func TestExtractNoGoFilesEmpty(t *testing.T) {
+	pkgs, err := New().Extract("testdata/nogo")
+	if err != nil {
+		t.Fatalf("Extract(no-go dir) = error %v, want nil", err)
+	}
+	if len(pkgs) != 0 {
+		t.Fatalf("Extract(no-go dir) = %d packages, want 0", len(pkgs))
+	}
+}

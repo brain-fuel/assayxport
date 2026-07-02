@@ -1,6 +1,12 @@
 package registry
 
-import "testing"
+import (
+	"errors"
+	"testing"
+
+	"goforge.dev/assayxport/internal/extract"
+	"goforge.dev/assayxport/internal/schema"
+)
 
 // mixedFixture is the polyglot fixture: a Go package (calc) plus a Python
 // module (thing.py) under one directory. Path is relative to this package.
@@ -107,5 +113,46 @@ func TestAllRegistered(t *testing.T) {
 	}
 	if !langs["go"] || !langs["python"] || !langs["java"] {
 		t.Fatalf("registry missing go/python/java: %v", langs)
+	}
+}
+
+// fakeExt is a test extractor with a fixed result, used to exercise Run's
+// error-tolerance without a real broken fixture.
+type fakeExt struct {
+	lang string
+	pkgs []schema.Package
+	err  error
+}
+
+func (f fakeExt) Language() string                         { return f.lang }
+func (f fakeExt) Extract(string) ([]schema.Package, error) { return f.pkgs, f.err }
+
+// TestRunToleratesOneLanguageError covers the reported bug: a single extractor
+// erroring (e.g. the Go loader on a non-Go tree) must NOT abort the scan; the
+// languages that succeeded are still returned.
+func TestRunToleratesOneLanguageError(t *testing.T) {
+	exts := []extract.Extractor{
+		fakeExt{lang: "go", err: errors.New("no main module")},
+		fakeExt{lang: "python", pkgs: []schema.Package{{ID: "m", Language: "python"}}},
+	}
+	pkgs, langs, err := Run(exts, ".")
+	if err != nil {
+		t.Fatalf("Run tolerating one error = %v, want nil", err)
+	}
+	if len(pkgs) != 1 || len(langs) != 1 || langs[0] != "python" {
+		t.Fatalf("Run = pkgs %d langs %v, want 1 pkg + [python]", len(pkgs), langs)
+	}
+}
+
+// TestRunAllFailReturnsError confirms that when every extractor errors and none
+// produced a package, Run surfaces the joined errors (clean non-zero exit).
+func TestRunAllFailReturnsError(t *testing.T) {
+	exts := []extract.Extractor{
+		fakeExt{lang: "go", err: errors.New("boom-go")},
+		fakeExt{lang: "python", err: errors.New("boom-py")},
+	}
+	_, _, err := Run(exts, ".")
+	if err == nil {
+		t.Fatal("Run with all extractors failing = nil error, want joined error")
 	}
 }
