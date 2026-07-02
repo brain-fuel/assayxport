@@ -40,6 +40,7 @@ func javaSummary(node ts.Node, src []byte, name string) complexity.Summary {
 	if !ok {
 		return sum // abstract/interface method has no body -> O(1)
 	}
+	paramCount := javaParamCount(node)
 	var walk func(n ts.Node, depth int)
 	walk = func(n ts.Node, depth int) {
 		for i := 0; i < n.NamedChildCount(); i++ {
@@ -66,7 +67,7 @@ func javaSummary(node ts.Node, src []byte, name string) complexity.Summary {
 					sum.MaxLoopDepth = d
 				}
 			case "method_invocation":
-				if javaIsSelfCall(c, src, name) {
+				if javaIsSelfCall(c, src, name, paramCount) {
 					sum.Recursive = true
 				}
 				if javaIsAllocCall(c, src) {
@@ -91,13 +92,22 @@ func recordAlloc(sum *complexity.Summary, depth int) {
 	}
 }
 
-// javaIsSelfCall reports whether a method_invocation calls `name` with no
-// object receiver or an explicit `this` receiver (direct recursion).
-// Limitation: qualified self-calls such as `ClassName.method()` are not
-// detected; they conservatively yield a loop-nesting bound rather than nil.
-func javaIsSelfCall(call ts.Node, src []byte, name string) bool {
+// javaIsSelfCall reports whether a method_invocation is a direct self-call:
+// same name, no object receiver (or an explicit `this`), AND the same argument
+// count as the enclosing method has parameters. The arity check rejects the
+// common overload-delegation pattern (e.g. toPrimitive(x) calling
+// toPrimitive(x, false)), which name-only matching mistook for recursion.
+//
+// Limitations: a qualified self-call such as `ClassName.method()` is not
+// detected; and two overloads of the SAME arity but different parameter types
+// cannot be told apart syntactically, so same-arity delegation may still read
+// as recursion. Both conservatively affect only the `method` label.
+func javaIsSelfCall(call ts.Node, src []byte, name string, paramCount int) bool {
 	nm, ok := call.ChildByFieldName("name")
 	if !ok || nm.Content(src) != name {
+		return false
+	}
+	if javaArgCount(call) != paramCount {
 		return false
 	}
 	obj, ok := call.ChildByFieldName("object")
@@ -105,6 +115,32 @@ func javaIsSelfCall(call ts.Node, src []byte, name string) bool {
 		return true // no receiver -- implicit this
 	}
 	return obj.Content(src) == "this"
+}
+
+// javaParamCount returns the number of formal parameters of a method or
+// constructor declaration (varargs counts as one).
+func javaParamCount(node ts.Node) int {
+	params, ok := node.ChildByFieldName("parameters")
+	if !ok {
+		return 0
+	}
+	n := 0
+	for i := 0; i < params.NamedChildCount(); i++ {
+		switch params.NamedChild(i).Type() {
+		case "formal_parameter", "spread_parameter":
+			n++
+		}
+	}
+	return n
+}
+
+// javaArgCount returns the number of arguments in a method_invocation.
+func javaArgCount(call ts.Node) int {
+	args, ok := call.ChildByFieldName("arguments")
+	if !ok {
+		return 0
+	}
+	return args.NamedChildCount()
 }
 
 // javaIsAllocCall reports whether a method_invocation is a collection mutator

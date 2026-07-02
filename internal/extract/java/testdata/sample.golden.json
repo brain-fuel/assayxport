@@ -75,7 +75,7 @@
         "name": "Shapes",
         "doc": "",
         "level": "module",
-        "symbol_count": 7,
+        "symbol_count": 17,
         "entrypoint_count": 0,
         "shard": ".assayxport/com/foo/Shapes.java.json"
       },
@@ -879,7 +879,7 @@
             "file": "com/foo/Shapes.java",
             "line": 6,
             "col": 1,
-            "end_line": 54
+            "end_line": 90
           },
           "doc": {
             "raw": "",
@@ -1127,6 +1127,323 @@
             "type_params": null,
             "variadic": false
           }
+        },
+        {
+          "id": "Shapes.delegate",
+          "name": "delegate",
+          "kind": "method",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Shapes.java",
+            "line": 57,
+            "col": 5,
+            "end_line": 59
+          },
+          "owner": "Shapes",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "x",
+                "type": "int"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "int"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Shapes.delegate",
+          "name": "delegate",
+          "kind": "method",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Shapes.java",
+            "line": 61,
+            "col": 5,
+            "end_line": 63
+          },
+          "owner": "Shapes",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "x",
+                "type": "int"
+              },
+              {
+                "name": "y",
+                "type": "int"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "int"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Shapes.Kind",
+          "name": "Kind",
+          "kind": "type",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Shapes.java",
+            "line": 67,
+            "col": 5,
+            "end_line": 84
+          },
+          "owner": "Shapes",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "enum"
+        },
+        {
+          "id": "Shapes.Kind.A",
+          "name": "A",
+          "kind": "enum-constant",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Shapes.java",
+            "line": 68,
+            "col": 9,
+            "end_line": 72
+          },
+          "owner": "Shapes.Kind",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          }
+        },
+        {
+          "id": "Shapes.Kind.A.label",
+          "name": "label",
+          "kind": "method",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Shapes.java",
+            "line": 69,
+            "col": 13,
+            "end_line": 71
+          },
+          "owner": "Shapes.Kind.A",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": null,
+            "returns": [
+              {
+                "name": "",
+                "type": "int"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Shapes.Kind.B",
+          "name": "B",
+          "kind": "enum-constant",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Shapes.java",
+            "line": 73,
+            "col": 9,
+            "end_line": 73
+          },
+          "owner": "Shapes.Kind",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          }
+        },
+        {
+          "id": "Shapes.Kind.code",
+          "name": "code",
+          "kind": "field",
+          "visibility": "private",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Shapes.java",
+            "line": 75,
+            "col": 27,
+            "end_line": 75
+          },
+          "owner": "Shapes.Kind",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type": "int"
+        },
+        {
+          "id": "Shapes.Kind.Kind",
+          "name": "Kind",
+          "kind": "constructor",
+          "visibility": "package-private",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Shapes.java",
+            "line": 77,
+            "col": 9,
+            "end_line": 79
+          },
+          "owner": "Shapes.Kind",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": null,
+            "returns": [],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Shapes.Kind.getCode",
+          "name": "getCode",
+          "kind": "method",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Shapes.java",
+            "line": 81,
+            "col": 9,
+            "end_line": 83
+          },
+          "owner": "Shapes.Kind",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": null,
+            "returns": [
+              {
+                "name": "",
+                "type": "int"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Shapes.Nested",
+          "name": "Nested",
+          "kind": "type",
+          "visibility": "package-private",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "com/foo/Shapes.java",
+            "line": 88,
+            "col": 5,
+            "end_line": 89
+          },
+          "owner": "Shapes",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": [],
+            "returns": [],
+            "type_params": null,
+            "variadic": false,
+            "modifiers": [
+              "static",
+              "final"
+            ]
+          },
+          "type_kind": "class"
         }
       ]
     },

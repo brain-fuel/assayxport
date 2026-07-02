@@ -51,4 +51,40 @@ public class Shapes {
         };
         r.run();
     }
+
+    // Overload delegation: delegate(int) calls delegate(int, int). Different
+    // arity, so it must NOT be flagged recursive (name-only matching did).
+    public int delegate(int x) {
+        return delegate(x, 0);
+    }
+
+    public int delegate(int x, int y) {
+        return x + y;
+    }
+
+    // Nested enum exercises enum-body member extraction: the constructor,
+    // field, and method inside the enum body must be emitted, not dropped.
+    public enum Kind {
+        A {
+            public int label() {
+                return 1;
+            }
+        },
+        B;
+
+        private final int code;
+
+        Kind() {
+            this.code = 0;
+        }
+
+        public int getCode() {
+            return this.code;
+        }
+    }
+
+    // Static nested class: its static/final modifiers must appear in the type
+    // symbol's signature.modifiers.
+    static final class Nested {
+    }
 }
