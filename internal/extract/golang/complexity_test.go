@@ -33,6 +33,7 @@ func TestGoComplexity(t *testing.T) {
 		{"Quadratic", "O(n^2)", "O(1)", "loop-nesting"},
 		{"Collect", "O(n)", "O(n)", "loop-nesting"},
 		{"Recur", "nil", "nil", "recursive"},
+		{"Closure", "O(1)", "O(1)", "loop-nesting"},
 	}
 	for _, c := range cases {
 		tm, sp, m := symComplexity(t, c.id)

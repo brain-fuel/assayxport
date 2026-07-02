@@ -21,6 +21,11 @@ func goSummary(fd *ast.FuncDecl) complexity.Summary {
 	depth := 0
 	astutil.Apply(fd.Body, func(c *astutil.Cursor) bool {
 		switch n := c.Node().(type) {
+		case *ast.FuncLit:
+			// A nested closure is its own scope; its loops and calls belong to
+			// it, not to fd. Skip the subtree so a loop inside a closure passed
+			// to a library function does not inflate fd's depth.
+			return false
 		case *ast.ForStmt, *ast.RangeStmt:
 			depth++
 			if depth > sum.MaxLoopDepth {

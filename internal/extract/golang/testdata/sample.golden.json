@@ -31,7 +31,7 @@
           "kind": "binary",
           "how": "go run ./cmd/tool"
         },
-        "symbol_count": 6,
+        "symbol_count": 7,
         "entrypoint_count": 1,
         "shard": ".assayxport/cmd/tool.json"
       }
@@ -931,6 +931,45 @@
               {
                 "name": "n",
                 "type": "int"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "int"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Closure",
+          "name": "Closure",
+          "kind": "func",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/shapes.go",
+            "line": 45,
+            "col": 1,
+            "end_line": 54
+          },
+          "doc": {
+            "raw": "Closure has no loop of its own; the loop lives inside a nested closure and\nmust NOT count toward Closure's complexity (stays O(1)).",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "xs",
+                "type": "[]int"
               }
             ],
             "returns": [

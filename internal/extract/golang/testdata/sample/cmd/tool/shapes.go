@@ -39,3 +39,16 @@ func Recur(n int) int {
 	}
 	return Recur(n - 1)
 }
+
+// Closure has no loop of its own; the loop lives inside a nested closure and
+// must NOT count toward Closure's complexity (stays O(1)).
+func Closure(xs []int) int {
+	f := func() int {
+		s := 0
+		for _, x := range xs {
+			s += x
+		}
+		return s
+	}
+	return f()
+}
