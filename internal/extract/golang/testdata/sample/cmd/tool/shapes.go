@@ -52,3 +52,32 @@ func Closure(xs []int) int {
 	}
 	return f()
 }
+
+// MarkThing is a package-level function that a method of the same name wraps.
+func MarkThing(n *Node) int { return n.depth }
+
+// Node is a tree node used to exercise method recursion detection.
+type Node struct {
+	depth  int
+	parent *Node
+}
+
+// MarkThing is a method that calls the package-level MarkThing of the same
+// name. That bare-name call is NOT a self-call, so MarkThing must be O(1)
+// loop-nesting, never "recursive".
+func (n *Node) MarkThing() int { return MarkThing(n) }
+
+// Root walks to the tree root by calling itself on the parent. The selector
+// self-call n.parent.Root() must be detected as recursion (method + selector).
+func (n *Node) Root() *Node {
+	if n.parent == nil {
+		return n
+	}
+	return n.parent.Root()
+}
+
+// Box is a generic type; its type parameter must appear in the symbol's
+// signature.type_params.
+type Box[T any] struct {
+	v T
+}

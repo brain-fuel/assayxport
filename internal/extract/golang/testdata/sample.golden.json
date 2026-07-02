@@ -31,7 +31,7 @@
           "kind": "binary",
           "how": "go run ./cmd/tool"
         },
-        "symbol_count": 7,
+        "symbol_count": 15,
         "entrypoint_count": 1,
         "shard": ".assayxport/cmd/tool.json"
       }
@@ -981,6 +981,259 @@
             "type_params": null,
             "variadic": false
           }
+        },
+        {
+          "id": "MarkThing",
+          "name": "MarkThing",
+          "kind": "func",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/shapes.go",
+            "line": 57,
+            "col": 1,
+            "end_line": 57
+          },
+          "doc": {
+            "raw": "MarkThing is a package-level function that a method of the same name wraps.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "n",
+                "type": "*Node"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "int"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Node",
+          "name": "Node",
+          "kind": "type",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/shapes.go",
+            "line": 60,
+            "col": 6,
+            "end_line": 63
+          },
+          "doc": {
+            "raw": "Node is a tree node used to exercise method recursion detection.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "struct",
+          "underlying": "struct{depth int; parent *Node}"
+        },
+        {
+          "id": "Node.depth",
+          "name": "depth",
+          "kind": "field",
+          "visibility": "unexported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/shapes.go",
+            "line": 61,
+            "col": 2,
+            "end_line": 61
+          },
+          "owner": "Node",
+          "doc": {
+            "raw": "",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type": "int"
+        },
+        {
+          "id": "Node.parent",
+          "name": "parent",
+          "kind": "field",
+          "visibility": "unexported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/shapes.go",
+            "line": 62,
+            "col": 2,
+            "end_line": 62
+          },
+          "owner": "Node",
+          "doc": {
+            "raw": "",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type": "*Node"
+        },
+        {
+          "id": "Node.MarkThing",
+          "name": "MarkThing",
+          "kind": "method",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/shapes.go",
+            "line": 68,
+            "col": 1,
+            "end_line": 68
+          },
+          "owner": "Node",
+          "doc": {
+            "raw": "MarkThing is a method that calls the package-level MarkThing of the same\nname. That bare-name call is NOT a self-call, so MarkThing must be O(1)\nloop-nesting, never \"recursive\".",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [],
+            "returns": [
+              {
+                "name": "",
+                "type": "int"
+              }
+            ],
+            "type_params": null,
+            "receiver": {
+              "name": "n",
+              "type": "*Node"
+            },
+            "variadic": false
+          }
+        },
+        {
+          "id": "Node.Root",
+          "name": "Root",
+          "kind": "method",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/shapes.go",
+            "line": 72,
+            "col": 1,
+            "end_line": 77
+          },
+          "owner": "Node",
+          "doc": {
+            "raw": "Root walks to the tree root by calling itself on the parent. The selector\nself-call n.parent.Root() must be detected as recursion (method + selector).",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "recursive"
+          },
+          "signature": {
+            "params": [],
+            "returns": [
+              {
+                "name": "",
+                "type": "*Node"
+              }
+            ],
+            "type_params": null,
+            "receiver": {
+              "name": "n",
+              "type": "*Node"
+            },
+            "variadic": false
+          }
+        },
+        {
+          "id": "Box",
+          "name": "Box",
+          "kind": "type",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/shapes.go",
+            "line": 81,
+            "col": 6,
+            "end_line": 83
+          },
+          "doc": {
+            "raw": "Box is a generic type; its type parameter must appear in the symbol's\nsignature.type_params.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": null,
+            "returns": null,
+            "type_params": [
+              {
+                "name": "T",
+                "constraint": "any"
+              }
+            ],
+            "variadic": false
+          },
+          "type_kind": "struct",
+          "underlying": "struct{v T}"
+        },
+        {
+          "id": "Box.v",
+          "name": "v",
+          "kind": "field",
+          "visibility": "unexported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/shapes.go",
+            "line": 82,
+            "col": 2,
+            "end_line": 82
+          },
+          "owner": "Box",
+          "doc": {
+            "raw": "",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type": "T"
         }
       ]
     }

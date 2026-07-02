@@ -87,6 +87,13 @@ func typeSymbols(p *packages.Package, gd *ast.GenDecl, ts *ast.TypeSpec, moduleD
 		TypeKind:        tk,
 		Underlying:      typeStringLocal(underlying, p.Types),
 	}
+	// Capture type parameters of a generic type declaration
+	// (e.g. type Set[T comparable] ...), mirroring generic funcs/methods.
+	if named, ok := obj.Type().(*types.Named); ok {
+		if tps := typeParams(named.TypeParams(), p.Types); len(tps) > 0 {
+			sym.Signature = &schema.Signature{TypeParams: tps}
+		}
+	}
 	out := []schema.Symbol{sym}
 
 	switch u := underlying.(type) {

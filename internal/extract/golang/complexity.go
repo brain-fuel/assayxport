@@ -9,15 +9,21 @@ import (
 )
 
 // goSummary walks a function body and produces a control-flow Summary. It uses
-// astutil.Apply's pre/post callbacks to track loop-nesting depth. Recursion is
-// detected by a bare-name self-call (selector self-calls like p.foo() are not
-// detected, which conservatively yields a loop-nesting bound rather than nil).
+// astutil.Apply's pre/post callbacks to track loop-nesting depth.
+//
+// Recursion detection distinguishes a function from a method. For a plain
+// function a self-call is a bare-name call foo(...). For a method a bare-name
+// call foo(...) is a PACKAGE-LEVEL function that merely shares the method's name
+// (a common wrapper pattern), NOT recursion; a real self-call is a selector
+// x.foo(...) whose selector matches the method name (this also catches indirect
+// recursion up a receiver chain such as c.Parent().Root()).
 func goSummary(fd *ast.FuncDecl) complexity.Summary {
 	var sum complexity.Summary
 	if fd == nil || fd.Body == nil {
 		return sum // bodiless (external/asm) or nil -> O(1)
 	}
 	name := fd.Name.Name
+	isMethod := fd.Recv != nil
 	depth := 0
 	astutil.Apply(fd.Body, func(c *astutil.Cursor) bool {
 		switch n := c.Node().(type) {
@@ -32,12 +38,17 @@ func goSummary(fd *ast.FuncDecl) complexity.Summary {
 				sum.MaxLoopDepth = depth
 			}
 		case *ast.CallExpr:
-			if id, ok := n.Fun.(*ast.Ident); ok {
-				if id.Name == name {
+			switch fn := n.Fun.(type) {
+			case *ast.Ident:
+				if !isMethod && fn.Name == name {
 					sum.Recursive = true
 				}
-				if id.Name == "make" || id.Name == "new" || id.Name == "append" {
+				if fn.Name == "make" || fn.Name == "new" || fn.Name == "append" {
 					recordAlloc(&sum, depth)
+				}
+			case *ast.SelectorExpr:
+				if isMethod && fn.Sel.Name == name {
+					sum.Recursive = true
 				}
 			}
 		case *ast.CompositeLit:
