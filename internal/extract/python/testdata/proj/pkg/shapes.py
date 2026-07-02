@@ -24,3 +24,12 @@ def recur(n):
     if n <= 0:
         return 0
     return recur(n - 1)
+
+def closure(xs):
+    # The loop lives in a nested def and must NOT count toward closure (O(1)).
+    def inner():
+        s = 0
+        for x in xs:
+            s += x
+        return s
+    return inner()

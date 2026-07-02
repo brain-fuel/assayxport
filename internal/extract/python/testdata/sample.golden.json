@@ -62,7 +62,7 @@
         "name": "shapes",
         "doc": "",
         "level": "module",
-        "symbol_count": 5,
+        "symbol_count": 6,
         "entrypoint_count": 0,
         "shard": ".assayxport/pkg/shapes.py.json"
       },
@@ -760,6 +760,40 @@
             "params": [
               {
                 "name": "n",
+                "type": ""
+              }
+            ],
+            "returns": null,
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "closure",
+          "name": "closure",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/shapes.py",
+            "line": 28,
+            "col": 1,
+            "end_line": 35
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "xs",
                 "type": ""
               }
             ],

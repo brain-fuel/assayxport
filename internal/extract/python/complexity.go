@@ -1,8 +1,6 @@
 package python
 
 import (
-	"strings"
-
 	"goforge.dev/assayxport/internal/complexity"
 	"goforge.dev/assayxport/internal/ts"
 )
@@ -35,6 +33,11 @@ func pySummary(node ts.Node, src []byte, name string) complexity.Summary {
 			c := n.NamedChild(i)
 			d := depth
 			switch c.Type() {
+			case "function_definition", "lambda", "lambda_expression":
+				// A nested def or lambda is its own scope; its loops and calls
+				// belong to it, not to the enclosing function. Skip the subtree
+				// so they do not inflate this function's depth.
+				continue
 			case "for_statement", "while_statement",
 				"list_comprehension", "set_comprehension",
 				"dictionary_comprehension", "generator_expression":
@@ -93,7 +96,7 @@ func pyIsAllocCall(call ts.Node, src []byte) bool {
 	if !ok {
 		return false
 	}
-	switch strings.TrimSpace(attr.Content(src)) {
+	switch attr.Content(src) {
 	case "append", "extend", "add", "update":
 		return true
 	}
