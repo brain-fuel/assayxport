@@ -74,11 +74,18 @@ Two honesty notes on the heuristic edges. The `space` allocation signal is not
 identical across languages: Go composite literals and Java `new` are counted as
 allocations, but a Python constructor call (`Foo()`) is syntactically
 indistinguishable from any other call and is NOT counted, so equivalent code
-can report a different `space` bound per language. And recursion detection is
-name-based: it can over-detect (a same-named local shadow, or a same-named
-overload) and mark a function `recursive`, which nulls its bound rather than
-fabricating a wrong one. Both are deliberate conservative choices for a
-best-effort signal.
+can report a different `space` bound per language.
+
+Recursion detection is scope-aware but syntactic. A self-call from a method
+must be qualified (`self.f(...)` in Python, a `recv.f(...)` selector in Go), so
+a method that calls an imported or package-level function of the same name is
+not mistaken for recursion; a plain function uses the bare-name rule. In Java,
+which has no free functions but does have overloading, a self-call must match
+both name and argument count, which rejects overload delegation such as
+`f(x)` calling `f(x, 0)`. The one case that remains indistinguishable is two
+Java overloads of the same arity but different parameter types; there, delegation
+may still read as `recursive`. When in doubt the estimator prefers to null the
+bound rather than fabricate one.
 
 ## License
 
