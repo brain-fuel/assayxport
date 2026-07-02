@@ -1,0 +1,129 @@
+package python
+
+import (
+	"goforge.dev/assayxport/internal/complexity"
+	"goforge.dev/assayxport/internal/ts"
+)
+
+// pySummary walks a function_definition body producing a control-flow Summary.
+// Loop nodes (for/while) and comprehensions increment depth; a bare-name call
+// to the def's own name is recursion; list/dict/set displays and
+// .append/.extend/.add/.update calls are allocations.
+//
+// Probe-verified node/field names (gotreesitter grammars.PythonLanguage):
+//   - loops:          for_statement, while_statement
+//   - comprehensions: list_comprehension, set_comprehension,
+//                     dictionary_comprehension, generator_expression
+//   - calls:          "call" node with "function" field (identifier or attribute)
+//   - attr call:      function field is "attribute" node; method name via "attribute" field
+//   - literals:       list, dictionary, set
+//
+// No deviations from the brief's canonical names were found.
+//
+// Recursion: for a free function (recv == "", isMethod false) a bare-name call
+// `name(...)` is a self-call. For a method (isMethod true) a bare-name call
+// resolves to an imported or module-level function, so a self-call must be the
+// qualified `recv.name(...)`; recv is the method's receiver ("self"/"cls").
+func pySummary(node ts.Node, src []byte, name, recv string, isMethod bool) complexity.Summary {
+	var sum complexity.Summary
+	body, ok := node.ChildByFieldName("body")
+	if !ok {
+		return sum
+	}
+	var walk func(n ts.Node, depth int)
+	walk = func(n ts.Node, depth int) {
+		for i := 0; i < n.NamedChildCount(); i++ {
+			c := n.NamedChild(i)
+			d := depth
+			switch c.Type() {
+			case "function_definition", "lambda", "lambda_expression", "class_definition":
+				// A nested def, lambda, or class is its own scope; its loops and
+				// calls belong to it, not to the enclosing function. Skip the
+				// subtree so they do not inflate this function's depth.
+				continue
+			case "for_statement", "while_statement",
+				"list_comprehension", "set_comprehension",
+				"dictionary_comprehension", "generator_expression":
+				d = depth + 1
+				if d > sum.MaxLoopDepth {
+					sum.MaxLoopDepth = d
+				}
+				if c.Type() != "for_statement" && c.Type() != "while_statement" {
+					// A comprehension builds a collection sized by its own loop,
+					// so it allocates O(n) at its own level (d), not the enclosing
+					// depth.
+					recordAlloc(&sum, d)
+				}
+			case "call":
+				if pyIsSelfCall(c, src, name, recv, isMethod) {
+					sum.Recursive = true
+				}
+				if pyIsAllocCall(c, src) {
+					recordAlloc(&sum, depth)
+				}
+			case "assignment":
+				// A subscript assignment `x[k] = v` inside a loop grows a
+				// container, so it counts as an allocation like .append/.update.
+				if left, ok := c.ChildByFieldName("left"); ok && left.Type() == "subscript" {
+					recordAlloc(&sum, depth)
+				}
+			case "list", "dictionary", "set":
+				recordAlloc(&sum, depth)
+			}
+			walk(c, d)
+		}
+	}
+	walk(body, 0)
+	return sum
+}
+
+// recordAlloc notes an allocation at the current loop depth (only in-loop
+// allocations affect the space estimate).
+func recordAlloc(sum *complexity.Summary, depth int) {
+	if depth >= 1 {
+		sum.AllocInLoop = true
+		if depth > sum.AllocDepth {
+			sum.AllocDepth = depth
+		}
+	}
+}
+
+// pyIsSelfCall reports whether a call node is a self-call. For a free function
+// (isMethod false) that is a bare-name call `name(...)`. For a method it is the
+// qualified `recv.name(...)`; a bare-name call from a method is a different
+// (imported or module-level) function and is NOT recursion.
+func pyIsSelfCall(call ts.Node, src []byte, name, recv string, isMethod bool) bool {
+	fn, ok := call.ChildByFieldName("function")
+	if !ok {
+		return false
+	}
+	if !isMethod {
+		return fn.Type() == "identifier" && fn.Content(src) == name
+	}
+	if recv == "" || fn.Type() != "attribute" {
+		return false
+	}
+	obj, ok := fn.ChildByFieldName("object")
+	if !ok || obj.Type() != "identifier" || obj.Content(src) != recv {
+		return false
+	}
+	attr, ok := fn.ChildByFieldName("attribute")
+	return ok && attr.Content(src) == name
+}
+
+// pyIsAllocCall reports whether a call is x.append/extend/add/update(...).
+func pyIsAllocCall(call ts.Node, src []byte) bool {
+	fn, ok := call.ChildByFieldName("function")
+	if !ok || fn.Type() != "attribute" {
+		return false
+	}
+	attr, ok := fn.ChildByFieldName("attribute")
+	if !ok {
+		return false
+	}
+	switch attr.Content(src) {
+	case "append", "extend", "add", "update":
+		return true
+	}
+	return false
+}

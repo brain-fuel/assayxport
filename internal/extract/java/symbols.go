@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"goforge.dev/assayxport/internal/complexity"
 	"goforge.dev/assayxport/internal/schema"
 	"goforge.dev/assayxport/internal/ts"
 )
@@ -104,11 +105,14 @@ func typeSymbols(node ts.Node, ownerPrefix string, src []byte, relFile string, d
 
 	mods := modifiersChild(node)
 
-	// A generic type declaration gets a Signature carrying only TypeParams;
-	// a non-generic type gets a nil Signature.
+	// A type declaration gets a Signature when it is generic or carries
+	// non-access modifiers (e.g. a `static` or `final` nested class); a bare
+	// non-generic, unmodified type gets a nil Signature.
 	var sig *schema.Signature
-	if tps := typeParams(node, src); len(tps) > 0 {
-		sig = &schema.Signature{Params: []schema.Param{}, Returns: []schema.Param{}, TypeParams: tps}
+	tps := typeParams(node, src)
+	tmods := javaModifiers(mods, src)
+	if len(tps) > 0 || len(tmods) > 0 {
+		sig = &schema.Signature{Params: []schema.Param{}, Returns: []schema.Param{}, TypeParams: tps, Modifiers: tmods}
 	}
 
 	typeSym := schema.Symbol{
@@ -140,41 +144,81 @@ func typeSymbols(node ts.Node, ownerPrefix string, src []byte, relFile string, d
 		return out
 	}
 
-	// Members are owned by this type's fully-qualified id. Body walking keeps
-	// its own pendingDoc for member Javadoc.
-	var pendingDoc schema.Doc
+	// Members are owned by this type's fully-qualified id.
+	out = append(out, memberSymbols(bodyMembers(body), id, name, src, relFile)...)
+	return out
+}
+
+// bodyMembers returns the member nodes of a type body. An enum keeps its
+// non-constant members (methods, fields, constructors, nested types) in an
+// `enum_body_declarations` child after the constant list; that node is flattened
+// so those members are surfaced rather than silently dropped.
+func bodyMembers(body ts.Node) []ts.Node {
+	var members []ts.Node
 	for i := 0; i < body.NamedChildCount(); i++ {
-		member := body.NamedChild(i)
+		m := body.NamedChild(i)
+		if m.Type() == "enum_body_declarations" {
+			for j := 0; j < m.NamedChildCount(); j++ {
+				members = append(members, m.NamedChild(j))
+			}
+			continue
+		}
+		members = append(members, m)
+	}
+	return members
+}
+
+// childOfType returns the first named child of node with the given type, or a
+// null node if none exists.
+func childOfType(node ts.Node, typ string) ts.Node {
+	for i := 0; i < node.NamedChildCount(); i++ {
+		if c := node.NamedChild(i); c.Type() == typ {
+			return c
+		}
+	}
+	return ts.Node{}
+}
+
+// memberSymbols builds symbols for a slice of type-body member nodes owned by
+// ownerID. typeName is the declaring type's simple name (used to name
+// constructors). It threads a pending Javadoc across members.
+func memberSymbols(members []ts.Node, ownerID, typeName string, src []byte, relFile string) []schema.Symbol {
+	var out []schema.Symbol
+	var pendingDoc schema.Doc
+	for _, member := range members {
 		switch member.Type() {
 		case "block_comment":
 			if raw := javadocText(member, src); raw != "" {
 				pendingDoc = schema.Doc{Raw: raw, Format: "javadoc"}
 			}
+			continue
 		case "line_comment":
 			// a line comment does not end a pending Javadoc
+			continue
 		case "method_declaration":
-			out = append(out, methodSymbol(member, id, src, relFile, pendingDoc))
-			pendingDoc = schema.Doc{}
+			out = append(out, methodSymbol(member, ownerID, src, relFile, pendingDoc))
 		case "constructor_declaration":
-			out = append(out, constructorSymbol(member, id, name, src, relFile, pendingDoc))
-			pendingDoc = schema.Doc{}
+			out = append(out, constructorSymbol(member, ownerID, typeName, src, relFile, pendingDoc))
 		case "field_declaration":
-			out = append(out, fieldSymbols(member, id, src, relFile, pendingDoc)...)
-			pendingDoc = schema.Doc{}
+			out = append(out, fieldSymbols(member, ownerID, src, relFile, pendingDoc)...)
 		case "enum_constant":
-			out = append(out, enumConstantSymbol(member, id, src, relFile, pendingDoc))
-			pendingDoc = schema.Doc{}
+			out = append(out, enumConstantSymbol(member, ownerID, src, relFile, pendingDoc))
+			// A constant with a class body (e.g. DOUBLE { ... }) declares members
+			// of an anonymous subclass; emit them owned by the constant.
+			if cb := childOfType(member, "class_body"); !cb.IsNull() {
+				constName := fieldText(member, "name", src)
+				out = append(out, memberSymbols(bodyMembers(cb), ownerID+"."+constName, constName, src, relFile)...)
+			}
 		case "annotation_type_element_declaration":
-			out = append(out, annotationElementSymbol(member, id, src, relFile, pendingDoc))
-			pendingDoc = schema.Doc{}
+			out = append(out, annotationElementSymbol(member, ownerID, src, relFile, pendingDoc))
 		default:
 			if _, ok := typeDeclTypes[member.Type()]; ok {
-				out = append(out, typeSymbols(member, id, src, relFile, pendingDoc)...)
+				out = append(out, typeSymbols(member, ownerID, src, relFile, pendingDoc)...)
 			}
 			// Any other member (static/instance initializer, etc.) ends the
 			// scope of a pending Javadoc.
-			pendingDoc = schema.Doc{}
 		}
+		pendingDoc = schema.Doc{}
 	}
 	return out
 }
@@ -198,7 +242,7 @@ func methodSymbol(node ts.Node, owner string, src []byte, relFile string, doc sc
 		Location:        locationOf(node, relFile),
 		Owner:           owner,
 		Doc:             doc,
-		Complexity:      schema.DeferredComplexity(),
+		Complexity:      complexity.Estimate(javaSummary(node, src, name)),
 		Signature:       sig,
 		Annotations:     annotationNames(mods, src),
 	}
@@ -223,7 +267,7 @@ func constructorSymbol(node ts.Node, owner, typeName string, src []byte, relFile
 		Location:        locationOf(node, relFile),
 		Owner:           owner,
 		Doc:             doc,
-		Complexity:      schema.DeferredComplexity(),
+		Complexity:      complexity.Estimate(javaSummary(node, src, typeName)),
 		Signature:       sig,
 		Annotations:     annotationNames(mods, src),
 	}

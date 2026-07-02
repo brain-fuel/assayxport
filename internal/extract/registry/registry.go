@@ -2,6 +2,7 @@
 package registry
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 
@@ -47,25 +48,38 @@ func Select(langs []string) ([]extract.Extractor, error) {
 	return out, nil
 }
 
-// Run executes each extractor over root and returns the merged packages plus
-// the sorted set of languages that produced at least one package.
-func Run(exts []extract.Extractor, root string) ([]schema.Package, []string, error) {
-	var pkgs []schema.Package
+// Run executes each extractor over root and returns the merged packages, the
+// sorted set of languages that produced at least one package, and any
+// per-extractor errors that were tolerated (see below).
+//
+// A single extractor's failure does not abort the scan: in a polyglot tree, a
+// Go loader error (e.g. a directory that is not a Go module) must not suppress
+// the Python and Java results. When at least one extractor produced packages,
+// the failures of the others are returned as `warnings` (a non-fatal nil
+// error) so the caller can surface them rather than presenting a silent
+// partial manifest. Only when NO extractor produced any package are the errors
+// joined into the fatal return, so a genuinely broken single-language scan
+// still fails cleanly.
+func Run(exts []extract.Extractor, root string) (pkgs []schema.Package, languages []string, warnings []error, err error) {
 	langSet := map[string]bool{}
+	var errs []error
 	for _, e := range exts {
-		got, err := e.Extract(root)
-		if err != nil {
-			return nil, nil, err
+		got, extErr := e.Extract(root)
+		if extErr != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", e.Language(), extErr))
+			continue
 		}
 		if len(got) > 0 {
 			langSet[e.Language()] = true
 		}
 		pkgs = append(pkgs, got...)
 	}
-	var languages []string
+	if len(pkgs) == 0 && len(errs) > 0 {
+		return nil, nil, nil, errors.Join(errs...)
+	}
 	for l := range langSet {
 		languages = append(languages, l)
 	}
 	sort.Strings(languages)
-	return pkgs, languages, nil
+	return pkgs, languages, errs, nil
 }

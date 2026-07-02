@@ -1,0 +1,77 @@
+package golang
+
+import (
+	"go/ast"
+
+	"golang.org/x/tools/go/ast/astutil"
+
+	"goforge.dev/assayxport/internal/complexity"
+)
+
+// goSummary walks a function body and produces a control-flow Summary. It uses
+// astutil.Apply's pre/post callbacks to track loop-nesting depth.
+//
+// Recursion detection distinguishes a function from a method. For a plain
+// function a self-call is a bare-name call foo(...). For a method a bare-name
+// call foo(...) is a PACKAGE-LEVEL function that merely shares the method's name
+// (a common wrapper pattern), NOT recursion; a real self-call is a selector
+// x.foo(...) whose selector matches the method name (this also catches indirect
+// recursion up a receiver chain such as c.Parent().Root()).
+func goSummary(fd *ast.FuncDecl) complexity.Summary {
+	var sum complexity.Summary
+	if fd == nil || fd.Body == nil {
+		return sum // bodiless (external/asm) or nil -> O(1)
+	}
+	name := fd.Name.Name
+	isMethod := fd.Recv != nil
+	depth := 0
+	astutil.Apply(fd.Body, func(c *astutil.Cursor) bool {
+		switch n := c.Node().(type) {
+		case *ast.FuncLit:
+			// A nested closure is its own scope; its loops and calls belong to
+			// it, not to fd. Skip the subtree so a loop inside a closure passed
+			// to a library function does not inflate fd's depth.
+			return false
+		case *ast.ForStmt, *ast.RangeStmt:
+			depth++
+			if depth > sum.MaxLoopDepth {
+				sum.MaxLoopDepth = depth
+			}
+		case *ast.CallExpr:
+			switch fn := n.Fun.(type) {
+			case *ast.Ident:
+				if !isMethod && fn.Name == name {
+					sum.Recursive = true
+				}
+				if fn.Name == "make" || fn.Name == "new" || fn.Name == "append" {
+					recordAlloc(&sum, depth)
+				}
+			case *ast.SelectorExpr:
+				if isMethod && fn.Sel.Name == name {
+					sum.Recursive = true
+				}
+			}
+		case *ast.CompositeLit:
+			recordAlloc(&sum, depth)
+		}
+		return true
+	}, func(c *astutil.Cursor) bool {
+		switch c.Node().(type) {
+		case *ast.ForStmt, *ast.RangeStmt:
+			depth--
+		}
+		return true
+	})
+	return sum
+}
+
+// recordAlloc notes an allocation at the current loop depth (only in-loop
+// allocations affect the space estimate).
+func recordAlloc(sum *complexity.Summary, depth int) {
+	if depth >= 1 {
+		sum.AllocInLoop = true
+		if depth > sum.AllocDepth {
+			sum.AllocDepth = depth
+		}
+	}
+}

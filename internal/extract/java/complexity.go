@@ -1,0 +1,158 @@
+package java
+
+import (
+	"goforge.dev/assayxport/internal/complexity"
+	"goforge.dev/assayxport/internal/ts"
+)
+
+// javaSummary walks a method or constructor body producing a control-flow
+// Summary. for/enhanced-for/while/do increment nesting depth; a self-named
+// method_invocation with no receiver (or `this`) is direct recursion;
+// object_creation_expression, array_creation_expression, and collection
+// add/put/addAll calls are allocations.
+//
+// Probe-verified node/field names (gotreesitter grammars.JavaLanguage,
+// probe 2026-07-01; see internal/ts/provenance.md):
+//   - loops: for_statement, enhanced_for_statement, while_statement,
+//     do_statement -- all confirmed canonical.
+//   - method_invocation has `name` field (identifier) and optional `object` field.
+//   - object_creation_expression, array_creation_expression -- confirmed.
+//   - lambda_expression with `body` field -- confirmed.
+//   - constructor body field name is `body`, node type is `constructor_body`
+//     (deviation from `block` -- see provenance.md).
+//
+// No control-flow node name deviations from the brief's canonical list were
+// found. The constructor_body deviation (noted in provenance.md) does not
+// affect the walker: ChildByFieldName("body") returns the correct node
+// regardless of its type, and the walker only inspects children's types.
+//
+// Nested-scope skipping: loops inside a lambda body, an anonymous class
+// (object_creation_expression with a class body), or a local/nested type
+// declaration must NOT count toward the enclosing method's complexity. The
+// walker skips these subtrees entirely via `continue` (same fix as the Go
+// and Python walkers). object_creation_expression is also treated as a leaf
+// because its children are either constructor arguments (not statements; Java
+// does not allow loops in expressions) or an anonymous class body that must be
+// skipped.
+func javaSummary(node ts.Node, src []byte, name string) complexity.Summary {
+	var sum complexity.Summary
+	body, ok := node.ChildByFieldName("body")
+	if !ok {
+		return sum // abstract/interface method has no body -> O(1)
+	}
+	paramCount := javaParamCount(node)
+	var walk func(n ts.Node, depth int)
+	walk = func(n ts.Node, depth int) {
+		for i := 0; i < n.NamedChildCount(); i++ {
+			c := n.NamedChild(i)
+			d := depth
+
+			// Skip nested scopes: a loop inside a lambda, a local/nested/anonymous
+			// class, or any other type declaration belongs to that scope, not to
+			// the enclosing method. object_creation_expression is skipped as a leaf
+			// (after recording the allocation) to handle anonymous-class bodies.
+			switch c.Type() {
+			case "class_declaration", "interface_declaration", "enum_declaration",
+				"record_declaration", "annotation_type_declaration", "lambda_expression":
+				continue // nested scope: don't recurse
+			case "object_creation_expression", "array_creation_expression":
+				recordAlloc(&sum, depth)
+				continue // may contain anonymous class body; arguments can't have loops
+			}
+
+			switch c.Type() {
+			case "for_statement", "enhanced_for_statement", "while_statement", "do_statement":
+				d = depth + 1
+				if d > sum.MaxLoopDepth {
+					sum.MaxLoopDepth = d
+				}
+			case "method_invocation":
+				if javaIsSelfCall(c, src, name, paramCount) {
+					sum.Recursive = true
+				}
+				if javaIsAllocCall(c, src) {
+					recordAlloc(&sum, depth)
+				}
+			}
+			walk(c, d)
+		}
+	}
+	walk(body, 0)
+	return sum
+}
+
+// recordAlloc notes an in-loop allocation. Only allocations inside a loop
+// affect the space estimate.
+func recordAlloc(sum *complexity.Summary, depth int) {
+	if depth >= 1 {
+		sum.AllocInLoop = true
+		if depth > sum.AllocDepth {
+			sum.AllocDepth = depth
+		}
+	}
+}
+
+// javaIsSelfCall reports whether a method_invocation is a direct self-call:
+// same name, no object receiver (or an explicit `this`), AND the same argument
+// count as the enclosing method has parameters. The arity check rejects the
+// common overload-delegation pattern (e.g. toPrimitive(x) calling
+// toPrimitive(x, false)), which name-only matching mistook for recursion.
+//
+// Limitations: a qualified self-call such as `ClassName.method()` is not
+// detected; and two overloads of the SAME arity but different parameter types
+// cannot be told apart syntactically, so same-arity delegation may still read
+// as recursion. Both conservatively affect only the `method` label.
+func javaIsSelfCall(call ts.Node, src []byte, name string, paramCount int) bool {
+	nm, ok := call.ChildByFieldName("name")
+	if !ok || nm.Content(src) != name {
+		return false
+	}
+	if javaArgCount(call) != paramCount {
+		return false
+	}
+	obj, ok := call.ChildByFieldName("object")
+	if !ok {
+		return true // no receiver -- implicit this
+	}
+	return obj.Content(src) == "this"
+}
+
+// javaParamCount returns the number of formal parameters of a method or
+// constructor declaration (varargs counts as one).
+func javaParamCount(node ts.Node) int {
+	params, ok := node.ChildByFieldName("parameters")
+	if !ok {
+		return 0
+	}
+	n := 0
+	for i := 0; i < params.NamedChildCount(); i++ {
+		switch params.NamedChild(i).Type() {
+		case "formal_parameter", "spread_parameter":
+			n++
+		}
+	}
+	return n
+}
+
+// javaArgCount returns the number of arguments in a method_invocation.
+func javaArgCount(call ts.Node) int {
+	args, ok := call.ChildByFieldName("arguments")
+	if !ok {
+		return 0
+	}
+	return args.NamedChildCount()
+}
+
+// javaIsAllocCall reports whether a method_invocation is a collection mutator
+// (add, put, or addAll), which implies an allocation of a new mapping entry.
+func javaIsAllocCall(call ts.Node, src []byte) bool {
+	nm, ok := call.ChildByFieldName("name")
+	if !ok {
+		return false
+	}
+	switch nm.Content(src) {
+	case "add", "put", "addAll":
+		return true
+	}
+	return false
+}

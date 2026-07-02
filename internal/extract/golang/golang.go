@@ -4,6 +4,7 @@ package golang
 
 import (
 	"fmt"
+	"io/fs"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -37,6 +38,12 @@ func (e *Extractor) Extract(root string) ([]schema.Package, error) {
 	// Abs-resolve so module-relative paths are always correct.
 	if abs, err := filepath.Abs(root); err == nil {
 		root = abs
+	}
+	// A tree with no Go files is not a Go project; return empty rather than
+	// letting go/packages fail with "does not contain main module". This lets a
+	// default polyglot `scan` succeed on a Python- or Java-only repository.
+	if !hasGoFiles(root) {
+		return nil, nil
 	}
 	cfg := &packages.Config{
 		Mode:  loadMode,
@@ -90,6 +97,29 @@ func (e *Extractor) Extract(root string) ([]schema.Package, error) {
 
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out, nil
+}
+
+// hasGoFiles reports whether any .go file exists under root (dot-directories
+// are skipped). It short-circuits on the first match.
+func hasGoFiles(root string) bool {
+	found := false
+	_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			if path != root && strings.HasPrefix(d.Name(), ".") {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if strings.HasSuffix(d.Name(), ".go") {
+			found = true
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	return found
 }
 
 // packageDir returns the directory holding a package's first Go file.

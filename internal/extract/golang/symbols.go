@@ -6,6 +6,7 @@ import (
 	"go/types"
 	"strings"
 
+	"goforge.dev/assayxport/internal/complexity"
 	"goforge.dev/assayxport/internal/schema"
 	"golang.org/x/tools/go/packages"
 )
@@ -85,6 +86,13 @@ func typeSymbols(p *packages.Package, gd *ast.GenDecl, ts *ast.TypeSpec, moduleD
 		Complexity:      schema.DeferredComplexity(),
 		TypeKind:        tk,
 		Underlying:      typeStringLocal(underlying, p.Types),
+	}
+	// Capture type parameters of a generic type declaration
+	// (e.g. type Set[T comparable] ...), mirroring generic funcs/methods.
+	if named, ok := obj.Type().(*types.Named); ok {
+		if tps := typeParams(named.TypeParams(), p.Types); len(tps) > 0 {
+			sym.Signature = &schema.Signature{TypeParams: tps}
+		}
 	}
 	out := []schema.Symbol{sym}
 
@@ -267,7 +275,7 @@ func funcSymbol(p *packages.Package, fd *ast.FuncDecl, moduleDir string) (schema
 		VisibilityIdiom: "capitalized",
 		Location:        locationOf(p.Fset, fd, moduleDir),
 		Doc:             schema.Doc{Raw: strings.TrimSpace(fd.Doc.Text()), Format: "godoc"},
-		Complexity:      schema.DeferredComplexity(),
+		Complexity:      complexity.Estimate(goSummary(fd)),
 		Signature: &schema.Signature{
 			Params:     tupleParams(sig.Params(), p.Types),
 			Returns:    tupleParams(sig.Results(), p.Types),

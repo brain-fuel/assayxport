@@ -3,6 +3,7 @@ package python
 import (
 	"strings"
 
+	"goforge.dev/assayxport/internal/complexity"
 	"goforge.dev/assayxport/internal/schema"
 	"goforge.dev/assayxport/internal/ts"
 )
@@ -49,9 +50,7 @@ func moduleSymbols(relFile string, src []byte) (syms []schema.Symbol, moduleDoc 
 				allSet = set
 				continue
 			}
-			if s, ok := assignmentVariable(child, "", src, relFile); ok {
-				syms = append(syms, s)
-			}
+			syms = append(syms, assignmentVariables(child, "", src, relFile)...)
 		case "function_definition", "async_function_definition":
 			syms = append(syms, funcSymbol(child, "", src, relFile, nil, isAsyncDef(child, src)))
 		case "class_definition":
@@ -115,6 +114,16 @@ func funcSymbol(node ts.Node, owner string, src []byte, relFile string, decorato
 		sig.Modifiers = append(sig.Modifiers, "async")
 	}
 
+	// Recursion detection needs to know whether a same-named call is a self-call.
+	// For a free function, that is a bare-name call `name(...)`. For a method, a
+	// bare-name call resolves to an imported or module-level function, NOT the
+	// method itself (a real self-call is `self.name(...)`), so pass the receiver
+	// (first parameter) and require the qualified form. A staticmethod has no
+	// receiver, so no recursion form is recognized (conservative).
+	recv := ""
+	if owner != "" && !hasDecorator(decorators, "staticmethod") {
+		recv = firstParamName(node, src)
+	}
 	sym := schema.Symbol{
 		ID:              id,
 		Name:            name,
@@ -124,7 +133,7 @@ func funcSymbol(node ts.Node, owner string, src []byte, relFile string, decorato
 		Location:        locationOf(node, relFile),
 		Owner:           owner,
 		Doc:             bodyDoc(node, src),
-		Complexity:      schema.DeferredComplexity(),
+		Complexity:      complexity.Estimate(pySummary(node, src, name, recv, owner != "")),
 		Signature:       sig,
 		Decorators:      decorators,
 	}
@@ -181,42 +190,54 @@ func classSymbols(node ts.Node, src []byte, relFile string, decorators []string,
 				out = append(out, classSymbols(def, src, relFile, decos, memberOwner)...)
 			}
 		case "assignment":
-			if s, ok := assignmentVariable(member, memberOwner, src, relFile); ok {
-				out = append(out, s)
-			}
+			out = append(out, assignmentVariables(member, memberOwner, src, relFile)...)
 		}
 	}
 	return out
 }
 
-// assignmentVariable builds a variable Symbol for an assignment whose left side
-// is a plain identifier. owner is the enclosing class (empty at module level).
-func assignmentVariable(node ts.Node, owner string, src []byte, relFile string) (schema.Symbol, bool) {
-	left, ok := node.ChildByFieldName("left")
-	if !ok || left.Type() != "identifier" {
-		return schema.Symbol{}, false
+// assignmentVariables builds variable Symbols for an assignment whose left side
+// is a plain identifier. A chained assignment (`a = b = c = value`) nests on the
+// right in the grammar, so every target identifier down the chain is emitted,
+// not just the leftmost. owner is the enclosing class (empty at module level).
+func assignmentVariables(node ts.Node, owner string, src []byte, relFile string) []schema.Symbol {
+	var out []schema.Symbol
+	cur := node
+	for cur.Type() == "assignment" {
+		left, ok := cur.ChildByFieldName("left")
+		if ok && left.Type() == "identifier" {
+			name := left.Content(src)
+			id := name
+			if owner != "" {
+				id = owner + "." + name
+			}
+			typ := ""
+			if t, ok := cur.ChildByFieldName("type"); ok {
+				typ = t.Content(src)
+			}
+			out = append(out, schema.Symbol{
+				ID:              id,
+				Name:            name,
+				Kind:            "variable",
+				Visibility:      pyVisibility(name),
+				VisibilityIdiom: "underscore",
+				Location:        locationOf(node, relFile),
+				Owner:           owner,
+				Doc:             schema.Doc{},
+				Complexity:      schema.DeferredComplexity(),
+				Type:            typ,
+			})
+		}
+		// Descend into a chained assignment: the right operand is itself an
+		// assignment whose left is the next target. A non-assignment right is
+		// the assigned value, which terminates the chain.
+		right, ok := cur.ChildByFieldName("right")
+		if !ok || right.Type() != "assignment" {
+			break
+		}
+		cur = right
 	}
-	name := left.Content(src)
-	id := name
-	if owner != "" {
-		id = owner + "." + name
-	}
-	typ := ""
-	if t, ok := node.ChildByFieldName("type"); ok {
-		typ = t.Content(src)
-	}
-	return schema.Symbol{
-		ID:              id,
-		Name:            name,
-		Kind:            "variable",
-		Visibility:      pyVisibility(name),
-		VisibilityIdiom: "underscore",
-		Location:        locationOf(node, relFile),
-		Owner:           owner,
-		Doc:             schema.Doc{},
-		Complexity:      schema.DeferredComplexity(),
-		Type:            typ,
-	}, true
+	return out
 }
 
 // parseAll returns the set of string values when the assignment defines
@@ -257,9 +278,22 @@ func unwrapDecorated(node ts.Node, src []byte) (decorators []string, def ts.Node
 }
 
 // decoratorName returns a decorator's dotted/called name without the leading @.
+// It reads the decorator's expression node (its first named child) rather than
+// the raw text, so a trailing inline comment such as
+// `@property  # type: ignore[override]` does not become part of the name (that
+// would break the @property-to-property-kind promotion in funcSymbol).
 func decoratorName(node ts.Node, src []byte) string {
+	if node.NamedChildCount() > 0 {
+		expr := node.NamedChild(0)
+		if !expr.IsNull() && expr.Type() != "comment" {
+			return strings.TrimSpace(expr.Content(src))
+		}
+	}
 	txt := strings.TrimSpace(node.Content(src))
 	txt = strings.TrimPrefix(txt, "@")
+	if i := strings.IndexByte(txt, '#'); i >= 0 {
+		txt = txt[:i]
+	}
 	return strings.TrimSpace(txt)
 }
 
@@ -300,6 +334,16 @@ func isMainGuard(node ts.Node, src []byte) bool {
 	// (`'__main__'` and `"__main__"`) both match.
 	norm = strings.ReplaceAll(norm, "'", `"`)
 	return norm == `__name__=="__main__"` || norm == `"__main__"==__name__`
+}
+
+// firstParamName returns the name of a function's first parameter (e.g. the
+// "self"/"cls" receiver of a method), or "" if it has none.
+func firstParamName(node ts.Node, src []byte) string {
+	pnode, ok := node.ChildByFieldName("parameters")
+	if !ok || pnode.NamedChildCount() == 0 {
+		return ""
+	}
+	return paramFrom(pnode.NamedChild(0), src).Name
 }
 
 // params extracts the parameter list from a function_definition.
