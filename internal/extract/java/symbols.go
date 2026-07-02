@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"goforge.dev/assayxport/internal/complexity"
 	"goforge.dev/assayxport/internal/schema"
 	"goforge.dev/assayxport/internal/ts"
 )
@@ -198,7 +199,7 @@ func methodSymbol(node ts.Node, owner string, src []byte, relFile string, doc sc
 		Location:        locationOf(node, relFile),
 		Owner:           owner,
 		Doc:             doc,
-		Complexity:      schema.DeferredComplexity(),
+		Complexity:      complexity.Estimate(javaSummary(node, src, name)),
 		Signature:       sig,
 		Annotations:     annotationNames(mods, src),
 	}
@@ -223,7 +224,7 @@ func constructorSymbol(node ts.Node, owner, typeName string, src []byte, relFile
 		Location:        locationOf(node, relFile),
 		Owner:           owner,
 		Doc:             doc,
-		Complexity:      schema.DeferredComplexity(),
+		Complexity:      complexity.Estimate(javaSummary(node, src, typeName)),
 		Signature:       sig,
 		Annotations:     annotationNames(mods, src),
 	}
