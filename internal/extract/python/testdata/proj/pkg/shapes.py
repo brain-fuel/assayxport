@@ -40,3 +40,33 @@ def nested_class(xs):
         for x in xs:
             pass
     return C
+
+def get_header_value(k):
+    return k
+
+class Evt:
+    @property  # type: ignore[override]
+    def prop_c(self):
+        return 1
+
+    x = y = z = _sentinel
+
+    def walk(self):
+        # self.walk() is a genuine self-call -> recursive.
+        return self.walk()
+
+    def get_header_value(self, k):
+        # Bare name matches this method's name but resolves to the module-level
+        # free function, NOT self, so it must NOT be flagged recursive.
+        return get_header_value(k)
+
+def dict_build(xs):
+    # Dict comprehension: O(n) time AND O(n) space.
+    return {k: k for k in xs}
+
+def dict_loop(xs):
+    # Subscript assignment inside a loop grows a dict: O(n) space.
+    out = {}
+    for k in xs:
+        out[k] = 1
+    return out

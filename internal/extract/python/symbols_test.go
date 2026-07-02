@@ -1,7 +1,11 @@
 package python
 
-import "os"
-import "testing"
+import (
+	"os"
+	"testing"
+
+	"goforge.dev/assayxport/internal/schema"
+)
 
 func load(t *testing.T) ([]symView, map[string]bool, bool) {
 	t.Helper()
@@ -109,4 +113,51 @@ func TestMainGuardSingleQuote(t *testing.T) {
 		t.Fatalf("double-quote guard: hasMain=%v err=%v", hasMain2, err)
 	}
 	_ = syms
+}
+
+// TestPropertyWithInlineComment covers the decorator-name fix: a
+// `@property  # type: ignore[override]` must still promote the symbol to kind
+// "property" with a clean "property" decorator (not "property  # type: ...").
+func TestPropertyWithInlineComment(t *testing.T) {
+	pkgs, err := New().Extract("testdata/proj")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got *schema.Symbol
+	for i := range pkgs {
+		for j := range pkgs[i].Symbols {
+			if pkgs[i].Symbols[j].ID == "Evt.prop_c" {
+				got = &pkgs[i].Symbols[j]
+			}
+		}
+	}
+	if got == nil {
+		t.Fatal("Evt.prop_c not found")
+	}
+	if got.Kind != "property" {
+		t.Errorf("Evt.prop_c kind = %q, want property", got.Kind)
+	}
+	if len(got.Decorators) != 1 || got.Decorators[0] != "property" {
+		t.Errorf("Evt.prop_c decorators = %v, want [property]", got.Decorators)
+	}
+}
+
+// TestChainedAssignmentTargets covers the chained-assignment fix: every target
+// of `x = y = z = value` must be emitted, not just the leftmost.
+func TestChainedAssignmentTargets(t *testing.T) {
+	pkgs, err := New().Extract("testdata/proj")
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := map[string]bool{}
+	for i := range pkgs {
+		for _, s := range pkgs[i].Symbols {
+			seen[s.ID] = true
+		}
+	}
+	for _, id := range []string{"Evt.x", "Evt.y", "Evt.z"} {
+		if !seen[id] {
+			t.Errorf("chained-assignment target %q missing from symbols", id)
+		}
+	}
 }

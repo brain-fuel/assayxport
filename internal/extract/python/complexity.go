@@ -19,9 +19,12 @@ import (
 //   - literals:       list, dictionary, set
 //
 // No deviations from the brief's canonical names were found.
-// Limitation: recursion is detected only for bare-name self-calls; method
-// self-calls (self.foo()) are not detected.
-func pySummary(node ts.Node, src []byte, name string) complexity.Summary {
+//
+// Recursion: for a free function (recv == "", isMethod false) a bare-name call
+// `name(...)` is a self-call. For a method (isMethod true) a bare-name call
+// resolves to an imported or module-level function, so a self-call must be the
+// qualified `recv.name(...)`; recv is the method's receiver ("self"/"cls").
+func pySummary(node ts.Node, src []byte, name, recv string, isMethod bool) complexity.Summary {
 	var sum complexity.Summary
 	body, ok := node.ChildByFieldName("body")
 	if !ok {
@@ -46,14 +49,22 @@ func pySummary(node ts.Node, src []byte, name string) complexity.Summary {
 					sum.MaxLoopDepth = d
 				}
 				if c.Type() != "for_statement" && c.Type() != "while_statement" {
-					// a comprehension allocates at the enclosing depth
-					recordAlloc(&sum, depth)
+					// A comprehension builds a collection sized by its own loop,
+					// so it allocates O(n) at its own level (d), not the enclosing
+					// depth.
+					recordAlloc(&sum, d)
 				}
 			case "call":
-				if pyIsSelfCall(c, src, name) {
+				if pyIsSelfCall(c, src, name, recv, isMethod) {
 					sum.Recursive = true
 				}
 				if pyIsAllocCall(c, src) {
+					recordAlloc(&sum, depth)
+				}
+			case "assignment":
+				// A subscript assignment `x[k] = v` inside a loop grows a
+				// container, so it counts as an allocation like .append/.update.
+				if left, ok := c.ChildByFieldName("left"); ok && left.Type() == "subscript" {
 					recordAlloc(&sum, depth)
 				}
 			case "list", "dictionary", "set":
@@ -77,13 +88,27 @@ func recordAlloc(sum *complexity.Summary, depth int) {
 	}
 }
 
-// pyIsSelfCall reports whether a call node invokes the bare name `name`.
-func pyIsSelfCall(call ts.Node, src []byte, name string) bool {
+// pyIsSelfCall reports whether a call node is a self-call. For a free function
+// (isMethod false) that is a bare-name call `name(...)`. For a method it is the
+// qualified `recv.name(...)`; a bare-name call from a method is a different
+// (imported or module-level) function and is NOT recursion.
+func pyIsSelfCall(call ts.Node, src []byte, name, recv string, isMethod bool) bool {
 	fn, ok := call.ChildByFieldName("function")
 	if !ok {
 		return false
 	}
-	return fn.Type() == "identifier" && fn.Content(src) == name
+	if !isMethod {
+		return fn.Type() == "identifier" && fn.Content(src) == name
+	}
+	if recv == "" || fn.Type() != "attribute" {
+		return false
+	}
+	obj, ok := fn.ChildByFieldName("object")
+	if !ok || obj.Type() != "identifier" || obj.Content(src) != recv {
+		return false
+	}
+	attr, ok := fn.ChildByFieldName("attribute")
+	return ok && attr.Content(src) == name
 }
 
 // pyIsAllocCall reports whether a call is x.append/extend/add/update(...).

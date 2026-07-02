@@ -38,6 +38,15 @@ func TestPyComplexity(t *testing.T) {
 		{"recur", "nil", "nil", "recursive"},
 		{"closure", "O(1)", "O(1)", "loop-nesting"},
 		{"nested_class", "O(1)", "O(1)", "loop-nesting"},
+		// Method self-call self.walk() is genuine recursion.
+		{"Evt.walk", "nil", "nil", "recursive"},
+		// Bare-name call from a method matching the method's own name resolves
+		// to the module-level free function, NOT self -> not recursion.
+		{"Evt.get_header_value", "O(1)", "O(1)", "loop-nesting"},
+		// Dict comprehension: O(n) time and O(n) space.
+		{"dict_build", "O(n)", "O(n)", "loop-nesting"},
+		// Subscript assignment inside a loop grows a dict: O(n) space.
+		{"dict_loop", "O(n)", "O(n)", "loop-nesting"},
 	}
 	for _, c := range cases {
 		tm, sp, m := symComplexity(t, "pkg.shapes", c.sym)

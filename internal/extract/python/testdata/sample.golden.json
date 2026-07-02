@@ -62,7 +62,7 @@
         "name": "shapes",
         "doc": "",
         "level": "module",
-        "symbol_count": 7,
+        "symbol_count": 17,
         "entrypoint_count": 0,
         "shard": ".assayxport/pkg/shapes.py.json"
       },
@@ -822,6 +822,315 @@
           "complexity": {
             "time": "O(1)",
             "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "xs",
+                "type": ""
+              }
+            ],
+            "returns": null,
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "get_header_value",
+          "name": "get_header_value",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/shapes.py",
+            "line": 44,
+            "col": 1,
+            "end_line": 45
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "k",
+                "type": ""
+              }
+            ],
+            "returns": null,
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Evt",
+          "name": "Evt",
+          "kind": "class",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/shapes.py",
+            "line": 47,
+            "col": 1,
+            "end_line": 61
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          }
+        },
+        {
+          "id": "Evt.prop_c",
+          "name": "prop_c",
+          "kind": "property",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/shapes.py",
+            "line": 49,
+            "col": 5,
+            "end_line": 50
+          },
+          "owner": "Evt",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "self",
+                "type": ""
+              }
+            ],
+            "returns": null,
+            "type_params": null,
+            "variadic": false
+          },
+          "decorators": [
+            "property"
+          ]
+        },
+        {
+          "id": "Evt.x",
+          "name": "x",
+          "kind": "variable",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/shapes.py",
+            "line": 52,
+            "col": 5,
+            "end_line": 52
+          },
+          "owner": "Evt",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          }
+        },
+        {
+          "id": "Evt.y",
+          "name": "y",
+          "kind": "variable",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/shapes.py",
+            "line": 52,
+            "col": 5,
+            "end_line": 52
+          },
+          "owner": "Evt",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          }
+        },
+        {
+          "id": "Evt.z",
+          "name": "z",
+          "kind": "variable",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/shapes.py",
+            "line": 52,
+            "col": 5,
+            "end_line": 52
+          },
+          "owner": "Evt",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          }
+        },
+        {
+          "id": "Evt.walk",
+          "name": "walk",
+          "kind": "method",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/shapes.py",
+            "line": 54,
+            "col": 5,
+            "end_line": 56
+          },
+          "owner": "Evt",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "recursive"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "self",
+                "type": ""
+              }
+            ],
+            "returns": null,
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Evt.get_header_value",
+          "name": "get_header_value",
+          "kind": "method",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/shapes.py",
+            "line": 58,
+            "col": 5,
+            "end_line": 61
+          },
+          "owner": "Evt",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "self",
+                "type": ""
+              },
+              {
+                "name": "k",
+                "type": ""
+              }
+            ],
+            "returns": null,
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "dict_build",
+          "name": "dict_build",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/shapes.py",
+            "line": 63,
+            "col": 1,
+            "end_line": 65
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "xs",
+                "type": ""
+              }
+            ],
+            "returns": null,
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "dict_loop",
+          "name": "dict_loop",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "underscore",
+          "location": {
+            "file": "pkg/shapes.py",
+            "line": 67,
+            "col": 1,
+            "end_line": 72
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)",
             "method": "loop-nesting"
           },
           "signature": {
