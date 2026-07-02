@@ -15,7 +15,7 @@ const mixedFixture = "../../../cmd/assayxport/testdata/mixed"
 // TestRunPolyglotMerge covers Finding 5: Run(All(), mixed) genuinely merges Go,
 // Java, and Python units and reports all three languages.
 func TestRunPolyglotMerge(t *testing.T) {
-	pkgs, langs, err := Run(All(), mixedFixture)
+	pkgs, langs, _, err := Run(All(), mixedFixture)
 	if err != nil {
 		t.Fatalf("Run(All(), mixed): %v", err)
 	}
@@ -38,7 +38,7 @@ func TestRunSelectSubsetPolyglot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pkgs, langs, err := Run(exts, mixedFixture)
+	pkgs, langs, _, err := Run(exts, mixedFixture)
 	if err != nil {
 		t.Fatalf("Run(python, mixed): %v", err)
 	}
@@ -89,7 +89,7 @@ func TestRunSelectJavaSubset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pkgs, langs, err := Run(exts, mixedFixture)
+	pkgs, langs, _, err := Run(exts, mixedFixture)
 	if err != nil {
 		t.Fatalf("Run(java, mixed): %v", err)
 	}
@@ -135,12 +135,16 @@ func TestRunToleratesOneLanguageError(t *testing.T) {
 		fakeExt{lang: "go", err: errors.New("no main module")},
 		fakeExt{lang: "python", pkgs: []schema.Package{{ID: "m", Language: "python"}}},
 	}
-	pkgs, langs, err := Run(exts, ".")
+	pkgs, langs, warns, err := Run(exts, ".")
 	if err != nil {
 		t.Fatalf("Run tolerating one error = %v, want nil", err)
 	}
 	if len(pkgs) != 1 || len(langs) != 1 || langs[0] != "python" {
 		t.Fatalf("Run = pkgs %d langs %v, want 1 pkg + [python]", len(pkgs), langs)
+	}
+	// The tolerated go failure must be surfaced as a warning, not swallowed.
+	if len(warns) != 1 {
+		t.Fatalf("warnings = %v, want the tolerated go failure", warns)
 	}
 }
 
@@ -151,7 +155,7 @@ func TestRunAllFailReturnsError(t *testing.T) {
 		fakeExt{lang: "go", err: errors.New("boom-go")},
 		fakeExt{lang: "python", err: errors.New("boom-py")},
 	}
-	_, _, err := Run(exts, ".")
+	_, _, _, err := Run(exts, ".")
 	if err == nil {
 		t.Fatal("Run with all extractors failing = nil error, want joined error")
 	}

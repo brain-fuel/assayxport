@@ -63,9 +63,17 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
-	pkgs, languages, err := registry.Run(exts, path)
+	pkgs, languages, warnings, err := registry.Run(exts, path)
 	if err != nil {
 		return err
+	}
+	// A tolerated per-language failure (some other language still produced
+	// output) is surfaced on stderr so a partial manifest is never silently
+	// mistaken for a complete one.
+	if !*quiet {
+		for _, w := range warnings {
+			fmt.Fprintln(os.Stderr, "assayxport: warning:", w)
+		}
 	}
 
 	// Derive module hint from the Go extractor if it was used.
