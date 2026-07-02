@@ -3,6 +3,7 @@ package python
 import (
 	"strings"
 
+	"goforge.dev/assayxport/internal/complexity"
 	"goforge.dev/assayxport/internal/schema"
 	"goforge.dev/assayxport/internal/ts"
 )
@@ -124,7 +125,7 @@ func funcSymbol(node ts.Node, owner string, src []byte, relFile string, decorato
 		Location:        locationOf(node, relFile),
 		Owner:           owner,
 		Doc:             bodyDoc(node, src),
-		Complexity:      schema.DeferredComplexity(),
+		Complexity:      complexity.Estimate(pySummary(node, src, name)),
 		Signature:       sig,
 		Decorators:      decorators,
 	}
