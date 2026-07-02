@@ -33,3 +33,10 @@ def closure(xs):
             s += x
         return s
     return inner()
+
+def nested_class(xs):
+    # A loop at a nested class body must NOT count toward nested_class (O(1)).
+    class C:
+        for x in xs:
+            pass
+    return C

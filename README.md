@@ -70,6 +70,16 @@ bounds recursion, and `space` is a weak allocation-based heuristic. Loops
 inside a nested closure, lambda, or local class are attributed to that inner
 scope, not the enclosing function.
 
+Two honesty notes on the heuristic edges. The `space` allocation signal is not
+identical across languages: Go composite literals and Java `new` are counted as
+allocations, but a Python constructor call (`Foo()`) is syntactically
+indistinguishable from any other call and is NOT counted, so equivalent code
+can report a different `space` bound per language. And recursion detection is
+name-based: it can over-detect (a same-named local shadow, or a same-named
+overload) and mark a function `recursive`, which nulls its bound rather than
+fabricating a wrong one. Both are deliberate conservative choices for a
+best-effort signal.
+
 ## License
 
 MIT. Third-party components (the tree-sitter runtime and the Python and Java

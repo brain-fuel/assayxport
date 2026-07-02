@@ -37,6 +37,7 @@ func TestPyComplexity(t *testing.T) {
 		{"collect", "O(n)", "O(n)", "loop-nesting"},
 		{"recur", "nil", "nil", "recursive"},
 		{"closure", "O(1)", "O(1)", "loop-nesting"},
+		{"nested_class", "O(1)", "O(1)", "loop-nesting"},
 	}
 	for _, c := range cases {
 		tm, sp, m := symComplexity(t, "pkg.shapes", c.sym)
