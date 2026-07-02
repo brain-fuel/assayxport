@@ -31,7 +31,7 @@
           "kind": "binary",
           "how": "go run ./cmd/tool"
         },
-        "symbol_count": 1,
+        "symbol_count": 6,
         "entrypoint_count": 1,
         "shard": ".assayxport/cmd/tool.json"
       }
@@ -67,9 +67,9 @@
           },
           "is_entrypoint": false,
           "complexity": {
-            "time": null,
-            "space": null,
-            "method": "deferred"
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
           },
           "signature": {
             "params": [
@@ -110,9 +110,9 @@
           },
           "is_entrypoint": false,
           "complexity": {
-            "time": null,
-            "space": null,
-            "method": "deferred"
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
           },
           "signature": {
             "params": [
@@ -153,9 +153,9 @@
           },
           "is_entrypoint": false,
           "complexity": {
-            "time": null,
-            "space": null,
-            "method": "deferred"
+            "time": "O(n)",
+            "space": "O(1)",
+            "method": "loop-nesting"
           },
           "signature": {
             "params": [
@@ -192,9 +192,9 @@
           },
           "is_entrypoint": false,
           "complexity": {
-            "time": null,
-            "space": null,
-            "method": "deferred"
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
           },
           "signature": {
             "params": [
@@ -291,9 +291,9 @@
           },
           "is_entrypoint": false,
           "complexity": {
-            "time": null,
-            "space": null,
-            "method": "deferred"
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
           },
           "signature": {
             "params": [
@@ -334,9 +334,9 @@
           },
           "is_entrypoint": false,
           "complexity": {
-            "time": null,
-            "space": null,
-            "method": "deferred"
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
           },
           "signature": {
             "params": [
@@ -737,13 +737,208 @@
             "how": "go run ./cmd/tool"
           },
           "complexity": {
-            "time": null,
-            "space": null,
-            "method": "deferred"
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
           },
           "signature": {
             "params": [],
             "returns": [],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Constant",
+          "name": "Constant",
+          "kind": "func",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/shapes.go",
+            "line": 4,
+            "col": 1,
+            "end_line": 4
+          },
+          "doc": {
+            "raw": "Constant does no looping.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "x",
+                "type": "int"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "int"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Linear",
+          "name": "Linear",
+          "kind": "func",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/shapes.go",
+            "line": 7,
+            "col": 1,
+            "end_line": 13
+          },
+          "doc": {
+            "raw": "Linear loops once.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "xs",
+                "type": "[]int"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "int"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Quadratic",
+          "name": "Quadratic",
+          "kind": "func",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/shapes.go",
+            "line": 16,
+            "col": 1,
+            "end_line": 24
+          },
+          "doc": {
+            "raw": "Quadratic nests two loops.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(n^2)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "xs",
+                "type": "[]int"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "int"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Collect",
+          "name": "Collect",
+          "kind": "func",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/shapes.go",
+            "line": 27,
+            "col": 1,
+            "end_line": 33
+          },
+          "doc": {
+            "raw": "Collect allocates inside a loop (space O(n)).",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(n)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "xs",
+                "type": "[]int"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "[]int"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Recur",
+          "name": "Recur",
+          "kind": "func",
+          "visibility": "exported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/shapes.go",
+            "line": 36,
+            "col": 1,
+            "end_line": 41
+          },
+          "doc": {
+            "raw": "Recur calls itself.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "recursive"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "n",
+                "type": "int"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "int"
+              }
+            ],
             "type_params": null,
             "variadic": false
           }

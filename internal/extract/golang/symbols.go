@@ -6,6 +6,7 @@ import (
 	"go/types"
 	"strings"
 
+	"goforge.dev/assayxport/internal/complexity"
 	"goforge.dev/assayxport/internal/schema"
 	"golang.org/x/tools/go/packages"
 )
@@ -267,7 +268,7 @@ func funcSymbol(p *packages.Package, fd *ast.FuncDecl, moduleDir string) (schema
 		VisibilityIdiom: "capitalized",
 		Location:        locationOf(p.Fset, fd, moduleDir),
 		Doc:             schema.Doc{Raw: strings.TrimSpace(fd.Doc.Text()), Format: "godoc"},
-		Complexity:      schema.DeferredComplexity(),
+		Complexity:      complexity.Estimate(goSummary(fd)),
 		Signature: &schema.Signature{
 			Params:     tupleParams(sig.Params(), p.Types),
 			Returns:    tupleParams(sig.Results(), p.Types),
