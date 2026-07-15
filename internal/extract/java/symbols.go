@@ -48,6 +48,17 @@ func compilationUnit(relFile string, src []byte) (cuResult, error) {
 	}
 	root := tree.Root()
 
+	// Build the call-classification context up front: the module-unit id this
+	// file's symbols will live under, plus its type/method/import tables.
+	stem := strings.TrimSuffix(filepath.Base(relFile), ".java")
+	unitID := stem
+	if pd := childOfType(root, "package_declaration"); !pd.IsNull() {
+		if pkg := packageName(pd, src); pkg != "" {
+			unitID = pkg + "." + stem
+		}
+	}
+	ctx := buildFileCtx(root, src, unitID)
+
 	// pendingDoc holds a Javadoc block_comment that immediately precedes the
 	// next declaration. Javadoc is a SIBLING of the declaration, not a child.
 	var pendingDoc schema.Doc
@@ -71,7 +82,7 @@ func compilationUnit(relFile string, src []byte) (cuResult, error) {
 			pendingDoc = schema.Doc{}
 		default:
 			if _, ok := typeDeclTypes[child.Type()]; ok {
-				syms := typeSymbols(child, "", src, relFile, pendingDoc)
+				syms := typeSymbols(child, "", src, relFile, pendingDoc, ctx)
 				res.Syms = append(res.Syms, syms...)
 
 				// main detection is anchored to the top-level type only: a main
@@ -96,7 +107,7 @@ func compilationUnit(relFile string, src []byte) (cuResult, error) {
 // typeSymbols builds the type symbol for a type declaration plus symbols for its
 // members and nested types. ownerPrefix is the enclosing type's fully-qualified
 // id ("" at the top level); it makes nested types and members carry dotted ids.
-func typeSymbols(node ts.Node, ownerPrefix string, src []byte, relFile string, doc schema.Doc) []schema.Symbol {
+func typeSymbols(node ts.Node, ownerPrefix string, src []byte, relFile string, doc schema.Doc, ctx *javaFileCtx) []schema.Symbol {
 	name := typeName(node, src)
 	id := name
 	if ownerPrefix != "" {
@@ -145,7 +156,7 @@ func typeSymbols(node ts.Node, ownerPrefix string, src []byte, relFile string, d
 	}
 
 	// Members are owned by this type's fully-qualified id.
-	out = append(out, memberSymbols(bodyMembers(body), id, name, src, relFile)...)
+	out = append(out, memberSymbols(bodyMembers(body), id, name, src, relFile, ctx)...)
 	return out
 }
 
@@ -182,7 +193,7 @@ func childOfType(node ts.Node, typ string) ts.Node {
 // memberSymbols builds symbols for a slice of type-body member nodes owned by
 // ownerID. typeName is the declaring type's simple name (used to name
 // constructors). It threads a pending Javadoc across members.
-func memberSymbols(members []ts.Node, ownerID, typeName string, src []byte, relFile string) []schema.Symbol {
+func memberSymbols(members []ts.Node, ownerID, typeName string, src []byte, relFile string, ctx *javaFileCtx) []schema.Symbol {
 	var out []schema.Symbol
 	var pendingDoc schema.Doc
 	for _, member := range members {
@@ -196,9 +207,9 @@ func memberSymbols(members []ts.Node, ownerID, typeName string, src []byte, relF
 			// a line comment does not end a pending Javadoc
 			continue
 		case "method_declaration":
-			out = append(out, methodSymbol(member, ownerID, src, relFile, pendingDoc))
+			out = append(out, methodSymbol(member, ownerID, src, relFile, pendingDoc, ctx))
 		case "constructor_declaration":
-			out = append(out, constructorSymbol(member, ownerID, typeName, src, relFile, pendingDoc))
+			out = append(out, constructorSymbol(member, ownerID, typeName, src, relFile, pendingDoc, ctx))
 		case "field_declaration":
 			out = append(out, fieldSymbols(member, ownerID, src, relFile, pendingDoc)...)
 		case "enum_constant":
@@ -207,13 +218,13 @@ func memberSymbols(members []ts.Node, ownerID, typeName string, src []byte, relF
 			// of an anonymous subclass; emit them owned by the constant.
 			if cb := childOfType(member, "class_body"); !cb.IsNull() {
 				constName := fieldText(member, "name", src)
-				out = append(out, memberSymbols(bodyMembers(cb), ownerID+"."+constName, constName, src, relFile)...)
+				out = append(out, memberSymbols(bodyMembers(cb), ownerID+"."+constName, constName, src, relFile, ctx)...)
 			}
 		case "annotation_type_element_declaration":
 			out = append(out, annotationElementSymbol(member, ownerID, src, relFile, pendingDoc))
 		default:
 			if _, ok := typeDeclTypes[member.Type()]; ok {
-				out = append(out, typeSymbols(member, ownerID, src, relFile, pendingDoc)...)
+				out = append(out, typeSymbols(member, ownerID, src, relFile, pendingDoc, ctx)...)
 			}
 			// Any other member (static/instance initializer, etc.) ends the
 			// scope of a pending Javadoc.
@@ -224,7 +235,7 @@ func memberSymbols(members []ts.Node, ownerID, typeName string, src []byte, relF
 }
 
 // methodSymbol builds a method Symbol. owner is the declaring type's id.
-func methodSymbol(node ts.Node, owner string, src []byte, relFile string, doc schema.Doc) schema.Symbol {
+func methodSymbol(node ts.Node, owner string, src []byte, relFile string, doc schema.Doc, ctx *javaFileCtx) schema.Symbol {
 	name := fieldText(node, "name", src)
 	mods := modifiersChild(node)
 	sig := &schema.Signature{
@@ -243,6 +254,7 @@ func methodSymbol(node ts.Node, owner string, src []byte, relFile string, doc sc
 		Owner:           owner,
 		Doc:             doc,
 		Complexity:      complexity.Estimate(javaSummary(node, src, name)),
+		Calls:           javaCalls(node, src, ctx, owner),
 		Signature:       sig,
 		Annotations:     annotationNames(mods, src),
 	}
@@ -250,7 +262,7 @@ func methodSymbol(node ts.Node, owner string, src []byte, relFile string, doc sc
 
 // constructorSymbol builds a constructor Symbol. Its id is Owner.SimpleTypeName
 // and its kind is "constructor". typeName is the declaring type's simple name.
-func constructorSymbol(node ts.Node, owner, typeName string, src []byte, relFile string, doc schema.Doc) schema.Symbol {
+func constructorSymbol(node ts.Node, owner, typeName string, src []byte, relFile string, doc schema.Doc, ctx *javaFileCtx) schema.Symbol {
 	mods := modifiersChild(node)
 	sig := &schema.Signature{
 		Params:     paramList(node, src),
@@ -268,6 +280,7 @@ func constructorSymbol(node ts.Node, owner, typeName string, src []byte, relFile
 		Owner:           owner,
 		Doc:             doc,
 		Complexity:      complexity.Estimate(javaSummary(node, src, typeName)),
+		Calls:           javaCalls(node, src, ctx, owner),
 		Signature:       sig,
 		Annotations:     annotationNames(mods, src),
 	}

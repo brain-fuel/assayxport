@@ -11,19 +11,22 @@ import (
 // moduleSymbols parses one module's source and returns its top-level symbols
 // (with nested methods/attrs owned), the module docstring (used by Task 4 for
 // the module unit's Doc), the module's __all__ set (nil if none), and whether
-// the module contains an `if __name__ == "__main__":` guard.
+// the module contains an `if __name__ == "__main__":` guard. unitID is the
+// manifest id this module's symbols will live under; call edges use it to
+// build internal refs.
 //
 // Node-name note: the backing runtime (gotreesitter) emits module- and
 // block-level docstrings as bare `string` nodes rather than wrapping them in
 // an `expression_statement`, and there is no `expression_statement` node in
 // the tree at all. The walk below therefore treats a leading `string` as the
 // docstring statement directly.
-func moduleSymbols(relFile string, src []byte) (syms []schema.Symbol, moduleDoc string, allSet map[string]bool, hasMain bool, err error) {
+func moduleSymbols(relFile string, src []byte, unitID string) (syms []schema.Symbol, moduleDoc string, allSet map[string]bool, hasMain bool, err error) {
 	tree, perr := ts.Parse(ts.Python, src)
 	if perr != nil {
 		return nil, "", nil, false, perr
 	}
 	root := tree.Root()
+	ctx := buildModuleCtx(root, src, unitID)
 
 	// A leading license/header comment pushes the module docstring off named
 	// index 0; the docstring is the first non-comment statement.
@@ -52,9 +55,9 @@ func moduleSymbols(relFile string, src []byte) (syms []schema.Symbol, moduleDoc 
 			}
 			syms = append(syms, assignmentVariables(child, "", src, relFile)...)
 		case "function_definition", "async_function_definition":
-			syms = append(syms, funcSymbol(child, "", src, relFile, nil, isAsyncDef(child, src)))
+			syms = append(syms, funcSymbol(child, "", src, relFile, nil, isAsyncDef(child, src), ctx))
 		case "class_definition":
-			syms = append(syms, classSymbols(child, src, relFile, nil, "")...)
+			syms = append(syms, classSymbols(child, src, relFile, nil, "", ctx)...)
 		case "decorated_definition":
 			decorators, def := unwrapDecorated(child, src)
 			if def.IsNull() {
@@ -62,9 +65,9 @@ func moduleSymbols(relFile string, src []byte) (syms []schema.Symbol, moduleDoc 
 			}
 			switch {
 			case isFuncDef(def.Type()):
-				syms = append(syms, funcSymbol(def, "", src, relFile, decorators, isAsyncDef(def, src)))
+				syms = append(syms, funcSymbol(def, "", src, relFile, decorators, isAsyncDef(def, src), ctx))
 			case def.Type() == "class_definition":
-				syms = append(syms, classSymbols(def, src, relFile, decorators, "")...)
+				syms = append(syms, classSymbols(def, src, relFile, decorators, "", ctx)...)
 			}
 		case "if_statement":
 			if isMainGuard(child, src) {
@@ -90,7 +93,7 @@ func moduleSymbols(relFile string, src []byte) (syms []schema.Symbol, moduleDoc 
 
 // funcSymbol builds a Symbol for a function_definition. owner is the enclosing
 // class name (empty for module-level functions).
-func funcSymbol(node ts.Node, owner string, src []byte, relFile string, decorators []string, isAsync bool) schema.Symbol {
+func funcSymbol(node ts.Node, owner string, src []byte, relFile string, decorators []string, isAsync bool, ctx *pyModuleCtx) schema.Symbol {
 	name := fieldText(node, "name", src)
 
 	kind := "function"
@@ -134,6 +137,7 @@ func funcSymbol(node ts.Node, owner string, src []byte, relFile string, decorato
 		Owner:           owner,
 		Doc:             bodyDoc(node, src),
 		Complexity:      complexity.Estimate(pySummary(node, src, name, recv, owner != "")),
+		Calls:           pyCalls(node, src, ctx, owner, recv),
 		Signature:       sig,
 		Decorators:      decorators,
 	}
@@ -145,7 +149,7 @@ func funcSymbol(node ts.Node, owner string, src []byte, relFile string, decorato
 // class. ownerPrefix is the enclosing class's fully-qualified id ("" at module
 // level); it makes nested classes and their members carry dotted ids/owners,
 // e.g. Outer.Inner and Outer.Inner.method.
-func classSymbols(node ts.Node, src []byte, relFile string, decorators []string, ownerPrefix string) []schema.Symbol {
+func classSymbols(node ts.Node, src []byte, relFile string, decorators []string, ownerPrefix string, ctx *pyModuleCtx) []schema.Symbol {
 	name := fieldText(node, "name", src)
 	id := name
 	if ownerPrefix != "" {
@@ -175,9 +179,9 @@ func classSymbols(node ts.Node, src []byte, relFile string, decorators []string,
 		member := body.NamedChild(i)
 		switch member.Type() {
 		case "function_definition", "async_function_definition":
-			out = append(out, funcSymbol(member, memberOwner, src, relFile, nil, isAsyncDef(member, src)))
+			out = append(out, funcSymbol(member, memberOwner, src, relFile, nil, isAsyncDef(member, src), ctx))
 		case "class_definition":
-			out = append(out, classSymbols(member, src, relFile, nil, memberOwner)...)
+			out = append(out, classSymbols(member, src, relFile, nil, memberOwner, ctx)...)
 		case "decorated_definition":
 			decos, def := unwrapDecorated(member, src)
 			if def.IsNull() {
@@ -185,9 +189,9 @@ func classSymbols(node ts.Node, src []byte, relFile string, decorators []string,
 			}
 			switch {
 			case isFuncDef(def.Type()):
-				out = append(out, funcSymbol(def, memberOwner, src, relFile, decos, isAsyncDef(def, src)))
+				out = append(out, funcSymbol(def, memberOwner, src, relFile, decos, isAsyncDef(def, src), ctx))
 			case def.Type() == "class_definition":
-				out = append(out, classSymbols(def, src, relFile, decos, memberOwner)...)
+				out = append(out, classSymbols(def, src, relFile, decos, memberOwner, ctx)...)
 			}
 		case "assignment":
 			out = append(out, assignmentVariables(member, memberOwner, src, relFile)...)

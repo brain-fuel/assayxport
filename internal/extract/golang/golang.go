@@ -80,6 +80,11 @@ func (e *Extractor) Extract(root string) ([]schema.Package, error) {
 			// Path, Symbols, and entrypoint fields filled below once moduleDir is known.
 		})
 	}
+	// The scanned-package set decides internal vs external call edges.
+	scanned := make(map[string]bool, len(loaded))
+	for _, p := range loaded {
+		scanned[p.PkgPath] = true
+	}
 	// Compute each package's module-relative directory and extract symbols.
 	for i, p := range loaded {
 		dir := packageDir(p)
@@ -88,7 +93,7 @@ func (e *Extractor) Extract(root string) ([]schema.Package, error) {
 			rel = filepath.Base(dir)
 		}
 		out[i].Path = filepath.ToSlash(rel)
-		out[i].Symbols = extractSymbols(p, moduleDir)
+		out[i].Symbols = extractSymbols(p, moduleDir, scanned)
 		if p.Name == "main" {
 			out[i].IsEntrypoint = true
 			out[i].Invocation = &schema.Invocation{Kind: "binary", How: entrypointHow(p, moduleDir)}

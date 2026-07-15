@@ -1,6 +1,6 @@
 {
   "index": {
-    "schema_version": "1",
+    "schema_version": "2",
     "tool": "assayxport",
     "languages": [
       "java"
@@ -108,7 +108,7 @@
   },
   "shards": {
     ".assayxport/com/foo.json": {
-      "schema_version": "1",
+      "schema_version": "2",
       "package": {
         "id": "com.foo",
         "language": "java",
@@ -127,7 +127,7 @@
       "symbols": null
     },
     ".assayxport/com/foo/App.java.json": {
-      "schema_version": "1",
+      "schema_version": "2",
       "package": {
         "id": "com.foo.App",
         "language": "java",
@@ -206,12 +206,23 @@
             "modifiers": [
               "static"
             ]
-          }
+          },
+          "calls": [
+            {
+              "target": "System.out.println",
+              "kind": "unresolved",
+              "arity": 1,
+              "arg_types": [
+                "String"
+              ],
+              "count": 1
+            }
+          ]
         }
       ]
     },
     ".assayxport/com/foo/Bar.java.json": {
-      "schema_version": "1",
+      "schema_version": "2",
       "package": {
         "id": "com.foo.Bar",
         "language": "java",
@@ -507,7 +518,18 @@
             "modifiers": [
               "static"
             ]
-          }
+          },
+          "calls": [
+            {
+              "target": "System.out.println",
+              "kind": "unresolved",
+              "arity": 1,
+              "arg_types": [
+                "String"
+              ],
+              "count": 1
+            }
+          ]
         },
         {
           "id": "Color",
@@ -584,7 +606,7 @@
       ]
     },
     ".assayxport/com/foo/Point.java.json": {
-      "schema_version": "1",
+      "schema_version": "2",
       "package": {
         "id": "com.foo.Point",
         "language": "java",
@@ -859,7 +881,7 @@
       ]
     },
     ".assayxport/com/foo/Shapes.java.json": {
-      "schema_version": "1",
+      "schema_version": "2",
       "package": {
         "id": "com.foo.Shapes",
         "language": "java",
@@ -1051,7 +1073,21 @@
             ],
             "type_params": null,
             "variadic": false
-          }
+          },
+          "calls": [
+            {
+              "target": "new java.util.ArrayList",
+              "kind": "external",
+              "arity": 0,
+              "count": 1
+            },
+            {
+              "target": "out.add",
+              "kind": "unresolved",
+              "arity": 1,
+              "count": 1
+            }
+          ]
         },
         {
           "id": "Shapes.recur",
@@ -1091,7 +1127,16 @@
             ],
             "type_params": null,
             "variadic": false
-          }
+          },
+          "calls": [
+            {
+              "target": "Shapes.recur",
+              "kind": "internal",
+              "ref": "com.foo.Shapes#Shapes.recur",
+              "arity": 1,
+              "count": 1
+            }
+          ]
         },
         {
           "id": "Shapes.noLoopHere",
@@ -1126,7 +1171,21 @@
             "returns": [],
             "type_params": null,
             "variadic": false
-          }
+          },
+          "calls": [
+            {
+              "target": "System.out.println",
+              "kind": "unresolved",
+              "arity": 1,
+              "count": 1
+            },
+            {
+              "target": "r.run",
+              "kind": "unresolved",
+              "arity": 0,
+              "count": 1
+            }
+          ]
         },
         {
           "id": "Shapes.delegate",
@@ -1166,7 +1225,20 @@
             ],
             "type_params": null,
             "variadic": false
-          }
+          },
+          "calls": [
+            {
+              "target": "Shapes.delegate",
+              "kind": "internal",
+              "ref": "com.foo.Shapes#Shapes.delegate",
+              "arity": 2,
+              "arg_types": [
+                null,
+                "int"
+              ],
+              "count": 1
+            }
+          ]
         },
         {
           "id": "Shapes.delegate",
@@ -1448,7 +1520,7 @@
       ]
     },
     ".assayxport/com/foo/sub.json": {
-      "schema_version": "1",
+      "schema_version": "2",
       "package": {
         "id": "com.foo.sub",
         "language": "java",
@@ -1463,7 +1535,7 @@
       "symbols": null
     },
     ".assayxport/com/foo/sub/Leaf.java.json": {
-      "schema_version": "1",
+      "schema_version": "2",
       "package": {
         "id": "com.foo.sub.Leaf",
         "language": "java",

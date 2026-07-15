@@ -2,8 +2,15 @@
 // encoding. Version is the schema_version string emitted in every artifact.
 package schema
 
+import (
+	"sort"
+	"strconv"
+	"strings"
+)
+
 // Version is the schema_version value written into every index and shard.
-const Version = "1"
+// "2" added the per-symbol call graph (Symbol.Calls); the change is additive.
+const Version = "2"
 
 // Index is the root manifest written to assayxport.json.
 type Index struct {
@@ -89,6 +96,8 @@ type Symbol struct {
 	InAll       *bool    `json:"in_all,omitempty"`
 	Decorators  []string `json:"decorators,omitempty"`
 	Annotations []string `json:"annotations,omitempty"`
+
+	Calls []Call `json:"calls,omitempty"`
 }
 
 // Signature describes a func or method.
@@ -143,4 +152,137 @@ type Complexity struct {
 // DeferredComplexity returns the SP1 placeholder complexity value.
 func DeferredComplexity() Complexity {
 	return Complexity{Time: nil, Space: nil, Method: "deferred"}
+}
+
+// Call is one edge in the call graph: one distinct callee of a function-like
+// symbol, deduplicated across its call sites. Edges are sorted by Target,
+// Kind, Ref, Arity, then ArgTypes, so equal inputs produce byte-identical
+// output.
+//
+// Kind says how far resolution got, and is honest about the boundary:
+//   - "internal":   the callee is a symbol in this manifest; Ref locates it.
+//   - "external":   resolved to a package outside the scan (stdlib or a
+//     dependency); the graph bottoms out here by construction.
+//   - "builtin":    a language primitive (Go len/make/append..., Python
+//     print/len/range...); the floor of the graph.
+//   - "dynamic":    a call through a function value or interface/abstract
+//     method; the static target is unknowable, Target names the site's
+//     declared callee (e.g. the interface method) or the value expression.
+//   - "unresolved": a syntactic extractor could not resolve the name
+//     (imported-name gaps, receiver-typed method calls in Python/Java);
+//     Target is the callee as written.
+//
+// Arity and ArgTypes are call-site evidence, recorded as written, for
+// languages with overloading (Java). Arity is the argument count. ArgTypes
+// has one entry per argument position: the type when the source states it (a
+// literal, a cast, a new T(...), this, a string concatenation) and null when
+// it does not (an identifier, a call result). The field is omitted when every
+// position is unknown. A consumer joins them against each candidate
+// overload's signature.params to draw the graph: exact when arity or
+// evidence distinguishes, an honest fan-out when it does not.
+type Call struct {
+	Target   string    `json:"target"`              // callee as resolved, or as written
+	Kind     string    `json:"kind"`                // internal|external|builtin|dynamic|unresolved
+	Ref      string    `json:"ref,omitempty"`       // "<package-id>#<symbol-id>" for internal edges
+	Arity    *int      `json:"arity,omitempty"`     // call-site argument count (overloading languages)
+	ArgTypes []*string `json:"arg_types,omitempty"` // per-position type evidence; null = unknown
+	Count    int       `json:"count"`               // number of call sites merged into this edge
+}
+
+// DedupeCalls merges raw per-site edges (Count ignored, each element is one
+// site) into the canonical form documented on Call. The merge key is the
+// full vector - Target, Kind, Ref, Arity, ArgTypes - so two sites that carry
+// different evidence stay distinct edges rather than blurring into one.
+// Returns nil for no edges so the field is omitted entirely.
+func DedupeCalls(raw []Call) []Call {
+	if len(raw) == 0 {
+		return nil
+	}
+	type slot struct {
+		c Call
+		n int
+	}
+	byKey := make(map[string]*slot, len(raw))
+	for _, c := range raw {
+		c.Count = 0
+		k := callKey(c)
+		if s, ok := byKey[k]; ok {
+			s.n++
+		} else {
+			byKey[k] = &slot{c: c, n: 1}
+		}
+	}
+	out := make([]Call, 0, len(byKey))
+	for _, s := range byKey {
+		s.c.Count = s.n
+		out = append(out, s.c)
+	}
+	sort.Slice(out, func(i, j int) bool { return callLess(out[i], out[j]) })
+	return out
+}
+
+// callKey encodes an edge's identity (everything but Count). \x00 separates
+// fields; \x01 marks an unknown ArgTypes position so it cannot collide with
+// the empty string.
+func callKey(c Call) string {
+	var b strings.Builder
+	b.WriteString(c.Target)
+	b.WriteByte(0)
+	b.WriteString(c.Kind)
+	b.WriteByte(0)
+	b.WriteString(c.Ref)
+	b.WriteByte(0)
+	if c.Arity != nil {
+		b.WriteString(strconv.Itoa(*c.Arity))
+	}
+	for _, t := range c.ArgTypes {
+		b.WriteByte(0)
+		if t == nil {
+			b.WriteByte(1)
+		} else {
+			b.WriteString(*t)
+		}
+	}
+	return b.String()
+}
+
+// callLess is the canonical edge order: Target, Kind, Ref, Arity (absent
+// first), then ArgTypes positionally (shorter first; unknown before known).
+func callLess(a, b Call) bool {
+	if a.Target != b.Target {
+		return a.Target < b.Target
+	}
+	if a.Kind != b.Kind {
+		return a.Kind < b.Kind
+	}
+	if a.Ref != b.Ref {
+		return a.Ref < b.Ref
+	}
+	aa, ba := -1, -1
+	if a.Arity != nil {
+		aa = *a.Arity
+	}
+	if b.Arity != nil {
+		ba = *b.Arity
+	}
+	if aa != ba {
+		return aa < ba
+	}
+	if len(a.ArgTypes) != len(b.ArgTypes) {
+		return len(a.ArgTypes) < len(b.ArgTypes)
+	}
+	for i := range a.ArgTypes {
+		at, bt := a.ArgTypes[i], b.ArgTypes[i]
+		switch {
+		case at == nil && bt == nil:
+			continue
+		case at == nil:
+			return true
+		case bt == nil:
+			return false
+		case *at != *bt:
+			return *at < *bt
+		}
+	}
+	return false
 }

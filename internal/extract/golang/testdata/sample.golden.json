@@ -1,6 +1,6 @@
 {
   "index": {
-    "schema_version": "1",
+    "schema_version": "2",
     "tool": "assayxport",
     "languages": [
       "go"
@@ -31,7 +31,7 @@
           "kind": "binary",
           "how": "go run ./cmd/tool"
         },
-        "symbol_count": 15,
+        "symbol_count": 20,
         "entrypoint_count": 1,
         "shard": ".assayxport/cmd/tool.json"
       }
@@ -39,7 +39,7 @@
   },
   "shards": {
     ".assayxport/calc.json": {
-      "schema_version": "1",
+      "schema_version": "2",
       "package": {
         "id": "example.com/sample/calc",
         "language": "go",
@@ -700,7 +700,7 @@
       ]
     },
     ".assayxport/cmd/tool.json": {
-      "schema_version": "1",
+      "schema_version": "2",
       "package": {
         "id": "example.com/sample/cmd/tool",
         "language": "go",
@@ -723,9 +723,9 @@
           "visibility_idiom": "capitalized",
           "location": {
             "file": "cmd/tool/main.go",
-            "line": 4,
+            "line": 10,
             "col": 1,
-            "end_line": 4
+            "end_line": 14
           },
           "doc": {
             "raw": "",
@@ -746,7 +746,254 @@
             "returns": [],
             "type_params": null,
             "variadic": false
+          },
+          "calls": [
+            {
+              "target": "example.com/sample/calc.Accumulator.Push",
+              "kind": "internal",
+              "ref": "example.com/sample/calc#Accumulator.Push",
+              "count": 1
+            },
+            {
+              "target": "example.com/sample/calc.Add",
+              "kind": "internal",
+              "ref": "example.com/sample/calc#Add",
+              "count": 1
+            },
+            {
+              "target": "example.com/sample/cmd/tool.report",
+              "kind": "internal",
+              "ref": "example.com/sample/cmd/tool#report",
+              "count": 2
+            },
+            {
+              "target": "len",
+              "kind": "builtin",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "id": "report",
+          "name": "report",
+          "kind": "func",
+          "visibility": "unexported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/main.go",
+            "line": 17,
+            "col": 1,
+            "end_line": 19
+          },
+          "doc": {
+            "raw": "report prints a labeled value; its edge to fmt.Println is external.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "label",
+                "type": "string"
+              },
+              {
+                "name": "v",
+                "type": "int"
+              }
+            ],
+            "returns": [],
+            "type_params": null,
+            "variadic": false
+          },
+          "calls": [
+            {
+              "target": "fmt.Println",
+              "kind": "external",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "id": "dispatch",
+          "name": "dispatch",
+          "kind": "func",
+          "visibility": "unexported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/main.go",
+            "line": 23,
+            "col": 1,
+            "end_line": 23
+          },
+          "doc": {
+            "raw": "dispatch calls through an interface: a dynamic edge that still names (and\nlinks) the interface method, since the concrete callee is chosen at run time.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "a",
+                "type": "example.com/sample/calc.Adder"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "int"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          },
+          "calls": [
+            {
+              "target": "example.com/sample/calc.Adder.Add",
+              "kind": "dynamic",
+              "ref": "example.com/sample/calc#Adder.Add",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "id": "apply",
+          "name": "apply",
+          "kind": "func",
+          "visibility": "unexported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/main.go",
+            "line": 26,
+            "col": 1,
+            "end_line": 26
+          },
+          "doc": {
+            "raw": "apply calls a func-typed parameter: a dynamic edge with no static name.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "f",
+                "type": "func(int) int"
+              },
+              {
+                "name": "v",
+                "type": "int"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "int"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          },
+          "calls": [
+            {
+              "target": "f",
+              "kind": "dynamic",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "id": "convert",
+          "name": "convert",
+          "kind": "func",
+          "visibility": "unexported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/main.go",
+            "line": 29,
+            "col": 1,
+            "end_line": 29
+          },
+          "doc": {
+            "raw": "convert uses call syntax that is a type conversion, not a call: no edge.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "f",
+                "type": "float64"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "example.com/sample/calc.Celsius"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
           }
+        },
+        {
+          "id": "deferred",
+          "name": "deferred",
+          "kind": "func",
+          "visibility": "unexported",
+          "visibility_idiom": "capitalized",
+          "location": {
+            "file": "cmd/tool/main.go",
+            "line": 33,
+            "col": 1,
+            "end_line": 35
+          },
+          "doc": {
+            "raw": "deferred calls fmt.Println only from inside a closure; a closure is not a\nsymbol of its own, so the edge is attributed to deferred.",
+            "format": "godoc"
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [],
+            "returns": [],
+            "type_params": null,
+            "variadic": false
+          },
+          "calls": [
+            {
+              "target": "(func() literal)",
+              "kind": "dynamic",
+              "count": 1
+            },
+            {
+              "target": "fmt.Println",
+              "kind": "external",
+              "count": 1
+            }
+          ]
         },
         {
           "id": "Constant",
@@ -902,7 +1149,19 @@
             ],
             "type_params": null,
             "variadic": false
-          }
+          },
+          "calls": [
+            {
+              "target": "append",
+              "kind": "builtin",
+              "count": 1
+            },
+            {
+              "target": "make",
+              "kind": "builtin",
+              "count": 1
+            }
+          ]
         },
         {
           "id": "Recur",
@@ -941,7 +1200,15 @@
             ],
             "type_params": null,
             "variadic": false
-          }
+          },
+          "calls": [
+            {
+              "target": "example.com/sample/cmd/tool.Recur",
+              "kind": "internal",
+              "ref": "example.com/sample/cmd/tool#Recur",
+              "count": 1
+            }
+          ]
         },
         {
           "id": "Closure",
@@ -980,7 +1247,14 @@
             ],
             "type_params": null,
             "variadic": false
-          }
+          },
+          "calls": [
+            {
+              "target": "f",
+              "kind": "dynamic",
+              "count": 1
+            }
+          ]
         },
         {
           "id": "MarkThing",
@@ -1133,7 +1407,15 @@
               "type": "*Node"
             },
             "variadic": false
-          }
+          },
+          "calls": [
+            {
+              "target": "example.com/sample/cmd/tool.MarkThing",
+              "kind": "internal",
+              "ref": "example.com/sample/cmd/tool#MarkThing",
+              "count": 1
+            }
+          ]
         },
         {
           "id": "Node.Root",
@@ -1172,7 +1454,15 @@
               "type": "*Node"
             },
             "variadic": false
-          }
+          },
+          "calls": [
+            {
+              "target": "example.com/sample/cmd/tool.Node.Root",
+              "kind": "internal",
+              "ref": "example.com/sample/cmd/tool#Node.Root",
+              "count": 1
+            }
+          ]
         },
         {
           "id": "Box",

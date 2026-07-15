@@ -13,7 +13,7 @@ func load(t *testing.T) ([]symView, map[string]bool, bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	syms, _, all, hasMain, err := moduleSymbols("sample.py", src)
+	syms, _, all, hasMain, err := moduleSymbols("sample.py", src, "sample")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +100,7 @@ func TestModuleSymbols(t *testing.T) {
 // detected just like the double-quoted form.
 func TestMainGuardSingleQuote(t *testing.T) {
 	src := []byte("def main():\n    pass\n\n\nif __name__ == '__main__':\n    main()\n")
-	syms, _, _, hasMain, err := moduleSymbols("guard.py", src)
+	syms, _, _, hasMain, err := moduleSymbols("guard.py", src, "guard")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +109,7 @@ func TestMainGuardSingleQuote(t *testing.T) {
 	}
 	// The double-quote form must still work.
 	src2 := []byte("if __name__ == \"__main__\":\n    pass\n")
-	if _, _, _, hasMain2, err := moduleSymbols("guard2.py", src2); err != nil || !hasMain2 {
+	if _, _, _, hasMain2, err := moduleSymbols("guard2.py", src2, "guard2"); err != nil || !hasMain2 {
 		t.Fatalf("double-quote guard: hasMain=%v err=%v", hasMain2, err)
 	}
 	_ = syms

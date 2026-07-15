@@ -1,6 +1,6 @@
 {
   "index": {
-    "schema_version": "1",
+    "schema_version": "2",
     "tool": "assayxport",
     "languages": [
       "python"
@@ -106,7 +106,7 @@
   },
   "shards": {
     ".assayxport/entry.py.json": {
-      "schema_version": "1",
+      "schema_version": "2",
       "package": {
         "id": "entry",
         "language": "python",
@@ -157,7 +157,7 @@
       ]
     },
     ".assayxport/pkg.json": {
-      "schema_version": "1",
+      "schema_version": "2",
       "package": {
         "id": "pkg",
         "language": "python",
@@ -227,7 +227,7 @@
       ]
     },
     ".assayxport/pkg/mod.py.json": {
-      "schema_version": "1",
+      "schema_version": "2",
       "package": {
         "id": "pkg.mod",
         "language": "python",
@@ -588,7 +588,7 @@
       ]
     },
     ".assayxport/pkg/shapes.py.json": {
-      "schema_version": "1",
+      "schema_version": "2",
       "package": {
         "id": "pkg.shapes",
         "language": "python",
@@ -732,7 +732,14 @@
             "returns": null,
             "type_params": null,
             "variadic": false
-          }
+          },
+          "calls": [
+            {
+              "target": "out.append",
+              "kind": "unresolved",
+              "count": 1
+            }
+          ]
         },
         {
           "id": "recur",
@@ -766,7 +773,15 @@
             "returns": null,
             "type_params": null,
             "variadic": false
-          }
+          },
+          "calls": [
+            {
+              "target": "recur",
+              "kind": "internal",
+              "ref": "pkg.shapes#recur",
+              "count": 1
+            }
+          ]
         },
         {
           "id": "closure",
@@ -800,7 +815,14 @@
             "returns": null,
             "type_params": null,
             "variadic": false
-          }
+          },
+          "calls": [
+            {
+              "target": "inner",
+              "kind": "unresolved",
+              "count": 1
+            }
+          ]
         },
         {
           "id": "nested_class",
@@ -1036,7 +1058,15 @@
             "returns": null,
             "type_params": null,
             "variadic": false
-          }
+          },
+          "calls": [
+            {
+              "target": "Evt.walk",
+              "kind": "internal",
+              "ref": "pkg.shapes#Evt.walk",
+              "count": 1
+            }
+          ]
         },
         {
           "id": "Evt.get_header_value",
@@ -1075,7 +1105,15 @@
             "returns": null,
             "type_params": null,
             "variadic": false
-          }
+          },
+          "calls": [
+            {
+              "target": "get_header_value",
+              "kind": "internal",
+              "ref": "pkg.shapes#get_header_value",
+              "count": 1
+            }
+          ]
         },
         {
           "id": "dict_build",
@@ -1148,7 +1186,7 @@
       ]
     },
     ".assayxport/pkg/sub.json": {
-      "schema_version": "1",
+      "schema_version": "2",
       "package": {
         "id": "pkg.sub",
         "language": "python",
@@ -1163,7 +1201,7 @@
       "symbols": null
     },
     ".assayxport/pkg/sub/leaf.py.json": {
-      "schema_version": "1",
+      "schema_version": "2",
       "package": {
         "id": "pkg.sub.leaf",
         "language": "python",
@@ -1175,7 +1213,7 @@
       "symbols": null
     },
     ".assayxport/script.py.json": {
-      "schema_version": "1",
+      "schema_version": "2",
       "package": {
         "id": "script",
         "language": "python",

@@ -97,7 +97,7 @@ func TestManifestCopiesPackageUnitFields(t *testing.T) {
 
 func TestManifestSortsAndCounts(t *testing.T) {
 	idx, shards := Manifest(samplePkgs(), "example.com/s", []string{"go"})
-	if idx.SchemaVersion != "1" || idx.Tool != "assayxport" {
+	if idx.SchemaVersion != "2" || idx.Tool != "assayxport" {
 		t.Fatalf("index header = %+v", idx)
 	}
 	if len(idx.Packages) != 2 || idx.Packages[0].ID != "example.com/s/a" {
@@ -130,7 +130,7 @@ func TestWriteDirDeterministic(t *testing.T) {
 	if first[len(first)-1] != '\n' {
 		t.Fatalf("index must end with newline")
 	}
-	if !bytes.Contains(first, []byte("\"schema_version\": \"1\"")) {
+	if !bytes.Contains(first, []byte("\"schema_version\": \"2\"")) {
 		t.Fatalf("index not 2-space indented JSON: %s", first)
 	}
 	// Re-emit; bytes identical.

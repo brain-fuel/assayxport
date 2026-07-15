@@ -1,0 +1,518 @@
+package java
+
+import (
+	"strings"
+
+	"goforge.dev/assayxport/internal/schema"
+	"goforge.dev/assayxport/internal/ts"
+)
+
+// Call extraction is syntactic, like the rest of this extractor, and resolves
+// exactly as far as file-local knowledge reaches:
+//
+//   - a bare-name (or this-qualified) invocation of a method declared on the
+//     enclosing type or one of its enclosing types -> internal;
+//   - Type.method(...) where Type is declared in this file -> internal when
+//     the method is declared on it, otherwise unresolved (it may be
+//     inherited, and inheritance is invisible to syntax);
+//   - a name bound by an import (including static imports; the last dotted
+//     segment is the local name either way) -> external;
+//   - a well-known java.lang class (String, Math, System, ...) -> external,
+//     since java.lang needs no import;
+//   - new T(...) resolves T the same way; an internal edge links the declared
+//     constructor when the file has one, else the type itself (the implicit
+//     default constructor has no symbol);
+//   - this(...) constructor delegation -> internal; super(...) and
+//     super.m(...) -> unresolved (the parent type is out of syntactic reach);
+//   - anything else (instance calls on locals/fields/expressions) ->
+//     unresolved, as written.
+//
+// Java has no free-function primitives, so no edge is ever "builtin", and a
+// call that is not a name at all cannot be expressed (method references are
+// values, not calls), so "dynamic" does not occur either.
+//
+// Lambda bodies and anonymous-class bodies are walked: neither is a symbol of
+// its own, so their calls are attributed to the enclosing declared method
+// (mirroring the Go extractor's closure rule).
+//
+// Every Java edge additionally records the call site as written: `arity` is
+// the argument count, and `arg_types` is per-position type evidence - the
+// entry is the type when the source states it (a literal, a cast, a
+// `new T(...)`, `this`, a string concatenation), null when it does not (an
+// identifier, a call result). Evidence is site data, so it never upgrades a
+// kind on its own; but a call whose arity matches NO locally declared
+// overload of a resolved name is downgraded to "unresolved" rather than
+// linked to the wrong local method (the real callee is likely inherited).
+// Varargs compatibility follows the declaration: n params accept >= n-1 args.
+//
+// Probe-verified node/field names (gotreesitter Java grammar, 2026-07-14):
+//   - import_declaration:      scoped_identifier (+ asterisk for wildcard;
+//     static imports differ only in the `static` keyword, an unnamed child)
+//   - method_invocation:       "object", "name", "arguments" fields; object
+//     may be this/identifier/field_access/method_invocation
+//   - object_creation_expression: "type" field (type_identifier or
+//     generic_type wrapping one), "arguments" field
+//   - explicit_constructor_invocation: first named child is this|super,
+//     argument_list child
+//   - constructor_declaration: body field is constructor_body
+//   - literals: decimal/hex/octal/binary_integer_literal (suffix l/L = long),
+//     decimal/hex_floating_point_literal (suffix f/F = float), string_literal
+//     (text blocks included), character_literal, true, false, null_literal
+//   - binary_expression: "left"/"operator"/"right" fields
+//   - array_creation_expression: "type" field + dimensions_expr (sized) or
+//     dimensions (initializer form) children
+
+// javaFileCtx is one compilation unit's name environment for classifying calls.
+type javaFileCtx struct {
+	unitID  string                        // manifest module-unit id, for internal refs
+	methods map[string]map[string][]sigInfo // typeID -> method name -> declared overload shapes
+	ctors   map[string][]sigInfo          // typeID -> declared constructor shapes
+	canon   map[string]sigInfo            // record typeID -> canonical constructor shape
+	types   map[string]bool               // every typeID declared in this file
+	imports map[string]string             // simple/local name -> imported dotted path
+}
+
+// sigInfo is the callable shape arity matching runs against: declared
+// parameter count and whether the last parameter is varargs.
+type sigInfo struct {
+	params   int
+	variadic bool
+}
+
+// compatible reports whether a call with the given argument count could
+// target any of the declared shapes: exact arity, or >= n-1 for varargs.
+func compatible(sigs []sigInfo, arity int) bool {
+	for _, s := range sigs {
+		if arity == s.params || (s.variadic && arity >= s.params-1) {
+			return true
+		}
+	}
+	return false
+}
+
+// sigOf reads a declaration's formal_parameters into a sigInfo.
+func sigOf(node ts.Node, src []byte) sigInfo {
+	var si sigInfo
+	pnode, ok := node.ChildByFieldName("parameters")
+	if !ok {
+		return si
+	}
+	for i := 0; i < pnode.NamedChildCount(); i++ {
+		switch pnode.NamedChild(i).Type() {
+		case "formal_parameter":
+			si.params++
+		case "spread_parameter":
+			si.params++
+			si.variadic = true
+		}
+	}
+	return si
+}
+
+// buildFileCtx makes one pre-pass over the compilation unit, collecting the
+// type/method/import environment that javaCalls resolves against.
+func buildFileCtx(root ts.Node, src []byte, unitID string) *javaFileCtx {
+	ctx := &javaFileCtx{
+		unitID:  unitID,
+		methods: map[string]map[string][]sigInfo{},
+		ctors:   map[string][]sigInfo{},
+		canon:   map[string]sigInfo{},
+		types:   map[string]bool{},
+		imports: map[string]string{},
+	}
+	for i := 0; i < root.NamedChildCount(); i++ {
+		child := root.NamedChild(i)
+		switch {
+		case child.Type() == "import_declaration":
+			ctx.addImport(child, src)
+		default:
+			if _, ok := typeDeclTypes[child.Type()]; ok {
+				ctx.addType(child, src, "")
+			}
+		}
+	}
+	return ctx
+}
+
+// addImport records one import as local-name -> full dotted path. A wildcard
+// import binds no name. A static import's last segment is a member name, a
+// plain import's is a class name; both resolve the same way at a call site.
+func (ctx *javaFileCtx) addImport(node ts.Node, src []byte) {
+	if !childOfType(node, "asterisk").IsNull() {
+		return
+	}
+	scoped := childOfType(node, "scoped_identifier")
+	if scoped.IsNull() {
+		return
+	}
+	full := scoped.Content(src)
+	ctx.imports[simpleName(full)] = full
+}
+
+// addType records a type declaration, its declared method and constructor
+// shapes, and recurses into nested types with dotted ids (mirroring
+// typeSymbols). A record's canonical constructor - implied by its component
+// list - is recorded separately, since it has no constructor symbol.
+func (ctx *javaFileCtx) addType(node ts.Node, src []byte, ownerPrefix string) {
+	name := typeName(node, src)
+	id := name
+	if ownerPrefix != "" {
+		id = ownerPrefix + "." + name
+	}
+	ctx.types[id] = true
+	methods := map[string][]sigInfo{}
+	ctx.methods[id] = methods
+	if node.Type() == "record_declaration" {
+		ctx.canon[id] = sigOf(node, src)
+	}
+
+	body, ok := node.ChildByFieldName("body")
+	if !ok {
+		return
+	}
+	for _, member := range bodyMembers(body) {
+		switch member.Type() {
+		case "method_declaration":
+			mname := fieldText(member, "name", src)
+			methods[mname] = append(methods[mname], sigOf(member, src))
+		case "constructor_declaration":
+			ctx.ctors[id] = append(ctx.ctors[id], sigOf(member, src))
+		default:
+			if _, ok := typeDeclTypes[member.Type()]; ok {
+				ctx.addType(member, src, id)
+			}
+		}
+	}
+}
+
+// ctorShapes returns the constructor shapes `new typeID(...)` can target:
+// the declared constructors, plus a record's canonical constructor, plus the
+// implicit zero-arg default when nothing at all is declared.
+func (ctx *javaFileCtx) ctorShapes(typeID string) []sigInfo {
+	shapes := ctx.ctors[typeID]
+	if c, ok := ctx.canon[typeID]; ok {
+		shapes = append(shapes[:len(shapes):len(shapes)], c)
+	}
+	if len(shapes) == 0 {
+		shapes = []sigInfo{{params: 0}}
+	}
+	return shapes
+}
+
+// javaCalls walks a method or constructor body and returns its call edges,
+// deduplicated and sorted per schema.DedupeCalls. ownerID is the declaring
+// type's dotted id.
+func javaCalls(node ts.Node, src []byte, ctx *javaFileCtx, ownerID string) []schema.Call {
+	body, ok := node.ChildByFieldName("body")
+	if !ok || ctx == nil {
+		return nil
+	}
+	var raw []schema.Call
+	var walk func(n ts.Node)
+	walk = func(n ts.Node) {
+		for i := 0; i < n.NamedChildCount(); i++ {
+			c := n.NamedChild(i)
+			var edge schema.Call
+			switch c.Type() {
+			case "method_invocation":
+				arity, ev := argEvidence(c, src, ownerID)
+				edge = ctx.invocationEdge(c, src, ownerID, arity)
+				edge.Arity, edge.ArgTypes = &arity, ev
+			case "object_creation_expression":
+				arity, ev := argEvidence(c, src, ownerID)
+				edge = ctx.creationEdge(c, src, ownerID, arity)
+				edge.Arity, edge.ArgTypes = &arity, ev
+			case "explicit_constructor_invocation":
+				arity, ev := argEvidence(c, src, ownerID)
+				edge = ctx.delegationEdge(c, src, ownerID, arity)
+				edge.Arity, edge.ArgTypes = &arity, ev
+			default:
+				walk(c)
+				continue
+			}
+			raw = append(raw, edge)
+			walk(c)
+		}
+	}
+	walk(body)
+	return schema.DedupeCalls(raw)
+}
+
+// argEvidence reads a call's argument list into its arity and per-position
+// as-written type evidence. The evidence slice is nil when every position is
+// unknown, so the field disappears from edges that carry no information.
+func argEvidence(call ts.Node, src []byte, ownerID string) (int, []*string) {
+	args, ok := call.ChildByFieldName("arguments")
+	if !ok {
+		args = childOfType(call, "argument_list") // explicit_constructor_invocation
+	}
+	if args.IsNull() {
+		return 0, nil
+	}
+	var ev []*string
+	known := false
+	for i := 0; i < args.NamedChildCount(); i++ {
+		c := args.NamedChild(i)
+		if c.Type() == "line_comment" || c.Type() == "block_comment" {
+			continue
+		}
+		t := classifyArg(c, src, ownerID)
+		if t != nil {
+			known = true
+		}
+		ev = append(ev, t)
+	}
+	arity := len(ev)
+	if !known {
+		ev = nil
+	}
+	return arity, ev
+}
+
+// classifyArg returns an argument's type when the source states it, nil when
+// it does not. Everything here is as written: no widening, no boxing, no
+// hierarchy - those belong to the consumer.
+func classifyArg(n ts.Node, src []byte, ownerID string) *string {
+	switch n.Type() {
+	case "decimal_integer_literal", "hex_integer_literal",
+		"octal_integer_literal", "binary_integer_literal":
+		if s := n.Content(src); strings.HasSuffix(s, "l") || strings.HasSuffix(s, "L") {
+			return strp("long")
+		}
+		return strp("int")
+	case "decimal_floating_point_literal", "hex_floating_point_literal":
+		if s := n.Content(src); strings.HasSuffix(s, "f") || strings.HasSuffix(s, "F") {
+			return strp("float")
+		}
+		return strp("double")
+	case "string_literal": // text blocks parse as string_literal too
+		return strp("String")
+	case "character_literal":
+		return strp("char")
+	case "true", "false":
+		return strp("boolean")
+	case "null_literal":
+		return strp("null")
+	case "this":
+		return strp(simpleName(ownerID))
+	case "cast_expression":
+		// A cast at a call site is the programmer's own overload
+		// disambiguation; preserve it exactly.
+		if t, ok := n.ChildByFieldName("type"); ok {
+			return strp(t.Content(src))
+		}
+	case "object_creation_expression":
+		if t, ok := n.ChildByFieldName("type"); ok {
+			return strp(t.Content(src))
+		}
+	case "array_creation_expression":
+		if t, ok := n.ChildByFieldName("type"); ok {
+			dims := 0
+			for i := 0; i < n.NamedChildCount(); i++ {
+				switch c := n.NamedChild(i); c.Type() {
+				case "dimensions_expr":
+					dims++
+				case "dimensions":
+					dims += strings.Count(c.Content(src), "[")
+				}
+			}
+			if dims == 0 {
+				dims = 1
+			}
+			return strp(t.Content(src) + strings.Repeat("[]", dims))
+		}
+	case "binary_expression":
+		// Concatenation with a String operand is always a String.
+		if op, ok := n.ChildByFieldName("operator"); ok && op.Content(src) == "+" {
+			l, _ := n.ChildByFieldName("left")
+			r, _ := n.ChildByFieldName("right")
+			if isStringOperand(l, src, ownerID) || isStringOperand(r, src, ownerID) {
+				return strp("String")
+			}
+		}
+	case "parenthesized_expression":
+		if n.NamedChildCount() > 0 {
+			return classifyArg(n.NamedChild(0), src, ownerID)
+		}
+	}
+	return nil
+}
+
+// isStringOperand reports whether a concatenation operand is known-String.
+func isStringOperand(n ts.Node, src []byte, ownerID string) bool {
+	if n.IsNull() {
+		return false
+	}
+	t := classifyArg(n, src, ownerID)
+	return t != nil && *t == "String"
+}
+
+// strp returns a pointer to s, for evidence entries.
+func strp(s string) *string { return &s }
+
+// invocationEdge classifies one method_invocation. arity is the call-site
+// argument count; a resolved local name whose overloads are all
+// arity-incompatible is downgraded to "unresolved" (see the header comment).
+func (ctx *javaFileCtx) invocationEdge(call ts.Node, src []byte, ownerID string, arity int) schema.Call {
+	name := fieldText(call, "name", src)
+	obj, hasObj := call.ChildByFieldName("object")
+
+	// helper() or this.helper(): a method on the enclosing type chain. The
+	// innermost enclosing type declaring the NAME wins (Java shadows by
+	// name); overload matching then runs within that type only.
+	if !hasObj || obj.Type() == "this" {
+		if declID := ctx.lookupMethod(ownerID, name); declID != "" {
+			if compatible(ctx.methods[declID][name], arity) {
+				return schema.Call{
+					Target: declID + "." + name,
+					Kind:   "internal",
+					Ref:    ctx.unitID + "#" + declID + "." + name,
+				}
+			}
+			return schema.Call{Target: declID + "." + name, Kind: "unresolved"}
+		}
+		if !hasObj {
+			// A static import is the only other syntactically visible binding.
+			if origin := ctx.imports[name]; origin != "" {
+				return schema.Call{Target: origin, Kind: "external"}
+			}
+			return schema.Call{Target: name, Kind: "unresolved"}
+		}
+		return schema.Call{Target: "this." + name, Kind: "unresolved"}
+	}
+
+	if obj.Type() == "identifier" {
+		base := obj.Content(src)
+		// Type.method(...) on a type declared in this file.
+		if typeID := ctx.lookupType(ownerID, base); typeID != "" {
+			if compatible(ctx.methods[typeID][name], arity) {
+				return schema.Call{
+					Target: typeID + "." + name,
+					Kind:   "internal",
+					Ref:    ctx.unitID + "#" + typeID + "." + name,
+				}
+			}
+			return schema.Call{Target: typeID + "." + name, Kind: "unresolved"}
+		}
+		if origin := ctx.imports[base]; origin != "" {
+			return schema.Call{Target: origin + "." + name, Kind: "external"}
+		}
+		if javaLang[base] {
+			return schema.Call{Target: "java.lang." + base + "." + name, Kind: "external"}
+		}
+		return schema.Call{Target: base + "." + name, Kind: "unresolved"}
+	}
+
+	// super.m(...), field-access chains, call chains: out of syntactic reach.
+	return schema.Call{Target: obj.Content(src) + "." + name, Kind: "unresolved"}
+}
+
+// creationEdge classifies one object_creation_expression (new T(...)).
+func (ctx *javaFileCtx) creationEdge(call ts.Node, src []byte, ownerID string, arity int) schema.Call {
+	typ, ok := call.ChildByFieldName("type")
+	if !ok {
+		return schema.Call{Target: "new", Kind: "unresolved"}
+	}
+	simple := creationTypeName(typ, src)
+
+	if typeID := ctx.lookupType(ownerID, simple); typeID != "" {
+		if !compatible(ctx.ctorShapes(typeID), arity) {
+			return schema.Call{Target: "new " + typeID, Kind: "unresolved"}
+		}
+		// Link the declared constructor when there is one; a record's
+		// canonical constructor and the implicit default have no symbol, so
+		// fall back to the type.
+		ref := ctx.unitID + "#" + typeID
+		if len(ctx.ctors[typeID]) > 0 {
+			ref = ctx.unitID + "#" + typeID + "." + simple
+		}
+		return schema.Call{Target: "new " + typeID, Kind: "internal", Ref: ref}
+	}
+	if origin := ctx.imports[simple]; origin != "" {
+		return schema.Call{Target: "new " + origin, Kind: "external"}
+	}
+	if javaLang[simple] {
+		return schema.Call{Target: "new java.lang." + simple, Kind: "external"}
+	}
+	return schema.Call{Target: "new " + typ.Content(src), Kind: "unresolved"}
+}
+
+// delegationEdge classifies one explicit_constructor_invocation:
+// this(...) delegates within the type, super(...) leaves syntactic reach.
+func (ctx *javaFileCtx) delegationEdge(call ts.Node, src []byte, ownerID string, arity int) schema.Call {
+	if childOfType(call, "this").IsNull() {
+		return schema.Call{Target: "super", Kind: "unresolved"}
+	}
+	simple := simpleName(ownerID)
+	if !compatible(ctx.ctorShapes(ownerID), arity) {
+		return schema.Call{Target: ownerID + "." + simple, Kind: "unresolved"}
+	}
+	return schema.Call{
+		Target: ownerID + "." + simple,
+		Kind:   "internal",
+		Ref:    ctx.unitID + "#" + ownerID + "." + simple,
+	}
+}
+
+// lookupMethod finds the innermost enclosing type (walking the dotted owner
+// chain outward) that declares name, returning its typeID or "".
+func (ctx *javaFileCtx) lookupMethod(ownerID, name string) string {
+	for id := ownerID; id != ""; id = parentID(id) {
+		if len(ctx.methods[id][name]) > 0 {
+			return id
+		}
+	}
+	return ""
+}
+
+// lookupType resolves a simple type name from inside ownerID: nested types of
+// each enclosing type first (innermost wins), then top-level types.
+func (ctx *javaFileCtx) lookupType(ownerID, simple string) string {
+	for id := ownerID; id != ""; id = parentID(id) {
+		if candidate := id + "." + simple; ctx.types[candidate] {
+			return candidate
+		}
+	}
+	if ctx.types[simple] {
+		return simple
+	}
+	return ""
+}
+
+// parentID strips the last dotted segment: Widget.Inner -> Widget -> "".
+func parentID(id string) string {
+	if i := strings.LastIndex(id, "."); i >= 0 {
+		return id[:i]
+	}
+	return ""
+}
+
+// creationTypeName returns the simple name of a creation's type node,
+// unwrapping generics (ArrayList<> -> ArrayList) and qualified names
+// (util.Pair -> Pair).
+func creationTypeName(typ ts.Node, src []byte) string {
+	if typ.Type() == "generic_type" {
+		for i := 0; i < typ.NamedChildCount(); i++ {
+			c := typ.NamedChild(i)
+			if c.Type() == "type_identifier" || c.Type() == "scoped_type_identifier" {
+				return simpleName(c.Content(src))
+			}
+		}
+	}
+	return simpleName(typ.Content(src))
+}
+
+// javaLang is the set of commonly used java.lang classes, which are visible
+// without an import. Coverage here is pragmatic, not exhaustive: a java.lang
+// class missing from this table degrades to an honest "unresolved".
+var javaLang = map[string]bool{
+	"Boolean": true, "Byte": true, "Character": true, "Class": true,
+	"Double": true, "Enum": true, "Exception": true, "Error": true,
+	"Float": true, "Integer": true, "Iterable": true, "Long": true,
+	"Math": true, "Number": true, "Object": true, "Runnable": true,
+	"Runtime": true, "RuntimeException": true, "Short": true, "String": true,
+	"StringBuilder": true, "StringBuffer": true, "System": true,
+	"Thread": true, "Throwable": true, "Void": true,
+	"IllegalArgumentException": true, "IllegalStateException": true,
+	"NullPointerException": true, "UnsupportedOperationException": true,
+}

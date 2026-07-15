@@ -37,9 +37,15 @@ func (*Extractor) Extract(root string) ([]schema.Package, error) {
 		if rerr != nil {
 			return nil, rerr
 		}
+		// Call-edge refs must point at the unit this file's symbols live in:
+		// the package unit for an __init__.py, the module unit otherwise.
+		unitID := f.ModuleID
+		if f.IsInit {
+			unitID = f.PackageID
+		}
 		// The discarded return is the __all__ membership set, already stamped
 		// onto each symbol's InAll inside moduleSymbols; not needed at unit level.
-		syms, moduleDoc, _, hasMain, serr := moduleSymbols(f.Rel, src)
+		syms, moduleDoc, _, hasMain, serr := moduleSymbols(f.Rel, src, unitID)
 		if serr != nil {
 			return nil, serr
 		}

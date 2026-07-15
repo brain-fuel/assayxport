@@ -1,0 +1,172 @@
+package golang
+
+import (
+	"go/ast"
+	"go/types"
+
+	"golang.org/x/tools/go/ast/astutil"
+	"golang.org/x/tools/go/packages"
+
+	"goforge.dev/assayxport/internal/schema"
+)
+
+// goCalls walks a function body and returns its call edges, deduplicated and
+// sorted per schema.DedupeCalls. Resolution is fully semantic via go/types.
+//
+// Unlike the complexity walker, closures ARE descended into: a FuncLit is not
+// a symbol of its own, so a call made inside one (a defer wrapper, an
+// errgroup.Go argument) would otherwise vanish from the graph. Its calls are
+// attributed to the enclosing declared function.
+//
+// Edge kinds, from most to least resolved:
+//   - builtin:    len, make, append, ... (*types.Builtin) and unsafe.*.
+//   - internal:   the callee is declared in a scanned package; Ref links to
+//     its manifest entry as "<pkg-path>#<symbol-id>".
+//   - external:   the callee is declared outside the scan (stdlib or a
+//     dependency); Target is its fully qualified name.
+//   - dynamic:    a call whose static target does not exist: an interface
+//     method (Target is the interface method, Ref set when the interface is
+//     scanned), or a func-typed value (Target is the value expression as
+//     written).
+//
+// Type conversions T(x) are expressions, not calls, and are skipped.
+func goCalls(p *packages.Package, fd *ast.FuncDecl, scanned map[string]bool) []schema.Call {
+	if fd == nil || fd.Body == nil {
+		return nil // bodiless (external/asm) -> no edges
+	}
+	var raw []schema.Call
+	astutil.Apply(fd.Body, func(c *astutil.Cursor) bool {
+		call, ok := c.Node().(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		if edge, ok := goCallEdge(p, call, scanned); ok {
+			raw = append(raw, edge)
+		}
+		return true
+	}, nil)
+	return schema.DedupeCalls(raw)
+}
+
+// goCallEdge classifies one CallExpr. The bool is false for non-call
+// call-syntax (type conversions).
+func goCallEdge(p *packages.Package, call *ast.CallExpr, scanned map[string]bool) (schema.Call, bool) {
+	fun := unwrapFun(call.Fun)
+
+	// A conversion uses call syntax but is not a call.
+	if tv, ok := p.TypesInfo.Types[call.Fun]; ok && tv.IsType() {
+		return schema.Call{}, false
+	}
+
+	switch fn := fun.(type) {
+	case *ast.Ident:
+		switch obj := p.TypesInfo.Uses[fn].(type) {
+		case *types.Builtin:
+			return schema.Call{Target: obj.Name(), Kind: "builtin"}, true
+		case *types.Func:
+			return funcEdge(obj, scanned), true
+		case *types.Var:
+			// A func-typed variable, parameter, or result.
+			return schema.Call{Target: fn.Name, Kind: "dynamic"}, true
+		}
+	case *ast.SelectorExpr:
+		if sel, ok := p.TypesInfo.Selections[fn]; ok {
+			switch sel.Kind() {
+			case types.MethodVal:
+				if callee, ok := sel.Obj().(*types.Func); ok {
+					return funcEdge(callee, scanned), true
+				}
+			case types.FieldVal:
+				// A func-typed struct field.
+				return schema.Call{Target: types.ExprString(fun), Kind: "dynamic"}, true
+			}
+		}
+		// No selection: a package-qualified name pkg.F, or a method
+		// expression T.M used as a value and called.
+		switch obj := p.TypesInfo.Uses[fn.Sel].(type) {
+		case *types.Builtin: // unsafe.Sizeof and friends
+			return schema.Call{Target: types.ExprString(fun), Kind: "builtin"}, true
+		case *types.Func:
+			return funcEdge(obj, scanned), true
+		case *types.Var:
+			return schema.Call{Target: types.ExprString(fun), Kind: "dynamic"}, true
+		}
+	}
+	// Anything else — a call of a call's result, an index into a slice of
+	// funcs — has no static callee at all.
+	return schema.Call{Target: types.ExprString(fun), Kind: "dynamic"}, true
+}
+
+// funcEdge builds the edge for a resolved *types.Func: a package function,
+// a concrete method, or an interface method (dynamic dispatch).
+func funcEdge(fn *types.Func, scanned map[string]bool) schema.Call {
+	sig, _ := fn.Type().(*types.Signature)
+	pkg := fn.Pkg()
+
+	// error.Error and other universe-scope methods have no package.
+	if pkg == nil {
+		return schema.Call{Target: fn.Name(), Kind: "builtin"}
+	}
+
+	target := pkg.Path() + "." + fn.Name()
+	symID := fn.Name()
+	dynamic := false
+	if sig != nil && sig.Recv() != nil {
+		recvName, isIface := recvTypeName(sig.Recv().Type())
+		if recvName == "" {
+			// A method on an unnamed receiver type; nothing to anchor an ID on.
+			return schema.Call{Target: pkg.Path() + "." + fn.Name(), Kind: "dynamic"}
+		}
+		target = pkg.Path() + "." + recvName + "." + fn.Name()
+		symID = recvName + "." + fn.Name()
+		dynamic = isIface
+	}
+
+	kind := "external"
+	ref := ""
+	if scanned[pkg.Path()] {
+		kind = "internal"
+		ref = pkg.Path() + "#" + symID
+	}
+	if dynamic {
+		// Interface dispatch: the manifest can name the interface method
+		// (and link it when the interface is scanned), but the concrete
+		// callee is chosen at run time.
+		kind = "dynamic"
+	}
+	return schema.Call{Target: target, Kind: kind, Ref: ref}
+}
+
+// recvTypeName returns the receiver's named-type name (pointer stripped,
+// generic instantiation reduced to its origin) and whether the receiver is an
+// interface. An unnamed receiver type yields "".
+func recvTypeName(t types.Type) (name string, isInterface bool) {
+	if ptr, ok := t.(*types.Pointer); ok {
+		t = ptr.Elem()
+	}
+	_, isInterface = t.Underlying().(*types.Interface)
+	switch n := t.(type) {
+	case *types.Named:
+		return n.Obj().Name(), isInterface
+	case *types.TypeParam:
+		return n.Obj().Name(), isInterface
+	}
+	return "", isInterface
+}
+
+// unwrapFun strips parens and generic instantiation from a call's Fun so the
+// underlying Ident/SelectorExpr is classifiable: (f)(x), f[int](x).
+func unwrapFun(e ast.Expr) ast.Expr {
+	for {
+		switch x := e.(type) {
+		case *ast.ParenExpr:
+			e = x.X
+		case *ast.IndexExpr:
+			e = x.X
+		case *ast.IndexListExpr:
+			e = x.X
+		default:
+			return e
+		}
+	}
+}

@@ -25,13 +25,15 @@ func typeStringLocal(t types.Type, currentPkg *types.Package) string {
 }
 
 // extractSymbols walks one package and returns all symbols in source order.
-func extractSymbols(p *packages.Package, moduleDir string) []schema.Symbol {
+// scanned is the set of package paths in this scan, used to classify call
+// edges as internal or external.
+func extractSymbols(p *packages.Package, moduleDir string, scanned map[string]bool) []schema.Symbol {
 	var syms []schema.Symbol
 	for _, file := range p.Syntax {
 		for _, decl := range file.Decls {
 			switch d := decl.(type) {
 			case *ast.FuncDecl:
-				if s, ok := funcSymbol(p, d, moduleDir); ok {
+				if s, ok := funcSymbol(p, d, moduleDir, scanned); ok {
 					syms = append(syms, s)
 				}
 			case *ast.GenDecl:
@@ -245,7 +247,7 @@ func fieldDoc(node ast.Node) string {
 	return ""
 }
 
-func funcSymbol(p *packages.Package, fd *ast.FuncDecl, moduleDir string) (schema.Symbol, bool) {
+func funcSymbol(p *packages.Package, fd *ast.FuncDecl, moduleDir string, scanned map[string]bool) (schema.Symbol, bool) {
 	obj := p.TypesInfo.Defs[fd.Name]
 	fn, ok := obj.(*types.Func)
 	if !ok || fn == nil {
@@ -276,6 +278,7 @@ func funcSymbol(p *packages.Package, fd *ast.FuncDecl, moduleDir string) (schema
 		Location:        locationOf(p.Fset, fd, moduleDir),
 		Doc:             schema.Doc{Raw: strings.TrimSpace(fd.Doc.Text()), Format: "godoc"},
 		Complexity:      complexity.Estimate(goSummary(fd)),
+		Calls:           goCalls(p, fd, scanned),
 		Signature: &schema.Signature{
 			Params:     tupleParams(sig.Params(), p.Types),
 			Returns:    tupleParams(sig.Results(), p.Types),

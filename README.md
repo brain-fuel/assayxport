@@ -2,9 +2,10 @@
 
 > Assaying analyzes a metal to report its exact composition. `assayxport`
 > analyzes a codebase to report its exact API composition - where each symbol
-> lives, what package it belongs to, its signature, its docs, and whether it is
-> a runnable entrypoint - as a deterministic JSON manifest at the project root,
-> so an LLM, docgen, or tool reads one map instead of reparsing everything.
+> lives, what package it belongs to, its signature, its docs, whether it is a
+> runnable entrypoint, and who it calls - as a deterministic JSON manifest at
+> the project root, so an LLM, docgen, or tool reads one map instead of
+> reparsing everything.
 
 Part of the [goforge](https://goforge.dev) suite. Supports Go (native
 `go/packages`), Python, and Java (both via a pure-Go, cgo-free tree-sitter
@@ -14,15 +15,17 @@ supported language found in the tree.
 ## Install
 
 ```bash
-go install goforge.dev/assayxport/cmd/assayxport@latest
+go install goforge.dev/assayxport/cmd/ax@latest
 ```
+
+The binary is `ax` — short for AssayXport, and short to type.
 
 ## Use
 
 ```bash
-assayxport scan .            # writes assayxport.json + .assayxport/ shards
-assayxport scan ./pkg --stdout   # print combined JSON, write nothing
-assayxport scan . --lang java    # restrict to one language (repeatable)
+ax scan .                # writes assayxport.json + .assayxport/ shards
+ax scan ./pkg --stdout   # print combined JSON, write nothing
+ax scan . --lang java    # restrict to one language (repeatable)
 ```
 
 ### Languages
@@ -48,6 +51,64 @@ languages.
 
 Output is deterministic: relative paths, no timestamps, stable ordering. Equal
 inputs produce byte-identical files.
+
+## Call graph
+
+Every function-like symbol carries a `calls` list: its distinct callees, each
+with a call-site `count`, sorted for byte-stable output. The graph is stored
+as edges-at-the-symbol, so the whole-program graph assembles by following
+`ref` links from shard to shard, and it bottoms out - all the way down to
+language primitives, or as far as the project's semantics allow - at the four
+non-internal kinds:
+
+- `internal` - the callee is a symbol in this manifest; `ref` locates it as
+  `<package-id>#<symbol-id>`. Traversal continues here.
+- `builtin` - a language primitive (Go `len`/`make`/`append`..., Python
+  `print`/`len`/`range`...). The floor of the graph.
+- `external` - resolved to a package outside the scan (stdlib or a
+  dependency). The scan boundary.
+- `dynamic` - a call through a func value or interface method; the static
+  target is unknowable. An interface-method call still names (and, when the
+  interface is scanned, links) the interface method itself.
+- `unresolved` - a syntactic extractor ran out of information; the callee is
+  recorded as written.
+
+Resolution depth follows extraction depth. Go edges are fully semantic
+(`go/types`): package functions, methods, builtins, and interface dispatch
+are classified exactly, and type conversions `T(x)` are never mistaken for
+calls. Python and Java edges are syntactic and honest about it: bare names
+resolve against the module's own defs/classes (Python) or the file's own
+types and their enclosing-type chain (Java), then the top-level import table
+(aliases expanded: `np.array` reports as `numpy.array`), then the builtin /
+`java.lang` floor; a receiver-typed call (`obj.method(...)`) whose receiver
+is not the method's own `self`/`cls`/type is `unresolved` because inheritance
+and instance types are invisible to syntax. `super` in Java is always
+`unresolved` for the same reason.
+
+Java edges additionally record the call site as written, so overloads can be
+drawn accurately: `arity` is the argument count, and `arg_types` is
+per-position type evidence - the entry is the type when the source states it
+(a literal, a cast, a `new T(...)`, `this`, a string concatenation) and
+`null` when it does not (an identifier, a call result). Casts at call sites
+are the programmer's own overload disambiguation, and the vector preserves
+them exactly. Deduplication is keyed on the full vector, so `f(1)` and
+`f(x)` stay distinct edges into an overloaded name; a consumer joins the
+evidence against each candidate overload's `signature.params` and gets an
+exact edge when arity or evidence distinguishes, an honest fan-out when it
+does not. Evidence never upgrades a kind - no widening, boxing, or hierarchy
+is assumed - but it can downgrade one: a call whose arity matches no locally
+declared overload is `unresolved` rather than linked to the wrong local
+method (the real callee is likely inherited). Varargs accept `>= n-1`
+arguments; a record's canonical constructor counts as declared, arity taken
+from its components.
+
+Closures, lambdas, and nested defs are not symbols of their own, so calls
+made inside them are attributed to the enclosing declared function - an edge
+behind a `defer func() { ... }()` or a lambda argument is not lost, but the
+graph does not record that its execution is conditional on the closure
+running. Overloads of a Java method share one manifest id; the `arity` and
+`arg_types` on each edge (and `signature.params` on each declaration) are
+what tell them apart.
 
 ## Complexity
 
