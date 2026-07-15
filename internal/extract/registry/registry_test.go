@@ -10,7 +10,7 @@ import (
 
 // mixedFixture is the polyglot fixture: a Go package (calc) plus a Python
 // module (thing.py) under one directory. Path is relative to this package.
-const mixedFixture = "../../../cmd/assayxport/testdata/mixed"
+const mixedFixture = "../../../cmd/ax/testdata/mixed"
 
 // TestRunPolyglotMerge covers Finding 5: Run(All(), mixed) genuinely merges Go,
 // Java, and Python units and reports all three languages.

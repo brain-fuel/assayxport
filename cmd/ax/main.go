@@ -1,4 +1,4 @@
-// Command assayxport scans a source tree and writes a deterministic JSON
+// Command ax (AssayXport) scans a source tree and writes a deterministic JSON
 // manifest (assayxport.json + .assayxport/ shards) of its API and docs.
 package main
 
@@ -23,20 +23,20 @@ func (s *stringsFlag) Set(v string) error {
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, "assayxport:", err)
+		fmt.Fprintln(os.Stderr, "ax:", err)
 		os.Exit(1)
 	}
 }
 
 func run(args []string) error {
-	fs := flag.NewFlagSet("assayxport", flag.ContinueOnError)
+	fs := flag.NewFlagSet("ax", flag.ContinueOnError)
 	out := fs.String("out", "", "output directory (default: scan path)")
 	stdout := fs.Bool("stdout", false, "print combined JSON to stdout; write no files")
 	quiet := fs.Bool("quiet", false, "suppress progress on stderr")
 	var langs stringsFlag
 	fs.Var(&langs, "lang", "language to scan (repeatable; default: all)")
 	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: assayxport scan [path] [flags]")
+		fmt.Fprintln(os.Stderr, "usage: ax scan [path] [flags]")
 		fs.PrintDefaults()
 	}
 	if len(args) == 0 || args[0] != "scan" {
@@ -72,7 +72,7 @@ func run(args []string) error {
 	// mistaken for a complete one.
 	if !*quiet {
 		for _, w := range warnings {
-			fmt.Fprintln(os.Stderr, "assayxport: warning:", w)
+			fmt.Fprintln(os.Stderr, "ax: warning:", w)
 		}
 	}
 
@@ -109,7 +109,7 @@ func run(args []string) error {
 		return err
 	}
 	if !*quiet {
-		fmt.Fprintf(os.Stderr, "assayxport: wrote %d packages to %s\n", len(idx.Packages), outDir)
+		fmt.Fprintf(os.Stderr, "ax: wrote %d packages to %s\n", len(idx.Packages), outDir)
 	}
 	return nil
 }
