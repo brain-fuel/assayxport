@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"syscall/js"
+	"time"
 
 	"goforge.dev/assayxport/internal/explorer/graph"
 	"goforge.dev/assayxport/internal/explorer/loader"
@@ -36,11 +37,31 @@ func main() {
 	// Boot: fetch the index, build the engine, install axapi, signal ready.
 	// A failure here leaves the page on its server-rendered shell with an
 	// error in the console; there is nothing to render without an index.
-	body, err := fetchBytes("/api/index")
-	if err != nil {
-		reportBootError(fmt.Errorf("fetch index: %w", err))
+	// The server binds its port before the first assay finishes, answering
+	// /api/index with 503 while it works. Poll until the index is ready (or a
+	// real network/HTTP error) rather than failing to boot, surfacing an
+	// "analyzing" status to the page in the meantime.
+	var body []byte
+	for {
+		b, status, err := fetchStatus("/api/index")
+		if err != nil {
+			reportBootError(fmt.Errorf("fetch index: %w", err))
+			return
+		}
+		if status == 200 {
+			body = b
+			break
+		}
+		if status == 503 {
+			reportStatus("analyzing")
+			time.Sleep(400 * time.Millisecond)
+			continue
+		}
+		reportBootError(fmt.Errorf("fetch index: status %d", status))
 		return
 	}
+	reportStatus("")
+
 	var idx schema.Index
 	if err := json.Unmarshal(body, &idx); err != nil {
 		reportBootError(fmt.Errorf("decode index: %w", err))
@@ -182,23 +203,29 @@ func shardFetcher(shardPath string) (schema.Shard, error) {
 	return sh, nil
 }
 
-// fetchBytes performs a browser fetch of url and returns the response body,
-// blocking the calling goroutine until the JS Promise chain settles. It must
-// not be called on the main goroutine (that goroutine runs the js event loop
-// the Promise resolves on); boot calls it before select{}, which is fine
-// because the wasm runtime services promises during the blocking receive.
-func fetchBytes(url string) ([]byte, error) {
+// fetchStatus performs a browser fetch of url and returns the response body and
+// HTTP status. Unlike fetchBytes it does NOT treat a non-2xx status as an error,
+// so callers can handle a 503 "analyzing" response and retry; only a network
+// failure or a body-read failure returns a non-nil error (a non-ok response
+// yields a nil body). It blocks the calling goroutine until the JS Promise chain
+// settles and must not run on the main goroutine (that goroutine runs the js
+// event loop the Promise resolves on); boot calls it before select{}, which is
+// fine because the wasm runtime services promises during the blocking receive.
+func fetchStatus(url string) ([]byte, int, error) {
 	type result struct {
-		data []byte
-		err  error
+		data   []byte
+		status int
+		err    error
 	}
 	done := make(chan result, 1)
 
 	var then, catch, bufThen, bufCatch js.Func
 	then = js.FuncOf(func(_ js.Value, args []js.Value) any {
 		resp := args[0]
+		status := resp.Get("status").Int()
 		if !resp.Get("ok").Bool() {
-			done <- result{err: fmt.Errorf("GET %s: status %d", url, resp.Get("status").Int())}
+			// The status is all a retrying caller needs; skip reading the body.
+			done <- result{status: status}
 			return nil
 		}
 		bufThen = js.FuncOf(func(_ js.Value, a []js.Value) any {
@@ -206,11 +233,11 @@ func fetchBytes(url string) ([]byte, error) {
 			n := arr.Get("length").Int()
 			b := make([]byte, n)
 			js.CopyBytesToGo(b, arr)
-			done <- result{data: b}
+			done <- result{data: b, status: status}
 			return nil
 		})
 		bufCatch = js.FuncOf(func(_ js.Value, a []js.Value) any {
-			done <- result{err: fmt.Errorf("GET %s: read body: %s", url, a[0].Call("toString").String())}
+			done <- result{status: status, err: fmt.Errorf("GET %s: read body: %s", url, a[0].Call("toString").String())}
 			return nil
 		})
 		resp.Call("arrayBuffer").Call("then", bufThen).Call("catch", bufCatch)
@@ -233,7 +260,21 @@ func fetchBytes(url string) ([]byte, error) {
 
 	js.Global().Call("fetch", url).Call("then", then).Call("catch", catch)
 	r := <-done
-	return r.data, r.err
+	return r.data, r.status, r.err
+}
+
+// fetchBytes performs a browser fetch of url and returns the response body,
+// erroring on any non-2xx status. It is the strict wrapper the shard fetcher
+// uses; boot uses fetchStatus directly so it can retry on 503.
+func fetchBytes(url string) ([]byte, error) {
+	body, status, err := fetchStatus(url)
+	if err != nil {
+		return nil, err
+	}
+	if status < 200 || status > 299 {
+		return nil, fmt.Errorf("GET %s: status %d", url, status)
+	}
+	return body, nil
 }
 
 // promise wraps fn in a JS Promise, running fn in its own goroutine so a
@@ -287,5 +328,14 @@ func reportBootError(err error) {
 	js.Global().Get("console").Call("error", "axwasm: "+err.Error())
 	if cb := js.Global().Get("__axError"); cb.Type() == js.TypeFunction {
 		cb.Invoke(err.Error())
+	}
+}
+
+// reportStatus surfaces a transient boot status (e.g. "analyzing" while the
+// server is still assaying) to the page via window.__axStatus, if defined. An
+// empty msg clears it.
+func reportStatus(msg string) {
+	if cb := js.Global().Get("__axStatus"); cb.Type() == js.TypeFunction {
+		cb.Invoke(msg)
 	}
 }

@@ -150,6 +150,12 @@
   .toast{position:fixed;top:52px;left:50%;transform:translateX(-50%);z-index:30;font-family:var(--mono);
     font-size:11.5px;background:#20252Bf0;border:1px solid #5a4a1e;color:var(--crucible);
     border-radius:6px;padding:6px 14px;display:none}
+  .status{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:40;font-family:var(--mono);
+    font-size:13px;background:#20252Bf0;border:1px solid #5a4a1e;color:var(--crucible);
+    border-radius:8px;padding:12px 20px;display:none}
+  .status .spin{display:inline-block;width:11px;height:11px;margin-right:8px;vertical-align:-1px;
+    border:2px solid var(--crucible);border-right-color:transparent;border-radius:50%;animation:axspin .8s linear infinite}
+  @keyframes axspin{to{transform:rotate(360deg)}}
 
   .drop{position:fixed;inset:0;background:rgba(10,12,14,.94);display:none;align-items:center;justify-content:center;z-index:50}
   .drop.on{display:flex}
@@ -209,6 +215,7 @@
 
 <div class="tip" id="tip"></div>
 <div class="toast" id="toast"></div>
+<div class="status" id="status"></div>
 <button class="compass" id="compass"><span class="arr" id="compassarr">➤</span>back to the map</button>
 <div class="drop" id="drop"><div class="box">Drop <b>assayxport.json</b> to explore another codebase</div></div>
 
@@ -1192,8 +1199,17 @@ window.__app={G,W,D,select,selectPkg,travel,flyToRef,toggleTree,doSearch:q=>{doS
     // ax serve: the WASM engine (cmd/axwasm) calls window.__axReady once it
     // has installed window.axapi. Wire that to lazyBoot; if the module has
     // already come up (a fast instantiate beating this script), boot now.
-    window.__axReady=lazyBoot;
-    if(window.axapi)lazyBoot();
+    // While the server is still assaying a large repo it answers /api/index
+    // with 503, and the engine calls __axStatus("analyzing") between retries;
+    // clear it once the index arrives and lazyBoot runs.
+    window.__axStatus=function(msg){
+      const t=$("#status"); if(!t)return;
+      if(msg){t.innerHTML='<span class="spin"></span>Analyzing the codebase…';t.style.display="block";}
+      else{t.style.display="none";}
+    };
+    const ready=function(){ if(window.__axStatus)window.__axStatus(""); lazyBoot(); };
+    window.__axReady=ready;
+    if(window.axapi)ready();
   }
   requestAnimationFrame(draw);
 })();

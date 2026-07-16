@@ -12,15 +12,21 @@ import (
 	"flag"
 	"fmt"
 	"hash/fnv"
+	"io"
 	"io/fs"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"syscall"
 	"time"
 
+	"goforge.dev/assayxport/internal/emit"
 	"goforge.dev/assayxport/internal/explorer"
 )
 
@@ -182,43 +188,118 @@ func runServeCmd(args []string) error {
 	// WebAssembly.
 	lazy := !*noWasm
 
-	build := func() (*snapshot, error) {
+	// One server-owned temp root holds each lazy assay's shards on disk. Each
+	// assay writes a fresh gen-<N>/ subdir; the previous generation is removed
+	// after a grace delay so in-flight reads of it stay consistent. Since
+	// ListenAndServe blocks (defers never run on SIGINT), a signal handler
+	// removes the root too.
+	var tmpRoot string
+	if lazy {
+		d, mkErr := os.MkdirTemp("", "ax-serve-*")
+		if mkErr != nil {
+			return mkErr
+		}
+		tmpRoot = d
+		defer os.RemoveAll(tmpRoot)
+		sigc := make(chan os.Signal, 1)
+		signal.Notify(sigc, os.Interrupt, syscall.SIGTERM)
+		go func() {
+			<-sigc
+			os.RemoveAll(tmpRoot)
+			os.Exit(0)
+		}()
+	}
+	var gen uint64
+
+	// build runs one assay. In lazy mode it streams the shards to a fresh
+	// generation dir and returns a disk-backed snapshot (releasing the in-RAM
+	// shard graph); in --no-wasm mode it inlines the whole manifest. The second
+	// return is the generation dir (empty in --no-wasm) for delayed cleanup.
+	build := func() (*snapshot, string, error) {
 		idx, shards, err := assayOnce(path, langs, *quiet)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
-		return buildSnapshot(idx, shards, watch)
+		if !lazy {
+			snap, err := buildSnapshot(idx, shards, watch)
+			return snap, "", err
+		}
+		g := atomic.AddUint64(&gen, 1)
+		dir := filepath.Join(tmpRoot, fmt.Sprintf("gen-%d", g))
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return nil, "", err
+		}
+		if err := emit.WriteDir(dir, idx, shards); err != nil {
+			return nil, "", err
+		}
+		snap, err := buildDiskSnapshot(idx, shards, dir)
+		if err != nil {
+			return nil, "", err
+		}
+		return snap, dir, nil
 	}
 
-	snap, err := build()
-	if err != nil {
-		return err
-	}
 	cur := &current{}
-	cur.set(snap)
 	h := newHub()
 
-	if watch {
-		go func() {
-			last := digest(path)
-			for {
+	// The first assay runs in the background so the port binds immediately and
+	// the page shows an "analyzing" state; on completion (and on every save in
+	// watch mode) the snapshot is swapped in atomically. The previous generation
+	// dir is removed after a grace delay so readers mid-request are not cut off.
+	go func() {
+		last := digest(path)
+		prevDir := ""
+		first := true
+		for {
+			if !first {
 				last = waitForChange(path, last)
-				start := time.Now()
-				snap, err := build()
-				if err != nil {
-					// A save mid-edit can be unparseable; keep serving the
-					// last good assay and say why.
+			}
+			start := time.Now()
+			snap, dir, err := build()
+			if err != nil {
+				if first {
+					fmt.Fprintln(os.Stderr, "ax: assay failed:", err)
+				} else {
+					// A save mid-edit can be unparseable; keep serving the last
+					// good assay and say why.
 					fmt.Fprintln(os.Stderr, "ax: re-assay failed (serving last good):", err)
-					continue
 				}
-				cur.set(snap)
+				if !watch {
+					return
+				}
+				first = false
+				continue
+			}
+			cur.set(snap)
+			if lazy {
+				// The assay's in-RAM struct graph is now unreferenced (the disk
+				// snapshot keeps only the index and shard-path set); return that
+				// peak to the OS promptly rather than waiting for the background
+				// scavenger, so steady-state RSS reflects what is actually served.
+				debug.FreeOSMemory()
+			}
+			if !first {
 				h.broadcast()
 				if !*quiet {
 					fmt.Fprintf(os.Stderr, "ax: re-assayed in %s\n", time.Since(start).Round(time.Millisecond))
 				}
 			}
-		}()
-	}
+			if prevDir != "" {
+				d := prevDir
+				go func() { time.Sleep(2 * time.Second); os.RemoveAll(d) }()
+			}
+			prevDir = dir
+			first = false
+			if !watch {
+				return
+			}
+		}
+	}()
+
+	// The lazy page shell is assay-independent, so it is precomputed once and
+	// served even before the first assay finishes (the WASM client boots and
+	// polls /api/index, which returns 503 until the index is ready).
+	shell := explorer.Shell(watch)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -226,41 +307,90 @@ func runServeCmd(args []string) error {
 			http.NotFound(w, r)
 			return
 		}
-		s := cur.get()
-		page := s.embedded
-		if lazy {
-			page = s.shell
-		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-store")
-		_, _ = w.Write(page)
+		if lazy {
+			_, _ = w.Write(shell)
+			return
+		}
+		s := cur.get()
+		if s == nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = io.WriteString(w, "<!doctype html><title>assayxport</title><p>Analyzing…</p>")
+			return
+		}
+		_, _ = w.Write(s.embedded)
 	})
-	// Lazy API: the index (with couplings) up front, then one package's shard
-	// at a time. Served regardless of --no-wasm so /assayxport.json's shape
-	// stays available to scripts either way.
+	// Lazy API: the lean index up front, then one package's shard at a time.
+	// Served regardless of --no-wasm so /assayxport.json's shape stays available
+	// to scripts either way. All three return 503 until the first assay lands.
 	mux.HandleFunc("/api/index", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Cache-Control", "no-store")
-		_, _ = w.Write(cur.get().indexJSON)
-	})
-	mux.HandleFunc("/api/shard", func(w http.ResponseWriter, r *http.Request) {
-		body, ok := cur.get().shards[r.URL.Query().Get("path")]
-		if !ok {
-			http.NotFound(w, r)
+		s := cur.get()
+		if s == nil {
+			writeAnalyzing(w)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
-		_, _ = w.Write(body)
+		_, _ = w.Write(s.indexJSON)
+	})
+	mux.HandleFunc("/api/shard", func(w http.ResponseWriter, r *http.Request) {
+		s := cur.get()
+		if s == nil {
+			writeAnalyzing(w)
+			return
+		}
+		p := r.URL.Query().Get("path")
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		if !lazy {
+			body, ok := s.shards[p]
+			if !ok {
+				http.NotFound(w, r)
+				return
+			}
+			_, _ = w.Write(body)
+			return
+		}
+		// Disk mode: only paths the manifest emitted are valid keys (so `../`
+		// traversal is never a key), with a cleaned-prefix check as defense in
+		// depth before touching the filesystem.
+		if !s.shardPaths[p] {
+			http.NotFound(w, r)
+			return
+		}
+		full := filepath.Join(s.dir, filepath.FromSlash(p))
+		if full != s.dir && !strings.HasPrefix(full, s.dir+string(os.PathSeparator)) {
+			http.NotFound(w, r)
+			return
+		}
+		f, err := os.Open(full)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		defer f.Close()
+		_, _ = io.Copy(w, f)
 	})
 	if lazy {
 		mux.HandleFunc("/static/explorer.wasm", gzAsset(explorer.WasmGz(), "application/wasm"))
 		mux.HandleFunc("/static/wasm_exec.js", gzAsset(explorer.WasmExecGz(), "text/javascript; charset=utf-8"))
 	}
 	mux.HandleFunc("/assayxport.json", func(w http.ResponseWriter, r *http.Request) {
+		s := cur.get()
+		if s == nil {
+			writeAnalyzing(w)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
-		_, _ = w.Write(cur.get().combined)
+		if lazy {
+			if err := streamCombined(w, s.dir, s.shardPaths); err != nil {
+				fmt.Fprintln(os.Stderr, "ax: stream /assayxport.json:", err)
+			}
+			return
+		}
+		_, _ = w.Write(s.combined)
 	})
 	mux.HandleFunc("/__events", func(w http.ResponseWriter, r *http.Request) {
 		fl, ok := w.(http.Flusher)

@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -37,28 +39,64 @@ func gzAsset(gz []byte, contentType string) http.HandlerFunc {
 	}
 }
 
-// snapshot is everything `ax serve` serves for one assay, built atomically so
-// a re-assay swaps in a complete, consistent set rather than a half-updated
-// mix. shell/embedded are the two page variants (lazy WASM vs. the inlined
-// single-page fallback); indexJSON and shards are the lazy API bodies; combined
-// is the /assayxport.json compatibility endpoint.
+// snapshot is everything `ax serve` serves for one assay, built atomically so a
+// re-assay swaps in a complete, consistent set rather than a half-updated mix.
+//
+// Two shapes share this struct, chosen by serve mode:
+//   - lazy (default, WASM): indexJSON is served up front; per-package shards are
+//     read from dir on disk on demand. shardPaths is the set of valid
+//     /api/shard?path= keys, so steady-state memory is the index plus a path set
+//     regardless of repo size.
+//   - --no-wasm (embedded): the whole manifest is inlined -- embedded is the
+//     single self-contained page, combined the /assayxport.json blob, shards the
+//     pre-marshaled per-package bodies. Held entirely in RAM; small trees only.
+//
+// The lazy page shell itself is assay-independent, so `ax serve` precomputes it
+// once rather than storing it per snapshot.
 type snapshot struct {
-	shell     []byte            // lazy page: index up front, shards on demand
-	embedded  []byte            // whole manifest inlined (--no-wasm fallback)
-	indexJSON []byte            // GET /api/index: the index plus couplings
-	combined  []byte            // GET /assayxport.json: the combined manifest
-	shards    map[string][]byte // GET /api/shard?path=... : one package's JSON
+	indexJSON []byte // GET /api/index: the marshaled index (both modes)
+
+	// lazy (disk-backed) fields
+	dir        string          // generation dir holding assayxport.json + shards
+	shardPaths map[string]bool // valid /api/shard?path= keys (traversal guard)
+
+	// --no-wasm (in-RAM) fields
+	embedded []byte            // whole manifest inlined page
+	combined []byte            // GET /assayxport.json blob
+	shards   map[string][]byte // GET /api/shard?path=... : one package's JSON
 }
 
-// buildSnapshot renders both page variants and pre-serializes the lazy API
-// bodies for one (index, shards) assay. live carries the /__events reload
-// subscription into whichever page is served.
+// writeAnalyzing responds while the first assay is still running: a 503 with a
+// small JSON body and a Retry-After, so the WASM client polls until the index is
+// ready instead of failing to boot.
+func writeAnalyzing(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Retry-After", "1")
+	w.WriteHeader(http.StatusServiceUnavailable)
+	_, _ = w.Write([]byte(`{"status":"analyzing"}`))
+}
+
+// leanIndexPayload is the GET /api/index body: just the marshaled index. The
+// hierarchical explorer lays every navigation level out from the index alone, so
+// the index carries no per-symbol or inter-package detail -- a shard crosses the
+// wire only when its package is opened. (Earlier versions appended an
+// inter-package "couplings" graph for the old flat archipelago layout; the
+// hierarchy replaced it, and the client now ignores it, so it is gone.)
+func leanIndexPayload(idx schema.Index) ([]byte, error) {
+	return json.Marshal(idx)
+}
+
+// buildSnapshot builds the in-RAM snapshot for --no-wasm (embedded) mode: it
+// inlines the whole manifest into one page and pre-serializes the API bodies.
+// This holds several manifest-sized copies at once, so it is used only for the
+// small trees --no-wasm targets; lazy mode uses buildDiskSnapshot.
 func buildSnapshot(idx schema.Index, shards map[string]schema.Shard, live bool) (*snapshot, error) {
 	combined, err := emit.Combined(idx, shards)
 	if err != nil {
 		return nil, err
 	}
-	indexJSON, err := indexPayload(idx, shards)
+	indexJSON, err := leanIndexPayload(idx)
 	if err != nil {
 		return nil, err
 	}
@@ -71,86 +109,75 @@ func buildSnapshot(idx schema.Index, shards map[string]schema.Shard, live bool) 
 		sj[path] = b
 	}
 	return &snapshot{
-		shell:     explorer.Shell(live),
-		embedded:  explorer.Render(combined, live),
 		indexJSON: indexJSON,
+		embedded:  explorer.Render(combined, live),
 		combined:  combined,
 		shards:    sj,
 	}, nil
 }
 
-// coupling is one aggregated inter-package call edge: the total weight of all
-// internal/dynamic calls from package Src into package Dst of a given Kind. The
-// lazy client lays out islands from these (the server has every shard, so it
-// can precompute the coupling the client would otherwise need every shard to
-// derive), and only then fetches a package's symbols on demand.
-type coupling struct {
-	Src  string `json:"src"`
-	Dst  string `json:"dst"`
-	Kind string `json:"kind"`
-	W    int    `json:"w"`
-}
-
-// computeCouplings folds every internal/dynamic call edge into per-(src,dst,
-// kind) weights, dropping self-edges (an island is not coupled to itself for
-// layout). Output is sorted so /api/index is byte-stable for equal inputs.
-func computeCouplings(idx schema.Index, shards map[string]schema.Shard) []coupling {
-	type key struct{ src, dst, kind string }
-	agg := map[key]int{}
-	for _, pe := range idx.Packages {
-		sh, ok := shards[pe.Shard]
-		if !ok {
-			continue
-		}
-		for _, s := range sh.Symbols {
-			for _, c := range s.Calls {
-				if (c.Kind != "internal" && c.Kind != "dynamic") || c.Ref == "" {
-					continue
-				}
-				dst := c.Ref
-				if i := strings.IndexByte(dst, '#'); i >= 0 {
-					dst = dst[:i]
-				}
-				if dst == pe.ID {
-					continue
-				}
-				agg[key{pe.ID, dst, c.Kind}] += c.Count
-			}
-		}
-	}
-	out := make([]coupling, 0, len(agg))
-	for k, w := range agg {
-		out = append(out, coupling{Src: k.src, Dst: k.dst, Kind: k.kind, W: w})
-	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].Src != out[j].Src {
-			return out[i].Src < out[j].Src
-		}
-		if out[i].Dst != out[j].Dst {
-			return out[i].Dst < out[j].Dst
-		}
-		return out[i].Kind < out[j].Kind
-	})
-	return out
-}
-
-// indexPayload marshals the index with a "couplings" field appended, the body
-// GET /api/index returns. The index itself is small (one entry per package);
-// couplings add the inter-package layout graph without any per-symbol detail,
-// so the client can draw and place every island before fetching a single shard.
-func indexPayload(idx schema.Index, shards map[string]schema.Shard) ([]byte, error) {
-	b, err := json.Marshal(idx)
+// buildDiskSnapshot builds the lazy snapshot. It assumes the shards were already
+// written under dir (via emit.WriteDir) and retains only the lean index and the
+// set of valid shard paths; the caller drops its `shards` map after this returns,
+// so steady-state memory is independent of repo size. /api/shard streams each
+// package's JSON from dir on demand.
+func buildDiskSnapshot(idx schema.Index, shards map[string]schema.Shard, dir string) (*snapshot, error) {
+	indexJSON, err := leanIndexPayload(idx)
 	if err != nil {
 		return nil, err
 	}
-	var m map[string]json.RawMessage
-	if err := json.Unmarshal(b, &m); err != nil {
-		return nil, err
+	paths := make(map[string]bool, len(shards))
+	for p := range shards {
+		paths[p] = true
 	}
-	cb, err := json.Marshal(computeCouplings(idx, shards))
-	if err != nil {
-		return nil, err
+	return &snapshot{indexJSON: indexJSON, dir: dir, shardPaths: paths}, nil
+}
+
+// streamCombined writes the /assayxport.json compatibility blob for disk mode by
+// streaming the on-disk index and shard files -- {"index":<index>,"shards":{...}}
+// -- one file at a time, so peak memory is a single shard rather than the whole
+// manifest. Output is valid, deterministic (shards in sorted path order) JSON;
+// it is compact rather than byte-identical to emit.Combined's indented form.
+func streamCombined(w io.Writer, dir string, shardPaths map[string]bool) error {
+	copyFile := func(name string) error {
+		f, err := os.Open(filepath.Join(dir, filepath.FromSlash(name)))
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		_, err = io.Copy(w, f)
+		return err
 	}
-	m["couplings"] = cb
-	return json.Marshal(m)
+	if _, err := io.WriteString(w, `{"index":`); err != nil {
+		return err
+	}
+	if err := copyFile("assayxport.json"); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, `,"shards":{`); err != nil {
+		return err
+	}
+	paths := make([]string, 0, len(shardPaths))
+	for p := range shardPaths {
+		paths = append(paths, p)
+	}
+	sort.Strings(paths)
+	for i, p := range paths {
+		key, err := json.Marshal(p)
+		if err != nil {
+			return err
+		}
+		sep := ""
+		if i > 0 {
+			sep = ","
+		}
+		if _, err := io.WriteString(w, sep+string(key)+":"); err != nil {
+			return err
+		}
+		if err := copyFile(p); err != nil {
+			return err
+		}
+	}
+	_, err := io.WriteString(w, `}}`)
+	return err
 }

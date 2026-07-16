@@ -7,8 +7,10 @@ package java
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 
 	"goforge.dev/assayxport/internal/schema"
 )
@@ -38,15 +40,55 @@ func (*Extractor) Extract(root string) ([]schema.Package, error) {
 	pkgDir := make(map[string]string)
 	pkgHasInfo := make(map[string]bool)
 
-	for _, f := range files {
-		src, rerr := os.ReadFile(f.Abs)
-		if rerr != nil {
-			return nil, rerr
+	// Parse every file in parallel. compilationUnit is pure per file (its result
+	// depends only on that file's bytes) and the tree-sitter backend is cgo-free
+	// with a fresh parser per call, so N workers parse N files with no shared
+	// mutable state. The order-dependent bookkeeping below then runs serially in
+	// the original sorted file order, so output stays byte-identical to a serial
+	// parse.
+	type parsedCU struct {
+		res cuResult
+		err error
+	}
+	parsed := make([]parsedCU, len(files))
+	// Leave one core unused so a caller sharing this process -- notably
+	// `ax serve`, which parses in a background goroutine while its HTTP server
+	// answers "analyzing" on the main one -- stays responsive during the parse.
+	workers := runtime.NumCPU() - 1
+	if workers < 1 {
+		workers = 1
+	}
+	var wg sync.WaitGroup
+	jobs := make(chan int)
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := range jobs {
+				src, rerr := os.ReadFile(files[i].Abs)
+				if rerr != nil {
+					parsed[i] = parsedCU{err: rerr}
+					continue
+				}
+				res, cerr := compilationUnit(files[i].Rel, src)
+				parsed[i] = parsedCU{res: res, err: cerr}
+			}
+		}()
+	}
+	for i := range files {
+		jobs <- i
+	}
+	close(jobs)
+	wg.Wait()
+
+	// Fold per-file results in sorted file order so the "first file wins"
+	// package-directory choice (pkgDir below) stays deterministic.
+	for i := range files {
+		f := files[i]
+		if parsed[i].err != nil {
+			return nil, parsed[i].err
 		}
-		res, cerr := compilationUnit(f.Rel, src)
-		if cerr != nil {
-			return nil, cerr
-		}
+		res := parsed[i].res
 
 		stem := strings.TrimSuffix(filepath.Base(f.Rel), ".java")
 		dir := filepath.ToSlash(filepath.Dir(f.Rel))
@@ -123,25 +165,28 @@ func (*Extractor) Extract(root string) ([]schema.Package, error) {
 		}
 	}
 
-	// Assign package Paths and Members.
+	// Assign package Paths and Members. A unit's direct parent is its id minus
+	// the last dotted segment, so bucketing every module and package unit under
+	// its parent is one O(M+P) pass -- versus scanning all units for every
+	// package (O(P*(M+P))), which on a large tree is tens of millions of prefix
+	// comparisons.
 	memberLists := make(map[string][]string, len(packageUnits))
-	for pkgID := range packageUnits {
-		var members []string
-		for modID := range moduleUnits {
-			if isDirectChild(pkgID, modID) {
-				members = append(members, modID)
-			}
+	addMember := func(childID string) {
+		parent := parentID(childID)
+		if _, ok := packageUnits[parent]; ok {
+			memberLists[parent] = append(memberLists[parent], childID)
 		}
-		for subID := range packageUnits {
-			if subID != pkgID && isDirectChild(pkgID, subID) {
-				members = append(members, subID)
-			}
-		}
-		sort.Strings(members)
-		memberLists[pkgID] = members
 	}
-	for pkgID, members := range memberLists {
+	for modID := range moduleUnits {
+		addMember(modID)
+	}
+	for subID := range packageUnits {
+		addMember(subID)
+	}
+	for pkgID := range packageUnits {
 		pkg := packageUnits[pkgID]
+		members := memberLists[pkgID]
+		sort.Strings(members)
 		pkg.Members = members
 		pkg.Path = pkgDir[pkgID]
 		packageUnits[pkgID] = pkg
@@ -156,18 +201,4 @@ func (*Extractor) Extract(root string) ([]schema.Package, error) {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out, nil
-}
-
-// isDirectChild reports whether childID is a direct child of parentID in dotted
-// terms: parentID is a proper prefix and exactly one more segment follows.
-func isDirectChild(parentID, childID string) bool {
-	if parentID == "" {
-		return childID != "" && !strings.Contains(childID, ".")
-	}
-	prefix := parentID + "."
-	if !strings.HasPrefix(childID, prefix) {
-		return false
-	}
-	rest := childID[len(prefix):]
-	return rest != "" && !strings.Contains(rest, ".")
 }

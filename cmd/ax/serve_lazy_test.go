@@ -2,21 +2,28 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
+	"goforge.dev/assayxport/internal/emit"
 	"goforge.dev/assayxport/internal/explorer/graph"
 	"goforge.dev/assayxport/internal/schema"
 )
 
-// TestLazyServeEndToEnd drives the whole lazy data path with a real assay of
-// the repo's own testdata: build a snapshot, serve /api/index and /api/shard
-// over httptest, and point a graph.Engine at those endpoints. It asserts the
-// server-side pieces (couplings in the index, per-shard bodies) and the
-// engine's lazy behavior (nothing loaded up front; a symbol resolves and
-// becomes searchable only after its package hydrates) agree over real data --
-// everything the browser exercises except the js/wasm glue and the canvas.
+// TestLazyServeEndToEnd drives the whole disk-backed lazy data path with a real
+// assay of the repo's own testdata: write the shards to a generation dir, build
+// a disk snapshot, serve /api/index and /api/shard over httptest (shards read
+// from disk, path validated against the manifest), and point a graph.Engine at
+// those endpoints. It asserts the server-side pieces (lean index, per-shard
+// bodies, traversal rejection) and the engine's lazy behavior (nothing loaded up
+// front; a symbol resolves and becomes searchable only after its package
+// hydrates) agree over real data -- everything the browser exercises except the
+// js/wasm glue and the canvas.
 func TestLazyServeEndToEnd(t *testing.T) {
 	idx, shards, err := assayOnce("testdata/mixed", nil, true)
 	if err != nil {
@@ -25,15 +32,23 @@ func TestLazyServeEndToEnd(t *testing.T) {
 	if len(idx.Packages) == 0 {
 		t.Fatal("no packages assayed from testdata/mixed")
 	}
-	snap, err := buildSnapshot(idx, shards, false)
+
+	// Disk-back the shards the way `ax serve` does, then drop the in-RAM graph.
+	dir := filepath.Join(t.TempDir(), "gen-1")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir gen dir: %v", err)
+	}
+	if err := emit.WriteDir(dir, idx, shards); err != nil {
+		t.Fatalf("WriteDir: %v", err)
+	}
+	snap, err := buildDiskSnapshot(idx, shards, dir)
 	if err != nil {
-		t.Fatalf("buildSnapshot: %v", err)
+		t.Fatalf("buildDiskSnapshot: %v", err)
 	}
 
-	// /api/index must decode and carry a couplings field (the layout graph).
+	// /api/index must decode to the lean index (no couplings) with every package.
 	var idxBody struct {
-		Packages  []schema.PackageEntry `json:"packages"`
-		Couplings []coupling            `json:"couplings"`
+		Packages []schema.PackageEntry `json:"packages"`
 	}
 	if err := json.Unmarshal(snap.indexJSON, &idxBody); err != nil {
 		t.Fatalf("decode /api/index: %v", err)
@@ -41,23 +56,42 @@ func TestLazyServeEndToEnd(t *testing.T) {
 	if len(idxBody.Packages) != len(idx.Packages) {
 		t.Fatalf("index payload has %d packages, want %d", len(idxBody.Packages), len(idx.Packages))
 	}
-	if idxBody.Couplings == nil {
-		t.Fatal("index payload missing couplings field")
-	}
 
-	// Serve the lazy API and drive an engine whose Fetcher is real HTTP.
+	// Serve /api/shard from disk with the same membership + prefix guard the real
+	// handler uses, so the test exercises the traversal defense too.
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/shard", func(w http.ResponseWriter, r *http.Request) {
-		body, ok := snap.shards[r.URL.Query().Get("path")]
-		if !ok {
+		p := r.URL.Query().Get("path")
+		if !snap.shardPaths[p] {
 			http.NotFound(w, r)
 			return
 		}
+		full := filepath.Join(snap.dir, filepath.FromSlash(p))
+		if full != snap.dir && !strings.HasPrefix(full, snap.dir+string(os.PathSeparator)) {
+			http.NotFound(w, r)
+			return
+		}
+		f, err := os.Open(full)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		defer f.Close()
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(body)
+		_, _ = io.Copy(w, f)
 	})
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
+
+	// A path outside the manifest is rejected (traversal guard).
+	resp, err := http.Get(srv.URL + "/api/shard?path=" + "../../../etc/passwd")
+	if err != nil {
+		t.Fatalf("traversal request: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("traversal path served with status %d, want 404", resp.StatusCode)
+	}
 
 	var fetched int
 	eng := graph.New(idx, func(shardPath string) (schema.Shard, error) {
