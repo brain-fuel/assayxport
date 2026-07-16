@@ -1,0 +1,33 @@
+package explorer
+
+import _ "embed"
+
+// The WASM data engine (cmd/axwasm) and the Go toolchain's wasm_exec.js are
+// embedded gzip-compressed so `ax` ships as a single binary: a user who runs
+// `go install goforge.dev/assayxport/cmd/ax@latest` gets `ax serve`'s live
+// explorer with no separate build step. They are served with
+// Content-Encoding: gzip (see cmd/ax/serve.go), which the browser decompresses
+// transparently for WebAssembly.instantiateStreaming.
+//
+// Regenerate both after changing cmd/axwasm or bumping the Go toolchain:
+//
+//	go generate ./internal/explorer/
+//
+// which runs scripts/build-wasm.sh (GOOS=js GOARCH=wasm build + gzip). The
+// .gz files are committed on purpose -- unlike a repo you build in, this is a
+// go-install target, so the artifacts must be in the module.
+//
+//go:generate ../../scripts/build-wasm.sh
+
+//go:embed dist/explorer.wasm.gz
+var wasmGz []byte
+
+//go:embed dist/wasm_exec.js.gz
+var wasmExecGz []byte
+
+// WasmGz returns the gzip-compressed WASM data engine binary.
+func WasmGz() []byte { return wasmGz }
+
+// WasmExecGz returns the gzip-compressed wasm_exec.js glue from the Go
+// toolchain that instantiates the WASM module.
+func WasmExecGz() []byte { return wasmExecGz }

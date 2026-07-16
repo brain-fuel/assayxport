@@ -1,0 +1,215 @@
+//go:build js && wasm
+
+// Command axwasm is the explorer's browser-side data engine, compiled to
+// WebAssembly. It fetches the manifest index once at boot, then answers the
+// visualization's data questions -- give me the index, hydrate this package's
+// shard, who calls this symbol, search for that -- out of an
+// internal/explorer/graph.Engine, pulling each package's shard across the wire
+// only when something first needs it.
+//
+// The page's canvas rendering stays in JavaScript (see
+// internal/explorer/explorer.html); this program is purely the data layer.
+// The two meet at window.axapi, a small object of functions this program
+// installs:
+//
+//	axapi.index()            -> JSON string of the manifest index (sync; fetched at boot)
+//	axapi.ensureShard(pkgID) -> Promise<JSON string> of that package's shard
+//	axapi.callers(ref)       -> JSON string, inbound call edges known so far (sync)
+//	axapi.search(q, limit)   -> JSON string, ranked matches over index + loaded shards (sync)
+//
+// Readiness is signalled by calling window.__axReady() (if defined) once the
+// index has loaded and axapi is installed, so the page boots deterministically
+// rather than polling.
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"syscall/js"
+
+	"goforge.dev/assayxport/internal/explorer/graph"
+	"goforge.dev/assayxport/internal/schema"
+)
+
+func main() {
+	// Boot: fetch the index, build the engine, install axapi, signal ready.
+	// A failure here leaves the page on its server-rendered shell with an
+	// error in the console; there is nothing to render without an index.
+	body, err := fetchBytes("/api/index")
+	if err != nil {
+		reportBootError(fmt.Errorf("fetch index: %w", err))
+		return
+	}
+	var idx schema.Index
+	if err := json.Unmarshal(body, &idx); err != nil {
+		reportBootError(fmt.Errorf("decode index: %w", err))
+		return
+	}
+
+	eng := graph.New(idx, shardFetcher)
+	install(eng, body)
+
+	if ready := js.Global().Get("__axReady"); ready.Type() == js.TypeFunction {
+		ready.Invoke()
+	}
+
+	// main returning would tear down the wasm instance and free the js.Funcs
+	// the page still calls; block forever so axapi stays live for the page.
+	select {}
+}
+
+// install publishes window.axapi. indexJSON is the raw index bytes fetched at
+// boot, handed back verbatim by axapi.index() so the page parses exactly what
+// the engine was built from.
+func install(eng *graph.Engine, indexJSON []byte) {
+	api := map[string]any{
+		"index": js.FuncOf(func(js.Value, []js.Value) any {
+			return string(indexJSON)
+		}),
+		"ensureShard": js.FuncOf(func(_ js.Value, args []js.Value) any {
+			pkgID := arg(args, 0)
+			return promise(func() (any, error) {
+				sh, err := eng.EnsureShardForPkg(pkgID)
+				if err != nil {
+					return nil, err
+				}
+				return marshal(sh)
+			})
+		}),
+		"callers": js.FuncOf(func(_ js.Value, args []js.Value) any {
+			return mustMarshal(eng.Callers(arg(args, 0)))
+		}),
+		"search": js.FuncOf(func(_ js.Value, args []js.Value) any {
+			limit := 0
+			if len(args) > 1 && args[1].Type() == js.TypeNumber {
+				limit = args[1].Int()
+			}
+			return mustMarshal(eng.Search(arg(args, 0), limit))
+		}),
+	}
+	js.Global().Set("axapi", js.ValueOf(api))
+}
+
+// shardFetcher is the engine's Fetcher: GET /api/shard?path=<shardPath>,
+// decoded into a schema.Shard. It blocks the calling goroutine (an
+// ensureShard promise's goroutine, never the main one) until the response
+// arrives.
+func shardFetcher(shardPath string) (schema.Shard, error) {
+	body, err := fetchBytes("/api/shard?path=" + js.Global().Get("encodeURIComponent").Invoke(shardPath).String())
+	if err != nil {
+		return schema.Shard{}, err
+	}
+	var sh schema.Shard
+	if err := json.Unmarshal(body, &sh); err != nil {
+		return schema.Shard{}, fmt.Errorf("decode shard: %w", err)
+	}
+	return sh, nil
+}
+
+// fetchBytes performs a browser fetch of url and returns the response body,
+// blocking the calling goroutine until the JS Promise chain settles. It must
+// not be called on the main goroutine (that goroutine runs the js event loop
+// the Promise resolves on); boot calls it before select{}, which is fine
+// because the wasm runtime services promises during the blocking receive.
+func fetchBytes(url string) ([]byte, error) {
+	type result struct {
+		data []byte
+		err  error
+	}
+	done := make(chan result, 1)
+
+	var then, catch, bufThen, bufCatch js.Func
+	then = js.FuncOf(func(_ js.Value, args []js.Value) any {
+		resp := args[0]
+		if !resp.Get("ok").Bool() {
+			done <- result{err: fmt.Errorf("GET %s: status %d", url, resp.Get("status").Int())}
+			return nil
+		}
+		bufThen = js.FuncOf(func(_ js.Value, a []js.Value) any {
+			arr := js.Global().Get("Uint8Array").New(a[0])
+			n := arr.Get("length").Int()
+			b := make([]byte, n)
+			js.CopyBytesToGo(b, arr)
+			done <- result{data: b}
+			return nil
+		})
+		bufCatch = js.FuncOf(func(_ js.Value, a []js.Value) any {
+			done <- result{err: fmt.Errorf("GET %s: read body: %s", url, a[0].Call("toString").String())}
+			return nil
+		})
+		resp.Call("arrayBuffer").Call("then", bufThen).Call("catch", bufCatch)
+		return nil
+	})
+	catch = js.FuncOf(func(_ js.Value, args []js.Value) any {
+		done <- result{err: fmt.Errorf("GET %s: %s", url, args[0].Call("toString").String())}
+		return nil
+	})
+	defer func() {
+		then.Release()
+		catch.Release()
+		if bufThen.Truthy() {
+			bufThen.Release()
+		}
+		if bufCatch.Truthy() {
+			bufCatch.Release()
+		}
+	}()
+
+	js.Global().Call("fetch", url).Call("then", then).Call("catch", catch)
+	r := <-done
+	return r.data, r.err
+}
+
+// promise wraps fn in a JS Promise, running fn in its own goroutine so a
+// blocking fetch inside it never stalls the js event loop. fn's string result
+// resolves the promise; an error rejects it with a JS Error.
+func promise(fn func() (any, error)) js.Value {
+	handler := js.FuncOf(func(_ js.Value, args []js.Value) any {
+		resolve, reject := args[0], args[1]
+		go func() {
+			v, err := fn()
+			if err != nil {
+				reject.Invoke(js.Global().Get("Error").New(err.Error()))
+				return
+			}
+			resolve.Invoke(v)
+		}()
+		return nil
+	})
+	return js.Global().Get("Promise").New(handler)
+}
+
+func arg(args []js.Value, i int) string {
+	if i >= len(args) || args[i].Type() != js.TypeString {
+		return ""
+	}
+	return args[i].String()
+}
+
+func marshal(v any) (any, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	return string(b), nil
+}
+
+// mustMarshal marshals v to a JSON string for a synchronous axapi call. The
+// inputs are always plain data (slices of structs with JSON tags), so an
+// encoding error is a programming bug; it surfaces as a JSON-encoded error
+// object the page can detect rather than a thrown exception across the
+// wasm/js boundary.
+func mustMarshal(v any) string {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return fmt.Sprintf(`{"error":%q}`, err.Error())
+	}
+	return string(b)
+}
+
+func reportBootError(err error) {
+	js.Global().Get("console").Call("error", "axwasm: "+err.Error())
+	if cb := js.Global().Get("__axError"); cb.Type() == js.TypeFunction {
+		cb.Invoke(err.Error())
+	}
+}
