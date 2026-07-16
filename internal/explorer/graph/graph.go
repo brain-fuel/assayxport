@@ -21,8 +21,31 @@ import (
 
 	"goforge.dev/assayxport/internal/explorer/hierarchy"
 	"goforge.dev/assayxport/internal/explorer/layout"
+	"goforge.dev/assayxport/internal/explorer/loader"
 	"goforge.dev/assayxport/internal/schema"
 )
+
+// defaultBudget is the shard cache's default byte budget (a browser-friendly
+// ~48 MB of estimated shard weight). Eviction only ever fires above it, and
+// never on a pinned shard, so normal sessions never evict.
+const defaultBudget int64 = 48 << 20
+
+// prefetchCap bounds how many shard prefetches are in flight at once.
+const prefetchCap = 6
+
+// approxSize estimates a shard's in-memory weight for the cache budget. Exact
+// bytes do not matter -- the budget is a coarse ceiling -- so a per-symbol
+// constant plus a per-call-edge term is enough to rank and bound.
+func approxSize(sh schema.Shard) int64 {
+	var n int64
+	for _, s := range sh.Symbols {
+		n += 512 + int64(len(s.Calls))*64
+	}
+	if n == 0 {
+		n = 256
+	}
+	return n
+}
 
 // Fetcher loads one shard by its manifest shard path (the PackageEntry.Shard
 // value, e.g. ".assayxport/calc.json"). It blocks until the shard is
@@ -64,13 +87,19 @@ type Match struct {
 type Engine struct {
 	fetch Fetcher
 
-	idx     schema.Index
-	pkgByID map[string]schema.PackageEntry // index entries, by package id
-	tree    *hierarchy.Tree                // package hierarchy for level navigation
+	idx        schema.Index
+	pkgByID    map[string]schema.PackageEntry // index entries, by package id
+	pkgByShard map[string]string              // shard path -> package id
+	tree       *hierarchy.Tree                // package hierarchy for level navigation
 
 	loaded   map[string]bool     // shard paths already hydrated
 	symIndex map[string]SymLoc   // ref -> location, for loaded shards
 	callers  map[string][]Caller // callee ref -> inbound edges, incremental
+
+	// Loading algebra: the priority scheduler drives background prefetch, the
+	// cache bounds memory with LRU eviction (pinned shards excepted).
+	sched *loader.Scheduler
+	cache *loader.Cache
 }
 
 // New builds an Engine over idx, using fetch to hydrate shards on demand. The
@@ -78,18 +107,78 @@ type Engine struct {
 // or via Search) asks for one.
 func New(idx schema.Index, fetch Fetcher) *Engine {
 	e := &Engine{
-		fetch:    fetch,
-		idx:      idx,
-		pkgByID:  make(map[string]schema.PackageEntry, len(idx.Packages)),
-		tree:     hierarchy.Build(idx),
-		loaded:   make(map[string]bool),
-		symIndex: make(map[string]SymLoc),
-		callers:  make(map[string][]Caller),
+		fetch:      fetch,
+		idx:        idx,
+		pkgByID:    make(map[string]schema.PackageEntry, len(idx.Packages)),
+		pkgByShard: make(map[string]string, len(idx.Packages)),
+		tree:       hierarchy.Build(idx),
+		loaded:     make(map[string]bool),
+		symIndex:   make(map[string]SymLoc),
+		callers:    make(map[string][]Caller),
+		sched:      loader.NewScheduler(prefetchCap),
+		cache:      loader.NewCache(defaultBudget),
 	}
 	for _, pe := range idx.Packages {
 		e.pkgByID[pe.ID] = pe
+		e.pkgByShard[pe.Shard] = pe.ID
 	}
 	return e
+}
+
+// Prefetch queues the shards of pkgIDs for background loading at the given
+// intent's priority. Already-loaded packages are skipped. It only enqueues;
+// NextPrefetch hands the actual work out under the concurrency cap.
+func (e *Engine) Prefetch(pkgIDs []string, in loader.Intent) {
+	prio := loader.Priority(in)
+	for _, id := range pkgIDs {
+		pe, ok := e.pkgByID[id]
+		if !ok || e.loaded[pe.Shard] {
+			continue
+		}
+		e.sched.Want(id, prio)
+	}
+}
+
+// NextPrefetch returns the next shard paths to fetch now (highest priority,
+// up to the free concurrency slots). The browser fetches each via EnsureShard,
+// whose completion frees a slot for the next NextPrefetch call.
+func (e *Engine) NextPrefetch() []string { return e.sched.Next() }
+
+// PinPkg / UnpinAll protect shards from eviction. The browser pins the open
+// package (and clears pins on navigate) so what you are looking at is never
+// dropped.
+func (e *Engine) PinPkg(pkgID string) { e.cache.Pin(pkgID) }
+func (e *Engine) UnpinAll()           { e.cache.UnpinAll() }
+
+// SetBudget adjusts the cache's byte budget (the browser lowers it under memory
+// pressure). A budget <= 0 disables eviction.
+func (e *Engine) SetBudget(b int64) { e.cache.Budget = b }
+
+// CacheBytes reports the estimated bytes currently held (for diagnostics).
+func (e *Engine) CacheBytes() int64 { return e.cache.Total() }
+
+// Evict drops the least-recently-used unpinned shards until the cache fits its
+// budget, returning the package ids evicted so the browser can release their
+// symbols too. Each dropped shard's symbols leave the symbol index and its
+// loaded flag is cleared, so re-opening it re-fetches. Returns nil when within
+// budget.
+func (e *Engine) Evict() []string {
+	pids := e.cache.Overflow() // package ids, LRU-first, unpinned
+	if len(pids) == 0 {
+		return nil
+	}
+	for _, pid := range pids {
+		for ref, loc := range e.symIndex {
+			if loc.PkgID == pid {
+				delete(e.symIndex, ref)
+			}
+		}
+		if pe, ok := e.pkgByID[pid]; ok {
+			delete(e.loaded, pe.Shard)
+		}
+		e.cache.Forget(pid)
+	}
+	return pids
 }
 
 // LevelNode is one child of a navigation level with its placed position: a
@@ -173,7 +262,22 @@ func (e *Engine) EnsureShardForPkg(pkgID string) (schema.Shard, error) {
 	if !ok {
 		return schema.Shard{}, fmt.Errorf("unknown package %q", pkgID)
 	}
-	return e.EnsureShard(pe.Shard)
+	if e.loaded[pe.Shard] {
+		e.cache.Touch(pkgID) // re-access keeps it hot (survives eviction)
+		e.sched.Done(pkgID)  // clear any queued/inflight mark so no slot leaks
+		e.sched.Forget(pkgID)
+		return e.shardOf(pe.Shard), nil
+	}
+	sh, err := e.EnsureShard(pe.Shard)
+	// Loading-algebra bookkeeping, keyed by package id: free the scheduler slot
+	// (success or failure) and record the shard's weight in the LRU cache.
+	e.sched.Done(pkgID)
+	e.sched.Forget(pkgID)
+	if err != nil {
+		return schema.Shard{}, err
+	}
+	e.cache.Note(pkgID, approxSize(sh))
+	return sh, nil
 }
 
 // integrate registers a freshly loaded shard's symbols and reverse edges. It

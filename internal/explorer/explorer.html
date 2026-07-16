@@ -290,7 +290,30 @@ function lazyBoot(){
   $("#modname").textContent=index.module||index.root||"explorer";
   G.visited.clear();updateAssayed();
   showLevel("",true);
+  startIdleLoop();
 }
+// startIdleLoop turns spare browser time into loading work: it keeps the current
+// level's shards warming as scheduler slots free up, and sheds memory when the JS
+// heap gets tight -- lowering the cache budget and evicting LRU unpinned shards,
+// restoring the budget once the heap eases. All bounded by pins (what you are
+// looking at never drops) and by the engine's own dedup (warm shards are skipped).
+const MEM={hi:0.85,budgetDefault:48<<20,budgetLow:20<<20,low:false};
+let idleStarted=false;
+function idleTick(){
+  const m=(typeof performance!=="undefined")&&performance.memory;
+  if(m&&m.jsHeapSizeLimit){
+    const frac=m.usedJSHeapSize/m.jsHeapSizeLimit;
+    if(frac>MEM.hi&&!MEM.low){MEM.low=true;LOAD.setBudget(MEM.budgetLow);releaseEvicted(LOAD.evict());}
+    else if(frac<MEM.hi*0.8&&MEM.low){MEM.low=false;LOAD.setBudget(MEM.budgetDefault);}
+  }
+  if(DATA_MODE==="hier")prefetchLevel(W.islands);
+  scheduleIdle();
+}
+function scheduleIdle(){
+  const ric=(typeof window!=="undefined"&&window.requestIdleCallback)||(f=>setTimeout(()=>f({timeRemaining:()=>0}),1500));
+  ric(idleTick,{timeout:2500});
+}
+function startIdleLoop(){if(idleStarted)return;idleStarted=true;scheduleIdle();}
 function cleanPath(p){return (p||"").replace(/\\/g,"/").replace(/^\.\//,"").split("/").filter(s=>s&&s!==".").join("/")}
 function parentPath(p){const i=p.lastIndexOf("/");return i<0?"":p.slice(0,i)}
 
@@ -316,6 +339,9 @@ function showLevel(path,instant){
   W.edges=[];W.posOf=new Map();
   recomputeBounds();buildTree();
   G.selPkg=null;G.selected=null;G.islandIn=null;
+  // Moving to a new level: the previously-open package no longer needs its pin,
+  // and this level's siblings become the prefetch frontier.
+  LOAD.unpinAll();prefetchLevel(islands);
   camFitWorld(!!instant);select(null,false);crumbs();
 }
 // levelIsland turns a positioned LevelNode into a drawable island. Group nodes
@@ -350,6 +376,9 @@ async function enterIsland(isl){
   if(!isl)return;
   if(isl.group){showLevel(isl.node.path,false);return}
   await hydrateIsland(isl);
+  // Pin what you are now looking at so it is never evicted, then shed any
+  // overflow the fetch pushed us past (a no-op until the budget is exceeded).
+  LOAD.pin(isl.pkgId);releaseEvicted(LOAD.evict());
   G.selPkg=isl.id;G.selected=null;G.islandIn=isl.id;
   renderCard();flyToIsland(isl);crumbs();
 }
@@ -417,6 +446,36 @@ function loadCallers(ref){
   try{D.callersOf.set(ref,JSON.parse(axapi.callers(ref))||[])}catch(e){/* leave empty */}
 }
 function pkgOf(ref){return ref.split("#")[0]}
+
+/* ============ loading algebra bridge (hier mode; no-ops if absent) ============
+   The engine (cmd/axwasm) owns the priority scheduler and LRU cache; this is the
+   thin client interpreter that feeds it intent and executes its eviction list.
+   Every call is guarded so embedded mode (no axapi) and older engines are safe. */
+const LOAD={
+  prefetch(ids){if(ids&&ids.length&&window.axapi&&axapi.prefetch){try{axapi.prefetch(JSON.stringify(ids))}catch(e){}}},
+  pin(id){if(id&&window.axapi&&axapi.pin){try{axapi.pin(id)}catch(e){}}},
+  unpinAll(){if(window.axapi&&axapi.unpinAll){try{axapi.unpinAll()}catch(e){}}},
+  evict(){if(window.axapi&&axapi.evict){try{return JSON.parse(axapi.evict())||[]}catch(e){}}return[]},
+  setBudget(b){if(window.axapi&&axapi.setBudget){try{axapi.setBudget(b)}catch(e){}}},
+};
+// prefetchLevel warms every not-yet-loaded package shard on the current level so
+// opening a sibling is instant. Groups have no shard of their own (only their
+// "self" island does), so we key off pkgId presence.
+function prefetchLevel(islands){LOAD.prefetch(islands.filter(i=>i.pkgId&&!i.loaded).map(i=>i.pkgId))}
+// releaseEvicted mirrors the engine's eviction on the client: an evicted package
+// loses its symbols from the JS index and its islands reseal, so re-opening it
+// re-fetches (the engine already cleared its own shard + symIndex).
+function releaseEvicted(pids){
+  if(!pids||!pids.length)return;
+  const set=new Set(pids);
+  for(const isl of W.islands){
+    if(isl.pkgId&&set.has(isl.pkgId)&&isl.loaded){
+      for(const pl of isl.planets){W.posOf.delete(pl.ref);for(const m of pl.moons)W.posOf.delete(m.ref)}
+      isl.planets=[];isl.loaded=false;isl.sealed=true;isl.pkg.symbols=[];
+    }
+  }
+  for(const ref of[...D.symIndex.keys()]){if(set.has(pkgOf(ref)))D.symIndex.delete(ref)}
+}
 
 /* ================= world building (deterministic) ================= */
 const W={islands:[],byId:new Map(),edges:[],bounds:{x0:0,y0:0,x1:0,y1:0}};
@@ -1122,6 +1181,7 @@ addEventListener("drop",e=>{e.preventDefault();$("#drop").classList.remove("on")
 /* ================= boot ================= */
 window.__app={G,W,D,select,selectPkg,travel,flyToRef,toggleTree,doSearch:q=>{doSearch(q);return curMatches},
   showLevel:(p,i)=>showLevel(p,i),enterIsland:i=>enterIsland(i),navigateToPackage:p=>navigateToPackage(p),
+  LOAD,idleTick,releaseEvicted,
   get NAV(){return NAV},get MODE(){return DATA_MODE}};
 (function boot(){
   const seed=$("#seed").textContent.trim();

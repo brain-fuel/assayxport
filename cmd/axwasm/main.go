@@ -28,6 +28,7 @@ import (
 	"syscall/js"
 
 	"goforge.dev/assayxport/internal/explorer/graph"
+	"goforge.dev/assayxport/internal/explorer/loader"
 	"goforge.dev/assayxport/internal/schema"
 )
 
@@ -76,12 +77,38 @@ func install(eng *graph.Engine, indexJSON []byte) {
 		"ensureShard": js.FuncOf(func(_ js.Value, args []js.Value) any {
 			pkgID := arg(args, 0)
 			return promise(func() (any, error) {
-				sh, err := eng.EnsureShardForPkg(pkgID)
+				sh, err := loadPkg(eng, pkgID)
 				if err != nil {
 					return nil, err
 				}
 				return marshal(sh)
 			})
+		}),
+		// prefetch queues packages for background loading at Adjacent priority
+		// (a sibling on the current level, likely-next) and kicks the driver.
+		"prefetch": js.FuncOf(func(_ js.Value, args []js.Value) any {
+			var ids []string
+			_ = json.Unmarshal([]byte(arg(args, 0)), &ids)
+			eng.Prefetch(ids, loader.Adjacent)
+			drivePrefetch(eng)
+			return nil
+		}),
+		"pin":      js.FuncOf(func(_ js.Value, args []js.Value) any { eng.PinPkg(arg(args, 0)); return nil }),
+		"unpinAll": js.FuncOf(func(js.Value, []js.Value) any { eng.UnpinAll(); return nil }),
+		// evict drops least-recently-used unpinned packages to fit the budget and
+		// returns the evicted package ids so the page releases their symbols too.
+		"evict": js.FuncOf(func(js.Value, []js.Value) any {
+			ev := eng.Evict()
+			if ev == nil {
+				ev = []string{}
+			}
+			return mustMarshal(ev)
+		}),
+		"setBudget": js.FuncOf(func(_ js.Value, args []js.Value) any {
+			if len(args) > 0 && args[0].Type() == js.TypeNumber {
+				eng.SetBudget(int64(args[0].Int()))
+			}
+			return nil
 		}),
 		"callers": js.FuncOf(func(_ js.Value, args []js.Value) any {
 			cs := eng.Callers(arg(args, 0))
@@ -103,6 +130,40 @@ func install(eng *graph.Engine, indexJSON []byte) {
 		}),
 	}
 	js.Global().Set("axapi", js.ValueOf(api))
+}
+
+// shardGate dedups concurrent loads of the same package: a background prefetch
+// and a direct open racing for one package share a single fetch (the second
+// waits on the first). The js runtime is single-threaded and cooperatively
+// scheduled, so this map needs no lock -- only the channel handoff.
+var shardGate = map[string]chan struct{}{}
+
+// loadPkg loads a package's shard exactly once. If another goroutine is already
+// loading it, this blocks on that load's completion channel and then returns the
+// now-cached shard.
+func loadPkg(eng *graph.Engine, pkgID string) (schema.Shard, error) {
+	if ch, ok := shardGate[pkgID]; ok {
+		<-ch
+		return eng.EnsureShardForPkg(pkgID) // cached now
+	}
+	ch := make(chan struct{})
+	shardGate[pkgID] = ch
+	sh, err := eng.EnsureShardForPkg(pkgID)
+	delete(shardGate, pkgID)
+	close(ch)
+	return sh, err
+}
+
+// drivePrefetch starts fetches for the scheduler's next packages, each of which
+// re-drives on completion so freed slots pull the next-highest priority. Runs
+// in the background off ensureShard/prefetch; on-demand opens never wait on it.
+func drivePrefetch(eng *graph.Engine) {
+	for _, pid := range eng.NextPrefetch() {
+		go func(id string) {
+			_, _ = loadPkg(eng, id)
+			drivePrefetch(eng)
+		}(pid)
+	}
 }
 
 // shardFetcher is the engine's Fetcher: GET /api/shard?path=<shardPath>,

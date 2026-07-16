@@ -1,7 +1,12 @@
 # Explorer: hierarchical navigation + priority-based, memory-bounded loading
 
-Status: design proposal (targets v0.9.0). Supersedes the flat force-directed
-archipelago as the explorer's scale model.
+Status: implemented (v0.9.0). Supersedes the flat force-directed
+archipelago as the explorer's scale model. P1–P3 landed; loading algebra,
+hierarchy, layout, and navigation are native-Go-tested, and the wasm+app-JS
+wiring is exercised end-to-end under a headless Deno DOM harness (boot →
+hierarchical nav → priority prefetch → pin/evict → idle memory pressure).
+The one thing still owed a human is a visual pass on the live canvas; the
+logic and data flow are verified.
 
 ## The problem (confirmed)
 
