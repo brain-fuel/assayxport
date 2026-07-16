@@ -160,6 +160,7 @@
 
 <script id="seed" type="text/plain">/*SEED*/</script>
 <script id="live">/*LIVE*/</script>
+<script id="axmode">/*MODE*/</script>
 
 <canvas id="world"></canvas>
 
@@ -232,13 +233,19 @@ function decodeSeed(s){s=s.replace(/\s+/g,"");const bin=atob(s);const b=new Uint
   for(let i=0;i<bin.length;i++)b[i]=bin.charCodeAt(i);return new TextDecoder("utf-8").decode(b)}
 
 /* ================= data ================= */
-const D={packages:[],symIndex:new Map(),callersOf:new Map(),meta:null,totalSyms:0};
+const D={packages:[],symIndex:new Map(),callersOf:new Map(),meta:null,totalSyms:0,couplings:null};
+// DATA_MODE is "embedded" when the whole manifest is inlined in the page (ax
+// assay's static file, or a dropped assayxport.json) and "lazy" when the WASM
+// engine feeds the index up front and shards on demand (ax serve). Only the
+// data path differs; the visualization is identical.
+let DATA_MODE="embedded";
 function normalize(root){
   let index,shards;
   if(root.index&&root.shards){index=root.index;shards=root.shards}
   else if(root.packages){index=root;shards=root.__shards||{}}
   else throw new Error("Unrecognized manifest");
-  D.packages=index.packages.map(pe=>Object.assign({},pe,{symbols:(shards[pe.shard]&&shards[pe.shard].symbols)||[]}));
+  DATA_MODE="embedded";D.couplings=null;
+  D.packages=index.packages.map(pe=>Object.assign({},pe,{symbols:(shards[pe.shard]&&shards[pe.shard].symbols)||[],loaded:true}));
   D.symIndex.clear();D.callersOf.clear();D.totalSyms=0;
   for(const p of D.packages)for(const s of p.symbols){
     const ref=p.id+"#"+s.id;D.symIndex.set(ref,{pkgId:p.id,sym:s});D.totalSyms++;
@@ -248,12 +255,70 @@ function normalize(root){
       if(!D.callersOf.has(c.ref))D.callersOf.set(c.ref,[]);
       D.callersOf.get(c.ref).push({from:p.id+"#"+s.id,kind:c.kind,count:c.count});
     }
+  finishLoad(index);
+}
+// finishLoad is the tail shared by embedded normalize() and lazyBoot(): once
+// D.packages / D.symIndex / D.couplings are populated, build the world and
+// tree, reset progress, and frame the map.
+function finishLoad(index){
   D.meta=index;
   buildWorld();buildTree();
   G.visited.clear();updateAssayed();
   $("#modname").textContent=index.module||index.root||"explorer";
   camFitWorld(true);select(null);crumbs();
 }
+
+/* ================= lazy (WASM) data path ================= */
+// lazyBoot runs once window.axapi (the WASM engine) is ready: it takes the
+// index (with server-precomputed couplings) and lays out every island sealed,
+// deferring each package's symbols to hydratePkg. window.__axReady, which the
+// WASM binary calls after installing axapi, is wired to this in boot().
+function lazyBoot(){
+  if(!window.axapi){console.warn("lazyBoot: axapi missing");return}
+  let index;
+  try{index=JSON.parse(axapi.index())}catch(e){console.error("lazyBoot: bad index",e);return}
+  DATA_MODE="lazy";
+  D.couplings=index.couplings||[];
+  D.packages=index.packages.map(pe=>Object.assign({},pe,{symbols:[],loaded:false}));
+  D.symIndex.clear();D.callersOf.clear();
+  D.totalSyms=index.packages.reduce((a,p)=>a+(p.symbol_count||0),0);
+  finishLoad(index);
+}
+const hydrating=new Map();
+// hydratePkg fetches pkgId's shard (once), registers its symbols, and repacks
+// just that island in place -- its position is kept, so the map does not
+// reflow; only the newly-opened island grows its interior. Returns a promise
+// that resolves when the package is loaded (or immediately if already loaded).
+function hydratePkg(pkgId){
+  if(DATA_MODE!=="lazy")return Promise.resolve();
+  const p=D.packages.find(p=>p.id===pkgId);
+  if(!p||p.loaded)return Promise.resolve();
+  if(hydrating.has(pkgId))return hydrating.get(pkgId);
+  const pr=(async()=>{
+    let sh;
+    try{sh=JSON.parse(await axapi.ensureShard(pkgId))}
+    catch(e){console.warn("hydrate",pkgId,e);return}
+    p.symbols=sh.symbols||[];p.loaded=true;
+    for(const s of p.symbols)D.symIndex.set(pkgId+"#"+s.id,{pkgId,sym:s});
+    const isl=W.byId.get(pkgId);
+    if(isl){const ni=packIsland(p);ni.x=isl.x;ni.y=isl.y;Object.assign(isl,ni);
+      for(const pl of isl.planets){pl.ax=isl.x+pl.x;pl.ay=isl.y+pl.y;
+        W.posOf.set(pl.ref,{x:pl.ax,y:pl.ay,island:isl,node:pl});
+        for(const m of pl.moons){m.ax=isl.x+m.x;m.ay=isl.y+m.y;
+          W.posOf.set(m.ref,{x:m.ax,y:m.ay,island:isl,node:m})}}}
+    refreshTreeSyms(pkgId);
+  })();
+  hydrating.set(pkgId,pr);
+  pr.finally(()=>hydrating.delete(pkgId));
+  return pr;
+}
+// loadCallers pulls a symbol's inbound edges from the engine (which knows only
+// the callers in shards loaded so far -- the list fills in as you explore).
+function loadCallers(ref){
+  if(DATA_MODE!=="lazy")return;
+  try{D.callersOf.set(ref,JSON.parse(axapi.callers(ref))||[])}catch(e){/* leave empty */}
+}
+function pkgOf(ref){return ref.split("#")[0]}
 
 /* ================= world building (deterministic) ================= */
 const W={islands:[],byId:new Map(),edges:[],bounds:{x0:0,y0:0,x1:0,y1:0}};
@@ -266,6 +331,17 @@ function symbolSize(s){
   return 3.2;
 }
 function packIsland(p){
+  // Lazy mode: a package whose shard has not been fetched yet is a "sealed"
+  // island -- drawn and placed from the index alone, its outer radius
+  // estimated from the symbol count (the sunflower packing below grows ~as
+  // sqrt(n)). It repacks for real, and may resize slightly, once hydratePkg
+  // loads its symbols.
+  if((!p.symbols||!p.symbols.length)&&(p.symbol_count||0)>0){
+    const n=p.symbol_count;const ext=8.9*Math.sqrt(n)+8;
+    return {id:p.id,pkg:p,planets:[],r:ext+16,
+      comp:{internal:0,external:0,builtin:0,dynamic:0,unresolved:0},compTot:0,
+      label:p.name,ep:!!p.is_entrypoint,sealed:true,x:0,y:0};
+  }
   // planets = ownerless symbols; moons attach to their owner planet
   const planets=[];const planetBySym=new Map();
   const sorted=p.symbols.slice().sort((a,b)=>a.id<b.id?-1:1);
@@ -312,14 +388,24 @@ function packIsland(p){
 function buildWorld(){
   W.islands=D.packages.map(packIsland);
   W.byId=new Map(W.islands.map(i=>[i.id,i]));
-  // inter-island aggregate edges (internal + linked dynamic)
-  const em=new Map();
-  for(const p of D.packages)for(const s of p.symbols)for(const c of (s.calls||[])){
-    if((c.kind==="internal"||c.kind==="dynamic")&&c.ref){
-      const dst=c.ref.split("#")[0];
-      if(dst!==p.id&&W.byId.has(dst)){const k=p.id+"|"+dst+"|"+c.kind;
-        if(!em.has(k))em.set(k,{src:p.id,dst,kind:c.kind,w:0});em.get(k).w+=c.count}}}
-  W.edges=[...em.values()].sort((a,b)=>a.src+a.dst<b.src+b.dst?-1:1);
+  // inter-island aggregate edges (internal + linked dynamic). In lazy mode
+  // these arrive precomputed in the index as D.couplings (the server has
+  // every shard), so island layout runs without any shard loaded; in
+  // embedded mode they are derived from the fully present call graph.
+  if(D.couplings){
+    W.edges=D.couplings
+      .filter(e=>W.byId.has(e.src)&&W.byId.has(e.dst)&&e.src!==e.dst)
+      .map(e=>({src:e.src,dst:e.dst,kind:e.kind,w:e.w}))
+      .sort((a,b)=>a.src+a.dst<b.src+b.dst?-1:1);
+  }else{
+    const em=new Map();
+    for(const p of D.packages)for(const s of p.symbols)for(const c of (s.calls||[])){
+      if((c.kind==="internal"||c.kind==="dynamic")&&c.ref){
+        const dst=c.ref.split("#")[0];
+        if(dst!==p.id&&W.byId.has(dst)){const k=p.id+"|"+dst+"|"+c.kind;
+          if(!em.has(k))em.set(k,{src:p.id,dst,kind:c.kind,w:0});em.get(k).w+=c.count}}}
+    W.edges=[...em.values()].sort((a,b)=>a.src+a.dst<b.src+b.dst?-1:1);
+  }
   // deterministic island layout: circle init (sorted), spring relax
   const isl=W.islands.slice().sort((a,b)=>a.id<b.id?-1:1);
   const circ=isl.reduce((a,i)=>a+2*i.r,0);const R0=Math.max(300,circ/(2*Math.PI)*1.9);
@@ -391,6 +477,11 @@ function updateAssayed(){
   $("#assayedtxt").innerHTML=`<b>${G.visited.size}</b> / ${D.totalSyms} symbols assayed`;
   $("#assayedbar").style.width=(D.totalSyms?100*G.visited.size/D.totalSyms:0)+"%"}
 function select(ref,push=true){
+  if(ref&&DATA_MODE==="lazy"){
+    const p=D.packages.find(p=>p.id===pkgOf(ref));
+    if(p&&!p.loaded){hydratePkg(p.id).then(()=>select(ref,push));return}
+    if(!D.callersOf.has(ref))loadCallers(ref);
+  }
   if(ref&&!D.symIndex.has(ref))ref=null;
   if(push&&G.selected&&G.selected!==ref)G.history.push(G.selected);
   G.selected=ref;
@@ -400,10 +491,17 @@ function select(ref,push=true){
 function selectPkg(pkgId,fly){
   const isl=W.byId.get(pkgId);if(!isl)return;
   G.selPkg=pkgId;G.selected=null;G.islandIn=pkgId;
+  if(DATA_MODE==="lazy"&&isl.pkg&&!isl.pkg.loaded)
+    hydratePkg(pkgId).then(()=>{if(G.selPkg===pkgId)renderCard()});
   renderCard();
   if(fly)flyToIsland(isl);else crumbs()}
-function travel(ref){select(ref);flyToRef(ref);
-  const r=D.symIndex.get(ref);toast(`→ ${r.pkgId.split("/").pop()} · ${r.sym.name}`)}
+function travel(ref){
+  if(DATA_MODE==="lazy"){
+    const p=D.packages.find(p=>p.id===pkgOf(ref));
+    if(p&&!p.loaded){hydratePkg(p.id).then(()=>travel(ref));return}
+  }
+  select(ref);flyToRef(ref);
+  const r=D.symIndex.get(ref);if(r)toast(`→ ${r.pkgId.split("/").pop()} · ${r.sym.name}`)}
 let toastT=null;
 function toast(msg){const t=$("#toast");t.textContent=msg;t.style.display="block";
   clearTimeout(toastT);toastT=setTimeout(()=>t.style.display="none",1400)}
@@ -441,16 +539,18 @@ function renderCard(){
     cx.method==="recursive"?`<div class="cx" style="margin-top:6px">complexity <b>recursive</b> · bound withheld</div>`:
     `<div class="cx" style="margin-top:6px">time <b>${cx.time||"—"}</b> · space <b>${cx.space||"—"}</b></div>`;
   const calls=(s.calls||[]).slice().sort((a,b)=>b.count-a.count);
-  const row=c=>{const linked=c.ref&&D.symIndex.has(c.ref);
+  const row=c=>{const linked=!!c.ref&&(D.symIndex.has(c.ref)||(DATA_MODE==="lazy"&&W.byId.has(pkgOf(c.ref))));
     return `<button class="call ${linked?"travel":""}" ${linked?`data-ref="${esc(c.ref)}"`:""}>
       <span class="kbadge" style="background:${KHEX[c.kind]}22;color:${KHEX[c.kind]};border:1px solid ${KHEX[c.kind]}55">${c.kind}</span>
       <span class="tgt">${esc(c.target)}</span><span class="ct">×${c.count}</span>
       <span class="go">${linked?"travel →":""}</span></button>`};
   const callers=(D.callersOf.get(G.selected)||[]).slice().sort((a,b)=>b.count-a.count);
   const crow=c=>{const r=D.symIndex.get(c.from);
+    const nm=r?esc(r.pkgId.split("/").pop())+"."+esc(r.sym.name)
+             :esc(pkgOf(c.from).split("/").pop())+"."+esc(c.from.split("#")[1]||c.from);
     return `<button class="call travel" data-ref="${esc(c.from)}">
       <span class="kbadge" style="background:${KHEX.internal}22;color:${KHEX.internal};border:1px solid ${KHEX.internal}55">caller</span>
-      <span class="tgt">${esc(r.pkgId.split("/").pop())}.${esc(r.sym.name)}</span>
+      <span class="tgt">${nm}</span>
       <span class="ct">×${c.count}</span><span class="go">travel →</span></button>`};
   $("#cardbody").innerHTML=`
     <div class="sig">${fmtSig(s)}</div>
@@ -751,8 +851,17 @@ addEventListener("keydown",e=>{
       updateAssayed();renderCard();flyToRef(prev);}}
 });
 $("#worldbtn").onclick=()=>{G.islandIn=null;G.selPkg=null;select(null,false);camFitWorld(false);crumbs()};
-$("#startbtn").onclick=()=>{
+$("#startbtn").onclick=async()=>{
   for(const [ref,r] of D.symIndex)if(r.sym.is_entrypoint){travel(ref);return}
+  if(DATA_MODE==="lazy"){
+    // Nothing loaded names an entrypoint yet; find an entrypoint package in
+    // the index, hydrate it, and fly to its runnable symbol.
+    const ep=D.packages.find(p=>p.is_entrypoint&&(p.entrypoint_count||0)>0)
+           ||D.packages.find(p=>p.is_entrypoint);
+    if(ep){await hydratePkg(ep.id);
+      for(const s of ep.symbols)if(s.is_entrypoint){travel(ep.id+"#"+s.id);return}
+      selectPkg(ep.id,true);return}
+  }
   toast("no entrypoint in manifest")};
 
 /* ================= search ================= */
@@ -760,29 +869,40 @@ const searchEl=$("#search"),matchesEl=$("#matches");let hot=-1,curMatches=[];
 function doSearch(q){
   q=q.trim().toLowerCase();curMatches=[];hot=-1;
   if(!q){matchesEl.classList.remove("on");return}
-  // packages first: the world is navigable at root level too
-  const pks=[];
-  for(const isl of W.islands){
-    const n=isl.label.toLowerCase(),idl=isl.id.toLowerCase();
-    let score=-1;
-    if(n===q)score=0;else if(n.startsWith(q))score=1;else if(idl.includes(q))score=2;
-    if(score>=0)pks.push({pkg:isl.id,name:isl.label,score})}
-  pks.sort((a,b)=>(a.score-b.score)||(a.name.length-b.name.length));
-  const syms=[];
-  for(const [ref,r] of D.symIndex){
-    const n=r.sym.name.toLowerCase(),id=r.sym.id.toLowerCase();
-    let score=-1;
-    if(n===q)score=0;else if(n.startsWith(q))score=1;else if(id.includes(q))score=2;
-    if(score>=0)syms.push({ref,r,score,exp:r.sym.visibility==="exported"?0:1})}
-  syms.sort((a,b)=>(a.score-b.score)||(a.exp-b.exp)||(a.r.sym.name.length-b.r.sym.name.length));
-  curMatches=pks.slice(0,4).concat(syms).slice(0,12);
+  if(DATA_MODE==="lazy"){
+    // The WASM engine ranks packages (always) and symbols (in loaded shards)
+    // so search is instant and its symbol coverage grows as you explore.
+    let res=[];try{res=JSON.parse(axapi.search(q,24))||[]}catch(e){/* leave empty */}
+    curMatches=res.map(m=>m.kind==="package"
+      ?{pkg:m.pkg_id,name:m.name}
+      :{ref:m.ref,name:m.name,kind:m.kind,pkgId:m.pkg_id});
+  }else{
+    // packages first: the world is navigable at root level too
+    const pks=[];
+    for(const isl of W.islands){
+      const n=isl.label.toLowerCase(),idl=isl.id.toLowerCase();
+      let score=-1;
+      if(n===q)score=0;else if(n.startsWith(q))score=1;else if(idl.includes(q))score=2;
+      if(score>=0)pks.push({pkg:isl.id,name:isl.label,score})}
+    pks.sort((a,b)=>(a.score-b.score)||(a.name.length-b.name.length));
+    const syms=[];
+    for(const [ref,r] of D.symIndex){
+      const n=r.sym.name.toLowerCase(),id=r.sym.id.toLowerCase();
+      let score=-1;
+      if(n===q)score=0;else if(n.startsWith(q))score=1;else if(id.includes(q))score=2;
+      if(score>=0)syms.push({ref,r,score,exp:r.sym.visibility==="exported"?0:1})}
+    syms.sort((a,b)=>(a.score-b.score)||(a.exp-b.exp)||(a.r.sym.name.length-b.r.sym.name.length));
+    curMatches=pks.slice(0,4).concat(syms).slice(0,12);
+  }
   matchesEl.innerHTML=curMatches.map((m,i)=>{
     if(m.pkg)return `<div class="match" data-i="${i}">
       <span style="color:${KHEX.internal};font-size:11px;width:7px;flex:0 0 auto">◈</span>
       ${esc(m.name)} <span class="k">package</span><span class="p">${esc(m.pkg.split("/").slice(-2).join("/"))}</span></div>`;
-    const s=m.r.sym;const col=s.is_entrypoint?CRUCIBLE:(s.visibility==="exported"?"#C8963E":"#5A636B");
+    const s=m.r?m.r.sym:{name:m.name,kind:m.kind,visibility:"",is_entrypoint:false};
+    const pkgId=m.r?m.r.pkgId:m.pkgId;
+    const col=s.is_entrypoint?CRUCIBLE:(s.visibility==="exported"?"#C8963E":"#5A636B");
     return `<div class="match" data-i="${i}"><span class="dot" style="background:${col}"></span>
-      ${esc(s.name)} <span class="k">${s.kind}</span><span class="p">${esc(m.r.pkgId.split("/").slice(-2).join("/"))}</span></div>`}).join("");
+      ${esc(s.name)} <span class="k">${s.kind}</span><span class="p">${esc(pkgId.split("/").slice(-2).join("/"))}</span></div>`}).join("");
   matchesEl.classList.toggle("on",curMatches.length>0);
   matchesEl.querySelectorAll(".match").forEach(el=>el.onclick=()=>pick(+el.dataset.i))}
 function pick(i){const m=curMatches[i];if(!m)return;
@@ -800,28 +920,41 @@ document.addEventListener("click",e=>{if(!e.target.closest(".searchbox"))matches
 
 /* ================= index (tree) panel ================= */
 const treeRowByRef=new Map();
+const treePkg=new Map();
+function miniBar(isl){return isl.compTot?["internal","external","builtin","dynamic","unresolved"]
+  .filter(k=>isl.comp[k])
+  .map(k=>`<i style="width:${100*isl.comp[k]/isl.compTot}%;background:${KHEX[k]}"></i>`).join(""):""}
 function buildTree(){
-  const tb=$("#treebody");tb.innerHTML="";treeRowByRef.clear();
+  const tb=$("#treebody");tb.innerHTML="";treeRowByRef.clear();treePkg.clear();
   for(const isl of W.islands.slice().sort((a,b)=>a.id<b.id?-1:1)){
     const p=isl.pkg;
     const el=document.createElement("div");el.className="tpkg";
-    const mini=isl.compTot?["internal","external","builtin","dynamic","unresolved"]
-      .filter(k=>isl.comp[k])
-      .map(k=>`<i style="width:${100*isl.comp[k]/isl.compTot}%;background:${KHEX[k]}"></i>`).join(""):"";
     el.innerHTML=`<div class="tpkg-row"><span class="chev">▸</span>
       <span class="nm" title="${esc(p.id)}">${esc(p.name)}${p.is_entrypoint?' <span class="ep">▸</span>':""}</span>
-      <span class="minibar" title="edge composition">${mini}</span>
-      <span class="cnt">${p.symbols.length}</span></div>
+      <span class="minibar" title="edge composition">${miniBar(isl)}</span>
+      <span class="cnt">${p.symbols.length||p.symbol_count||0}</span></div>
       <div class="tsyms"></div>`;
     const row=el.querySelector(".tpkg-row"),chev=el.querySelector(".chev"),
-      syms=el.querySelector(".tsyms");
+      syms=el.querySelector(".tsyms"),cntEl=el.querySelector(".cnt"),
+      barEl=el.querySelector(".minibar");
     let built=false;
+    const build=()=>{if(built)return;built=true;syms.innerHTML="";fillTreeSyms(syms,isl)};
     const expand=open=>{el.classList.toggle("open",open);
       chev.textContent=el.classList.contains("open")?"▾":"▸";
-      if(el.classList.contains("open")&&!built){built=true;fillTreeSyms(syms,isl)}};
+      if(el.classList.contains("open")&&!built){
+        if(DATA_MODE==="lazy"&&isl.pkg&&!isl.pkg.loaded)hydratePkg(isl.id).then(build);
+        else build();}};
+    // refill updates this package's row after its shard hydrates: the count,
+    // the edge-composition bar, and (if the row is already expanded) its
+    // symbol list.
+    treePkg.set(isl.id,{refill:()=>{
+      cntEl.textContent=isl.pkg.symbols.length||isl.pkg.symbol_count||0;
+      barEl.innerHTML=miniBar(isl);
+      if(built){built=false;build()}}});
     chev.onclick=e=>{e.stopPropagation();expand(!el.classList.contains("open"))};
     row.onclick=()=>{expand(true);selectPkg(isl.id,true)};
     tb.appendChild(el)}}
+function refreshTreeSyms(pkgId){const t=treePkg.get(pkgId);if(t)t.refill()}
 function fillTreeSyms(container,isl){
   const p=isl.pkg;
   const syms=p.symbols.slice().sort((a,b)=>{
@@ -853,12 +986,17 @@ addEventListener("drop",e=>{e.preventDefault();$("#drop").classList.remove("on")
 window.__app={G,W,D,select,selectPkg,travel,flyToRef,toggleTree,doSearch:q=>{doSearch(q);return curMatches}};
 (function boot(){
   const seed=$("#seed").textContent.trim();
-  try{
-    if(seed&&seed.length>20){
-      const json=seed.charAt(0)==="{"?seed:decodeSeed(seed);
-      normalize(parseManifest(json));
-    }
-  }catch(e){console.warn("seed:",e)}
+  if(seed&&seed.length>20){
+    try{const json=seed.charAt(0)==="{"?seed:decodeSeed(seed);
+      normalize(parseManifest(json));}catch(e){console.warn("seed:",e)}
+  }else if(window.__LAZY){
+    // ax serve: the WASM engine (cmd/axwasm) calls window.__axReady once it
+    // has installed window.axapi. Wire that to lazyBoot; if the module has
+    // already come up (a fast instantiate beating this script), boot now.
+    window.__axReady=lazyBoot;
+    if(window.axapi)lazyBoot();
+  }
   requestAnimationFrame(draw);
 })();
 </script>
+<!--BOOT-->

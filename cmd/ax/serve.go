@@ -21,7 +21,6 @@ import (
 	"sync"
 	"time"
 
-	"goforge.dev/assayxport/internal/emit"
 	"goforge.dev/assayxport/internal/explorer"
 )
 
@@ -135,30 +134,31 @@ func (h *hub) broadcast() {
 	h.mu.Unlock()
 }
 
-// current holds the latest rendered artifacts under a lock so requests
-// always see a complete, consistent pair.
+// current holds the latest snapshot under a lock so every request sees a
+// complete, consistent set of artifacts even while a re-assay is building the
+// next one.
 type current struct {
-	mu       sync.RWMutex
-	html     []byte
-	manifest []byte
+	mu   sync.RWMutex
+	snap *snapshot
 }
 
-func (c *current) set(html, manifest []byte) {
+func (c *current) set(s *snapshot) {
 	c.mu.Lock()
-	c.html, c.manifest = html, manifest
+	c.snap = s
 	c.mu.Unlock()
 }
 
-func (c *current) get() (html, manifest []byte) {
+func (c *current) get() *snapshot {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.html, c.manifest
+	return c.snap
 }
 
 func runServeCmd(args []string) error {
 	fs2 := flag.NewFlagSet("ax serve", flag.ContinueOnError)
 	port := fs2.Int("port", 7979, "port to listen on")
 	noWatch := fs2.Bool("no-watch", false, "serve a single assay; do not re-assay on save")
+	noWasm := fs2.Bool("no-wasm", false, "serve the whole manifest inline instead of the lazy WASM explorer")
 	quiet := fs2.Bool("quiet", false, "suppress progress on stderr")
 	var langs stringsFlag
 	fs2.Var(&langs, "lang", "language to assay (repeatable; default: all)")
@@ -174,25 +174,28 @@ func runServeCmd(args []string) error {
 		path = fs2.Arg(0)
 	}
 	watch := !*noWatch
+	// Lazy (WASM) mode is the default: the page fetches the index up front and
+	// each package's shard on demand, so a large tree (thousands of packages)
+	// is explorable without ever building one multi-hundred-MB page. --no-wasm
+	// falls back to inlining the whole manifest, the same self-contained page
+	// `ax assay` writes -- handy for a small tree or an environment without
+	// WebAssembly.
+	lazy := !*noWasm
 
-	build := func() ([]byte, []byte, error) {
+	build := func() (*snapshot, error) {
 		idx, shards, err := assayOnce(path, langs, *quiet)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		combined, err := emit.Combined(idx, shards)
-		if err != nil {
-			return nil, nil, err
-		}
-		return explorer.Render(combined, watch), combined, nil
+		return buildSnapshot(idx, shards, watch)
 	}
 
-	html, manifest, err := build()
+	snap, err := build()
 	if err != nil {
 		return err
 	}
 	cur := &current{}
-	cur.set(html, manifest)
+	cur.set(snap)
 	h := newHub()
 
 	if watch {
@@ -201,14 +204,14 @@ func runServeCmd(args []string) error {
 			for {
 				last = waitForChange(path, last)
 				start := time.Now()
-				html, manifest, err := build()
+				snap, err := build()
 				if err != nil {
 					// A save mid-edit can be unparseable; keep serving the
 					// last good assay and say why.
 					fmt.Fprintln(os.Stderr, "ax: re-assay failed (serving last good):", err)
 					continue
 				}
-				cur.set(html, manifest)
+				cur.set(snap)
 				h.broadcast()
 				if !*quiet {
 					fmt.Fprintf(os.Stderr, "ax: re-assayed in %s\n", time.Since(start).Round(time.Millisecond))
@@ -223,16 +226,41 @@ func runServeCmd(args []string) error {
 			http.NotFound(w, r)
 			return
 		}
-		page, _ := cur.get()
+		s := cur.get()
+		page := s.embedded
+		if lazy {
+			page = s.shell
+		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-store")
 		_, _ = w.Write(page)
 	})
-	mux.HandleFunc("/assayxport.json", func(w http.ResponseWriter, r *http.Request) {
-		_, m := cur.get()
+	// Lazy API: the index (with couplings) up front, then one package's shard
+	// at a time. Served regardless of --no-wasm so /assayxport.json's shape
+	// stays available to scripts either way.
+	mux.HandleFunc("/api/index", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
-		_, _ = w.Write(m)
+		_, _ = w.Write(cur.get().indexJSON)
+	})
+	mux.HandleFunc("/api/shard", func(w http.ResponseWriter, r *http.Request) {
+		body, ok := cur.get().shards[r.URL.Query().Get("path")]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		_, _ = w.Write(body)
+	})
+	if lazy {
+		mux.HandleFunc("/static/explorer.wasm", gzAsset(explorer.WasmGz(), "application/wasm"))
+		mux.HandleFunc("/static/wasm_exec.js", gzAsset(explorer.WasmExecGz(), "text/javascript; charset=utf-8"))
+	}
+	mux.HandleFunc("/assayxport.json", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		_, _ = w.Write(cur.get().combined)
 	})
 	mux.HandleFunc("/__events", func(w http.ResponseWriter, r *http.Request) {
 		fl, ok := w.(http.Flusher)
@@ -269,7 +297,11 @@ func runServeCmd(args []string) error {
 		if !watch {
 			mode = "static (--no-watch)"
 		}
-		fmt.Fprintf(os.Stderr, "ax: exploring %s at http://%s (%s)\n", path, addr, mode)
+		engine := "lazy WASM"
+		if !lazy {
+			engine = "inline (--no-wasm)"
+		}
+		fmt.Fprintf(os.Stderr, "ax: exploring %s at http://%s (%s, %s)\n", path, addr, engine, mode)
 	}
 	return http.ListenAndServe(addr, mux)
 }
