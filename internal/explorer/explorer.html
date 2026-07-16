@@ -1,0 +1,864 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>assayxport · explorer</title>
+<style>
+  :root{
+    --bg:#14171A; --panel:#1A1E23; --panel2:#20252B; --line:#2A3138;
+    --ink:#E7EAEC; --mut:#8B949E; --dim:#5A636B;
+    --k-internal:#C8963E; --k-external:#5B8CA8; --k-builtin:#5A636B;
+    --k-dynamic:#D9506A; --k-unresolved:#D69A3C;
+    --crucible:#F2C14E; --steel:#3A4149;
+    --mono: ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans: system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:13px}
+  .mono{font-family:var(--mono)}
+  button{font-family:var(--sans);color:var(--ink);background:var(--panel2);
+    border:1px solid var(--line);border-radius:5px;padding:4px 10px;cursor:pointer;font-size:12px}
+  button:hover{border-color:#3a4550}
+  button:focus-visible,input:focus{outline:2px solid var(--crucible);outline-offset:1px}
+
+  #world{position:fixed;inset:0;display:block;cursor:grab}
+  #world.drag{cursor:grabbing}
+
+  /* top HUD */
+  .hud-top{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;gap:12px;
+    padding:8px 14px;background:linear-gradient(#14171Aee,#14171A00);pointer-events:none;z-index:10}
+  .hud-top>*{pointer-events:auto}
+  .brand{font-family:var(--mono);font-weight:700;letter-spacing:.14em;font-size:13px;white-space:nowrap}
+  .brand .x{color:var(--k-internal)}
+  .brand small{display:block;letter-spacing:.02em;font-weight:400;color:var(--dim);font-size:9.5px;margin-top:1px}
+  .searchbox{position:relative;width:min(360px,40vw)}
+  .searchbox input{width:100%;font-family:var(--mono);background:#1A1E23dd;color:var(--ink);
+    border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:12.5px}
+  .matches{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1A1E23f5;
+    border:1px solid var(--line);border-radius:7px;overflow:hidden;display:none;max-height:320px;overflow-y:auto}
+  .matches.on{display:block}
+  .match{display:flex;gap:8px;align-items:center;padding:6px 10px;cursor:pointer;font-family:var(--mono);font-size:12px}
+  .match:hover,.match.hot{background:#252b32}
+  .match .p{color:var(--dim);font-size:10.5px;margin-left:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:45%}
+  .match .k{color:var(--dim);font-size:10px}
+  .match .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+  .spacer{flex:1}
+  .assayed{font-family:var(--mono);font-size:11px;color:var(--mut);text-align:right;line-height:1.3;white-space:nowrap}
+  .assayed b{color:var(--crucible);font-weight:700}
+  .assayed .bar{width:120px;height:4px;background:var(--steel);border-radius:2px;margin-top:4px;overflow:hidden}
+  .assayed .bar i{display:block;height:100%;background:var(--crucible);width:0%}
+
+  /* breadcrumb / controls */
+  .hud-nav{position:fixed;top:52px;left:14px;display:flex;gap:6px;z-index:10;flex-wrap:wrap;max-width:60vw}
+  .crumb{font-family:var(--mono);font-size:11px;background:#1A1E23cc;border:1px solid var(--line);
+    border-radius:5px;padding:3px 9px;cursor:pointer;color:var(--mut)}
+  .crumb:hover{color:var(--ink);border-color:#3a4550}
+  .crumb.here{color:var(--crucible);border-color:#5a4a1e;cursor:default}
+
+  /* symbol card */
+  .card{position:fixed;left:14px;bottom:14px;width:min(430px,calc(100vw - 28px));max-height:min(58vh,560px);
+    background:#1A1E23f2;border:1px solid var(--line);border-radius:10px;z-index:10;
+    display:none;flex-direction:column;overflow:hidden;box-shadow:0 8px 30px #0008}
+  .card.on{display:flex}
+  .card .head{display:flex;align-items:center;gap:8px;padding:10px 12px 0}
+  .card .pkgline{font-family:var(--mono);font-size:10.5px;color:var(--dim);flex:1;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .card .close{background:none;border:none;color:var(--dim);font-size:15px;padding:2px 6px;cursor:pointer}
+  .card .close:hover{color:var(--ink)}
+  .card .title{font-family:var(--mono);font-size:12.5px;font-weight:700;color:var(--crucible);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;cursor:pointer}
+  .card .title:hover{text-decoration:underline}
+  .compass{position:fixed;z-index:15;display:none;transform:translate(-50%,-50%);
+    font-family:var(--mono);font-size:11px;color:var(--crucible);background:#1A1E23ee;
+    border:1px solid #5a4a1e;border-radius:999px;padding:7px 14px;cursor:pointer;
+    box-shadow:0 4px 18px #000a;white-space:nowrap}
+  .compass:hover{border-color:var(--crucible)}
+  .compass .arr{display:inline-block;margin-right:6px;transition:transform .15s linear}
+  .card.min .body{display:none}
+  .card.min{width:auto;max-width:min(430px,calc(100vw - 28px))}
+  .card.min .head{padding:8px 12px}
+  .card .body{padding:8px 12px 12px;overflow-y:auto}
+  .sig{font-family:var(--mono);font-size:13px;line-height:1.5;background:var(--panel2);
+    border:1px solid var(--line);border-radius:6px;padding:9px 11px;white-space:pre-wrap;word-break:break-word}
+  .sig .kw{color:var(--k-dynamic)} .sig .ty{color:var(--k-external)} .sig .nm{color:var(--crucible);font-weight:700}
+  .chips{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 2px}
+  .chip{font-family:var(--mono);font-size:10.5px;padding:1px 7px;border-radius:9px;border:1px solid var(--line);color:var(--mut)}
+  .chip.ep{color:var(--crucible);border-color:#5a4a1e}
+  .chip.exp{color:var(--k-internal);border-color:#5a4620}
+  .doc{color:var(--mut);line-height:1.5;margin:8px 0 2px;white-space:pre-wrap;font-size:12px;max-height:110px;overflow-y:auto}
+  h4{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--dim);margin:12px 0 6px;border-top:1px solid var(--line);padding-top:9px}
+  .calls{display:flex;flex-direction:column;gap:3px}
+  .call{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11.5px;
+    padding:4px 8px;border-radius:5px;background:var(--panel2);border:1px solid var(--line);text-align:left;width:100%;cursor:default}
+  .call.travel{cursor:pointer}
+  .call.travel:hover{border-color:var(--k-internal);background:#252b32}
+  .call .kbadge{font-size:8.5px;font-weight:700;letter-spacing:.05em;padding:1px 5px;border-radius:3px;
+    text-transform:uppercase;flex:0 0 auto;width:68px;text-align:center}
+  .call .tgt{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .call .go{color:var(--dim);font-size:10px;flex:0 0 auto}
+  .call.travel .go{color:var(--k-internal)}
+  .call .ct{color:var(--dim);font-size:10px}
+  .cx{font-family:var(--mono);font-size:11.5px;color:var(--mut)}
+  .cx b{color:var(--ink)}
+
+  /* legend + hints */
+  .hud-br{position:fixed;right:14px;bottom:14px;z-index:10;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+  .legend{background:#1A1E23cc;border:1px solid var(--line);border-radius:8px;padding:8px 11px;
+    font-family:var(--mono);font-size:10px;color:var(--mut);display:grid;grid-template-columns:auto auto;gap:3px 14px}
+  .legend span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .legend b{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .legend i{width:14px;height:2px;display:inline-block}
+  .hint{font-family:var(--mono);font-size:10px;color:var(--dim);text-align:right;line-height:1.6}
+  .hint kbd{border:1px solid var(--line);border-radius:3px;padding:0 4px;font-size:9px;color:var(--mut)}
+
+  /* index (tree) panel */
+  .tree-panel{position:fixed;top:52px;left:14px;bottom:14px;width:min(340px,80vw);z-index:11;
+    background:#1A1E23f2;border:1px solid var(--line);border-radius:10px;display:none;
+    flex-direction:column;overflow:hidden;box-shadow:0 8px 30px #0008}
+  .tree-panel.on{display:flex}
+  .tree-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+  .tree-body{flex:1;overflow-y:auto;padding:6px}
+  .tpkg{margin:1px 0}
+  .tpkg-row{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:5px;cursor:pointer}
+  .tpkg-row:hover{background:var(--panel2)}
+  .tpkg-row .chev{width:14px;color:var(--dim);font-size:10px;text-align:center;flex:0 0 auto}
+  .tpkg-row .nm{font-family:var(--mono);font-size:12px;font-weight:600;flex:1;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .tpkg-row:hover .nm{color:var(--crucible)}
+  .tpkg-row .ep{color:var(--crucible)}
+  .tpkg-row .cnt{color:var(--dim);font-family:var(--mono);font-size:10px}
+  .tpkg .minibar{display:flex;height:4px;width:44px;border-radius:2px;overflow:hidden;opacity:.85;flex:0 0 auto}
+  .tpkg .minibar i{height:100%}
+  .tsyms{margin:1px 0 4px 20px;border-left:1px solid var(--line);padding-left:6px;display:none}
+  .tpkg.open>.tsyms{display:block}
+  .tsym{display:flex;align-items:center;gap:6px;padding:2.5px 6px;border-radius:4px;cursor:pointer;
+    font-family:var(--mono);font-size:11.5px}
+  .tsym:hover{background:var(--panel2)}
+  .tsym .dot{width:6px;height:6px;border-radius:50%;flex:0 0 auto}
+  .tsym .kn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tsym.un .kn{color:var(--mut)}
+  .tsym .kind{color:var(--dim);font-size:9px;margin-left:auto;flex:0 0 auto}
+  .tsym.visited .kn::after{content:" ✓";color:var(--crucible);font-size:9px}
+
+  /* tooltip */
+  .tip{position:fixed;pointer-events:none;z-index:20;font-family:var(--mono);font-size:11px;
+    background:#20252Bf0;border:1px solid var(--line);border-radius:5px;padding:4px 8px;display:none;white-space:nowrap}
+  .tip small{color:var(--dim)}
+
+  .toast{position:fixed;top:52px;left:50%;transform:translateX(-50%);z-index:30;font-family:var(--mono);
+    font-size:11.5px;background:#20252Bf0;border:1px solid #5a4a1e;color:var(--crucible);
+    border-radius:6px;padding:6px 14px;display:none}
+
+  .drop{position:fixed;inset:0;background:rgba(10,12,14,.94);display:none;align-items:center;justify-content:center;z-index:50}
+  .drop.on{display:flex}
+  .drop .box{border:2px dashed var(--k-internal);border-radius:12px;padding:36px 54px;text-align:center;
+    font-family:var(--mono);background:var(--panel)}
+  ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:#2a3138;border-radius:4px}
+</style>
+
+<script id="seed" type="text/plain">/*SEED*/</script>
+<script id="live">/*LIVE*/</script>
+
+<canvas id="world"></canvas>
+
+<div class="hud-top">
+  <div class="brand">ASSAY<span class="x">X</span>PORT<small id="modname">explorer</small></div>
+  <div class="searchbox">
+    <input id="search" type="text" placeholder="teleport to symbol or package…  ( / )" autocomplete="off">
+    <div class="matches" id="matches"></div>
+  </div>
+  <button id="startbtn" title="Fly to the program entrypoint">▸ Entrypoint</button>
+  <button id="worldbtn" title="Zoom out to see everything (Esc)">◈ World</button>
+  <button id="treebtn" title="Plain package & symbol index (i)">☰ Index</button>
+  <div class="spacer"></div>
+  <div class="assayed"><span id="assayedtxt"><b>0</b> / 0 symbols assayed</span>
+    <div class="bar"><i id="assayedbar"></i></div></div>
+</div>
+
+<div class="hud-nav" id="crumbs"></div>
+
+<div class="tree-panel" id="treepanel">
+  <div class="tree-head">package index<span style="flex:1"></span>
+    <button class="close" id="treeclose" title="Close (i)">✕</button></div>
+  <div class="tree-body" id="treebody"></div>
+</div>
+
+<div class="card" id="card">
+  <div class="head"><span class="title" id="cardtitle"></span><div class="pkgline" id="cardpkg"></div>
+    <button class="close" id="cardfocus" title="Show on map — fly to this and light its edges">⌖</button>
+    <button class="close" id="cardmin" title="Minimize — watch the edges behind">–</button>
+    <button class="close" id="cardclose" title="Close (Esc)">✕</button></div>
+  <div class="body" id="cardbody"></div>
+</div>
+
+<div class="hud-br">
+  <div class="legend">
+    <span><b style="background:#C8963E"></b>exported</span><span><i style="background:#C8963E"></i>internal call</span>
+    <span><b style="background:#3A4149;border:1px solid #5A636B"></b>unexported</span><span><i style="background:#D9506A"></i>dynamic dispatch</span>
+    <span><b style="background:#F2C14E"></b>entrypoint</span><span><i style="background:#5B8CA8"></i>external floor</span>
+    <span><b style="background:#8B949E"></b>type (planet)</span><span><i style="background:#5A636B"></i>builtin floor</span>
+  </div>
+  <div class="hint">click island → land · click <b>island name</b> → contents<br>
+    click symbol → assay · gold rows → <b>travel the edge</b><br>
+    <kbd>/</kbd> search · <kbd>i</kbd> index · <kbd>–</kbd> minimize card<br>
+    <kbd>⌫</kbd> back · <kbd>Esc</kbd> up · scroll zoom</div>
+</div>
+
+<div class="tip" id="tip"></div>
+<div class="toast" id="toast"></div>
+<button class="compass" id="compass"><span class="arr" id="compassarr">➤</span>back to the map</button>
+<div class="drop" id="drop"><div class="box">Drop <b>assayxport.json</b> to explore another codebase</div></div>
+
+<script>
+"use strict";
+const KHEX={internal:"#C8963E",external:"#5B8CA8",builtin:"#5A636B",dynamic:"#D9506A",unresolved:"#D69A3C"};
+const CRUCIBLE="#F2C14E", STEEL="#3A4149", INK="#E7EAEC", MUT="#8B949E", DIM="#5A636B", LINE="#2A3138";
+const $=s=>document.querySelector(s);
+const RM = (typeof matchMedia==="function") && matchMedia("(prefers-reduced-motion: reduce)").matches;
+const esc=x=>(x||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+function sanitizeJSON(text){let out="",inStr=false,e=false;
+  for(let i=0;i<text.length;i++){const c=text[i],code=text.charCodeAt(i);
+    if(e){out+=c;e=false;continue}
+    if(c==="\\"){out+=c;e=true;continue}
+    if(c==='"'){inStr=!inStr;out+=c;continue}
+    if(inStr&&code<0x20){out+="\\u"+code.toString(16).padStart(4,"0");continue}
+    out+=c}
+  return out}
+function parseManifest(t){try{return JSON.parse(t)}catch(_){return JSON.parse(sanitizeJSON(t))}}
+function decodeSeed(s){s=s.replace(/\s+/g,"");const bin=atob(s);const b=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)b[i]=bin.charCodeAt(i);return new TextDecoder("utf-8").decode(b)}
+
+/* ================= data ================= */
+const D={packages:[],symIndex:new Map(),callersOf:new Map(),meta:null,totalSyms:0};
+function normalize(root){
+  let index,shards;
+  if(root.index&&root.shards){index=root.index;shards=root.shards}
+  else if(root.packages){index=root;shards=root.__shards||{}}
+  else throw new Error("Unrecognized manifest");
+  D.packages=index.packages.map(pe=>Object.assign({},pe,{symbols:(shards[pe.shard]&&shards[pe.shard].symbols)||[]}));
+  D.symIndex.clear();D.callersOf.clear();D.totalSyms=0;
+  for(const p of D.packages)for(const s of p.symbols){
+    const ref=p.id+"#"+s.id;D.symIndex.set(ref,{pkgId:p.id,sym:s});D.totalSyms++;
+  }
+  for(const p of D.packages)for(const s of p.symbols)for(const c of (s.calls||[]))
+    if(c.ref&&D.symIndex.has(c.ref)){
+      if(!D.callersOf.has(c.ref))D.callersOf.set(c.ref,[]);
+      D.callersOf.get(c.ref).push({from:p.id+"#"+s.id,kind:c.kind,count:c.count});
+    }
+  D.meta=index;
+  buildWorld();buildTree();
+  G.visited.clear();updateAssayed();
+  $("#modname").textContent=index.module||index.root||"explorer";
+  camFitWorld(true);select(null);crumbs();
+}
+
+/* ================= world building (deterministic) ================= */
+const W={islands:[],byId:new Map(),edges:[],bounds:{x0:0,y0:0,x1:0,y1:0}};
+function hashN(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0)/4294967296}
+const GA=Math.PI*(3-Math.sqrt(5));
+
+function symbolSize(s){
+  if(s.kind==="type")return 6.5;
+  if(s.kind==="func"||s.kind==="method")return 5;
+  return 3.2;
+}
+function packIsland(p){
+  // planets = ownerless symbols; moons attach to their owner planet
+  const planets=[];const planetBySym=new Map();
+  const sorted=p.symbols.slice().sort((a,b)=>a.id<b.id?-1:1);
+  for(const s of sorted)if(!s.owner||!sorted.some(o=>o.id===s.owner)){
+    const pl={sym:s,ref:p.id+"#"+s.id,r:symbolSize(s),moons:[]};planets.push(pl);planetBySym.set(s.id,pl);
+  }
+  for(const s of sorted)if(s.owner&&planetBySym.has(s.owner))
+    planetBySym.get(s.owner).moons.push({sym:s,ref:p.id+"#"+s.id,r:symbolSize(s)*0.82});
+  // outer radius incl. moon ring
+  for(const pl of planets){
+    pl.moonRing=pl.moons.length?pl.r+3+Math.max(...pl.moons.map(m=>m.r)):0;
+    if(pl.moons.length){ // ring big enough that moons don't collide
+      const need=(pl.moons.length*(2*4.6))/(2*Math.PI);
+      pl.moonRing=Math.max(pl.moonRing,need);
+    }
+    pl.outer=pl.moons.length?pl.moonRing+Math.max(...pl.moons.map(m=>m.r))+1.5:pl.r;
+  }
+  // deterministic sunflower placement, big planets first
+  planets.sort((a,b)=>(b.outer-a.outer)||(a.ref<b.ref?-1:1));
+  const avg=planets.length?planets.reduce((a,x)=>a+x.outer,0)/planets.length:6;
+  const c=Math.max(9,avg*2.05);
+  planets.forEach((pl,i)=>{const ang=i*GA;const rad=c*Math.sqrt(i)*0.72;
+    pl.x=Math.cos(ang)*rad;pl.y=Math.sin(ang)*rad});
+  // deterministic relaxation
+  for(let it=0;it<70;it++){let moved=false;
+    for(let i=0;i<planets.length;i++)for(let j=i+1;j<planets.length;j++){
+      const a=planets[i],b=planets[j];let dx=b.x-a.x,dy=b.y-a.y;
+      let d=Math.hypot(dx,dy);const min=a.outer+b.outer+3.5;
+      if(d<min){if(d<0.01){const h=hashN(a.ref+b.ref)*Math.PI*2;dx=Math.cos(h);dy=Math.sin(h);d=1}
+        const push=(min-d)/2,ux=dx/d,uy=dy/d;
+        a.x-=ux*push;a.y-=uy*push;b.x+=ux*push;b.y+=uy*push;moved=true}}
+    if(!moved)break}
+  // moons on their rings
+  for(const pl of planets)pl.moons.forEach((m,j)=>{
+    const ang=j*(2*Math.PI/pl.moons.length)+hashN(pl.ref)*Math.PI*2;
+    m.x=pl.x+Math.cos(ang)*pl.moonRing;m.y=pl.y+Math.sin(ang)*pl.moonRing});
+  let ext=20;for(const pl of planets)ext=Math.max(ext,Math.hypot(pl.x,pl.y)+pl.outer);
+  // per-island edge composition
+  const comp={internal:0,external:0,builtin:0,dynamic:0,unresolved:0};let tot=0;
+  for(const s of p.symbols)for(const cc of (s.calls||[])){comp[cc.kind]+=cc.count;tot+=cc.count}
+  return {id:p.id,pkg:p,planets,r:ext+16,comp,compTot:tot,
+    label:p.name,ep:!!p.is_entrypoint,x:0,y:0};
+}
+function buildWorld(){
+  W.islands=D.packages.map(packIsland);
+  W.byId=new Map(W.islands.map(i=>[i.id,i]));
+  // inter-island aggregate edges (internal + linked dynamic)
+  const em=new Map();
+  for(const p of D.packages)for(const s of p.symbols)for(const c of (s.calls||[])){
+    if((c.kind==="internal"||c.kind==="dynamic")&&c.ref){
+      const dst=c.ref.split("#")[0];
+      if(dst!==p.id&&W.byId.has(dst)){const k=p.id+"|"+dst+"|"+c.kind;
+        if(!em.has(k))em.set(k,{src:p.id,dst,kind:c.kind,w:0});em.get(k).w+=c.count}}}
+  W.edges=[...em.values()].sort((a,b)=>a.src+a.dst<b.src+b.dst?-1:1);
+  // deterministic island layout: circle init (sorted), spring relax
+  const isl=W.islands.slice().sort((a,b)=>a.id<b.id?-1:1);
+  const circ=isl.reduce((a,i)=>a+2*i.r,0);const R0=Math.max(300,circ/(2*Math.PI)*1.9);
+  isl.forEach((i,k)=>{const a=(k/isl.length)*Math.PI*2;i.x=Math.cos(a)*R0;i.y=Math.sin(a)*R0});
+  const conn=new Map();for(const e of W.edges){const k=[e.src,e.dst].sort().join("|");
+    conn.set(k,(conn.get(k)||0)+e.w)}
+  for(let it=0;it<420;it++){
+    // springs
+    for(const [k,w] of conn){const [a0,b0]=k.split("|");const a=W.byId.get(a0),b=W.byId.get(b0);
+      const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;
+      const want=a.r+b.r+150;const f=(d-want)*0.012*Math.min(2,Math.log2(2+w)/3);
+      const ux=dx/d,uy=dy/d;a.x+=ux*f;a.y+=uy*f;b.x-=ux*f;b.y-=uy*f}
+    // separation + mild repulsion
+    for(let i=0;i<isl.length;i++)for(let j=i+1;j<isl.length;j++){
+      const a=isl[i],b=isl[j];let dx=b.x-a.x,dy=b.y-a.y;let d=Math.hypot(dx,dy);
+      const min=a.r+b.r+70;
+      if(d<0.01){const h=hashN(a.id+b.id)*Math.PI*2;dx=Math.cos(h);dy=Math.sin(h);d=1}
+      if(d<min){const push=(min-d)*0.5,ux=dx/d,uy=dy/d;
+        a.x-=ux*push;a.y-=uy*push;b.x+=ux*push;b.y+=uy*push}
+      else{const f=1600/(d*d);a.x-=dx/d*f;a.y-=dy/d*f;b.x+=dx/d*f;b.y+=dy/d*f}}
+    // gravity
+    let cx=0,cy=0;for(const i of isl){cx+=i.x;cy+=i.y}cx/=isl.length;cy/=isl.length;
+    for(const i of isl){i.x-=(cx+ (i.x-cx)*0.0009);i.y-=(cy+(i.y-cy)*0.0009);i.x+=cx*0; i.y+=cy*0;}
+    for(const i of isl){i.x-=cx;i.y-=cy}
+  }
+  // absolute symbol positions + lookup
+  W.posOf=new Map();
+  for(const isl2 of W.islands)for(const pl of isl2.planets){
+    pl.ax=isl2.x+pl.x;pl.ay=isl2.y+pl.y;W.posOf.set(pl.ref,{x:pl.ax,y:pl.ay,island:isl2,node:pl});
+    for(const m of pl.moons){m.ax=isl2.x+m.x;m.ay=isl2.y+m.y;
+      W.posOf.set(m.ref,{x:m.ax,y:m.ay,island:isl2,node:m})}}
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(const i of W.islands){x0=Math.min(x0,i.x-i.r);y0=Math.min(y0,i.y-i.r);
+    x1=Math.max(x1,i.x+i.r);y1=Math.max(y1,i.y+i.r)}
+  W.bounds={x0,y0,x1,y1};
+}
+
+/* ================= camera & game state ================= */
+const canvas=$("#world");const ctx=canvas.getContext("2d");
+let VW=innerWidth,VH=innerHeight,DPR=Math.min(devicePixelRatio||1,2);
+function resize(){VW=innerWidth;VH=innerHeight;canvas.width=VW*DPR;canvas.height=VH*DPR;
+  canvas.style.width=VW+"px";canvas.style.height=VH+"px"}
+addEventListener("resize",resize);resize();
+
+const G={cam:{x:0,y:0,k:0.5},target:null,tstart:0,tdur:0,from:null,
+  selected:null,selPkg:null,cardMin:false,hover:null,hoverLabel:null,labelBoxes:[],
+  visited:new Set(),history:[],islandIn:null};
+const S2W=(sx,sy)=>({x:(sx-VW/2)/G.cam.k+G.cam.x,y:(sy-VH/2)/G.cam.k+G.cam.y});
+const W2S=(wx,wy)=>({x:(wx-G.cam.x)*G.cam.k+VW/2,y:(wy-G.cam.y)*G.cam.k+VH/2});
+const ease=t=>t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+function flyTo(x,y,k,dur=700){
+  if(RM){G.cam={x,y,k};G.target=null;return}
+  G.from={...G.cam};G.target={x,y,k};G.tstart=performance.now();G.tdur=dur}
+function camFitWorld(instant){
+  const b=W.bounds,pad=90;
+  const k=Math.min(VW/(b.x1-b.x0+pad*2),VH/(b.y1-b.y0+pad*2));
+  const x=(b.x0+b.x1)/2,y=(b.y0+b.y1)/2;
+  if(instant){G.cam={x,y,k};G.target=null}else flyTo(x,y,k,800)}
+function flyToIsland(isl){G.islandIn=isl.id;
+  flyTo(isl.x,isl.y,Math.min(2.4,0.42*Math.min(VW,VH)/isl.r),750);crumbs()}
+function flyToRef(ref){
+  const pos=W.posOf.get(ref);if(!pos)return;
+  G.islandIn=pos.island.id;
+  flyTo(pos.x,pos.y,Math.max(2.2,0.42*Math.min(VW,VH)/Math.max(60,pos.node.outer||30)),750);
+  crumbs()}
+
+/* ================= selection / travel ================= */
+function updateAssayed(){
+  $("#assayedtxt").innerHTML=`<b>${G.visited.size}</b> / ${D.totalSyms} symbols assayed`;
+  $("#assayedbar").style.width=(D.totalSyms?100*G.visited.size/D.totalSyms:0)+"%"}
+function select(ref,push=true){
+  if(ref&&!D.symIndex.has(ref))ref=null;
+  if(push&&G.selected&&G.selected!==ref)G.history.push(G.selected);
+  G.selected=ref;
+  if(ref){G.selPkg=null;G.visited.add(ref);updateAssayed();
+    const tr=treeRowByRef.get(ref);if(tr)tr.classList.add("visited")}
+  renderCard();crumbs()}
+function selectPkg(pkgId,fly){
+  const isl=W.byId.get(pkgId);if(!isl)return;
+  G.selPkg=pkgId;G.selected=null;G.islandIn=pkgId;
+  renderCard();
+  if(fly)flyToIsland(isl);else crumbs()}
+function travel(ref){select(ref);flyToRef(ref);
+  const r=D.symIndex.get(ref);toast(`→ ${r.pkgId.split("/").pop()} · ${r.sym.name}`)}
+let toastT=null;
+function toast(msg){const t=$("#toast");t.textContent=msg;t.style.display="block";
+  clearTimeout(toastT);toastT=setTimeout(()=>t.style.display="none",1400)}
+
+function fmtSig(s){
+  if(s.signature){const sg=s.signature;
+    const ps=(sg.params||[]).map(p=>`${p.name?p.name+" ":""}<span class="ty">${esc(p.type)}</span>`).join(", ");
+    const rs=(sg.returns||[]).filter(r=>r.type).map(r=>`<span class="ty">${esc(r.type)}</span>`).join(", ");
+    const recv=sg.receiver?`(<span class="ty">${esc(sg.receiver.type)}</span>) `:"";
+    return `${recv}<span class="nm">${esc(s.name)}</span>(${ps})${rs?" → "+rs:""}`}
+  if(s.type)return `<span class="nm">${esc(s.name)}</span> <span class="ty">${esc(s.type)}</span>`;
+  if(s.type_kind)return `<span class="kw">${esc(s.type_kind)}</span> <span class="nm">${esc(s.name)}</span>${s.underlying?' = <span class="ty">'+esc(s.underlying)+'</span>':""}`;
+  return `<span class="nm">${esc(s.name)}</span>`}
+function symRow(ref,s){
+  const col=s.is_entrypoint?CRUCIBLE:(s.visibility==="exported"?"#C8963E":"#5A636B");
+  return `<button class="call travel" data-ref="${esc(ref)}">
+    <span style="width:8px;height:8px;border-radius:50%;background:${col};flex:0 0 auto"></span>
+    <span class="tgt" style="${s.visibility!=="exported"?"color:var(--mut)":""}">${esc(s.id)}</span>
+    <span class="ct">${s.kind}</span><span class="go">assay →</span></button>`}
+function renderCard(){
+  const card=$("#card");
+  card.classList.toggle("min",G.cardMin);
+  $("#cardmin").textContent=G.cardMin?"▣":"–";
+  $("#cardmin").title=G.cardMin?"Restore panel":"Minimize — watch the edges behind";
+  if(!G.selected&&!G.selPkg){card.classList.remove("on");return}
+  if(G.selPkg){renderPkgCard(card);return}
+  const {pkgId,sym:s}=D.symIndex.get(G.selected);
+  $("#cardtitle").textContent=s.name;
+  $("#cardpkg").textContent=pkgId;
+  const chips=[`<span class="chip">${s.kind}</span>`,
+    `<span class="chip ${s.visibility==="exported"?"exp":""}">${s.visibility}</span>`];
+  if(s.is_entrypoint)chips.push(`<span class="chip ep">▸ ${esc((s.invocation||{}).how||"entrypoint")}</span>`);
+  const cx=s.complexity||{};
+  const cxLine=cx.method==="deferred"?"":
+    cx.method==="recursive"?`<div class="cx" style="margin-top:6px">complexity <b>recursive</b> · bound withheld</div>`:
+    `<div class="cx" style="margin-top:6px">time <b>${cx.time||"—"}</b> · space <b>${cx.space||"—"}</b></div>`;
+  const calls=(s.calls||[]).slice().sort((a,b)=>b.count-a.count);
+  const row=c=>{const linked=c.ref&&D.symIndex.has(c.ref);
+    return `<button class="call ${linked?"travel":""}" ${linked?`data-ref="${esc(c.ref)}"`:""}>
+      <span class="kbadge" style="background:${KHEX[c.kind]}22;color:${KHEX[c.kind]};border:1px solid ${KHEX[c.kind]}55">${c.kind}</span>
+      <span class="tgt">${esc(c.target)}</span><span class="ct">×${c.count}</span>
+      <span class="go">${linked?"travel →":""}</span></button>`};
+  const callers=(D.callersOf.get(G.selected)||[]).slice().sort((a,b)=>b.count-a.count);
+  const crow=c=>{const r=D.symIndex.get(c.from);
+    return `<button class="call travel" data-ref="${esc(c.from)}">
+      <span class="kbadge" style="background:${KHEX.internal}22;color:${KHEX.internal};border:1px solid ${KHEX.internal}55">caller</span>
+      <span class="tgt">${esc(r.pkgId.split("/").pop())}.${esc(r.sym.name)}</span>
+      <span class="ct">×${c.count}</span><span class="go">travel →</span></button>`};
+  $("#cardbody").innerHTML=`
+    <div class="sig">${fmtSig(s)}</div>
+    <div class="chips">${chips.join("")}</div>${cxLine}
+    ${s.doc&&s.doc.raw?`<div class="doc">${esc(s.doc.raw)}</div>`:""}
+    <h4>calls · ${calls.length}</h4>
+    <div class="calls">${calls.length?calls.map(row).join(""):'<span class="cx" style="color:var(--dim)">leaf — calls nothing</span>'}</div>
+    <h4>called by · ${callers.length}</h4>
+    <div class="calls">${callers.length?callers.map(crow).join(""):'<span class="cx" style="color:var(--dim)">no known callers — a root or reached dynamically</span>'}</div>`;
+  card.classList.add("on");
+  card.querySelectorAll("[data-ref]").forEach(b=>b.onclick=()=>travel(b.dataset.ref));
+}
+function renderPkgCard(card){
+  const isl=W.byId.get(G.selPkg);if(!isl){card.classList.remove("on");return}
+  const p=isl.pkg;
+  $("#cardtitle").textContent=p.name;
+  $("#cardpkg").textContent=p.id;
+  const comp=isl.compTot?["internal","external","builtin","dynamic","unresolved"]
+    .filter(k=>isl.comp[k])
+    .map(k=>`<i style="width:${100*isl.comp[k]/isl.compTot}%;background:${KHEX[k]};display:block;height:100%"></i>`).join(""):"";
+  const chips=[`<span class="chip">${p.symbols.length} symbols</span>`,
+    `<span class="chip">${p.symbols.filter(s=>s.visibility==="exported").length} exported</span>`];
+  if(p.is_entrypoint)chips.push(`<span class="chip ep">▸ ${esc((p.invocation||{}).how||"entrypoint")}</span>`);
+  const syms=p.symbols.slice().sort((a,b)=>{
+    const ea=a.visibility==="exported"?0:1,eb=b.visibility==="exported"?0:1;
+    return (ea-eb)||(a.id<b.id?-1:1)});
+  const exp=syms.filter(s=>s.visibility==="exported"),un=syms.filter(s=>s.visibility!=="exported");
+  $("#cardbody").innerHTML=`
+    ${p.doc?`<div class="doc" style="margin-top:2px">${esc(p.doc)}</div>`:""}
+    <div class="chips">${chips.join("")}</div>
+    ${isl.compTot?`<div style="display:flex;height:6px;border-radius:3px;overflow:hidden;border:1px solid var(--line);margin:6px 0 2px" title="edge composition">${comp}</div>`:""}
+    <h4>exported · ${exp.length}</h4>
+    <div class="calls">${exp.map(s=>symRow(p.id+"#"+s.id,s)).join("")||'<span class="cx" style="color:var(--dim)">none</span>'}</div>
+    <h4>unexported · ${un.length}</h4>
+    <div class="calls">${un.map(s=>symRow(p.id+"#"+s.id,s)).join("")||'<span class="cx" style="color:var(--dim)">none</span>'}</div>`;
+  card.classList.add("on");
+  card.querySelectorAll("[data-ref]").forEach(b=>b.onclick=()=>travel(b.dataset.ref));
+}
+$("#cardclose").onclick=()=>{G.selPkg=null;select(null,false)};
+$("#cardmin").onclick=()=>{G.cardMin=!G.cardMin;renderCard()};
+function focusOnCard(){
+  if(G.selected){flyToRef(G.selected);
+    const r=D.symIndex.get(G.selected);toast("⌖ "+r.sym.name)}
+  else if(G.selPkg){const isl=W.byId.get(G.selPkg);
+    if(isl){flyToIsland(isl);toast("⌖ "+isl.label)}}}
+$("#cardfocus").onclick=focusOnCard;
+$("#cardtitle").onclick=focusOnCard;
+function updateCompass(){
+  const el=$("#compass");
+  if(!W.islands.length){el.style.display="none";return}
+  const b=W.bounds;
+  const p1=W2S(b.x0,b.y0),p2=W2S(b.x1,b.y1);
+  const x0=Math.min(p1.x,p2.x),x1=Math.max(p1.x,p2.x),
+        y0=Math.min(p1.y,p2.y),y1=Math.max(p1.y,p2.y);
+  const lost=x1<0||x0>VW||y1<0||y0>VH;
+  if(!lost){el.style.display="none";return}
+  const ang=Math.atan2((y0+y1)/2-VH/2,(x0+x1)/2-VW/2);
+  const m=84,tx=Math.cos(ang),ty=Math.sin(ang);
+  const s=Math.min(tx?(VW/2-m)/Math.abs(tx):1e9, ty?(VH/2-m)/Math.abs(ty):1e9);
+  el.style.left=(VW/2+tx*s)+"px";el.style.top=(VH/2+ty*s)+"px";
+  $("#compassarr").style.transform=`rotate(${ang}rad)`;
+  el.style.display="block"}
+$("#compass").onclick=()=>{camFitWorld(false);toast("◈ back to the map")};
+
+function crumbs(){
+  const c=$("#crumbs");const parts=[];
+  parts.push(`<span class="crumb ${!G.islandIn&&!G.selected?"here":""}" data-act="world">◈ world</span>`);
+  if(G.islandIn){const isl=W.byId.get(G.islandIn);
+    if(isl)parts.push(`<span class="crumb ${!G.selected?"here":""}" data-act="island">${esc(isl.label)}</span>`)}
+  if(G.selected){const r=D.symIndex.get(G.selected);
+    parts.push(`<span class="crumb here">${esc(r.sym.name)}</span>`)}
+  c.innerHTML=parts.join('<span style="color:var(--dim);font-family:var(--mono);font-size:11px;align-self:center">›</span>');
+  c.querySelectorAll("[data-act]").forEach(el=>el.onclick=()=>{
+    if(el.dataset.act==="world"){G.islandIn=null;G.selPkg=null;select(null,false);camFitWorld(false);crumbs()}
+    else if(el.dataset.act==="island"){selectPkg(G.islandIn,true)}})}
+
+/* ================= rendering ================= */
+let pulse=0;
+function draw(now){
+  if(G.target){const t=Math.min(1,(now-G.tstart)/G.tdur);const e=ease(t);
+    G.cam.x=G.from.x+(G.target.x-G.from.x)*e;G.cam.y=G.from.y+(G.target.y-G.from.y)*e;
+    G.cam.k=G.from.k+(G.target.k-G.from.k)*e;if(t>=1)G.target=null}
+  updateCompass();
+  pulse=RM?0.5:(Math.sin(now/600)+1)/2;
+  if(!ctx){requestAnimationFrame(draw);return}
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.clearRect(0,0,VW,VH);
+  // sea
+  const grad=ctx.createRadialGradient(VW/2,VH*0.42,60,VW/2,VH*0.42,Math.max(VW,VH)*0.75);
+  grad.addColorStop(0,"#181C21");grad.addColorStop(1,"#121518");
+  ctx.fillStyle=grad;ctx.fillRect(0,0,VW,VH);
+  const k=G.cam.k;
+  // inter-island edges (architecture always visible)
+  for(const e of W.edges){
+    const a=W.byId.get(e.src),b=W.byId.get(e.dst);
+    const A=W2S(a.x,a.y),B=W2S(b.x,b.y);
+    const dx=B.x-A.x,dy=B.y-A.y,d=Math.hypot(dx,dy)||1;
+    const ra=a.r*k,rb=b.r*k;
+    if(d<ra+rb+8)continue;
+    const ux=dx/d,uy=dy/d;
+    const sx=A.x+ux*ra,sy=A.y+uy*ra,tx=B.x-ux*(rb+7),ty=B.y-uy*(rb+7);
+    const off=(e.src<e.dst?1:-1)*Math.min(40,d*0.09);
+    const mx=(sx+tx)/2-uy*off,my=(sy+ty)/2+ux*off;
+    ctx.strokeStyle=KHEX[e.kind];ctx.globalAlpha=e.kind==="dynamic"?0.35:0.5;
+    ctx.lineWidth=Math.max(0.8,Math.min(4,0.6+Math.log2(1+e.w)*0.55));
+    ctx.setLineDash(e.kind==="dynamic"?[5,4]:[]);
+    ctx.beginPath();ctx.moveTo(sx,sy);ctx.quadraticCurveTo(mx,my,tx,ty);ctx.stroke();
+    ctx.setLineDash([]);
+    // arrowhead
+    const ex=tx-mx,ey=ty-my,ed=Math.hypot(ex,ey)||1;
+    ctx.globalAlpha=e.kind==="dynamic"?0.5:0.7;ctx.fillStyle=KHEX[e.kind];
+    ctx.beginPath();ctx.moveTo(tx,ty);
+    ctx.lineTo(tx-ex/ed*7-(-ey/ed)*3.2,ty-ey/ed*7-(ex/ed)*3.2);
+    ctx.lineTo(tx-ex/ed*7+(-ey/ed)*3.2,ty-ey/ed*7+(ex/ed)*3.2);ctx.closePath();ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  // islands
+  G.labelBoxes.length=0;
+  for(const isl of W.islands){
+    const C=W2S(isl.x,isl.y);const sr=isl.r*k;
+    if(C.x+sr<-60||C.x-sr>VW+60||C.y+sr<-60||C.y-sr>VH+60)continue;
+    // disc
+    ctx.fillStyle="#1A1E23";ctx.strokeStyle=LINE;ctx.lineWidth=1;
+    ctx.beginPath();ctx.arc(C.x,C.y,sr,0,Math.PI*2);ctx.fill();ctx.stroke();
+    // assay ring
+    if(isl.compTot>0&&sr>18){
+      let a0=-Math.PI/2;const rw=Math.max(2.5,sr*0.045);
+      for(const kk of ["internal","external","builtin","dynamic","unresolved"]){
+        const frac=isl.comp[kk]/isl.compTot;if(!frac)continue;
+        const a1=a0+frac*Math.PI*2;
+        ctx.strokeStyle=KHEX[kk];ctx.lineWidth=rw;ctx.globalAlpha=0.9;
+        ctx.beginPath();ctx.arc(C.x,C.y,sr+rw*1.4,a0+0.02,a1-0.02);ctx.stroke();a0=a1}
+      ctx.globalAlpha=1}
+    // entry beacon
+    if(isl.ep){ctx.strokeStyle=CRUCIBLE;ctx.globalAlpha=0.35+pulse*0.5;ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(C.x,C.y,sr+10+pulse*5,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1}
+    // symbols (LOD)
+    if(sr>52){
+      const showLabels=sr>260;
+      for(const pl of isl.planets){
+        const P=W2S(pl.ax,pl.ay);const pr=Math.max(1.4,pl.r*k);
+        if(P.x<-30||P.x>VW+30||P.y<-30||P.y>VH+30)continue;
+        // moon ring guide
+        if(pl.moons.length&&sr>140){ctx.strokeStyle="#2A3138";ctx.lineWidth=0.7;
+          ctx.beginPath();ctx.arc(P.x,P.y,pl.moonRing*k,0,Math.PI*2);ctx.stroke()}
+        drawSym(pl,P,pr);
+        if(pl.moons.length&&sr>140)for(const m of pl.moons){
+          const M=W2S(m.ax,m.ay);drawSym(m,M,Math.max(1.1,m.r*k));
+          if(showLabels&&m.r*k>4)label(m.sym.name,M.x,M.y+m.r*k+10,m.sym.visibility==="exported"?INK:MUT,10)}
+        if((showLabels&&pr>4)||(sr>140&&(pl.sym.kind==="type"||pl.sym.is_entrypoint)&&pr>3))
+          label(pl.sym.name,P.x,P.y+((pl.moons.length?pl.moonRing*k:pr))+11,
+            pl.sym.visibility==="exported"?INK:MUT,10.5)}
+    } else if(sr>26){ // dots only
+      ctx.fillStyle="#2f363e";
+      for(const pl of isl.planets){const P=W2S(pl.ax,pl.ay);
+        ctx.beginPath();ctx.arc(P.x,P.y,1.3,0,Math.PI*2);ctx.fill()}}
+    // island label (clickable → package card)
+    const lf=Math.min(15,Math.max(10.5,sr*0.09));
+    const lw=label(isl.label,C.x,C.y+sr+16,G.hoverLabel===isl.id?CRUCIBLE:INK,lf,700);
+    G.labelBoxes.push({x0:C.x-lw/2-6,y0:C.y+sr+16-lf*0.85,x1:C.x+lw/2+6,y1:C.y+sr+16+lf*0.85,id:isl.id});
+    if(sr<170)label(isl.pkg.symbol_count+" symbols",C.x,C.y+sr+16+lf+2,DIM,9.5);
+  }
+  // selected symbol edges
+  if(G.selected&&W.posOf.has(G.selected)){
+    const src=W.posOf.get(G.selected);const S=W2S(src.x,src.y);
+    const {sym:s}=D.symIndex.get(G.selected);
+    let stubA=0;
+    for(const c of (s.calls||[])){
+      if(c.ref&&W.posOf.has(c.ref)){const dst=W.posOf.get(c.ref);const T=W2S(dst.x,dst.y);
+        edgeLine(S,T,KHEX[c.kind],c.kind!=="internal",Math.min(3,1+Math.log2(1+c.count)*0.5),true)}
+      else{ // floor stub
+        const a=stubA*GA;stubA++;
+        const T={x:S.x+Math.cos(a)*46,y:S.y+Math.sin(a)*46};
+        edgeLine(S,T,KHEX[c.kind],true,1.2,false)}}
+    for(const c of (D.callersOf.get(G.selected)||[])){
+      if(W.posOf.has(c.from)){const f=W.posOf.get(c.from);const F=W2S(f.x,f.y);
+        edgeLine(F,S,"#8B949E",true,1,true)}}
+    // selection ring
+    const rr=Math.max(7,(src.node.r||5)*k+5);
+    ctx.strokeStyle=CRUCIBLE;ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(S.x,S.y,rr,0,Math.PI*2);ctx.stroke();
+  }
+  // hover ring
+  if(G.hover&&G.hover.ref&&W.posOf.has(G.hover.ref)){
+    const h=W.posOf.get(G.hover.ref);const H=W2S(h.x,h.y);
+    ctx.strokeStyle="#ffffff55";ctx.lineWidth=1.4;
+    ctx.beginPath();ctx.arc(H.x,H.y,Math.max(6,(h.node.r||5)*k+4),0,Math.PI*2);ctx.stroke()}
+  requestAnimationFrame(draw);
+}
+function drawSym(n,P,pr){
+  const s=n.sym;const visited=G.visited.has(n.ref);
+  let fill=s.visibility==="exported"?"#C8963E":"#3A4149";
+  if(s.is_entrypoint)fill=CRUCIBLE;
+  if(s.kind==="type")fill=s.visibility==="exported"?"#b98f4d":"#454d56";
+  ctx.fillStyle=fill;ctx.beginPath();ctx.arc(P.x,P.y,pr,0,Math.PI*2);ctx.fill();
+  if(s.kind==="type"){ctx.strokeStyle="#8B949E";ctx.lineWidth=1;
+    ctx.beginPath();ctx.arc(P.x,P.y,pr,0,Math.PI*2);ctx.stroke()}
+  if(s.visibility!=="exported"&&s.kind!=="type"){ctx.strokeStyle="#5A636B";ctx.lineWidth=0.8;
+    ctx.beginPath();ctx.arc(P.x,P.y,pr,0,Math.PI*2);ctx.stroke()}
+  if(visited&&pr>2.4){ctx.strokeStyle=CRUCIBLE;ctx.lineWidth=1.1;ctx.globalAlpha=0.85;
+    ctx.beginPath();ctx.arc(P.x,P.y,pr+2.2,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1}
+  if(s.is_entrypoint){ctx.strokeStyle=CRUCIBLE;ctx.globalAlpha=0.3+pulse*0.5;ctx.lineWidth=1.6;
+    ctx.beginPath();ctx.arc(P.x,P.y,pr+4+pulse*3,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1}
+}
+function edgeLine(A,B,color,dashed,w,arrow){
+  ctx.strokeStyle=color;ctx.lineWidth=w;ctx.globalAlpha=0.8;
+  ctx.setLineDash(dashed?[5,4]:[]);
+  ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();ctx.setLineDash([]);
+  if(arrow){const dx=B.x-A.x,dy=B.y-A.y,d=Math.hypot(dx,dy)||1;
+    const tx=B.x-dx/d*8,ty=B.y-dy/d*8;
+    ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(B.x,B.y);
+    ctx.lineTo(tx-(-dy/d)*3.4,ty-(dx/d)*3.4);ctx.lineTo(tx+(-dy/d)*3.4,ty+(dx/d)*3.4);
+    ctx.closePath();ctx.fill()}
+  ctx.globalAlpha=1}
+function label(text,x,y,color,size,weight){
+  ctx.font=`${weight||400} ${size}px ui-monospace,Menlo,monospace`;
+  ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.fillStyle="#14171Acc";
+  const w=ctx.measureText(text).width;
+  ctx.fillRect(x-w/2-3,y-size*0.7,w+6,size*1.4);
+  ctx.fillStyle=color;ctx.fillText(text,x,y);return w}
+
+/* ================= hit testing & input ================= */
+function hit(sx,sy){
+  const p=S2W(sx,sy);const k=G.cam.k;
+  for(const isl of W.islands){
+    const d=Math.hypot(p.x-isl.x,p.y-isl.y);
+    if(d>isl.r+14)continue;
+    if(isl.r*k>52){ // symbols visible → try symbol hit
+      let best=null,bd=1e9;
+      for(const pl of isl.planets){
+        const dd=Math.hypot(p.x-pl.ax,p.y-pl.ay);
+        const hr=Math.max(pl.r+3,7/k);
+        if(dd<hr&&dd<bd){best={ref:pl.ref,node:pl};bd=dd}
+        if(pl.moons.length&&isl.r*k>140)for(const m of pl.moons){
+          const dm=Math.hypot(p.x-m.ax,p.y-m.ay);
+          const mr=Math.max(m.r+2.5,6/k);
+          if(dm<mr&&dm<bd){best={ref:m.ref,node:m};bd=dm}}}
+      if(best)return best;
+      if(d<=isl.r)return {island:isl};
+      return null}
+    return {island:isl}}
+  return null}
+
+let drag=null,moved=false;
+canvas.addEventListener("pointerdown",e=>{drag={x:e.clientX,y:e.clientY,cx:G.cam.x,cy:G.cam.y};
+  moved=false;canvas.classList.add("drag");canvas.setPointerCapture(e.pointerId)});
+canvas.addEventListener("pointermove",e=>{
+  if(drag){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+    if(Math.hypot(dx,dy)>4)moved=true;
+    if(moved){G.target=null;G.cam.x=drag.cx-dx/G.cam.k;G.cam.y=drag.cy-dy/G.cam.k}return}
+  const lb=G.labelBoxes.find(b=>e.clientX>=b.x0&&e.clientX<=b.x1&&e.clientY>=b.y0&&e.clientY<=b.y1);
+  G.hoverLabel=lb?lb.id:null;
+  if(lb){const tip0=$("#tip");
+    tip0.innerHTML=`◈ package <small>click for contents</small>`;
+    tip0.style.display="block";tip0.style.left=(e.clientX+14)+"px";tip0.style.top=(e.clientY+10)+"px";
+    canvas.style.cursor="pointer";G.hover=null;return}
+  const h=hit(e.clientX,e.clientY);G.hover=h&&h.ref?h:null;
+  const tip=$("#tip");
+  if(G.hover){const r=D.symIndex.get(G.hover.ref);
+    tip.innerHTML=`${esc(r.sym.name)} <small>${r.sym.kind}${r.sym.owner?" · "+esc(r.sym.owner):""}</small>`;
+    tip.style.display="block";tip.style.left=(e.clientX+14)+"px";tip.style.top=(e.clientY+10)+"px";
+    canvas.style.cursor="pointer"}
+  else{tip.style.display="none";canvas.style.cursor=h&&h.island?"pointer":"grab"}});
+canvas.addEventListener("pointerup",e=>{
+  canvas.classList.remove("drag");const wasDrag=moved;drag=null;
+  if(wasDrag)return;
+  const lb=G.labelBoxes.find(b=>e.clientX>=b.x0&&e.clientX<=b.x1&&e.clientY>=b.y0&&e.clientY<=b.y1);
+  if(lb){selectPkg(lb.id,true);return}
+  const h=hit(e.clientX,e.clientY);
+  if(!h){G.selPkg=null;select(null,false);return}
+  if(h.ref){select(h.ref);flyToRefSoft(h.ref)}
+  else if(h.island){select(null,false);flyToIsland(h.island)}});
+function flyToRefSoft(ref){ // gentle: only recenter if off-screen-ish or too small
+  const pos=W.posOf.get(ref);if(!pos)return;G.islandIn=pos.island.id;
+  const S=W2S(pos.x,pos.y);
+  const off=S.x<80||S.x>VW-80||S.y<110||S.y>VH-90;
+  if(off||pos.island.r*G.cam.k<70)flyToRef(ref);crumbs()}
+canvas.addEventListener("wheel",e=>{e.preventDefault();G.target=null;
+  const f=e.deltaY>0?0.88:1.14;
+  const before=S2W(e.clientX,e.clientY);
+  G.cam.k=Math.max(0.04,Math.min(14,G.cam.k*f));
+  const after=S2W(e.clientX,e.clientY);
+  G.cam.x+=before.x-after.x;G.cam.y+=before.y-after.y},{passive:false});
+canvas.addEventListener("dblclick",e=>{const h=hit(e.clientX,e.clientY);
+  if(h&&h.island)flyToIsland(h.island)});
+
+addEventListener("keydown",e=>{
+  if(e.key==="/"&&document.activeElement!==$("#search")){e.preventDefault();$("#search").focus();return}
+  if(document.activeElement===$("#search"))return;
+  if(e.key==="Escape"){
+    if($("#treepanel").classList.contains("on"))toggleTree(false);
+    else if(G.selected||G.selPkg){G.selPkg=null;select(null,false)}
+    else{G.islandIn=null;camFitWorld(false);crumbs()}}
+  if(e.key==="i"&&!e.metaKey&&!e.ctrlKey)toggleTree();
+  if(e.key==="Backspace"){e.preventDefault();
+    const prev=G.history.pop();if(prev){G.selected=prev;G.visited.add(prev);
+      updateAssayed();renderCard();flyToRef(prev);}}
+});
+$("#worldbtn").onclick=()=>{G.islandIn=null;G.selPkg=null;select(null,false);camFitWorld(false);crumbs()};
+$("#startbtn").onclick=()=>{
+  for(const [ref,r] of D.symIndex)if(r.sym.is_entrypoint){travel(ref);return}
+  toast("no entrypoint in manifest")};
+
+/* ================= search ================= */
+const searchEl=$("#search"),matchesEl=$("#matches");let hot=-1,curMatches=[];
+function doSearch(q){
+  q=q.trim().toLowerCase();curMatches=[];hot=-1;
+  if(!q){matchesEl.classList.remove("on");return}
+  // packages first: the world is navigable at root level too
+  const pks=[];
+  for(const isl of W.islands){
+    const n=isl.label.toLowerCase(),idl=isl.id.toLowerCase();
+    let score=-1;
+    if(n===q)score=0;else if(n.startsWith(q))score=1;else if(idl.includes(q))score=2;
+    if(score>=0)pks.push({pkg:isl.id,name:isl.label,score})}
+  pks.sort((a,b)=>(a.score-b.score)||(a.name.length-b.name.length));
+  const syms=[];
+  for(const [ref,r] of D.symIndex){
+    const n=r.sym.name.toLowerCase(),id=r.sym.id.toLowerCase();
+    let score=-1;
+    if(n===q)score=0;else if(n.startsWith(q))score=1;else if(id.includes(q))score=2;
+    if(score>=0)syms.push({ref,r,score,exp:r.sym.visibility==="exported"?0:1})}
+  syms.sort((a,b)=>(a.score-b.score)||(a.exp-b.exp)||(a.r.sym.name.length-b.r.sym.name.length));
+  curMatches=pks.slice(0,4).concat(syms).slice(0,12);
+  matchesEl.innerHTML=curMatches.map((m,i)=>{
+    if(m.pkg)return `<div class="match" data-i="${i}">
+      <span style="color:${KHEX.internal};font-size:11px;width:7px;flex:0 0 auto">◈</span>
+      ${esc(m.name)} <span class="k">package</span><span class="p">${esc(m.pkg.split("/").slice(-2).join("/"))}</span></div>`;
+    const s=m.r.sym;const col=s.is_entrypoint?CRUCIBLE:(s.visibility==="exported"?"#C8963E":"#5A636B");
+    return `<div class="match" data-i="${i}"><span class="dot" style="background:${col}"></span>
+      ${esc(s.name)} <span class="k">${s.kind}</span><span class="p">${esc(m.r.pkgId.split("/").slice(-2).join("/"))}</span></div>`}).join("");
+  matchesEl.classList.toggle("on",curMatches.length>0);
+  matchesEl.querySelectorAll(".match").forEach(el=>el.onclick=()=>pick(+el.dataset.i))}
+function pick(i){const m=curMatches[i];if(!m)return;
+  if(m.pkg){selectPkg(m.pkg,true);toast("◈ "+m.name)}
+  else travel(m.ref);
+  matchesEl.classList.remove("on");searchEl.value="";searchEl.blur()}
+searchEl.addEventListener("input",()=>doSearch(searchEl.value));
+searchEl.addEventListener("keydown",e=>{
+  if(e.key==="Enter"){pick(hot>=0?hot:0)}
+  else if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();
+    hot=Math.max(0,Math.min(curMatches.length-1,hot+(e.key==="ArrowDown"?1:-1)));
+    matchesEl.querySelectorAll(".match").forEach((el,i)=>el.classList.toggle("hot",i===hot))}
+  else if(e.key==="Escape"){matchesEl.classList.remove("on");searchEl.blur()}});
+document.addEventListener("click",e=>{if(!e.target.closest(".searchbox"))matchesEl.classList.remove("on")});
+
+/* ================= index (tree) panel ================= */
+const treeRowByRef=new Map();
+function buildTree(){
+  const tb=$("#treebody");tb.innerHTML="";treeRowByRef.clear();
+  for(const isl of W.islands.slice().sort((a,b)=>a.id<b.id?-1:1)){
+    const p=isl.pkg;
+    const el=document.createElement("div");el.className="tpkg";
+    const mini=isl.compTot?["internal","external","builtin","dynamic","unresolved"]
+      .filter(k=>isl.comp[k])
+      .map(k=>`<i style="width:${100*isl.comp[k]/isl.compTot}%;background:${KHEX[k]}"></i>`).join(""):"";
+    el.innerHTML=`<div class="tpkg-row"><span class="chev">▸</span>
+      <span class="nm" title="${esc(p.id)}">${esc(p.name)}${p.is_entrypoint?' <span class="ep">▸</span>':""}</span>
+      <span class="minibar" title="edge composition">${mini}</span>
+      <span class="cnt">${p.symbols.length}</span></div>
+      <div class="tsyms"></div>`;
+    const row=el.querySelector(".tpkg-row"),chev=el.querySelector(".chev"),
+      syms=el.querySelector(".tsyms");
+    let built=false;
+    const expand=open=>{el.classList.toggle("open",open);
+      chev.textContent=el.classList.contains("open")?"▾":"▸";
+      if(el.classList.contains("open")&&!built){built=true;fillTreeSyms(syms,isl)}};
+    chev.onclick=e=>{e.stopPropagation();expand(!el.classList.contains("open"))};
+    row.onclick=()=>{expand(true);selectPkg(isl.id,true)};
+    tb.appendChild(el)}}
+function fillTreeSyms(container,isl){
+  const p=isl.pkg;
+  const syms=p.symbols.slice().sort((a,b)=>{
+    const ea=a.visibility==="exported"?0:1,eb=b.visibility==="exported"?0:1;
+    return (ea-eb)||(a.id<b.id?-1:1)});
+  const frag=document.createDocumentFragment();
+  for(const s of syms){const ref=isl.id+"#"+s.id;
+    const d=document.createElement("div");
+    d.className="tsym"+(s.visibility!=="exported"?" un":"")+(G.visited.has(ref)?" visited":"");
+    const col=s.is_entrypoint?CRUCIBLE:(s.visibility==="exported"?"#C8963E":"#5A636B");
+    d.innerHTML=`<span class="dot" style="background:${col}"></span>
+      <span class="kn" title="${esc(s.id)}">${esc(s.id)}</span><span class="kind">${s.kind}</span>`;
+    d.onclick=()=>travel(ref);
+    treeRowByRef.set(ref,d);frag.appendChild(d)}
+  container.appendChild(frag)}
+function toggleTree(force){const tp=$("#treepanel");
+  tp.classList.toggle("on",force!==undefined?force:!tp.classList.contains("on"))}
+$("#treebtn").onclick=()=>toggleTree();
+$("#treeclose").onclick=()=>toggleTree(false);
+
+/* ================= manifest drop ================= */
+addEventListener("dragover",e=>{e.preventDefault();$("#drop").classList.add("on")});
+$("#drop").addEventListener("dragleave",()=>$("#drop").classList.remove("on"));
+addEventListener("drop",e=>{e.preventDefault();$("#drop").classList.remove("on");
+  const f=[...e.dataTransfer.files].find(f=>f.name.endsWith(".json"));
+  if(f)f.text().then(t=>normalize(parseManifest(t))).catch(err=>alert(err.message))});
+
+/* ================= boot ================= */
+window.__app={G,W,D,select,selectPkg,travel,flyToRef,toggleTree,doSearch:q=>{doSearch(q);return curMatches}};
+(function boot(){
+  const seed=$("#seed").textContent.trim();
+  try{
+    if(seed&&seed.length>20){
+      const json=seed.charAt(0)==="{"?seed:decodeSeed(seed);
+      normalize(parseManifest(json));
+    }
+  }catch(e){console.warn("seed:",e)}
+  requestAnimationFrame(draw);
+})();
+</script>
