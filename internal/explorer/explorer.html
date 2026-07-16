@@ -268,54 +268,152 @@ function finishLoad(index){
   camFitWorld(true);select(null);crumbs();
 }
 
-/* ================= lazy (WASM) data path ================= */
-// lazyBoot runs once window.axapi (the WASM engine) is ready: it takes the
-// index (with server-precomputed couplings) and lays out every island sealed,
-// deferring each package's symbols to hydratePkg. window.__axReady, which the
-// WASM binary calls after installing axapi, is wired to this in boot().
+/* ================= hierarchical (WASM) navigation ================= */
+// In hier mode the WASM engine (window.axapi) holds the whole index and answers
+// one navigable LEVEL at a time -- a node's immediate children, each already
+// positioned by the engine -- so the client renders a handful to a few hundred
+// islands per level instead of laying out every package at once (which froze
+// the browser on large repos). Descending a group fetches the next level;
+// opening a package fetches its symbols (a shard); nothing else loads.
+const NAV={path:"",name:"root"};
+let pkgById=new Map();          // index package id -> entry, for search/travel path lookup
+
+// lazyBoot runs once axapi is ready (window.__axReady, wired in boot()).
 function lazyBoot(){
   if(!window.axapi){console.warn("lazyBoot: axapi missing");return}
   let index;
   try{index=JSON.parse(axapi.index())}catch(e){console.error("lazyBoot: bad index",e);return}
-  DATA_MODE="lazy";
-  D.couplings=index.couplings||[];
-  D.packages=index.packages.map(pe=>Object.assign({},pe,{symbols:[],loaded:false}));
-  D.symIndex.clear();D.callersOf.clear();
-  D.totalSyms=index.packages.reduce((a,p)=>a+(p.symbol_count||0),0);
-  finishLoad(index);
+  DATA_MODE="hier";D.couplings=null;
+  D.meta=index;D.symIndex.clear();D.callersOf.clear();
+  D.totalSyms=(index.packages||[]).reduce((a,p)=>a+(p.symbol_count||0),0);
+  pkgById=new Map((index.packages||[]).map(pe=>[pe.id,pe]));
+  $("#modname").textContent=index.module||index.root||"explorer";
+  G.visited.clear();updateAssayed();
+  showLevel("",true);
+}
+function cleanPath(p){return (p||"").replace(/\\/g,"/").replace(/^\.\//,"").split("/").filter(s=>s&&s!==".").join("/")}
+function parentPath(p){const i=p.lastIndexOf("/");return i<0?"":p.slice(0,i)}
+
+// showLevel replaces the world with one navigation level's islands (positioned
+// by the engine). instant skips the fly-in (initial load / breadcrumb jump).
+function showLevel(path,instant){
+  let view;
+  try{view=JSON.parse(axapi.level(path))}catch(e){console.warn("level",path,e);return}
+  if(view.error){console.warn("level",path,view.error);return}
+  NAV.path=view.path||"";NAV.name=view.name||(D.meta.module||D.meta.root||"root");
+  const islands=(view.nodes||[]).map(levelIsland);
+  // A group that is also a package (own code + sub-packages): add a "self"
+  // island for its own symbols so they stay reachable while descending.
+  if(view.is_pkg&&view.self_pkg_id&&(view.self_symbols||0)>0){
+    islands.push(levelIsland({
+      path:(view.path||"")+"//self",name:view.name+" ·self",kind:"package",
+      symbols:view.self_symbols,packages:1,children:0,has_entrypoint:false,
+      pkg_id:view.self_pkg_id,shard:view.self_shard,
+      x:0,y:0,r:8.9*Math.sqrt(view.self_symbols)+8}));
+  }
+  W.islands=islands;
+  W.byId=new Map(W.islands.map(i=>[i.id,i]));
+  W.edges=[];W.posOf=new Map();
+  recomputeBounds();buildTree();
+  G.selPkg=null;G.selected=null;G.islandIn=null;
+  camFitWorld(!!instant);select(null,false);crumbs();
+}
+// levelIsland turns a positioned LevelNode into a drawable island. Group nodes
+// are sealed "folder" islands sized by their subtree; package nodes fill their
+// interior with planets when opened (hydrateIsland).
+function levelIsland(n){
+  const isPkg=n.kind==="package";
+  return {
+    id:n.path,node:n,group:!isPkg,
+    pkgId:n.pkg_id||"",shard:n.shard||"",
+    label:n.name,ep:!!n.has_entrypoint,
+    x:n.x,y:n.y,r:n.r||20,
+    planets:[],loaded:false,sealed:true,
+    comp:{internal:0,external:0,builtin:0,dynamic:0,unresolved:0},compTot:0,
+    // synthetic pkg so the shared draw/card code (isl.pkg.symbol_count / name)
+    // works for both groups and packages.
+    pkg:{id:n.pkg_id||n.path,name:n.name,symbol_count:n.symbols,
+      is_entrypoint:!!n.has_entrypoint,symbols:[],path:n.path,
+      childCount:n.children||0,pkgCount:n.packages||0,group:!isPkg},
+  };
+}
+function recomputeBounds(){
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(const i of W.islands){x0=Math.min(x0,i.x-i.r);y0=Math.min(y0,i.y-i.r);
+    x1=Math.max(x1,i.x+i.r);y1=Math.max(y1,i.y+i.r)}
+  if(!W.islands.length){x0=y0=-100;x1=y1=100}
+  W.bounds={x0,y0,x1,y1};
+}
+// enterIsland: descend into a group, or open a package (fetch its symbols and
+// fly in so its planets show).
+async function enterIsland(isl){
+  if(!isl)return;
+  if(isl.group){showLevel(isl.node.path,false);return}
+  await hydrateIsland(isl);
+  G.selPkg=isl.id;G.selected=null;G.islandIn=isl.id;
+  renderCard();flyToIsland(isl);crumbs();
 }
 const hydrating=new Map();
-// hydratePkg fetches pkgId's shard (once), registers its symbols, and repacks
-// just that island in place -- its position is kept, so the map does not
-// reflow; only the newly-opened island grows its interior. Returns a promise
-// that resolves when the package is loaded (or immediately if already loaded).
-function hydratePkg(pkgId){
-  if(DATA_MODE!=="lazy")return Promise.resolve();
-  const p=D.packages.find(p=>p.id===pkgId);
-  if(!p||p.loaded)return Promise.resolve();
-  if(hydrating.has(pkgId))return hydrating.get(pkgId);
+// hydrateIsland fetches a package island's shard once and packs its symbols
+// into planets positioned within the island.
+function hydrateIsland(isl){
+  if(!isl||isl.loaded||!isl.pkgId)return Promise.resolve();
+  if(hydrating.has(isl.id))return hydrating.get(isl.id);
   const pr=(async()=>{
     let sh;
-    try{sh=JSON.parse(await axapi.ensureShard(pkgId))}
-    catch(e){console.warn("hydrate",pkgId,e);return}
-    p.symbols=sh.symbols||[];p.loaded=true;
-    for(const s of p.symbols)D.symIndex.set(pkgId+"#"+s.id,{pkgId,sym:s});
-    const isl=W.byId.get(pkgId);
-    if(isl){const ni=packIsland(p);ni.x=isl.x;ni.y=isl.y;Object.assign(isl,ni);
-      for(const pl of isl.planets){pl.ax=isl.x+pl.x;pl.ay=isl.y+pl.y;
-        W.posOf.set(pl.ref,{x:pl.ax,y:pl.ay,island:isl,node:pl});
-        for(const m of pl.moons){m.ax=isl.x+m.x;m.ay=isl.y+m.y;
-          W.posOf.set(m.ref,{x:m.ax,y:m.ay,island:isl,node:m})}}}
-    refreshTreeSyms(pkgId);
+    try{sh=JSON.parse(await axapi.ensureShard(isl.pkgId))}
+    catch(e){console.warn("hydrate",isl.pkgId,e);return}
+    const p=isl.pkg;p.symbols=sh.symbols||[];
+    if(sh.package&&sh.package.doc)p.doc=sh.package.doc;
+    for(const s of p.symbols)D.symIndex.set(isl.pkgId+"#"+s.id,{pkgId:isl.pkgId,sym:s});
+    const packed=packIsland(p);
+    isl.planets=packed.planets;isl.comp=packed.comp;isl.compTot=packed.compTot;
+    isl.r=Math.max(isl.r,packed.r);isl.loaded=true;isl.sealed=false;
+    for(const pl of isl.planets){pl.ax=isl.x+pl.x;pl.ay=isl.y+pl.y;
+      W.posOf.set(pl.ref,{x:pl.ax,y:pl.ay,island:isl,node:pl});
+      for(const m of pl.moons){m.ax=isl.x+m.x;m.ay=isl.y+m.y;
+        W.posOf.set(m.ref,{x:m.ax,y:m.ay,island:isl,node:m})}}
+    recomputeBounds();refreshTreeSyms(isl.id);
   })();
-  hydrating.set(pkgId,pr);
-  pr.finally(()=>hydrating.delete(pkgId));
+  hydrating.set(isl.id,pr);
+  pr.finally(()=>hydrating.delete(isl.id));
   return pr;
 }
-// loadCallers pulls a symbol's inbound edges from the engine (which knows only
-// the callers in shards loaded so far -- the list fills in as you explore).
+// navigateToRef reveals a symbol not currently loaded: jump to its package's
+// level, open the package, then select the symbol. navigateToPackage stops at
+// opening the package.
+async function navigateToRef(ref){
+  const pe=pkgById.get(pkgOf(ref));if(!pe){toast("not in this manifest");return}
+  const np=cleanPath(pe.path);
+  showLevel(parentPath(np),false);
+  let isl=W.byId.get(np);
+  if(isl&&isl.group){
+    // group-package: the symbol lives in its "self" island one level down
+    showLevel(np,false);
+    isl=W.islands.find(i=>i.pkgId===pkgOf(ref))||isl;
+  }
+  if(isl)await hydrateIsland(isl);
+  select(ref);flyToRef(ref);
+}
+async function navigateToPackage(pid){
+  const pe=pkgById.get(pid);if(!pe){toast("not found");return}
+  const np=cleanPath(pe.path);
+  showLevel(parentPath(np),false);
+  const isl=W.byId.get(np);if(!isl){toast("not found");return}
+  if(isl.group){
+    // A group-package (own code + sub-packages): descend into it and open its
+    // own-symbols "self" island so the pick reveals the package's symbols.
+    showLevel(np,false);
+    const self=W.islands.find(i=>i.pkgId===pid);
+    if(self){await enterIsland(self);return}
+    return;
+  }
+  await enterIsland(isl);
+}
+// loadCallers pulls a symbol's inbound edges from the engine (loaded shards
+// only -- the list fills in as you explore).
 function loadCallers(ref){
-  if(DATA_MODE!=="lazy")return;
+  if(DATA_MODE!=="hier")return;
   try{D.callersOf.set(ref,JSON.parse(axapi.callers(ref))||[])}catch(e){/* leave empty */}
 }
 function pkgOf(ref){return ref.split("#")[0]}
@@ -477,9 +575,10 @@ function updateAssayed(){
   $("#assayedtxt").innerHTML=`<b>${G.visited.size}</b> / ${D.totalSyms} symbols assayed`;
   $("#assayedbar").style.width=(D.totalSyms?100*G.visited.size/D.totalSyms:0)+"%"}
 function select(ref,push=true){
-  if(ref&&DATA_MODE==="lazy"){
-    const p=D.packages.find(p=>p.id===pkgOf(ref));
-    if(p&&!p.loaded){hydratePkg(p.id).then(()=>select(ref,push));return}
+  if(ref&&DATA_MODE==="hier"){
+    // The symbol's package may not be loaded (or even on this level); jump to
+    // it, then this re-runs with the symbol resolvable.
+    if(!D.symIndex.has(ref)){navigateToRef(ref);return}
     if(!D.callersOf.has(ref))loadCallers(ref);
   }
   if(ref&&!D.symIndex.has(ref))ref=null;
@@ -491,15 +590,12 @@ function select(ref,push=true){
 function selectPkg(pkgId,fly){
   const isl=W.byId.get(pkgId);if(!isl)return;
   G.selPkg=pkgId;G.selected=null;G.islandIn=pkgId;
-  if(DATA_MODE==="lazy"&&isl.pkg&&!isl.pkg.loaded)
-    hydratePkg(pkgId).then(()=>{if(G.selPkg===pkgId)renderCard()});
+  if(DATA_MODE==="hier"&&isl.pkgId&&!isl.loaded)
+    hydrateIsland(isl).then(()=>{if(G.selPkg===pkgId)renderCard()});
   renderCard();
   if(fly)flyToIsland(isl);else crumbs()}
 function travel(ref){
-  if(DATA_MODE==="lazy"){
-    const p=D.packages.find(p=>p.id===pkgOf(ref));
-    if(p&&!p.loaded){hydratePkg(p.id).then(()=>travel(ref));return}
-  }
+  if(DATA_MODE==="hier"&&!D.symIndex.has(ref)){navigateToRef(ref);return}
   select(ref);flyToRef(ref);
   const r=D.symIndex.get(ref);if(r)toast(`→ ${r.pkgId.split("/").pop()} · ${r.sym.name}`)}
 let toastT=null;
@@ -539,7 +635,7 @@ function renderCard(){
     cx.method==="recursive"?`<div class="cx" style="margin-top:6px">complexity <b>recursive</b> · bound withheld</div>`:
     `<div class="cx" style="margin-top:6px">time <b>${cx.time||"—"}</b> · space <b>${cx.space||"—"}</b></div>`;
   const calls=(s.calls||[]).slice().sort((a,b)=>b.count-a.count);
-  const row=c=>{const linked=!!c.ref&&(D.symIndex.has(c.ref)||(DATA_MODE==="lazy"&&W.byId.has(pkgOf(c.ref))));
+  const row=c=>{const linked=!!c.ref&&(D.symIndex.has(c.ref)||(DATA_MODE==="hier"&&pkgById.has(pkgOf(c.ref))));
     return `<button class="call ${linked?"travel":""}" ${linked?`data-ref="${esc(c.ref)}"`:""}>
       <span class="kbadge" style="background:${KHEX[c.kind]}22;color:${KHEX[c.kind]};border:1px solid ${KHEX[c.kind]}55">${c.kind}</span>
       <span class="tgt">${esc(c.target)}</span><span class="ct">×${c.count}</span>
@@ -617,6 +713,24 @@ $("#compass").onclick=()=>{camFitWorld(false);toast("◈ back to the map")};
 
 function crumbs(){
   const c=$("#crumbs");const parts=[];
+  if(DATA_MODE==="hier"){
+    // Breadcrumb of the hierarchy path: root, then each ancestor segment, each
+    // a click-to-jump target. The current level is the last, non-clickable.
+    const root=(D.meta&&(D.meta.module||D.meta.root))||"root";
+    const segs=NAV.path?NAV.path.split("/"):[];
+    parts.push(`<span class="crumb ${NAV.path?"":"here"}" data-path="">◈ ${esc(root)}</span>`);
+    let acc="";
+    segs.forEach((s,i)=>{acc=acc?acc+"/"+s:s;
+      parts.push(`<span class="crumb ${i===segs.length-1&&!G.selected&&!G.selPkg?"here":""}" data-path="${esc(acc)}">${esc(s)}</span>`)});
+    if(G.selPkg){const isl=W.byId.get(G.selPkg);
+      if(isl)parts.push(`<span class="crumb ${!G.selected?"here":""}" data-open="${esc(isl.id)}">${esc(isl.label)}</span>`)}
+    if(G.selected){const r=D.symIndex.get(G.selected);
+      if(r)parts.push(`<span class="crumb here">${esc(r.sym.name)}</span>`)}
+    c.innerHTML=parts.join('<span style="color:var(--dim);font-family:var(--mono);font-size:11px;align-self:center">›</span>');
+    c.querySelectorAll("[data-path]").forEach(el=>el.onclick=()=>showLevel(el.dataset.path,false));
+    c.querySelectorAll("[data-open]").forEach(el=>el.onclick=()=>{const isl=W.byId.get(el.dataset.open);if(isl)enterIsland(isl)});
+    return;
+  }
   parts.push(`<span class="crumb ${!G.islandIn&&!G.selected?"here":""}" data-act="world">◈ world</span>`);
   if(G.islandIn){const isl=W.byId.get(G.islandIn);
     if(isl)parts.push(`<span class="crumb ${!G.selected?"here":""}" data-act="island">${esc(isl.label)}</span>`)}
@@ -675,6 +789,9 @@ function draw(now){
     // disc
     ctx.fillStyle="#1A1E23";ctx.strokeStyle=LINE;ctx.lineWidth=1;
     ctx.beginPath();ctx.arc(C.x,C.y,sr,0,Math.PI*2);ctx.fill();ctx.stroke();
+    // a group (folder of packages) reads as a dashed containing ring
+    if(isl.group){ctx.strokeStyle="#3a4550";ctx.lineWidth=1;ctx.setLineDash([5,4]);
+      ctx.beginPath();ctx.arc(C.x,C.y,sr+3,0,Math.PI*2);ctx.stroke();ctx.setLineDash([])}
     // assay ring
     if(isl.compTot>0&&sr>18){
       let a0=-Math.PI/2;const rw=Math.max(2.5,sr*0.045);
@@ -711,7 +828,8 @@ function draw(now){
     const lf=Math.min(15,Math.max(10.5,sr*0.09));
     const lw=label(isl.label,C.x,C.y+sr+16,G.hoverLabel===isl.id?CRUCIBLE:INK,lf,700);
     G.labelBoxes.push({x0:C.x-lw/2-6,y0:C.y+sr+16-lf*0.85,x1:C.x+lw/2+6,y1:C.y+sr+16+lf*0.85,id:isl.id});
-    if(sr<170)label(isl.pkg.symbol_count+" symbols",C.x,C.y+sr+16+lf+2,DIM,9.5);
+    if(sr<170){const sub=isl.group?((isl.pkg.pkgCount||isl.pkg.childCount||0)+" pkgs · "+isl.pkg.symbol_count+" syms")
+      :(isl.pkg.symbol_count+" symbols");label(sub,C.x,C.y+sr+16+lf+2,DIM,9.5)}
   }
   // selected symbol edges
   if(G.selected&&W.posOf.has(G.selected)){
@@ -819,11 +937,16 @@ canvas.addEventListener("pointerup",e=>{
   canvas.classList.remove("drag");const wasDrag=moved;drag=null;
   if(wasDrag)return;
   const lb=G.labelBoxes.find(b=>e.clientX>=b.x0&&e.clientX<=b.x1&&e.clientY>=b.y0&&e.clientY<=b.y1);
-  if(lb){selectPkg(lb.id,true);return}
+  if(lb){const isl=W.byId.get(lb.id);
+    if(DATA_MODE==="hier")enterIsland(isl);else selectPkg(lb.id,true);return}
   const h=hit(e.clientX,e.clientY);
   if(!h){G.selPkg=null;select(null,false);return}
   if(h.ref){select(h.ref);flyToRefSoft(h.ref)}
-  else if(h.island){select(null,false);flyToIsland(h.island)}});
+  else if(h.island){
+    // In hier mode a click on an island enters it (descend a group / open a
+    // package); in the embedded static file it just frames the island.
+    if(DATA_MODE==="hier")enterIsland(h.island);
+    else{select(null,false);flyToIsland(h.island)}}});
 function flyToRefSoft(ref){ // gentle: only recenter if off-screen-ish or too small
   const pos=W.posOf.get(ref);if(!pos)return;G.islandIn=pos.island.id;
   const S=W2S(pos.x,pos.y);
@@ -836,7 +959,7 @@ canvas.addEventListener("wheel",e=>{e.preventDefault();G.target=null;
   const after=S2W(e.clientX,e.clientY);
   G.cam.x+=before.x-after.x;G.cam.y+=before.y-after.y},{passive:false});
 canvas.addEventListener("dblclick",e=>{const h=hit(e.clientX,e.clientY);
-  if(h&&h.island)flyToIsland(h.island)});
+  if(h&&h.island){if(DATA_MODE==="hier")enterIsland(h.island);else flyToIsland(h.island)}});
 
 addEventListener("keydown",e=>{
   if(e.key==="/"&&document.activeElement!==$("#search")){e.preventDefault();$("#search").focus();return}
@@ -844,23 +967,27 @@ addEventListener("keydown",e=>{
   if(e.key==="Escape"){
     if($("#treepanel").classList.contains("on"))toggleTree(false);
     else if(G.selected||G.selPkg){G.selPkg=null;select(null,false)}
+    else if(DATA_MODE==="hier"&&NAV.path){showLevel(parentPath(NAV.path),false)} // ascend a level
     else{G.islandIn=null;camFitWorld(false);crumbs()}}
   if(e.key==="i"&&!e.metaKey&&!e.ctrlKey)toggleTree();
   if(e.key==="Backspace"){e.preventDefault();
     const prev=G.history.pop();if(prev){G.selected=prev;G.visited.add(prev);
       updateAssayed();renderCard();flyToRef(prev);}}
 });
-$("#worldbtn").onclick=()=>{G.islandIn=null;G.selPkg=null;select(null,false);camFitWorld(false);crumbs()};
+$("#worldbtn").onclick=()=>{
+  if(DATA_MODE==="hier"){showLevel("",false);return}
+  G.islandIn=null;G.selPkg=null;select(null,false);camFitWorld(false);crumbs()};
 $("#startbtn").onclick=async()=>{
   for(const [ref,r] of D.symIndex)if(r.sym.is_entrypoint){travel(ref);return}
-  if(DATA_MODE==="lazy"){
-    // Nothing loaded names an entrypoint yet; find an entrypoint package in
-    // the index, hydrate it, and fly to its runnable symbol.
-    const ep=D.packages.find(p=>p.is_entrypoint&&(p.entrypoint_count||0)>0)
-           ||D.packages.find(p=>p.is_entrypoint);
-    if(ep){await hydratePkg(ep.id);
-      for(const s of ep.symbols)if(s.is_entrypoint){travel(ep.id+"#"+s.id);return}
-      selectPkg(ep.id,true);return}
+  if(DATA_MODE==="hier"){
+    // Nothing loaded names an entrypoint yet; find an entrypoint package in the
+    // index, navigate to it, and fly to its runnable symbol.
+    let ep=null;for(const pe of (D.meta.packages||[]))if(pe.is_entrypoint&&(pe.entrypoint_count||0)>0){ep=pe;break}
+    if(!ep)for(const pe of (D.meta.packages||[]))if(pe.is_entrypoint){ep=pe;break}
+    if(ep){await navigateToPackage(ep.id);
+      const isl=W.byId.get(cleanPath(ep.path));
+      if(isl)for(const s of (isl.pkg.symbols||[]))if(s.is_entrypoint){travel(ep.id+"#"+s.id);return}
+      return}
   }
   toast("no entrypoint in manifest")};
 
@@ -869,7 +996,7 @@ const searchEl=$("#search"),matchesEl=$("#matches");let hot=-1,curMatches=[];
 function doSearch(q){
   q=q.trim().toLowerCase();curMatches=[];hot=-1;
   if(!q){matchesEl.classList.remove("on");return}
-  if(DATA_MODE==="lazy"){
+  if(DATA_MODE==="hier"){
     // The WASM engine ranks packages (always) and symbols (in loaded shards)
     // so search is instant and its symbol coverage grows as you explore.
     let res=[];try{res=JSON.parse(axapi.search(q,24))||[]}catch(e){/* leave empty */}
@@ -906,8 +1033,13 @@ function doSearch(q){
   matchesEl.classList.toggle("on",curMatches.length>0);
   matchesEl.querySelectorAll(".match").forEach(el=>el.onclick=()=>pick(+el.dataset.i))}
 function pick(i){const m=curMatches[i];if(!m)return;
-  if(m.pkg){selectPkg(m.pkg,true);toast("◈ "+m.name)}
-  else travel(m.ref);
+  if(DATA_MODE==="hier"){
+    if(m.pkg){navigateToPackage(m.pkg);toast("◈ "+m.name)}
+    else travel(m.ref); // travel navigates to the symbol's package as needed
+  }else{
+    if(m.pkg){selectPkg(m.pkg,true);toast("◈ "+m.name)}
+    else travel(m.ref);
+  }
   matchesEl.classList.remove("on");searchEl.value="";searchEl.blur()}
 searchEl.addEventListener("input",()=>doSearch(searchEl.value));
 searchEl.addEventListener("keydown",e=>{
@@ -939,10 +1071,13 @@ function buildTree(){
       barEl=el.querySelector(".minibar");
     let built=false;
     const build=()=>{if(built)return;built=true;syms.innerHTML="";fillTreeSyms(syms,isl)};
-    const expand=open=>{el.classList.toggle("open",open);
+    const expand=open=>{
+      // Group rows have no symbols to expand -- clicking descends instead.
+      if(DATA_MODE==="hier"&&isl.group)return;
+      el.classList.toggle("open",open);
       chev.textContent=el.classList.contains("open")?"▾":"▸";
       if(el.classList.contains("open")&&!built){
-        if(DATA_MODE==="lazy"&&isl.pkg&&!isl.pkg.loaded)hydratePkg(isl.id).then(build);
+        if(DATA_MODE==="hier"&&isl.pkgId&&!isl.loaded)hydrateIsland(isl).then(build);
         else build();}};
     // refill updates this package's row after its shard hydrates: the count,
     // the edge-composition bar, and (if the row is already expanded) its
@@ -952,7 +1087,9 @@ function buildTree(){
       barEl.innerHTML=miniBar(isl);
       if(built){built=false;build()}}});
     chev.onclick=e=>{e.stopPropagation();expand(!el.classList.contains("open"))};
-    row.onclick=()=>{expand(true);selectPkg(isl.id,true)};
+    row.onclick=()=>{
+      if(DATA_MODE==="hier"){enterIsland(isl);return}
+      expand(true);selectPkg(isl.id,true)};
     tb.appendChild(el)}}
 function refreshTreeSyms(pkgId){const t=treePkg.get(pkgId);if(t)t.refill()}
 function fillTreeSyms(container,isl){
@@ -983,7 +1120,9 @@ addEventListener("drop",e=>{e.preventDefault();$("#drop").classList.remove("on")
   if(f)f.text().then(t=>normalize(parseManifest(t))).catch(err=>alert(err.message))});
 
 /* ================= boot ================= */
-window.__app={G,W,D,select,selectPkg,travel,flyToRef,toggleTree,doSearch:q=>{doSearch(q);return curMatches}};
+window.__app={G,W,D,select,selectPkg,travel,flyToRef,toggleTree,doSearch:q=>{doSearch(q);return curMatches},
+  showLevel:(p,i)=>showLevel(p,i),enterIsland:i=>enterIsland(i),navigateToPackage:p=>navigateToPackage(p),
+  get NAV(){return NAV},get MODE(){return DATA_MODE}};
 (function boot(){
   const seed=$("#seed").textContent.trim();
   if(seed&&seed.length>20){

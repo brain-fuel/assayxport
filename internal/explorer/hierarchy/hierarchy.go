@@ -115,12 +115,18 @@ type LevelEntry struct {
 
 // Level is what GET /api/tree returns for one node: the node's own path and its
 // immediate children (one level), sorted deterministically. The payload is
-// O(this node's breadth), not O(all packages), which is the whole point.
+// O(this node's breadth), not O(all packages), which is the whole point. When
+// the node is itself an assayed package (a "group-package": own code plus
+// sub-packages), SelfPkgID/SelfShard/SelfSymbols expose its own symbols so the
+// client can still open them while descending into its children.
 type Level struct {
-	Path     string       `json:"path"`
-	Name     string       `json:"name"`
-	IsPkg    bool         `json:"is_pkg"`
-	Children []LevelEntry `json:"children"`
+	Path        string       `json:"path"`
+	Name        string       `json:"name"`
+	IsPkg       bool         `json:"is_pkg"`
+	SelfPkgID   string       `json:"self_pkg_id,omitempty"`
+	SelfShard   string       `json:"self_shard,omitempty"`
+	SelfSymbols int          `json:"self_symbols,omitempty"`
+	Children    []LevelEntry `json:"children"`
 }
 
 // Level returns the immediate children of the node at path (path "" is the
@@ -133,6 +139,14 @@ func (t *Tree) Level(path string) (Level, bool) {
 		return Level{}, false
 	}
 	lv := Level{Path: n.Path, Name: n.Name, IsPkg: n.IsPkg}
+	if n.IsPkg && len(n.Children) > 0 {
+		// A group-package: expose its own symbols so descending here can still
+		// open them alongside the sub-packages (a leaf package has no children,
+		// so its own symbols are reached by opening it, not descending).
+		lv.SelfPkgID = n.PkgID
+		lv.SelfShard = n.Shard
+		lv.SelfSymbols = n.OwnSyms
+	}
 	for _, c := range n.Children {
 		e := LevelEntry{
 			Path: c.Path, Name: c.Name, Symbols: c.Symbols,

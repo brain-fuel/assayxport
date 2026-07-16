@@ -66,6 +66,13 @@ func install(eng *graph.Engine, indexJSON []byte) {
 		"index": js.FuncOf(func(js.Value, []js.Value) any {
 			return string(indexJSON)
 		}),
+		"level": js.FuncOf(func(_ js.Value, args []js.Value) any {
+			view, ok := eng.Level(arg(args, 0))
+			if !ok {
+				return `{"error":"unknown node"}`
+			}
+			return mustMarshal(view)
+		}),
 		"ensureShard": js.FuncOf(func(_ js.Value, args []js.Value) any {
 			pkgID := arg(args, 0)
 			return promise(func() (any, error) {
@@ -77,14 +84,22 @@ func install(eng *graph.Engine, indexJSON []byte) {
 			})
 		}),
 		"callers": js.FuncOf(func(_ js.Value, args []js.Value) any {
-			return mustMarshal(eng.Callers(arg(args, 0)))
+			cs := eng.Callers(arg(args, 0))
+			if cs == nil {
+				cs = []graph.Caller{} // marshal an empty result as [] not null
+			}
+			return mustMarshal(cs)
 		}),
 		"search": js.FuncOf(func(_ js.Value, args []js.Value) any {
 			limit := 0
 			if len(args) > 1 && args[1].Type() == js.TypeNumber {
 				limit = args[1].Int()
 			}
-			return mustMarshal(eng.Search(arg(args, 0), limit))
+			ms := eng.Search(arg(args, 0), limit)
+			if ms == nil {
+				ms = []graph.Match{} // marshal an empty result as [] not null
+			}
+			return mustMarshal(ms)
 		}),
 	}
 	js.Global().Set("axapi", js.ValueOf(api))

@@ -19,6 +19,8 @@ import (
 	"sort"
 	"strings"
 
+	"goforge.dev/assayxport/internal/explorer/hierarchy"
+	"goforge.dev/assayxport/internal/explorer/layout"
 	"goforge.dev/assayxport/internal/schema"
 )
 
@@ -64,6 +66,7 @@ type Engine struct {
 
 	idx     schema.Index
 	pkgByID map[string]schema.PackageEntry // index entries, by package id
+	tree    *hierarchy.Tree                // package hierarchy for level navigation
 
 	loaded   map[string]bool     // shard paths already hydrated
 	symIndex map[string]SymLoc   // ref -> location, for loaded shards
@@ -78,6 +81,7 @@ func New(idx schema.Index, fetch Fetcher) *Engine {
 		fetch:    fetch,
 		idx:      idx,
 		pkgByID:  make(map[string]schema.PackageEntry, len(idx.Packages)),
+		tree:     hierarchy.Build(idx),
 		loaded:   make(map[string]bool),
 		symIndex: make(map[string]SymLoc),
 		callers:  make(map[string][]Caller),
@@ -86,6 +90,55 @@ func New(idx schema.Index, fetch Fetcher) *Engine {
 		e.pkgByID[pe.ID] = pe
 	}
 	return e
+}
+
+// LevelNode is one child of a navigation level with its placed position: a
+// hierarchy entry (group or package, with subtree aggregates) plus the center
+// and radius the client draws it at.
+type LevelNode struct {
+	hierarchy.LevelEntry
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+	R float64 `json:"r"`
+}
+
+// LevelView is one navigable level: the node at path and its immediate children,
+// each already laid out. The client renders only this -- a handful to a few
+// hundred nodes -- never the whole tree, which is what makes a 6000-package
+// repo explorable. ok is false for an unknown path.
+type LevelView struct {
+	Path        string      `json:"path"`
+	Name        string      `json:"name"`
+	IsPkg       bool        `json:"is_pkg"`
+	SelfPkgID   string      `json:"self_pkg_id,omitempty"`
+	SelfShard   string      `json:"self_shard,omitempty"`
+	SelfSymbols int         `json:"self_symbols,omitempty"`
+	Nodes       []LevelNode `json:"nodes"`
+}
+
+// Level returns the positioned children of the node at path (path "" is the
+// root). Positions are deterministic (layout.Place), so revisiting a level
+// redraws it identically. It touches no shards: a level is pure index-derived
+// structure, so navigation is instant and never blocks on the network.
+func (e *Engine) Level(path string) (LevelView, bool) {
+	lv, ok := e.tree.Level(path)
+	if !ok {
+		return LevelView{}, false
+	}
+	items := make([]layout.Item, len(lv.Children))
+	for i, c := range lv.Children {
+		items[i] = layout.Item{ID: c.Path, Radius: layout.RadiusFor(c.Symbols)}
+	}
+	pos := layout.Place(items)
+	view := LevelView{
+		Path: lv.Path, Name: lv.Name, IsPkg: lv.IsPkg,
+		SelfPkgID: lv.SelfPkgID, SelfShard: lv.SelfShard, SelfSymbols: lv.SelfSymbols,
+		Nodes: make([]LevelNode, len(lv.Children)),
+	}
+	for i, c := range lv.Children {
+		view.Nodes[i] = LevelNode{LevelEntry: c, X: pos[i].X, Y: pos[i].Y, R: items[i].Radius}
+	}
+	return view, true
 }
 
 // Index returns the manifest index. The world (islands sized by symbol count,
