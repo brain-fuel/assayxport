@@ -225,11 +225,10 @@
   ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
 </style>
 <script>
-// Set the theme before first paint (no flash). Follows a saved choice, else the
-// OS preference. The main script re-applies this and recolors the canvas.
+// Set the theme before first paint (no flash). Dark is the default; a saved
+// choice overrides it. The main script re-applies this and recolors the canvas.
 (function(){try{var t=localStorage.getItem("axtheme");
-  if(t!=="dark"&&t!=="light")t=(typeof matchMedia==="function"&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";
-  document.documentElement.setAttribute("data-theme",t);}catch(e){}})();
+  document.documentElement.setAttribute("data-theme",t==="light"?"light":"dark");}catch(e){}})();
 </script>
 
 <script id="seed" type="text/plain">/*SEED*/</script>
@@ -322,7 +321,7 @@ setPalette(true); // provisional; applyTheme() below sets the real theme at boot
 // --- theme (shared goforge dark/light) ---------------------------------------
 const THEME_KEY="axtheme";
 function themeSaved(){try{const t=localStorage.getItem(THEME_KEY);return t==="dark"||t==="light"?t:null}catch(e){return null}}
-function curTheme(){return themeSaved()||((typeof matchMedia==="function"&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light")}
+function curTheme(){return themeSaved()||"dark"} // dark is the default
 function applyTheme(t){
   document.documentElement.setAttribute("data-theme",t);
   setPalette(t==="dark");
