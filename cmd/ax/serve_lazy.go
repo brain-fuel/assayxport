@@ -116,19 +116,19 @@ func buildSnapshot(idx schema.Index, shards map[string]schema.Shard, live bool) 
 	}, nil
 }
 
-// buildDiskSnapshot builds the lazy snapshot. It assumes the shards were already
-// written under dir (via emit.WriteDir) and retains only the lean index and the
-// set of valid shard paths; the caller drops its `shards` map after this returns,
-// so steady-state memory is independent of repo size. /api/shard streams each
-// package's JSON from dir on demand.
-func buildDiskSnapshot(idx schema.Index, shards map[string]schema.Shard, dir string) (*snapshot, error) {
+// buildDiskSnapshot builds the lazy snapshot from an index whose shards already
+// live under dir (written by assayToDir). It retains only the lean index and the
+// set of valid shard paths (read from the index entries), so memory is
+// independent of repo size. /api/shard streams each package's JSON from dir on
+// demand.
+func buildDiskSnapshot(idx schema.Index, dir string) (*snapshot, error) {
 	indexJSON, err := leanIndexPayload(idx)
 	if err != nil {
 		return nil, err
 	}
-	paths := make(map[string]bool, len(shards))
-	for p := range shards {
-		paths[p] = true
+	paths := make(map[string]bool, len(idx.Packages))
+	for _, pe := range idx.Packages {
+		paths[pe.Shard] = true
 	}
 	return &snapshot{indexJSON: indexJSON, dir: dir, shardPaths: paths}, nil
 }

@@ -41,7 +41,7 @@ func TestLazyServeEndToEnd(t *testing.T) {
 	if err := emit.WriteDir(dir, idx, shards); err != nil {
 		t.Fatalf("WriteDir: %v", err)
 	}
-	snap, err := buildDiskSnapshot(idx, shards, dir)
+	snap, err := buildDiskSnapshot(idx, dir)
 	if err != nil {
 		t.Fatalf("buildDiskSnapshot: %v", err)
 	}

@@ -25,32 +25,57 @@ func New() *Extractor { return &Extractor{} }
 func (*Extractor) Language() string { return "java" }
 
 // Extract discovers all .java files under root and returns one module unit per
-// file and one package unit per package declaration, sorted by ID.
-func (*Extractor) Extract(root string) ([]schema.Package, error) {
-	files, err := discover(root)
-	if err != nil {
+// file and one package unit per package declaration, sorted by ID. It buffers
+// ExtractStream's output; callers that can consume packages incrementally
+// (large trees) should use ExtractStream directly to keep memory bounded.
+func (e *Extractor) Extract(root string) ([]schema.Package, error) {
+	var out []schema.Package
+	var mu sync.Mutex
+	if err := e.ExtractStream(root, func(p schema.Package) error {
+		mu.Lock()
+		out = append(out, p)
+		mu.Unlock()
+		return nil
+	}); err != nil {
 		return nil, err
 	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].ID != out[j].ID {
+			return out[i].ID < out[j].ID
+		}
+		return out[i].Path < out[j].Path // stable total order when two files share an FQCN
+	})
+	return out, nil
+}
 
-	moduleUnits := make(map[string]schema.Package)  // moduleID -> Package
-	packageUnits := make(map[string]schema.Package) // packageID -> Package
-	// pkgDir records a representative directory per package for its Path, and
-	// pkgHasInfo marks packages whose Path came from package-info.java (which
-	// wins over a plain compilation unit's directory).
-	pkgDir := make(map[string]string)
-	pkgHasInfo := make(map[string]bool)
+// modRec is the lightweight per-file record ExtractStream keeps after a file's
+// module shard has been emitted and its symbols released -- just enough to build
+// the package units and member lists without holding any symbols.
+type modRec struct {
+	packageName string
+	dir         string
+	moduleID    string // "" for package-info.java (no module unit)
+	isPkgInfo   bool
+	pkgDoc      string
+}
 
-	// Parse every file in parallel. compilationUnit is pure per file (its result
-	// depends only on that file's bytes) and the tree-sitter backend is cgo-free
-	// with a fresh parser per call, so N workers parse N files with no shared
-	// mutable state. The order-dependent bookkeeping below then runs serially in
-	// the original sorted file order, so output stays byte-identical to a serial
-	// parse.
-	type parsedCU struct {
-		res cuResult
-		err error
+// ExtractStream parses every .java file under root across a worker pool and
+// emits each file's module unit as soon as it is parsed, so the caller can write
+// the shard and release its symbols immediately; only lightweight per-file
+// records are retained, from which the (symbol-free) package units and member
+// lists are built and emitted at the end. Output is the same set of packages as
+// Extract; the writer sorts by id, so emission order does not matter.
+func (*Extractor) ExtractStream(root string, emit func(schema.Package) error) error {
+	files, err := discover(root)
+	if err != nil {
+		return err
 	}
-	parsed := make([]parsedCU, len(files))
+
+	recs := make([]modRec, len(files)) // indexed by file (sorted) order
+	perr := make([]error, len(files))
+	var mu sync.Mutex
+	var emitErr error
+
 	// Leave one core unused so a caller sharing this process -- notably
 	// `ax serve`, which parses in a background goroutine while its HTTP server
 	// answers "analyzing" on the main one -- stays responsive during the parse.
@@ -67,11 +92,73 @@ func (*Extractor) Extract(root string) ([]schema.Package, error) {
 			for i := range jobs {
 				src, rerr := os.ReadFile(files[i].Abs)
 				if rerr != nil {
-					parsed[i] = parsedCU{err: rerr}
+					perr[i] = rerr
 					continue
 				}
 				res, cerr := compilationUnit(files[i].Rel, src)
-				parsed[i] = parsedCU{res: res, err: cerr}
+				if cerr != nil {
+					perr[i] = cerr
+					continue
+				}
+				stem := strings.TrimSuffix(filepath.Base(files[i].Rel), ".java")
+				dir := filepath.ToSlash(filepath.Dir(files[i].Rel))
+				if dir == "." {
+					dir = ""
+				}
+				rec := modRec{packageName: res.PackageName, dir: dir}
+				if res.IsPackageInfo {
+					// package-info.java carries no module symbols; it supplies the
+					// package doc and a preferred package Path.
+					rec.isPkgInfo = true
+					rec.pkgDoc = res.PackageDoc
+					recs[i] = rec
+					continue
+				}
+				moduleID := stem
+				if res.PackageName != "" {
+					moduleID = res.PackageName + "." + stem
+				}
+				rec.moduleID = moduleID
+				recs[i] = rec
+				mod := schema.Package{
+					ID:       moduleID,
+					Language: "java",
+					Path:     files[i].Rel,
+					Name:     stem,
+					Level:    "module",
+					Symbols:  res.Syms,
+				}
+				if res.HasMain {
+					fqcn := res.MainType
+					if res.PackageName != "" {
+						fqcn = res.PackageName + "." + res.MainType
+					}
+					how := "java " + fqcn
+					mod.IsEntrypoint = true
+					// The module unit and the stamped main symbol each get their
+					// own Invocation value (same fields) to avoid sharing a pointer.
+					mod.Invocation = &schema.Invocation{Kind: "class", How: how}
+					for k := range mod.Symbols {
+						s := &mod.Symbols[k]
+						if s.Kind == "method" && s.Name == "main" && s.Owner == res.MainType {
+							s.IsEntrypoint = true
+							s.Invocation = &schema.Invocation{Kind: "class", How: how}
+						}
+					}
+				}
+				mu.Lock()
+				stop := emitErr != nil
+				mu.Unlock()
+				if stop {
+					continue
+				}
+				if e := emit(mod); e != nil {
+					mu.Lock()
+					if emitErr == nil {
+						emitErr = e
+					}
+					mu.Unlock()
+				}
 			}
 		}()
 	}
@@ -81,95 +168,56 @@ func (*Extractor) Extract(root string) ([]schema.Package, error) {
 	close(jobs)
 	wg.Wait()
 
-	// Fold per-file results in sorted file order so the "first file wins"
-	// package-directory choice (pkgDir below) stays deterministic.
-	for i := range files {
-		f := files[i]
-		if parsed[i].err != nil {
-			return nil, parsed[i].err
+	for _, e := range perr {
+		if e != nil {
+			return e
 		}
-		res := parsed[i].res
+	}
+	if emitErr != nil {
+		return emitErr
+	}
 
-		stem := strings.TrimSuffix(filepath.Base(f.Rel), ".java")
-		dir := filepath.ToSlash(filepath.Dir(f.Rel))
-		if dir == "." {
-			dir = ""
-		}
-
-		// package-info.java carries no module symbols; it supplies the package
-		// doc and a preferred package Path.
-		if res.IsPackageInfo {
-			if res.PackageName != "" {
-				pkg := packageUnits[res.PackageName]
-				pkg.ID = res.PackageName
-				pkg.Language = "java"
-				pkg.Level = "package"
-				pkg.Name = simpleName(res.PackageName)
-				pkg.Doc = res.PackageDoc
-				packageUnits[res.PackageName] = pkg
-				pkgDir[res.PackageName] = dir
-				pkgHasInfo[res.PackageName] = true
-			}
+	// Build package units from the lightweight records, in sorted file order so
+	// the package Path ("first file wins") is deterministic. package-info.java's
+	// doc and dir win over a plain compilation unit's.
+	packageUnits := make(map[string]schema.Package)
+	pkgDir := make(map[string]string)
+	pkgHasInfo := make(map[string]bool)
+	for _, rec := range recs {
+		if rec.packageName == "" {
 			continue
 		}
-
-		// Module id and entrypoint FQCN.
-		moduleID := stem
-		if res.PackageName != "" {
-			moduleID = res.PackageName + "." + stem
+		if rec.isPkgInfo {
+			pkg := packageUnits[rec.packageName]
+			pkg.ID = rec.packageName
+			pkg.Language = "java"
+			pkg.Level = "package"
+			pkg.Name = simpleName(rec.packageName)
+			pkg.Doc = rec.pkgDoc
+			packageUnits[rec.packageName] = pkg
+			pkgDir[rec.packageName] = rec.dir
+			pkgHasInfo[rec.packageName] = true
+			continue
 		}
-		mod := schema.Package{
-			ID:       moduleID,
-			Language: "java",
-			Path:     f.Rel,
-			Name:     stem,
-			Level:    "module",
-			Symbols:  res.Syms,
-		}
-		if res.HasMain {
-			fqcn := res.MainType
-			if res.PackageName != "" {
-				fqcn = res.PackageName + "." + res.MainType
-			}
-			how := "java " + fqcn
-			mod.IsEntrypoint = true
-			// The module unit and the stamped main symbol each get their own
-			// Invocation value (same fields) to avoid sharing one pointer.
-			mod.Invocation = &schema.Invocation{Kind: "class", How: how}
-			for i := range mod.Symbols {
-				s := &mod.Symbols[i]
-				if s.Kind == "method" && s.Name == "main" && s.Owner == res.MainType {
-					s.IsEntrypoint = true
-					s.Invocation = &schema.Invocation{Kind: "class", How: how}
-				}
+		if _, ok := packageUnits[rec.packageName]; !ok {
+			packageUnits[rec.packageName] = schema.Package{
+				ID:       rec.packageName,
+				Language: "java",
+				Level:    "package",
+				Name:     simpleName(rec.packageName),
 			}
 		}
-		moduleUnits[moduleID] = mod
-
-		// Ensure a package unit exists for this file's package (unless default
-		// package). package-info.java Path wins; otherwise first file's dir.
-		if res.PackageName != "" {
-			if _, ok := packageUnits[res.PackageName]; !ok {
-				packageUnits[res.PackageName] = schema.Package{
-					ID:       res.PackageName,
-					Language: "java",
-					Level:    "package",
-					Name:     simpleName(res.PackageName),
-				}
-			}
-			if !pkgHasInfo[res.PackageName] {
-				if _, ok := pkgDir[res.PackageName]; !ok {
-					pkgDir[res.PackageName] = dir // files are sorted, so this is the first
-				}
+		if !pkgHasInfo[rec.packageName] {
+			if _, ok := pkgDir[rec.packageName]; !ok {
+				pkgDir[rec.packageName] = rec.dir
 			}
 		}
 	}
 
-	// Assign package Paths and Members. A unit's direct parent is its id minus
-	// the last dotted segment, so bucketing every module and package unit under
-	// its parent is one O(M+P) pass -- versus scanning all units for every
-	// package (O(P*(M+P))), which on a large tree is tens of millions of prefix
-	// comparisons.
+	// Assign package Members. A unit's direct parent is its id minus the last
+	// dotted segment, so bucketing every module and package unit under its parent
+	// is one O(M+P) pass -- versus scanning all units for every package
+	// (O(P*(M+P))), which on a large tree is tens of millions of prefix compares.
 	memberLists := make(map[string][]string, len(packageUnits))
 	addMember := func(childID string) {
 		parent := parentID(childID)
@@ -177,28 +225,25 @@ func (*Extractor) Extract(root string) ([]schema.Package, error) {
 			memberLists[parent] = append(memberLists[parent], childID)
 		}
 	}
-	for modID := range moduleUnits {
-		addMember(modID)
+	for _, rec := range recs {
+		if rec.moduleID != "" {
+			addMember(rec.moduleID)
+		}
 	}
 	for subID := range packageUnits {
 		addMember(subID)
 	}
+
+	// Emit the package units (member lists + doc; no symbols).
 	for pkgID := range packageUnits {
 		pkg := packageUnits[pkgID]
 		members := memberLists[pkgID]
 		sort.Strings(members)
 		pkg.Members = members
 		pkg.Path = pkgDir[pkgID]
-		packageUnits[pkgID] = pkg
+		if err := emit(pkg); err != nil {
+			return err
+		}
 	}
-
-	out := make([]schema.Package, 0, len(moduleUnits)+len(packageUnits))
-	for _, p := range moduleUnits {
-		out = append(out, p)
-	}
-	for _, p := range packageUnits {
-		out = append(out, p)
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
-	return out, nil
+	return nil
 }

@@ -10,7 +10,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math"
 	"os"
+	"runtime/debug"
 
 	"goforge.dev/assayxport/internal/emit"
 	"goforge.dev/assayxport/internal/explorer"
@@ -121,6 +123,54 @@ func assayOnce(path string, langs stringsFlag, quiet bool) (schema.Index, map[st
 	return idx, shards, nil
 }
 
+// capAssayMemory sets a soft memory limit for the streaming assay so the GC
+// keeps its transient parse garbage in check -- on a very large repo the peak
+// RSS roughly halves. Streaming keeps live data small (index metadata plus a few
+// in-flight shards), so the limit caps garbage without thrashing. A limit the
+// user set via GOMEMLIMIT is respected rather than overridden. The limit is a
+// soft target, never a hard cap, so a repo that genuinely needs more slows down
+// rather than failing.
+func capAssayMemory() {
+	if debug.SetMemoryLimit(-1) == math.MaxInt64 { // unset by the user
+		debug.SetMemoryLimit(1 << 30) // 1 GiB
+	}
+}
+
+// assayToDir streams the manifest for path directly into dir, one shard file at
+// a time, and returns the index. Peak memory is the index metadata plus the
+// in-flight packages -- not the whole symbol graph -- so it scales to very large
+// repos. It is the extraction path `ax serve` (lazy mode) uses; the in-RAM
+// assayOnce remains for --stdout and --no-wasm, which need the whole manifest at
+// once anyway. The produced files are identical to assayOnce + emit.WriteDir.
+func assayToDir(path string, langs stringsFlag, quiet bool, dir string) (schema.Index, error) {
+	capAssayMemory()
+	exts, err := registry.Select(langs)
+	if err != nil {
+		return schema.Index{}, err
+	}
+	w, err := emit.NewWriter(dir)
+	if err != nil {
+		return schema.Index{}, err
+	}
+	languages, warnings, err := registry.RunStream(exts, path, w.Add)
+	if err != nil {
+		return schema.Index{}, err
+	}
+	if !quiet {
+		for _, wn := range warnings {
+			fmt.Fprintln(os.Stderr, "ax: warning:", wn)
+		}
+	}
+	module := ""
+	for _, e := range exts {
+		if ge, ok := e.(*golang.Extractor); ok {
+			module = ge.Module()
+			break
+		}
+	}
+	return w.Finalize(module, languages)
+}
+
 // writeAll writes the JSON manifest and, unless noHTML, the explorer.
 func writeAll(outDir string, idx schema.Index, shards map[string]schema.Shard, noHTML bool) error {
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
@@ -161,12 +211,11 @@ func runAssayCmd(args []string) error {
 		path = fs.Arg(0)
 	}
 
-	idx, shards, err := assayOnce(path, langs, *quiet)
-	if err != nil {
-		return err
-	}
-
 	if *stdout {
+		idx, shards, err := assayOnce(path, langs, *quiet)
+		if err != nil {
+			return err
+		}
 		b, err := emit.Combined(idx, shards)
 		if err != nil {
 			return err
@@ -179,15 +228,34 @@ func runAssayCmd(args []string) error {
 	if outDir == "" {
 		outDir = path
 	}
-	if err := writeAll(outDir, idx, shards, *noHTML); err != nil {
+
+	// --no-html writes only the JSON manifest, so stream it straight to disk and
+	// never hold the whole symbol graph in RAM -- this is what lets a repo the
+	// size of Kafka be assayed without a multi-gigabyte peak. Producing the HTML
+	// explorer needs the whole manifest inlined, so that path stays in-RAM.
+	if *noHTML {
+		if err := os.MkdirAll(outDir, 0o755); err != nil {
+			return err
+		}
+		idx, err := assayToDir(path, langs, *quiet, outDir)
+		if err != nil {
+			return err
+		}
+		if !*quiet {
+			fmt.Fprintf(os.Stderr, "ax: wrote %d packages (assayxport.json + shards) to %s\n", len(idx.Packages), outDir)
+		}
+		return nil
+	}
+
+	idx, shards, err := assayOnce(path, langs, *quiet)
+	if err != nil {
+		return err
+	}
+	if err := writeAll(outDir, idx, shards, false); err != nil {
 		return err
 	}
 	if !*quiet {
-		artifacts := "assayxport.json + shards + assayxport.html"
-		if *noHTML {
-			artifacts = "assayxport.json + shards"
-		}
-		fmt.Fprintf(os.Stderr, "ax: wrote %d packages (%s) to %s\n", len(idx.Packages), artifacts, outDir)
+		fmt.Fprintf(os.Stderr, "ax: wrote %d packages (assayxport.json + shards + assayxport.html) to %s\n", len(idx.Packages), outDir)
 	}
 	return nil
 }

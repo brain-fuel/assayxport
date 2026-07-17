@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"sync/atomic"
 
 	"goforge.dev/assayxport/internal/extract"
 	"goforge.dev/assayxport/internal/extract/golang"
@@ -82,4 +83,53 @@ func Run(exts []extract.Extractor, root string) (pkgs []schema.Package, language
 	}
 	sort.Strings(languages)
 	return pkgs, languages, errs, nil
+}
+
+// RunStream is the streaming counterpart of Run: each extractor's packages are
+// handed to emit one at a time (via ExtractStream where an extractor supports
+// it, else by replaying a buffered Extract) rather than accumulated into one
+// slice, so a large tree's peak memory stays bounded. The tolerated-failure and
+// language-set semantics match Run; emit is called possibly concurrently for
+// StreamExtractors, so it must synchronize itself.
+func RunStream(exts []extract.Extractor, root string, emit func(schema.Package) error) (languages []string, warnings []error, err error) {
+	langSet := map[string]bool{}
+	var errs []error
+	produced := false
+	for _, e := range exts {
+		// A StreamExtractor may call emit concurrently from a worker pool, so the
+		// produced-count is atomic.
+		var got atomic.Int64
+		count := func(p schema.Package) error {
+			got.Add(1)
+			return emit(p)
+		}
+		var extErr error
+		if se, ok := e.(extract.StreamExtractor); ok {
+			extErr = se.ExtractStream(root, count)
+		} else {
+			var pkgs []schema.Package
+			pkgs, extErr = e.Extract(root)
+			for _, p := range pkgs {
+				if err := count(p); err != nil {
+					return nil, nil, err
+				}
+			}
+		}
+		if extErr != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", e.Language(), extErr))
+			continue
+		}
+		if got.Load() > 0 {
+			langSet[e.Language()] = true
+			produced = true
+		}
+	}
+	if !produced && len(errs) > 0 {
+		return nil, nil, errors.Join(errs...)
+	}
+	for l := range langSet {
+		languages = append(languages, l)
+	}
+	sort.Strings(languages)
+	return languages, errs, nil
 }

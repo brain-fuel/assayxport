@@ -64,12 +64,12 @@ import (
 
 // javaFileCtx is one compilation unit's name environment for classifying calls.
 type javaFileCtx struct {
-	unitID  string                        // manifest module-unit id, for internal refs
+	unitID  string                          // manifest module-unit id, for internal refs
 	methods map[string]map[string][]sigInfo // typeID -> method name -> declared overload shapes
-	ctors   map[string][]sigInfo          // typeID -> declared constructor shapes
-	canon   map[string]sigInfo            // record typeID -> canonical constructor shape
-	types   map[string]bool               // every typeID declared in this file
-	imports map[string]string             // simple/local name -> imported dotted path
+	ctors   map[string][]sigInfo            // typeID -> declared constructor shapes
+	canon   map[string]sigInfo              // record typeID -> canonical constructor shape
+	types   map[string]bool                 // every typeID declared in this file
+	imports map[string]string               // simple/local name -> imported dotted path
 }
 
 // sigInfo is the callable shape arity matching runs against: declared

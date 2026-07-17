@@ -26,7 +26,6 @@ import (
 	"syscall"
 	"time"
 
-	"goforge.dev/assayxport/internal/emit"
 	"goforge.dev/assayxport/internal/explorer"
 )
 
@@ -216,23 +215,23 @@ func runServeCmd(args []string) error {
 	// shard graph); in --no-wasm mode it inlines the whole manifest. The second
 	// return is the generation dir (empty in --no-wasm) for delayed cleanup.
 	build := func() (*snapshot, string, error) {
-		idx, shards, err := assayOnce(path, langs, *quiet)
-		if err != nil {
-			return nil, "", err
-		}
 		if !lazy {
+			idx, shards, err := assayOnce(path, langs, *quiet)
+			if err != nil {
+				return nil, "", err
+			}
 			snap, err := buildSnapshot(idx, shards, watch)
 			return snap, "", err
 		}
+		// Lazy mode streams shards straight to a fresh generation dir, so the
+		// whole symbol graph is never held in RAM at once.
 		g := atomic.AddUint64(&gen, 1)
 		dir := filepath.Join(tmpRoot, fmt.Sprintf("gen-%d", g))
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		idx, err := assayToDir(path, langs, *quiet, dir)
+		if err != nil {
 			return nil, "", err
 		}
-		if err := emit.WriteDir(dir, idx, shards); err != nil {
-			return nil, "", err
-		}
-		snap, err := buildDiskSnapshot(idx, shards, dir)
+		snap, err := buildDiskSnapshot(idx, dir)
 		if err != nil {
 			return nil, "", err
 		}

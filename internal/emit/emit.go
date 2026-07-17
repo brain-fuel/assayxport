@@ -5,7 +5,6 @@ package emit
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -40,7 +39,12 @@ func sanitizeID(id string) string {
 // deterministically and computing shard paths and counts.
 func Manifest(pkgs []schema.Package, module string, languages []string) (schema.Index, map[string]schema.Shard) {
 	sorted := append([]schema.Package(nil), pkgs...)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i].ID < sorted[j].ID })
+	sort.Slice(sorted, func(i, j int) bool {
+		if sorted[i].ID != sorted[j].ID {
+			return sorted[i].ID < sorted[j].ID
+		}
+		return sorted[i].Path < sorted[j].Path // total order: distinct FQCNs collide, paths do not
+	})
 
 	idx := schema.Index{
 		SchemaVersion: schema.Version,
@@ -62,61 +66,10 @@ func Manifest(pkgs []schema.Package, module string, languages []string) (schema.
 	used := make(map[string]bool, len(sorted))
 
 	for _, p := range sorted {
-		syms := append([]schema.Symbol(nil), p.Symbols...)
-		sort.SliceStable(syms, func(i, j int) bool {
-			a, b := syms[i].Location, syms[j].Location
-			if a.File != b.File {
-				return a.File < b.File
-			}
-			if a.Line != b.Line {
-				return a.Line < b.Line
-			}
-			return syms[i].Name < syms[j].Name
-		})
-		entrypoints := 0
-		for _, s := range syms {
-			if s.IsEntrypoint {
-				entrypoints++
-			}
-		}
-		sp := shardPath(p.Path)
-		if used[sp] {
-			base := sp[:len(sp)-len(".json")]
-			sp = base + "__" + sanitizeID(p.ID) + ".json"
-			for i := 2; used[sp]; i++ {
-				sp = fmt.Sprintf("%s__%s_%d.json", base, sanitizeID(p.ID), i)
-			}
-		}
-		used[sp] = true
-		idx.Packages = append(idx.Packages, schema.PackageEntry{
-			ID:              p.ID,
-			Language:        p.Language,
-			Path:            p.Path,
-			Name:            p.Name,
-			Doc:             p.Doc,
-			Level:           p.Level,
-			Members:         p.Members,
-			IsEntrypoint:    p.IsEntrypoint,
-			Invocation:      p.Invocation,
-			SymbolCount:     len(syms),
-			EntrypointCount: entrypoints,
-			Shard:           sp,
-		})
-		shards[sp] = schema.Shard{
-			SchemaVersion: schema.Version,
-			Package: schema.PackageInfo{
-				ID:           p.ID,
-				Language:     p.Language,
-				Path:         p.Path,
-				Name:         p.Name,
-				Doc:          p.Doc,
-				Level:        p.Level,
-				Members:      p.Members,
-				IsEntrypoint: p.IsEntrypoint,
-				Invocation:   p.Invocation,
-			},
-			Symbols: syms,
-		}
+		shard, entrypoints := shardOf(p)
+		sp := assignShard(p.Path, p.ID, used)
+		idx.Packages = append(idx.Packages, entryOf(p, len(shard.Symbols), entrypoints, sp))
+		shards[sp] = shard
 	}
 	return idx, shards
 }
@@ -166,30 +119,8 @@ func WriteDir(outDir string, idx schema.Index, shards map[string]schema.Shard) e
 			return err
 		}
 	}
-	// Prune stale shards: walk .assayxport/ and delete any *.json file not in
-	// the written set. Empty subdirectories are left in place.
-	shardRoot := filepath.Join(outDir, shardDir)
-	if _, err := os.Stat(shardRoot); err == nil {
-		if err := filepath.Walk(shardRoot, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if info.IsDir() || filepath.Ext(path) != ".json" {
-				return nil
-			}
-			rel, err := filepath.Rel(outDir, path)
-			if err != nil {
-				return err
-			}
-			if !written[filepath.ToSlash(rel)] {
-				return os.Remove(path)
-			}
-			return nil
-		}); err != nil {
-			return err
-		}
-	}
-	return nil
+	// Prune stale shards: delete any *.json under .assayxport/ not just written.
+	return pruneShards(outDir, written)
 }
 
 // Combined renders the whole manifest as one JSON blob for --stdout.
