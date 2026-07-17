@@ -55,11 +55,26 @@
   .crumb:hover{color:var(--ink);border-color:#3a4550}
   .crumb.here{color:var(--crucible);border-color:#5a4a1e;cursor:default}
 
+  /* left dock: package index (top) + detail card (bottom), pinned to the left
+     and stacked. Each panel expands to width or collapses to a vertical tab on
+     the edge; the dock's fixed top/bottom keep either from overrunning the
+     viewport, and neither is ever removed -- "closing" just minimizes it. */
+  #leftdock{position:fixed;left:12px;top:82px;bottom:14px;z-index:11;
+    display:flex;flex-direction:column;gap:8px;align-items:flex-start;
+    pointer-events:none;max-width:calc(100vw - 24px)}
+  #leftdock>*{pointer-events:auto}
+  .dockpanel{background:#1A1E23f2;border:1px solid var(--line);border-radius:10px;
+    display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 30px #0008}
+  .dp-tab{display:none;writing-mode:vertical-rl;text-orientation:mixed;cursor:pointer;
+    padding:14px 7px;font-family:var(--mono);font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--crucible);white-space:nowrap;user-select:none}
+  .dp-tab:hover{color:var(--ink)}
+  .dockpanel.min{flex:0 0 auto;width:auto;min-height:0;cursor:pointer}
+  .dockpanel.min>:not(.dp-tab){display:none}
+  .dockpanel.min .dp-tab{display:block}
+
   /* symbol card */
-  .card{position:fixed;left:14px;bottom:14px;width:min(430px,calc(100vw - 28px));max-height:min(58vh,560px);
-    background:#1A1E23f2;border:1px solid var(--line);border-radius:10px;z-index:10;
-    display:none;flex-direction:column;overflow:hidden;box-shadow:0 8px 30px #0008}
-  .card.on{display:flex}
+  .card{flex:0 1 auto;width:min(430px,calc(100vw - 28px));max-height:min(58vh,560px)}
   .card .head{display:flex;align-items:center;gap:8px;padding:10px 12px 0}
   .card .pkgline{font-family:var(--mono);font-size:10.5px;color:var(--dim);flex:1;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -74,10 +89,7 @@
     box-shadow:0 4px 18px #000a;white-space:nowrap}
   .compass:hover{border-color:var(--crucible)}
   .compass .arr{display:inline-block;margin-right:6px;transition:transform .15s linear}
-  .card.min .body{display:none}
-  .card.min{width:auto;max-width:min(430px,calc(100vw - 28px))}
-  .card.min .head{padding:8px 12px}
-  .card .body{padding:8px 12px 12px;overflow-y:auto}
+  .card .body{padding:8px 12px 12px;overflow-y:auto;flex:1 1 auto;min-height:0}
   .sig{font-family:var(--mono);font-size:13px;line-height:1.5;background:var(--panel2);
     border:1px solid var(--line);border-radius:6px;padding:9px 11px;white-space:pre-wrap;word-break:break-word}
   .sig .kw{color:var(--k-dynamic)} .sig .ty{color:var(--k-external)} .sig .nm{color:var(--crucible);font-weight:700}
@@ -112,14 +124,12 @@
   .hint{font-family:var(--mono);font-size:10px;color:var(--dim);text-align:right;line-height:1.6}
   .hint kbd{border:1px solid var(--line);border-radius:3px;padding:0 4px;font-size:9px;color:var(--mut)}
 
-  /* index (tree) panel */
-  .tree-panel{position:fixed;top:52px;left:14px;bottom:14px;width:min(340px,80vw);z-index:11;
-    background:#1A1E23f2;border:1px solid var(--line);border-radius:10px;display:none;
-    flex-direction:column;overflow:hidden;box-shadow:0 8px 30px #0008}
-  .tree-panel.on{display:flex}
+  /* index (tree) panel: the top dock panel, grows to fill the height the card
+     leaves so it never overruns the card below it. */
+  .tree-panel{flex:1 1 auto;min-height:46px;width:min(340px,80vw)}
   .tree-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);
     font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
-  .tree-body{flex:1;overflow-y:auto;padding:6px}
+  .tree-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:6px}
   .tpkg{margin:1px 0}
   .tpkg-row{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:5px;cursor:pointer}
   .tpkg-row:hover{background:var(--panel2)}
@@ -186,18 +196,22 @@
 
 <div class="hud-nav" id="crumbs"></div>
 
-<div class="tree-panel" id="treepanel">
-  <div class="tree-head">package index<span style="flex:1"></span>
-    <button class="close" id="treeclose" title="Close (i)">✕</button></div>
-  <div class="tree-body" id="treebody"></div>
-</div>
+<div id="leftdock">
+  <div class="dockpanel tree-panel" id="treepanel">
+    <div class="dp-tab" id="treetab" title="Package index (i)">☰&nbsp;index</div>
+    <div class="tree-head">package index<span style="flex:1"></span>
+      <button class="close" id="treeclose" title="Minimize (i)">–</button></div>
+    <div class="tree-body" id="treebody"></div>
+  </div>
 
-<div class="card" id="card">
-  <div class="head"><span class="title" id="cardtitle"></span><div class="pkgline" id="cardpkg"></div>
-    <button class="close" id="cardfocus" title="Show on map — fly to this and light its edges">⌖</button>
-    <button class="close" id="cardmin" title="Minimize — watch the edges behind">–</button>
-    <button class="close" id="cardclose" title="Close (Esc)">✕</button></div>
-  <div class="body" id="cardbody"></div>
+  <div class="dockpanel card" id="card">
+    <div class="dp-tab" id="cardtab" title="Detail">▤&nbsp;detail</div>
+    <div class="head"><span class="title" id="cardtitle"></span><div class="pkgline" id="cardpkg"></div>
+      <button class="close" id="cardfocus" title="Show on map — fly to this and light its edges">⌖</button>
+      <button class="close" id="cardmin" title="Minimize — watch the edges behind">–</button>
+      <button class="close" id="cardclose" title="Clear (Esc)">✕</button></div>
+    <div class="body" id="cardbody"></div>
+  </div>
 </div>
 
 <div class="hud-br">
@@ -615,8 +629,23 @@ function resize(){VW=innerWidth;VH=innerHeight;canvas.width=VW*DPR;canvas.height
 addEventListener("resize",resize);resize();
 
 const G={cam:{x:0,y:0,k:0.5},target:null,tstart:0,tdur:0,from:null,
-  selected:null,selPkg:null,cardMin:false,hover:null,hoverLabel:null,labelBoxes:[],
+  selected:null,selPkg:null,cardMin:true,treeMin:true,hover:null,hoverLabel:null,labelBoxes:[],
   visited:new Set(),history:[],islandIn:null};
+// applyDock reflects the minimize state of the two left-dock panels: a minimized
+// panel collapses to its vertical edge tab, an expanded one shows in full. The
+// card tab carries the current selection's name so it stays identifiable folded.
+function applyDock(){
+  const tp=$("#treepanel"),card=$("#card");
+  if(tp)tp.classList.toggle("min",G.treeMin);
+  if(card)card.classList.toggle("min",G.cardMin);
+  const ct=$("#cardtab");
+  if(ct){
+    let name="detail";
+    if(G.selected&&D.symIndex.has(G.selected))name=D.symIndex.get(G.selected).sym.name;
+    else if(G.selPkg&&W.byId.get(G.selPkg))name=W.byId.get(G.selPkg).label;
+    ct.innerHTML="▤&nbsp;"+esc(name);
+  }
+}
 const S2W=(sx,sy)=>({x:(sx-VW/2)/G.cam.k+G.cam.x,y:(sy-VH/2)/G.cam.k+G.cam.y});
 const W2S=(wx,wy)=>({x:(wx-G.cam.x)*G.cam.k+VW/2,y:(wy-G.cam.y)*G.cam.k+VH/2});
 const ease=t=>t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
@@ -650,12 +679,12 @@ function select(ref,push=true){
   if(ref&&!D.symIndex.has(ref))ref=null;
   if(push&&G.selected&&G.selected!==ref)G.history.push(G.selected);
   G.selected=ref;
-  if(ref){G.selPkg=null;G.visited.add(ref);updateAssayed();
+  if(ref){G.selPkg=null;G.cardMin=false;G.visited.add(ref);updateAssayed();
     const tr=treeRowByRef.get(ref);if(tr)tr.classList.add("visited")}
   renderCard();crumbs()}
 function selectPkg(pkgId,fly){
   const isl=W.byId.get(pkgId);if(!isl)return;
-  G.selPkg=pkgId;G.selected=null;G.islandIn=pkgId;
+  G.selPkg=pkgId;G.selected=null;G.islandIn=pkgId;G.cardMin=false;
   if(DATA_MODE==="hier"&&isl.pkgId&&!isl.loaded)
     hydrateIsland(isl).then(()=>{if(G.selPkg===pkgId)renderCard()});
   renderCard();
@@ -685,11 +714,16 @@ function symRow(ref,s){
     <span class="ct">${s.kind}</span><span class="go">assay →</span></button>`}
 function renderCard(){
   const card=$("#card");
-  card.classList.toggle("min",G.cardMin);
-  $("#cardmin").textContent=G.cardMin?"▣":"–";
-  $("#cardmin").title=G.cardMin?"Restore panel":"Minimize — watch the edges behind";
-  if(!G.selected&&!G.selPkg){card.classList.remove("on");return}
-  if(G.selPkg){renderPkgCard(card);return}
+  $("#cardmin").textContent="–";
+  $("#cardmin").title="Minimize — watch the edges behind";
+  if(!G.selected&&!G.selPkg){
+    // The card never disappears; with nothing selected it holds a placeholder
+    // (folded to its tab by default).
+    $("#cardtitle").textContent="detail";
+    $("#cardpkg").textContent="";
+    $("#cardbody").innerHTML='<span class="cx" style="color:var(--dim)">Nothing selected — click a symbol or an island on the map.</span>';
+    applyDock();return}
+  if(G.selPkg){renderPkgCard(card);applyDock();return}
   const {pkgId,sym:s}=D.symIndex.get(G.selected);
   $("#cardtitle").textContent=s.name;
   $("#cardpkg").textContent=pkgId;
@@ -722,11 +756,11 @@ function renderCard(){
     <div class="calls">${calls.length?calls.map(row).join(""):'<span class="cx" style="color:var(--dim)">leaf — calls nothing</span>'}</div>
     <h4>called by · ${callers.length}</h4>
     <div class="calls">${callers.length?callers.map(crow).join(""):'<span class="cx" style="color:var(--dim)">no known callers — a root or reached dynamically</span>'}</div>`;
-  card.classList.add("on");
+  applyDock();
   card.querySelectorAll("[data-ref]").forEach(b=>b.onclick=()=>travel(b.dataset.ref));
 }
 function renderPkgCard(card){
-  const isl=W.byId.get(G.selPkg);if(!isl){card.classList.remove("on");return}
+  const isl=W.byId.get(G.selPkg);if(!isl){$("#cardbody").innerHTML='<span class="cx" style="color:var(--dim)">Nothing selected.</span>';applyDock();return}
   const p=isl.pkg;
   $("#cardtitle").textContent=p.name;
   $("#cardpkg").textContent=p.id;
@@ -748,11 +782,14 @@ function renderPkgCard(card){
     <div class="calls">${exp.map(s=>symRow(p.id+"#"+s.id,s)).join("")||'<span class="cx" style="color:var(--dim)">none</span>'}</div>
     <h4>unexported · ${un.length}</h4>
     <div class="calls">${un.map(s=>symRow(p.id+"#"+s.id,s)).join("")||'<span class="cx" style="color:var(--dim)">none</span>'}</div>`;
-  card.classList.add("on");
+  applyDock();
   card.querySelectorAll("[data-ref]").forEach(b=>b.onclick=()=>travel(b.dataset.ref));
 }
-$("#cardclose").onclick=()=>{G.selPkg=null;select(null,false)};
-$("#cardmin").onclick=()=>{G.cardMin=!G.cardMin;renderCard()};
+// ✕ clears the selection and folds the card to its tab (it never disappears);
+// – folds it keeping the content; the tab clicks back open.
+$("#cardclose").onclick=()=>{G.cardMin=true;G.selPkg=null;select(null,false)};
+$("#cardmin").onclick=()=>{G.cardMin=true;applyDock()};
+$("#cardtab").onclick=()=>{G.cardMin=false;applyDock()};
 function focusOnCard(){
   if(G.selected){flyToRef(G.selected);
     const r=D.symIndex.get(G.selected);toast("⌖ "+r.sym.name)}
@@ -1031,8 +1068,8 @@ addEventListener("keydown",e=>{
   if(e.key==="/"&&document.activeElement!==$("#search")){e.preventDefault();$("#search").focus();return}
   if(document.activeElement===$("#search"))return;
   if(e.key==="Escape"){
-    if($("#treepanel").classList.contains("on"))toggleTree(false);
-    else if(G.selected||G.selPkg){G.selPkg=null;select(null,false)}
+    if(!G.treeMin)toggleTree(false);
+    else if(G.selected||G.selPkg){G.cardMin=true;G.selPkg=null;select(null,false)}
     else if(DATA_MODE==="hier"&&NAV.path){showLevel(parentPath(NAV.path),false)} // ascend a level
     else{G.islandIn=null;camFitWorld(false);crumbs()}}
   if(e.key==="i"&&!e.metaKey&&!e.ctrlKey)toggleTree();
@@ -1173,10 +1210,14 @@ function fillTreeSyms(container,isl){
     d.onclick=()=>travel(ref);
     treeRowByRef.set(ref,d);frag.appendChild(d)}
   container.appendChild(frag)}
-function toggleTree(force){const tp=$("#treepanel");
-  tp.classList.toggle("on",force!==undefined?force:!tp.classList.contains("on"))}
+// toggleTree(expanded): true expands the index, false minimizes it to its tab,
+// undefined toggles. The panel is never removed -- minimized it is the edge tab.
+function toggleTree(force){
+  G.treeMin=(force!==undefined)?!force:!G.treeMin;
+  applyDock();}
 $("#treebtn").onclick=()=>toggleTree();
 $("#treeclose").onclick=()=>toggleTree(false);
+$("#treetab").onclick=()=>toggleTree(true);
 
 /* ================= manifest drop ================= */
 addEventListener("dragover",e=>{e.preventDefault();$("#drop").classList.add("on")});
@@ -1211,6 +1252,7 @@ window.__app={G,W,D,select,selectPkg,travel,flyToRef,toggleTree,doSearch:q=>{doS
     window.__axReady=ready;
     if(window.axapi)ready();
   }
+  renderCard(); // seed the dock: both panels start folded to their edge tabs
   requestAnimationFrame(draw);
 })();
 </script>
