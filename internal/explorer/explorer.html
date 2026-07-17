@@ -3,14 +3,65 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>assayxport · explorer</title>
 <style>
+  /* GoForge shared neutrals (navy-biased) — same across every servable surface,
+     in both themes. The gold accent and the call-kind hues are the explorer's
+     own and are kept, with a light-mode variant each. LIGHT is the base; the
+     dark values live under prefers-color-scheme and the data-theme overrides. */
   :root{
-    --bg:#14171A; --panel:#1A1E23; --panel2:#20252B; --line:#2A3138;
-    --ink:#E7EAEC; --mut:#8B949E; --dim:#5A636B;
-    --k-internal:#C8963E; --k-external:#5B8CA8; --k-builtin:#5A636B;
-    --k-dynamic:#D9506A; --k-unresolved:#D69A3C;
-    --crucible:#F2C14E; --steel:#3A4149;
+    --bg:#ffffff; --panel:#f5f8fd; --panel2:#e9f0fa; --line:#d3ddf0;
+    --ink:#0a1f4d; --mut:#51617f; --dim:#8493ad;
+    --k-internal:#9a6a1e; --k-external:#3a6b87; --k-builtin:#6b7280;
+    --k-dynamic:#c23a54; --k-unresolved:#b0781f;
+    --crucible:#b0810f; --steel:#c2ccdc;
+    /* canvas-painted tokens (read into JS on theme change) */
+    --sea-0:#eef2fb; --sea-1:#ffffff; --lod-dot:#c2cddf;
+    --type-exp:#9a6a1e; --type-un:#c2ccdc; --hover-ring:#0a1f4d33;
+    --label-plate:#ffffffcc; --group-ring:#c2cddf; --moon-ring:#d3ddf0; --caller-edge:#51617f;
+    /* floating surfaces / overlays */
+    --glass:#f5f8fdee; --accent-line:#d8c48a; --hot:#dce6f5;
+    --btn-hover-border:#b6c4de; --drop-backdrop:rgba(255,255,255,.9); --shadow:rgba(3,30,91,.18);
+    --hud-fade-0:#ffffffee; --hud-fade-1:#ffffff00;
     --mono: ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
     --sans: system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){:root{
+    --bg:#02102e; --panel:#06214f; --panel2:#0a2a63; --line:#173a72;
+    --ink:#e9eef7; --mut:#9fb2d6; --dim:#647aa3;
+    --k-internal:#C8963E; --k-external:#5B8CA8; --k-builtin:#7488a8;
+    --k-dynamic:#E0637C; --k-unresolved:#D69A3C;
+    --crucible:#F2C14E; --steel:#2c4372;
+    --sea-0:#041634; --sea-1:#02102e; --lod-dot:#22345f;
+    --type-exp:#c9a24e; --type-un:#3a4d74; --hover-ring:#ffffff55;
+    --label-plate:#02102ecc; --group-ring:#2a4a80; --moon-ring:#173a72; --caller-edge:#9fb2d6;
+    --glass:#06214fee; --accent-line:var(--accent-line); --hot:#0e2f66;
+    --btn-hover-border:#2a4a80; --drop-backdrop:rgba(2,16,46,.94); --shadow:rgba(0,0,0,.5);
+    --hud-fade-0:#02102eee; --hud-fade-1:#02102e00;
+  }}
+  :root[data-theme="light"]{
+    --bg:#ffffff; --panel:#f5f8fd; --panel2:#e9f0fa; --line:#d3ddf0;
+    --ink:#0a1f4d; --mut:#51617f; --dim:#8493ad;
+    --k-internal:#9a6a1e; --k-external:#3a6b87; --k-builtin:#6b7280;
+    --k-dynamic:#c23a54; --k-unresolved:#b0781f;
+    --crucible:#b0810f; --steel:#c2ccdc;
+    --sea-0:#eef2fb; --sea-1:#ffffff; --lod-dot:#c2cddf;
+    --type-exp:#9a6a1e; --type-un:#c2ccdc; --hover-ring:#0a1f4d33;
+    --label-plate:#ffffffcc; --group-ring:#c2cddf; --moon-ring:#d3ddf0; --caller-edge:#51617f;
+    --glass:#f5f8fdee; --accent-line:#d8c48a; --hot:#dce6f5;
+    --btn-hover-border:#b6c4de; --drop-backdrop:rgba(255,255,255,.9); --shadow:rgba(3,30,91,.18);
+    --hud-fade-0:#ffffffee; --hud-fade-1:#ffffff00;
+  }
+  :root[data-theme="dark"]{
+    --bg:#02102e; --panel:#06214f; --panel2:#0a2a63; --line:#173a72;
+    --ink:#e9eef7; --mut:#9fb2d6; --dim:#647aa3;
+    --k-internal:#C8963E; --k-external:#5B8CA8; --k-builtin:#7488a8;
+    --k-dynamic:#E0637C; --k-unresolved:#D69A3C;
+    --crucible:#F2C14E; --steel:#2c4372;
+    --sea-0:#041634; --sea-1:#02102e; --lod-dot:#22345f;
+    --type-exp:#c9a24e; --type-un:#3a4d74; --hover-ring:#ffffff55;
+    --label-plate:#02102ecc; --group-ring:#2a4a80; --moon-ring:#173a72; --caller-edge:#9fb2d6;
+    --glass:#06214fee; --accent-line:var(--accent-line); --hot:#0e2f66;
+    --btn-hover-border:#2a4a80; --drop-backdrop:rgba(2,16,46,.94); --shadow:rgba(0,0,0,.5);
+    --hud-fade-0:#02102eee; --hud-fade-1:#02102e00;
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;overflow:hidden}
@@ -18,7 +69,7 @@
   .mono{font-family:var(--mono)}
   button{font-family:var(--sans);color:var(--ink);background:var(--panel2);
     border:1px solid var(--line);border-radius:5px;padding:4px 10px;cursor:pointer;font-size:12px}
-  button:hover{border-color:#3a4550}
+  button:hover{border-color:var(--btn-hover-border)}
   button:focus-visible,input:focus{outline:2px solid var(--crucible);outline-offset:1px}
 
   #world{position:fixed;inset:0;display:block;cursor:grab}
@@ -26,19 +77,19 @@
 
   /* top HUD */
   .hud-top{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;gap:12px;
-    padding:8px 14px;background:linear-gradient(#14171Aee,#14171A00);pointer-events:none;z-index:10}
+    padding:8px 14px;background:linear-gradient(var(--hud-fade-0),var(--hud-fade-1));pointer-events:none;z-index:10}
   .hud-top>*{pointer-events:auto}
   .brand{font-family:var(--mono);font-weight:700;letter-spacing:.14em;font-size:13px;white-space:nowrap}
   .brand .x{color:var(--k-internal)}
   .brand small{display:block;letter-spacing:.02em;font-weight:400;color:var(--dim);font-size:9.5px;margin-top:1px}
   .searchbox{position:relative;width:min(360px,40vw)}
-  .searchbox input{width:100%;font-family:var(--mono);background:#1A1E23dd;color:var(--ink);
+  .searchbox input{width:100%;font-family:var(--mono);background:var(--glass);color:var(--ink);
     border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:12.5px}
-  .matches{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1A1E23f5;
+  .matches{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--panel);
     border:1px solid var(--line);border-radius:7px;overflow:hidden;display:none;max-height:320px;overflow-y:auto}
   .matches.on{display:block}
   .match{display:flex;gap:8px;align-items:center;padding:6px 10px;cursor:pointer;font-family:var(--mono);font-size:12px}
-  .match:hover,.match.hot{background:#252b32}
+  .match:hover,.match.hot{background:var(--hot)}
   .match .p{color:var(--dim);font-size:10.5px;margin-left:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:45%}
   .match .k{color:var(--dim);font-size:10px}
   .match .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
@@ -50,10 +101,10 @@
 
   /* breadcrumb / controls */
   .hud-nav{position:fixed;top:52px;left:14px;display:flex;gap:6px;z-index:10;flex-wrap:wrap;max-width:60vw}
-  .crumb{font-family:var(--mono);font-size:11px;background:#1A1E23cc;border:1px solid var(--line);
+  .crumb{font-family:var(--mono);font-size:11px;background:var(--glass);border:1px solid var(--line);
     border-radius:5px;padding:3px 9px;cursor:pointer;color:var(--mut)}
-  .crumb:hover{color:var(--ink);border-color:#3a4550}
-  .crumb.here{color:var(--crucible);border-color:#5a4a1e;cursor:default}
+  .crumb:hover{color:var(--ink);border-color:var(--btn-hover-border)}
+  .crumb.here{color:var(--crucible);border-color:var(--accent-line);cursor:default}
 
   /* left dock: package index (top) + detail card (bottom), pinned to the left
      and stacked. Each panel expands to width or collapses to a vertical tab on
@@ -63,8 +114,8 @@
     display:flex;flex-direction:column;gap:8px;align-items:flex-start;
     pointer-events:none;max-width:calc(100vw - 24px)}
   #leftdock>*{pointer-events:auto}
-  .dockpanel{background:#1A1E23f2;border:1px solid var(--line);border-radius:10px;
-    display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 30px #0008}
+  .dockpanel{background:var(--glass);border:1px solid var(--line);border-radius:10px;
+    display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 30px var(--shadow)}
   .dp-tab{display:none;writing-mode:vertical-rl;text-orientation:mixed;cursor:pointer;
     padding:14px 7px;font-family:var(--mono);font-size:11px;letter-spacing:.14em;
     text-transform:uppercase;color:var(--crucible);white-space:nowrap;user-select:none}
@@ -84,9 +135,9 @@
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;cursor:pointer}
   .card .title:hover{text-decoration:underline}
   .compass{position:fixed;z-index:15;display:none;transform:translate(-50%,-50%);
-    font-family:var(--mono);font-size:11px;color:var(--crucible);background:#1A1E23ee;
-    border:1px solid #5a4a1e;border-radius:999px;padding:7px 14px;cursor:pointer;
-    box-shadow:0 4px 18px #000a;white-space:nowrap}
+    font-family:var(--mono);font-size:11px;color:var(--crucible);background:var(--glass);
+    border:1px solid var(--accent-line);border-radius:999px;padding:7px 14px;cursor:pointer;
+    box-shadow:0 4px 18px var(--shadow);white-space:nowrap}
   .compass:hover{border-color:var(--crucible)}
   .compass .arr{display:inline-block;margin-right:6px;transition:transform .15s linear}
   .card .body{padding:8px 12px 12px;overflow-y:auto;flex:1 1 auto;min-height:0}
@@ -95,8 +146,8 @@
   .sig .kw{color:var(--k-dynamic)} .sig .ty{color:var(--k-external)} .sig .nm{color:var(--crucible);font-weight:700}
   .chips{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 2px}
   .chip{font-family:var(--mono);font-size:10.5px;padding:1px 7px;border-radius:9px;border:1px solid var(--line);color:var(--mut)}
-  .chip.ep{color:var(--crucible);border-color:#5a4a1e}
-  .chip.exp{color:var(--k-internal);border-color:#5a4620}
+  .chip.ep{color:var(--crucible);border-color:var(--accent-line)}
+  .chip.exp{color:var(--k-internal);border-color:var(--accent-line)}
   .doc{color:var(--mut);line-height:1.5;margin:8px 0 2px;white-space:pre-wrap;font-size:12px;max-height:110px;overflow-y:auto}
   h4{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
     color:var(--dim);margin:12px 0 6px;border-top:1px solid var(--line);padding-top:9px}
@@ -104,7 +155,7 @@
   .call{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11.5px;
     padding:4px 8px;border-radius:5px;background:var(--panel2);border:1px solid var(--line);text-align:left;width:100%;cursor:default}
   .call.travel{cursor:pointer}
-  .call.travel:hover{border-color:var(--k-internal);background:#252b32}
+  .call.travel:hover{border-color:var(--k-internal);background:var(--hot)}
   .call .kbadge{font-size:8.5px;font-weight:700;letter-spacing:.05em;padding:1px 5px;border-radius:3px;
     text-transform:uppercase;flex:0 0 auto;width:68px;text-align:center}
   .call .tgt{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -116,7 +167,7 @@
 
   /* legend + hints */
   .hud-br{position:fixed;right:14px;bottom:14px;z-index:10;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
-  .legend{background:#1A1E23cc;border:1px solid var(--line);border-radius:8px;padding:8px 11px;
+  .legend{background:var(--glass);border:1px solid var(--line);border-radius:8px;padding:8px 11px;
     font-family:var(--mono);font-size:10px;color:var(--mut);display:grid;grid-template-columns:auto auto;gap:3px 14px}
   .legend span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
   .legend b{width:9px;height:9px;border-radius:50%;display:inline-block}
@@ -154,25 +205,32 @@
 
   /* tooltip */
   .tip{position:fixed;pointer-events:none;z-index:20;font-family:var(--mono);font-size:11px;
-    background:#20252Bf0;border:1px solid var(--line);border-radius:5px;padding:4px 8px;display:none;white-space:nowrap}
+    background:var(--glass);border:1px solid var(--line);border-radius:5px;padding:4px 8px;display:none;white-space:nowrap}
   .tip small{color:var(--dim)}
 
   .toast{position:fixed;top:52px;left:50%;transform:translateX(-50%);z-index:30;font-family:var(--mono);
-    font-size:11.5px;background:#20252Bf0;border:1px solid #5a4a1e;color:var(--crucible);
+    font-size:11.5px;background:var(--glass);border:1px solid var(--accent-line);color:var(--crucible);
     border-radius:6px;padding:6px 14px;display:none}
   .status{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:40;font-family:var(--mono);
-    font-size:13px;background:#20252Bf0;border:1px solid #5a4a1e;color:var(--crucible);
+    font-size:13px;background:var(--glass);border:1px solid var(--accent-line);color:var(--crucible);
     border-radius:8px;padding:12px 20px;display:none}
   .status .spin{display:inline-block;width:11px;height:11px;margin-right:8px;vertical-align:-1px;
     border:2px solid var(--crucible);border-right-color:transparent;border-radius:50%;animation:axspin .8s linear infinite}
   @keyframes axspin{to{transform:rotate(360deg)}}
 
-  .drop{position:fixed;inset:0;background:rgba(10,12,14,.94);display:none;align-items:center;justify-content:center;z-index:50}
+  .drop{position:fixed;inset:0;background:var(--drop-backdrop);display:none;align-items:center;justify-content:center;z-index:50}
   .drop.on{display:flex}
   .drop .box{border:2px dashed var(--k-internal);border-radius:12px;padding:36px 54px;text-align:center;
     font-family:var(--mono);background:var(--panel)}
-  ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:#2a3138;border-radius:4px}
+  ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
 </style>
+<script>
+// Set the theme before first paint (no flash). Follows a saved choice, else the
+// OS preference. The main script re-applies this and recolors the canvas.
+(function(){try{var t=localStorage.getItem("axtheme");
+  if(t!=="dark"&&t!=="light")t=(typeof matchMedia==="function"&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light";
+  document.documentElement.setAttribute("data-theme",t);}catch(e){}})();
+</script>
 
 <script id="seed" type="text/plain">/*SEED*/</script>
 <script id="live">/*LIVE*/</script>
@@ -189,6 +247,7 @@
   <button id="startbtn" title="Fly to the program entrypoint">▸ Entrypoint</button>
   <button id="worldbtn" title="Zoom out to see everything (Esc)">◈ World</button>
   <button id="treebtn" title="Plain package & symbol index (i)">☰ Index</button>
+  <button id="themebtn" title="Toggle light / dark theme">◐ Theme</button>
   <div class="spacer"></div>
   <div class="assayed"><span id="assayedtxt"><b>0</b> / 0 symbols assayed</span>
     <div class="bar"><i id="assayedbar"></i></div></div>
@@ -216,10 +275,10 @@
 
 <div class="hud-br">
   <div class="legend">
-    <span><b style="background:#C8963E"></b>exported</span><span><i style="background:#C8963E"></i>internal call</span>
-    <span><b style="background:#3A4149;border:1px solid #5A636B"></b>unexported</span><span><i style="background:#D9506A"></i>dynamic dispatch</span>
-    <span><b style="background:#F2C14E"></b>entrypoint</span><span><i style="background:#5B8CA8"></i>external floor</span>
-    <span><b style="background:#8B949E"></b>type (planet)</span><span><i style="background:#5A636B"></i>builtin floor</span>
+    <span><b style="background:var(--k-internal)"></b>exported</span><span><i style="background:var(--k-internal)"></i>internal call</span>
+    <span><b style="background:var(--steel);border:1px solid var(--k-builtin)"></b>unexported</span><span><i style="background:var(--k-dynamic)"></i>dynamic dispatch</span>
+    <span><b style="background:var(--crucible)"></b>entrypoint</span><span><i style="background:var(--k-external)"></i>external floor</span>
+    <span><b style="background:var(--mut)"></b>type (planet)</span><span><i style="background:var(--k-builtin)"></i>builtin floor</span>
   </div>
   <div class="hint">click island → land · click <b>island name</b> → contents<br>
     click symbol → assay · gold rows → <b>travel the edge</b><br>
@@ -235,8 +294,49 @@
 
 <script>
 "use strict";
-const KHEX={internal:"#C8963E",external:"#5B8CA8",builtin:"#5A636B",dynamic:"#D9506A",unresolved:"#D69A3C"};
-const CRUCIBLE="#F2C14E", STEEL="#3A4149", INK="#E7EAEC", MUT="#8B949E", DIM="#5A636B", LINE="#2A3138";
+// The canvas is painted from JS and cannot read CSS vars per-frame, so the
+// palette is mirrored here as two hex sets and swapped on theme change (see
+// setPalette). These identifiers stay live -- the draw code reads whichever set
+// is active. The values track the CSS tokens in :root.
+const PALS={
+  dark:{k:{internal:"#C8963E",external:"#5B8CA8",builtin:"#7488a8",dynamic:"#E0637C",unresolved:"#D69A3C"},
+    crucible:"#F2C14E",steel:"#2c4372",ink:"#e9eef7",mut:"#9fb2d6",dim:"#647aa3",line:"#173a72",
+    islandFill:"#06214f",sea0:"#041634",sea1:"#02102e",lod:"#22345f",typeExp:"#c9a24e",typeUn:"#3a4d74",
+    typeOutline:"#9fb2d6",unexpOutline:"#647aa3",hover:"#ffffff55",plate:"#02102ecc",group:"#2a4a80",
+    moon:"#173a72",caller:"#9fb2d6"},
+  light:{k:{internal:"#9a6a1e",external:"#3a6b87",builtin:"#6b7280",dynamic:"#c23a54",unresolved:"#b0781f"},
+    crucible:"#b0810f",steel:"#c2ccdc",ink:"#0a1f4d",mut:"#51617f",dim:"#8493ad",line:"#d3ddf0",
+    islandFill:"#f5f8fd",sea0:"#eef2fb",sea1:"#ffffff",lod:"#c2cddf",typeExp:"#9a6a1e",typeUn:"#c2ccdc",
+    typeOutline:"#51617f",unexpOutline:"#8493ad",hover:"#0a1f4d33",plate:"#ffffffcc",group:"#c2cddf",
+    moon:"#d3ddf0",caller:"#51617f"}};
+let KHEX,CRUCIBLE,STEEL,INK,MUT,DIM,LINE;
+let ISLAND_FILL,SEA0,SEA1,LOD,TYPE_EXP,TYPE_UN,TYPE_OUT,UNEXP_OUT,HOVER,PLATE,GROUP,MOON,CALLER;
+function setPalette(dark){
+  const p=dark?PALS.dark:PALS.light;
+  KHEX=p.k;CRUCIBLE=p.crucible;STEEL=p.steel;INK=p.ink;MUT=p.mut;DIM=p.dim;LINE=p.line;
+  ISLAND_FILL=p.islandFill;SEA0=p.sea0;SEA1=p.sea1;LOD=p.lod;TYPE_EXP=p.typeExp;TYPE_UN=p.typeUn;
+  TYPE_OUT=p.typeOutline;UNEXP_OUT=p.unexpOutline;HOVER=p.hover;PLATE=p.plate;GROUP=p.group;MOON=p.moon;CALLER=p.caller;
+}
+setPalette(true); // provisional; applyTheme() below sets the real theme at boot
+
+// --- theme (shared goforge dark/light) ---------------------------------------
+const THEME_KEY="axtheme";
+function themeSaved(){try{const t=localStorage.getItem(THEME_KEY);return t==="dark"||t==="light"?t:null}catch(e){return null}}
+function curTheme(){return themeSaved()||((typeof matchMedia==="function"&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light")}
+function applyTheme(t){
+  document.documentElement.setAttribute("data-theme",t);
+  setPalette(t==="dark");
+  const b=document.querySelector("#themebtn");if(b)b.textContent=t==="dark"?"☀ Light":"☾ Dark";
+  if(typeof requestAnimationFrame==="function")requestAnimationFrame(draw); // recolor the canvas
+}
+function toggleTheme(){
+  const t=curTheme()==="dark"?"light":"dark";
+  try{localStorage.setItem(THEME_KEY,t)}catch(e){}
+  applyTheme(t);
+}
+if(typeof matchMedia==="function"){const mq=matchMedia("(prefers-color-scheme: dark)");
+  if(mq&&mq.addEventListener)mq.addEventListener("change",()=>{if(!themeSaved())applyTheme(curTheme())});}
+{const tb=document.querySelector("#themebtn");if(tb)tb.onclick=toggleTheme;}
 const $=s=>document.querySelector(s);
 const RM = (typeof matchMedia==="function") && matchMedia("(prefers-reduced-motion: reduce)").matches;
 const esc=x=>(x||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -707,7 +807,7 @@ function fmtSig(s){
   if(s.type_kind)return `<span class="kw">${esc(s.type_kind)}</span> <span class="nm">${esc(s.name)}</span>${s.underlying?' = <span class="ty">'+esc(s.underlying)+'</span>':""}`;
   return `<span class="nm">${esc(s.name)}</span>`}
 function symRow(ref,s){
-  const col=s.is_entrypoint?CRUCIBLE:(s.visibility==="exported"?"#C8963E":"#5A636B");
+  const col=s.is_entrypoint?CRUCIBLE:(s.visibility==="exported"?KHEX.internal:DIM);
   return `<button class="call travel" data-ref="${esc(ref)}">
     <span style="width:8px;height:8px;border-radius:50%;background:${col};flex:0 0 auto"></span>
     <span class="tgt" style="${s.visibility!=="exported"?"color:var(--mut)":""}">${esc(s.id)}</span>
@@ -857,7 +957,7 @@ function draw(now){
   ctx.clearRect(0,0,VW,VH);
   // sea
   const grad=ctx.createRadialGradient(VW/2,VH*0.42,60,VW/2,VH*0.42,Math.max(VW,VH)*0.75);
-  grad.addColorStop(0,"#181C21");grad.addColorStop(1,"#121518");
+  grad.addColorStop(0,SEA0);grad.addColorStop(1,SEA1);
   ctx.fillStyle=grad;ctx.fillRect(0,0,VW,VH);
   const k=G.cam.k;
   // inter-island edges (architecture always visible)
@@ -890,10 +990,10 @@ function draw(now){
     const C=W2S(isl.x,isl.y);const sr=isl.r*k;
     if(C.x+sr<-60||C.x-sr>VW+60||C.y+sr<-60||C.y-sr>VH+60)continue;
     // disc
-    ctx.fillStyle="#1A1E23";ctx.strokeStyle=LINE;ctx.lineWidth=1;
+    ctx.fillStyle=ISLAND_FILL;ctx.strokeStyle=LINE;ctx.lineWidth=1;
     ctx.beginPath();ctx.arc(C.x,C.y,sr,0,Math.PI*2);ctx.fill();ctx.stroke();
     // a group (folder of packages) reads as a dashed containing ring
-    if(isl.group){ctx.strokeStyle="#3a4550";ctx.lineWidth=1;ctx.setLineDash([5,4]);
+    if(isl.group){ctx.strokeStyle=GROUP;ctx.lineWidth=1;ctx.setLineDash([5,4]);
       ctx.beginPath();ctx.arc(C.x,C.y,sr+3,0,Math.PI*2);ctx.stroke();ctx.setLineDash([])}
     // assay ring
     if(isl.compTot>0&&sr>18){
@@ -914,7 +1014,7 @@ function draw(now){
         const P=W2S(pl.ax,pl.ay);const pr=Math.max(1.4,pl.r*k);
         if(P.x<-30||P.x>VW+30||P.y<-30||P.y>VH+30)continue;
         // moon ring guide
-        if(pl.moons.length&&sr>140){ctx.strokeStyle="#2A3138";ctx.lineWidth=0.7;
+        if(pl.moons.length&&sr>140){ctx.strokeStyle=MOON;ctx.lineWidth=0.7;
           ctx.beginPath();ctx.arc(P.x,P.y,pl.moonRing*k,0,Math.PI*2);ctx.stroke()}
         drawSym(pl,P,pr);
         if(pl.moons.length&&sr>140)for(const m of pl.moons){
@@ -924,7 +1024,7 @@ function draw(now){
           label(pl.sym.name,P.x,P.y+((pl.moons.length?pl.moonRing*k:pr))+11,
             pl.sym.visibility==="exported"?INK:MUT,10.5)}
     } else if(sr>26){ // dots only
-      ctx.fillStyle="#2f363e";
+      ctx.fillStyle=LOD;
       for(const pl of isl.planets){const P=W2S(pl.ax,pl.ay);
         ctx.beginPath();ctx.arc(P.x,P.y,1.3,0,Math.PI*2);ctx.fill()}}
     // island label (clickable → package card)
@@ -948,7 +1048,7 @@ function draw(now){
         edgeLine(S,T,KHEX[c.kind],true,1.2,false)}}
     for(const c of (D.callersOf.get(G.selected)||[])){
       if(W.posOf.has(c.from)){const f=W.posOf.get(c.from);const F=W2S(f.x,f.y);
-        edgeLine(F,S,"#8B949E",true,1,true)}}
+        edgeLine(F,S,CALLER,true,1,true)}}
     // selection ring
     const rr=Math.max(7,(src.node.r||5)*k+5);
     ctx.strokeStyle=CRUCIBLE;ctx.lineWidth=2;
@@ -957,19 +1057,19 @@ function draw(now){
   // hover ring
   if(G.hover&&G.hover.ref&&W.posOf.has(G.hover.ref)){
     const h=W.posOf.get(G.hover.ref);const H=W2S(h.x,h.y);
-    ctx.strokeStyle="#ffffff55";ctx.lineWidth=1.4;
+    ctx.strokeStyle=HOVER;ctx.lineWidth=1.4;
     ctx.beginPath();ctx.arc(H.x,H.y,Math.max(6,(h.node.r||5)*k+4),0,Math.PI*2);ctx.stroke()}
   requestAnimationFrame(draw);
 }
 function drawSym(n,P,pr){
   const s=n.sym;const visited=G.visited.has(n.ref);
-  let fill=s.visibility==="exported"?"#C8963E":"#3A4149";
+  let fill=s.visibility==="exported"?KHEX.internal:STEEL;
   if(s.is_entrypoint)fill=CRUCIBLE;
-  if(s.kind==="type")fill=s.visibility==="exported"?"#b98f4d":"#454d56";
+  if(s.kind==="type")fill=s.visibility==="exported"?TYPE_EXP:TYPE_UN;
   ctx.fillStyle=fill;ctx.beginPath();ctx.arc(P.x,P.y,pr,0,Math.PI*2);ctx.fill();
-  if(s.kind==="type"){ctx.strokeStyle="#8B949E";ctx.lineWidth=1;
+  if(s.kind==="type"){ctx.strokeStyle=TYPE_OUT;ctx.lineWidth=1;
     ctx.beginPath();ctx.arc(P.x,P.y,pr,0,Math.PI*2);ctx.stroke()}
-  if(s.visibility!=="exported"&&s.kind!=="type"){ctx.strokeStyle="#5A636B";ctx.lineWidth=0.8;
+  if(s.visibility!=="exported"&&s.kind!=="type"){ctx.strokeStyle=UNEXP_OUT;ctx.lineWidth=0.8;
     ctx.beginPath();ctx.arc(P.x,P.y,pr,0,Math.PI*2);ctx.stroke()}
   if(visited&&pr>2.4){ctx.strokeStyle=CRUCIBLE;ctx.lineWidth=1.1;ctx.globalAlpha=0.85;
     ctx.beginPath();ctx.arc(P.x,P.y,pr+2.2,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1}
@@ -989,7 +1089,7 @@ function edgeLine(A,B,color,dashed,w,arrow){
 function label(text,x,y,color,size,weight){
   ctx.font=`${weight||400} ${size}px ui-monospace,Menlo,monospace`;
   ctx.textAlign="center";ctx.textBaseline="middle";
-  ctx.fillStyle="#14171Acc";
+  ctx.fillStyle=PLATE;
   const w=ctx.measureText(text).width;
   ctx.fillRect(x-w/2-3,y-size*0.7,w+6,size*1.4);
   ctx.fillStyle=color;ctx.fillText(text,x,y);return w}
@@ -1130,7 +1230,7 @@ function doSearch(q){
       ${esc(m.name)} <span class="k">package</span><span class="p">${esc(m.pkg.split("/").slice(-2).join("/"))}</span></div>`;
     const s=m.r?m.r.sym:{name:m.name,kind:m.kind,visibility:"",is_entrypoint:false};
     const pkgId=m.r?m.r.pkgId:m.pkgId;
-    const col=s.is_entrypoint?CRUCIBLE:(s.visibility==="exported"?"#C8963E":"#5A636B");
+    const col=s.is_entrypoint?CRUCIBLE:(s.visibility==="exported"?KHEX.internal:DIM);
     return `<div class="match" data-i="${i}"><span class="dot" style="background:${col}"></span>
       ${esc(s.name)} <span class="k">${s.kind}</span><span class="p">${esc(pkgId.split("/").slice(-2).join("/"))}</span></div>`}).join("");
   matchesEl.classList.toggle("on",curMatches.length>0);
@@ -1204,7 +1304,7 @@ function fillTreeSyms(container,isl){
   for(const s of syms){const ref=isl.id+"#"+s.id;
     const d=document.createElement("div");
     d.className="tsym"+(s.visibility!=="exported"?" un":"")+(G.visited.has(ref)?" visited":"");
-    const col=s.is_entrypoint?CRUCIBLE:(s.visibility==="exported"?"#C8963E":"#5A636B");
+    const col=s.is_entrypoint?CRUCIBLE:(s.visibility==="exported"?KHEX.internal:DIM);
     d.innerHTML=`<span class="dot" style="background:${col}"></span>
       <span class="kn" title="${esc(s.id)}">${esc(s.id)}</span><span class="kind">${s.kind}</span>`;
     d.onclick=()=>travel(ref);
@@ -1232,6 +1332,7 @@ window.__app={G,W,D,select,selectPkg,travel,flyToRef,toggleTree,doSearch:q=>{doS
   LOAD,idleTick,releaseEvicted,
   get NAV(){return NAV},get MODE(){return DATA_MODE}};
 (function boot(){
+  applyTheme(curTheme()); // sync the canvas palette + button to the active theme
   const seed=$("#seed").textContent.trim();
   if(seed&&seed.length>20){
     try{const json=seed.charAt(0)==="{"?seed:decodeSeed(seed);
