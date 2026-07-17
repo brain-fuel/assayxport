@@ -1,0 +1,79 @@
+package typescript
+
+import (
+	"io/fs"
+	"path/filepath"
+	"sort"
+	"strings"
+)
+
+// tsFile is one discovered source file: its absolute path (to read) and its
+// slash-separated path relative to the scan root (the manifest identity, so ids
+// never embed host paths above the root).
+type tsFile struct {
+	Abs string
+	Rel string
+}
+
+// skipDirs are directories that never hold first-party source worth assaying.
+var skipDirs = map[string]bool{
+	"node_modules": true, "dist": true, "build": true, "out": true,
+	"coverage": true, ".next": true, ".nuxt": true, "vendor": true,
+}
+
+// lang maps a file to the grammar it should be parsed with, and reports whether
+// the file is TypeScript (types expected) -- a plain .js/.jsx file is not, which
+// the flagger uses to mark an untyped module.
+func langFor(name string) (grammar int, isTS bool, ok bool) {
+	switch {
+	case strings.HasSuffix(name, ".d.ts"):
+		return 0, false, false // ambient declarations: no bodies to assay
+	case strings.HasSuffix(name, ".tsx"):
+		return grammarTSX, true, true
+	case strings.HasSuffix(name, ".ts") || strings.HasSuffix(name, ".mts") || strings.HasSuffix(name, ".cts"):
+		return grammarTS, true, true
+	case strings.HasSuffix(name, ".jsx") || strings.HasSuffix(name, ".js") ||
+		strings.HasSuffix(name, ".mjs") || strings.HasSuffix(name, ".cjs"):
+		return grammarJS, false, true
+	}
+	return 0, false, false
+}
+
+// discover walks root for TypeScript/JavaScript source, skipping dependency and
+// build directories, dot-directories, and .d.ts ambient declarations. The result
+// is sorted by relative path for deterministic output.
+func discover(root string) ([]tsFile, error) {
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+	var out []tsFile
+	err = filepath.WalkDir(absRoot, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if path != absRoot {
+				base := d.Name()
+				if strings.HasPrefix(base, ".") || skipDirs[base] {
+					return filepath.SkipDir
+				}
+			}
+			return nil
+		}
+		if _, _, ok := langFor(d.Name()); !ok {
+			return nil
+		}
+		rel, err := filepath.Rel(absRoot, path)
+		if err != nil {
+			return err
+		}
+		out = append(out, tsFile{Abs: path, Rel: filepath.ToSlash(rel)})
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Rel < out[j].Rel })
+	return out, nil
+}

@@ -13,6 +13,7 @@
     --k-internal:#9a6a1e; --k-external:#3a6b87; --k-builtin:#6b7280;
     --k-dynamic:#c23a54; --k-unresolved:#b0781f;
     --crucible:#b0810f; --steel:#c2ccdc;
+    --warn:#b5641a; --warn-bg:#b5641a18; --warn-line:#b5641a55;
     /* canvas-painted tokens (read into JS on theme change) */
     --sea-0:#eef2fb; --sea-1:#ffffff; --lod-dot:#c2cddf;
     --type-exp:#9a6a1e; --type-un:#c2ccdc; --hover-ring:#0a1f4d33;
@@ -30,6 +31,7 @@
     --k-internal:#C8963E; --k-external:#5B8CA8; --k-builtin:#7488a8;
     --k-dynamic:#E0637C; --k-unresolved:#D69A3C;
     --crucible:#F2C14E; --steel:#2c4372;
+    --warn:#F2994A; --warn-bg:#F2994A22; --warn-line:#F2994A66;
     --sea-0:#041634; --sea-1:#02102e; --lod-dot:#22345f;
     --type-exp:#c9a24e; --type-un:#3a4d74; --hover-ring:#ffffff55;
     --label-plate:#02102ecc; --group-ring:#2a4a80; --moon-ring:#173a72; --caller-edge:#9fb2d6;
@@ -43,6 +45,7 @@
     --k-internal:#9a6a1e; --k-external:#3a6b87; --k-builtin:#6b7280;
     --k-dynamic:#c23a54; --k-unresolved:#b0781f;
     --crucible:#b0810f; --steel:#c2ccdc;
+    --warn:#b5641a; --warn-bg:#b5641a18; --warn-line:#b5641a55;
     --sea-0:#eef2fb; --sea-1:#ffffff; --lod-dot:#c2cddf;
     --type-exp:#9a6a1e; --type-un:#c2ccdc; --hover-ring:#0a1f4d33;
     --label-plate:#ffffffcc; --group-ring:#c2cddf; --moon-ring:#d3ddf0; --caller-edge:#51617f;
@@ -56,6 +59,7 @@
     --k-internal:#C8963E; --k-external:#5B8CA8; --k-builtin:#7488a8;
     --k-dynamic:#E0637C; --k-unresolved:#D69A3C;
     --crucible:#F2C14E; --steel:#2c4372;
+    --warn:#F2994A; --warn-bg:#F2994A22; --warn-line:#F2994A66;
     --sea-0:#041634; --sea-1:#02102e; --lod-dot:#22345f;
     --type-exp:#c9a24e; --type-un:#3a4d74; --hover-ring:#ffffff55;
     --label-plate:#02102ecc; --group-ring:#2a4a80; --moon-ring:#173a72; --caller-edge:#9fb2d6;
@@ -148,6 +152,15 @@
   .chip{font-family:var(--mono);font-size:10.5px;padding:1px 7px;border-radius:9px;border:1px solid var(--line);color:var(--mut)}
   .chip.ep{color:var(--crucible);border-color:var(--accent-line)}
   .chip.exp{color:var(--k-internal);border-color:var(--accent-line)}
+  /* "works but doesn't match up": type-honesty / off-standard flags. */
+  .flags{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 2px}
+  .flag{font-family:var(--mono);font-size:10.5px;padding:1px 7px 1px 6px;border-radius:9px;
+    color:var(--warn);background:var(--warn-bg);border:1px solid var(--warn-line);
+    display:inline-flex;align-items:center;gap:4px;cursor:help}
+  .flag::before{content:"\25C9";font-size:8px;opacity:.85}
+  h4.warn{color:var(--warn);border-top-color:var(--warn-line)}
+  .warnpip{width:7px;height:7px;border-radius:50%;background:var(--warn);flex:0 0 auto;
+    box-shadow:0 0 0 2px var(--warn-bg)}
   .doc{color:var(--mut);line-height:1.5;margin:8px 0 2px;white-space:pre-wrap;font-size:12px;max-height:110px;overflow-y:auto}
   h4{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
     color:var(--dim);margin:12px 0 6px;border-top:1px solid var(--line);padding-top:9px}
@@ -317,6 +330,25 @@ function setPalette(dark){
   TYPE_OUT=p.typeOutline;UNEXP_OUT=p.unexpOutline;HOVER=p.hover;PLATE=p.plate;GROUP=p.group;MOON=p.moon;CALLER=p.caller;
 }
 setPalette(true); // provisional; applyTheme() below sets the real theme at boot
+
+// Concern flags (schema.Symbol.concerns): constructs that compile/run but forfeit
+// their type contract or drift off the current standard. Each maps to a plain
+// explanation surfaced as a tooltip in the detail card.
+const CONCERN_DOC={
+  "untyped":"plain JavaScript — no static type contract to check against",
+  "untyped-param":"a parameter has no type annotation (implicit any)",
+  "untyped-return":"the return type is inferred, not declared",
+  "untyped-export":"exported without a type annotation — its public shape is inferred",
+  "any":"uses the any type — opts out of type checking",
+  "as-any":"asserted to any — silences the checker for this value",
+  "as-unknown":"cast through unknown — a double assertion that bypasses the type system",
+  "type-assertion":"an as-cast overrides the inferred type without a runtime check",
+  "non-null-assertion":"the ! operator asserts non-null without proof",
+  "loose-equality":"== / != coerces types — prefer === / !==",
+  "var":"declared with var — function-scoped and hoisted; prefer const / let",
+  "ts-ignore":"a @ts-ignore / @ts-expect-error / @ts-nocheck suppresses errors here",
+};
+function concernDoc(c){return CONCERN_DOC[c]||"off-standard construct"}
 
 // --- theme (shared goforge dark/light) ---------------------------------------
 const THEME_KEY="axtheme";
@@ -833,6 +865,10 @@ function renderCard(){
   const cxLine=cx.method==="deferred"?"":
     cx.method==="recursive"?`<div class="cx" style="margin-top:6px">complexity <b>recursive</b> · bound withheld</div>`:
     `<div class="cx" style="margin-top:6px">time <b>${cx.time||"—"}</b> · space <b>${cx.space||"—"}</b></div>`;
+  const concerns=s.concerns||[];
+  const flagsBlock=concerns.length?`
+    <h4 class="warn">off-standard · ${concerns.length}</h4>
+    <div class="flags">${concerns.map(c=>`<span class="flag" title="${esc(concernDoc(c))}">${esc(c)}</span>`).join("")}</div>`:"";
   const calls=(s.calls||[]).slice().sort((a,b)=>b.count-a.count);
   const row=c=>{const linked=!!c.ref&&(D.symIndex.has(c.ref)||(DATA_MODE==="hier"&&pkgById.has(pkgOf(c.ref))));
     return `<button class="call ${linked?"travel":""}" ${linked?`data-ref="${esc(c.ref)}"`:""}>
@@ -851,6 +887,7 @@ function renderCard(){
     <div class="sig">${fmtSig(s)}</div>
     <div class="chips">${chips.join("")}</div>${cxLine}
     ${s.doc&&s.doc.raw?`<div class="doc">${esc(s.doc.raw)}</div>`:""}
+    ${flagsBlock}
     <h4>calls · ${calls.length}</h4>
     <div class="calls">${calls.length?calls.map(row).join(""):'<span class="cx" style="color:var(--dim)">leaf — calls nothing</span>'}</div>
     <h4>called by · ${callers.length}</h4>
@@ -1304,8 +1341,10 @@ function fillTreeSyms(container,isl){
     const d=document.createElement("div");
     d.className="tsym"+(s.visibility!=="exported"?" un":"")+(G.visited.has(ref)?" visited":"");
     const col=s.is_entrypoint?CRUCIBLE:(s.visibility==="exported"?KHEX.internal:DIM);
+    const nc=(s.concerns||[]).length;
+    const pip=nc?`<span class="warnpip" title="${nc} off-standard flag${nc>1?"s":""}: ${esc((s.concerns||[]).join(", "))}"></span>`:"";
     d.innerHTML=`<span class="dot" style="background:${col}"></span>
-      <span class="kn" title="${esc(s.id)}">${esc(s.id)}</span><span class="kind">${s.kind}</span>`;
+      <span class="kn" title="${esc(s.id)}">${esc(s.id)}</span>${pip}<span class="kind">${s.kind}</span>`;
     d.onclick=()=>travel(ref);
     treeRowByRef.set(ref,d);frag.appendChild(d)}
   container.appendChild(frag)}

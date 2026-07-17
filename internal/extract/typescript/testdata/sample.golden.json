@@ -1,0 +1,1120 @@
+{
+  "index": {
+    "schema_version": "2",
+    "tool": "assayxport",
+    "languages": [
+      "javascript",
+      "typescript"
+    ],
+    "root": ".",
+    "packages": [
+      {
+        "id": "core/geometry",
+        "language": "typescript",
+        "path": "core/geometry.ts",
+        "name": "geometry",
+        "doc": "",
+        "level": "module",
+        "symbol_count": 11,
+        "entrypoint_count": 0,
+        "shard": ".assayxport/core/geometry.ts.json"
+      },
+      {
+        "id": "index",
+        "language": "typescript",
+        "path": "index.ts",
+        "name": "index",
+        "doc": "",
+        "level": "module",
+        "symbol_count": 1,
+        "entrypoint_count": 0,
+        "shard": ".assayxport/index.ts.json"
+      },
+      {
+        "id": "legacy/loose",
+        "language": "typescript",
+        "path": "legacy/loose.ts",
+        "name": "loose",
+        "doc": "",
+        "level": "module",
+        "symbol_count": 6,
+        "entrypoint_count": 0,
+        "shard": ".assayxport/legacy/loose.ts.json"
+      },
+      {
+        "id": "legacy/util",
+        "language": "javascript",
+        "path": "legacy/util.js",
+        "name": "util",
+        "doc": "",
+        "level": "module",
+        "symbol_count": 3,
+        "entrypoint_count": 0,
+        "shard": ".assayxport/legacy/util.js.json"
+      },
+      {
+        "id": "web/app",
+        "language": "typescript",
+        "path": "web/app.tsx",
+        "name": "app",
+        "doc": "",
+        "level": "module",
+        "symbol_count": 5,
+        "entrypoint_count": 0,
+        "shard": ".assayxport/web/app.tsx.json"
+      }
+    ]
+  },
+  "shards": {
+    ".assayxport/core/geometry.ts.json": {
+      "schema_version": "2",
+      "package": {
+        "id": "core/geometry",
+        "language": "typescript",
+        "path": "core/geometry.ts",
+        "name": "geometry",
+        "doc": "",
+        "level": "module"
+      },
+      "symbols": [
+        {
+          "id": "Point",
+          "name": "Point",
+          "kind": "type",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "core/geometry.ts",
+            "line": 4,
+            "col": 8,
+            "end_line": 7
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "interface"
+        },
+        {
+          "id": "Shape",
+          "name": "Shape",
+          "kind": "type",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "core/geometry.ts",
+            "line": 10,
+            "col": 8,
+            "end_line": 10
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "alias",
+          "underlying": "Circle | Rect"
+        },
+        {
+          "id": "Circle",
+          "name": "Circle",
+          "kind": "type",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "core/geometry.ts",
+            "line": 12,
+            "col": 8,
+            "end_line": 16
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "interface"
+        },
+        {
+          "id": "Rect",
+          "name": "Rect",
+          "kind": "type",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "core/geometry.ts",
+            "line": 18,
+            "col": 8,
+            "end_line": 23
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "interface"
+        },
+        {
+          "id": "Unit",
+          "name": "Unit",
+          "kind": "type",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "core/geometry.ts",
+            "line": 25,
+            "col": 8,
+            "end_line": 28
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "enum"
+        },
+        {
+          "id": "distance",
+          "name": "distance",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "core/geometry.ts",
+            "line": 30,
+            "col": 8,
+            "end_line": 34
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "a",
+                "type": "Point"
+              },
+              {
+                "name": "b",
+                "type": "Point"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "number"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          },
+          "calls": [
+            {
+              "target": "Math.sqrt",
+              "kind": "builtin",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "id": "area",
+          "name": "area",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "core/geometry.ts",
+            "line": 36,
+            "col": 14,
+            "end_line": 43
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "s",
+                "type": "Shape"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "number"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          }
+        },
+        {
+          "id": "Path",
+          "name": "Path",
+          "kind": "class",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "core/geometry.ts",
+            "line": 45,
+            "col": 8,
+            "end_line": 60
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type_kind": "class"
+        },
+        {
+          "id": "Path.points",
+          "name": "points",
+          "kind": "property",
+          "visibility": "private",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "core/geometry.ts",
+            "line": 46,
+            "col": 3,
+            "end_line": 46
+          },
+          "owner": "Path",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "type": "Point[]"
+        },
+        {
+          "id": "Path.add",
+          "name": "add",
+          "kind": "method",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "core/geometry.ts",
+            "line": 48,
+            "col": 3,
+            "end_line": 51
+          },
+          "owner": "Path",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "p",
+                "type": "Point"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "this"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          },
+          "calls": [
+            {
+              "target": "this.points.push",
+              "kind": "unresolved",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "id": "Path.length",
+          "name": "length",
+          "kind": "method",
+          "visibility": "public",
+          "visibility_idiom": "access-modifier",
+          "location": {
+            "file": "core/geometry.ts",
+            "line": 53,
+            "col": 3,
+            "end_line": 59
+          },
+          "owner": "Path",
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(n)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": null,
+            "returns": [
+              {
+                "name": "",
+                "type": "number"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          },
+          "calls": [
+            {
+              "target": "distance",
+              "kind": "internal",
+              "ref": "core/geometry#distance",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    ".assayxport/index.ts.json": {
+      "schema_version": "2",
+      "package": {
+        "id": "index",
+        "language": "typescript",
+        "path": "index.ts",
+        "name": "index",
+        "doc": "",
+        "level": "module"
+      },
+      "symbols": [
+        {
+          "id": "main",
+          "name": "main",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "index.ts",
+            "line": 7,
+            "col": 8,
+            "end_line": 10
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": null,
+            "returns": [
+              {
+                "name": "",
+                "type": "void"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          },
+          "calls": [
+            {
+              "target": "./core/geometry:Path",
+              "kind": "external",
+              "count": 1
+            },
+            {
+              "target": "console.log",
+              "kind": "builtin",
+              "count": 1
+            },
+            {
+              "target": "p.length",
+              "kind": "unresolved",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    ".assayxport/legacy/loose.ts.json": {
+      "schema_version": "2",
+      "package": {
+        "id": "legacy/loose",
+        "language": "typescript",
+        "path": "legacy/loose.ts",
+        "name": "loose",
+        "doc": "",
+        "level": "module"
+      },
+      "symbols": [
+        {
+          "id": "midpoint",
+          "name": "midpoint",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "legacy/loose.ts",
+            "line": 6,
+            "col": 8,
+            "end_line": 8
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "a",
+                "type": ""
+              },
+              {
+                "name": "b",
+                "type": ""
+              }
+            ],
+            "returns": null,
+            "type_params": null,
+            "variadic": false
+          },
+          "concerns": [
+            "untyped-param",
+            "untyped-return"
+          ]
+        },
+        {
+          "id": "parse",
+          "name": "parse",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "legacy/loose.ts",
+            "line": 11,
+            "col": 8,
+            "end_line": 13
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "raw",
+                "type": "any"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "any"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          },
+          "concerns": [
+            "any"
+          ],
+          "calls": [
+            {
+              "target": "JSON.parse",
+              "kind": "builtin",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "id": "forcePoint",
+          "name": "forcePoint",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "legacy/loose.ts",
+            "line": 16,
+            "col": 8,
+            "end_line": 18
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "v",
+                "type": "unknown"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "Point"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          },
+          "concerns": [
+            "as-any"
+          ]
+        },
+        {
+          "id": "firstX",
+          "name": "firstX",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "legacy/loose.ts",
+            "line": 21,
+            "col": 8,
+            "end_line": 23
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "pts",
+                "type": "Point[]"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "number"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          },
+          "concerns": [
+            "non-null-assertion"
+          ]
+        },
+        {
+          "id": "bad",
+          "name": "bad",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "legacy/loose.ts",
+            "line": 26,
+            "col": 8,
+            "end_line": 29
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "p",
+                "type": "Point"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "number"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          },
+          "concerns": [
+            "ts-ignore"
+          ],
+          "calls": [
+            {
+              "target": "../core/geometry:distance",
+              "kind": "external",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "id": "reinterpret",
+          "name": "reinterpret",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "legacy/loose.ts",
+            "line": 32,
+            "col": 8,
+            "end_line": 34
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "n",
+                "type": "number"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "string"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          },
+          "concerns": [
+            "as-unknown"
+          ]
+        }
+      ]
+    },
+    ".assayxport/legacy/util.js.json": {
+      "schema_version": "2",
+      "package": {
+        "id": "legacy/util",
+        "language": "javascript",
+        "path": "legacy/util.js",
+        "name": "util",
+        "doc": "",
+        "level": "module"
+      },
+      "symbols": [
+        {
+          "id": "clamp",
+          "name": "clamp",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "legacy/util.js",
+            "line": 3,
+            "col": 8,
+            "end_line": 7
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "v",
+                "type": ""
+              },
+              {
+                "name": "lo",
+                "type": ""
+              },
+              {
+                "name": "hi",
+                "type": ""
+              }
+            ],
+            "returns": null,
+            "type_params": null,
+            "variadic": false
+          },
+          "concerns": [
+            "untyped"
+          ]
+        },
+        {
+          "id": "LEGACY_MODE",
+          "name": "LEGACY_MODE",
+          "kind": "const",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "legacy/util.js",
+            "line": 9,
+            "col": 12,
+            "end_line": 9
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "concerns": [
+            "var"
+          ]
+        },
+        {
+          "id": "equalsLoose",
+          "name": "equalsLoose",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "legacy/util.js",
+            "line": 11,
+            "col": 8,
+            "end_line": 13
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "a",
+                "type": ""
+              },
+              {
+                "name": "b",
+                "type": ""
+              }
+            ],
+            "returns": null,
+            "type_params": null,
+            "variadic": false
+          },
+          "concerns": [
+            "untyped",
+            "loose-equality"
+          ]
+        }
+      ]
+    },
+    ".assayxport/web/app.tsx.json": {
+      "schema_version": "2",
+      "package": {
+        "id": "web/app",
+        "language": "typescript",
+        "path": "web/app.tsx",
+        "name": "app",
+        "doc": "",
+        "level": "module"
+      },
+      "symbols": [
+        {
+          "id": "Props",
+          "name": "Props",
+          "kind": "type",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "web/app.tsx",
+            "line": 4,
+            "col": 8,
+            "end_line": 7
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "signature": {
+            "params": null,
+            "returns": null,
+            "type_params": [
+              {
+                "name": "T",
+                "constraint": ""
+              }
+            ],
+            "variadic": false
+          },
+          "type_kind": "interface"
+        },
+        {
+          "id": "loadShapes",
+          "name": "loadShapes",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "web/app.tsx",
+            "line": 9,
+            "col": 8,
+            "end_line": 12
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "url",
+                "type": "string"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "Promise<Shape[]>"
+              }
+            ],
+            "type_params": null,
+            "variadic": false,
+            "modifiers": [
+              "async"
+            ]
+          },
+          "concerns": [
+            "type-assertion"
+          ],
+          "calls": [
+            {
+              "target": "fetch",
+              "kind": "builtin",
+              "count": 1
+            },
+            {
+              "target": "res.json",
+              "kind": "unresolved",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "id": "totalArea",
+          "name": "totalArea",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "web/app.tsx",
+            "line": 14,
+            "col": 8,
+            "end_line": 16
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "shapes",
+                "type": "Shape[]"
+              }
+            ],
+            "returns": [
+              {
+                "name": "",
+                "type": "number"
+              }
+            ],
+            "type_params": null,
+            "variadic": false
+          },
+          "calls": [
+            {
+              "target": "../core/geometry:area",
+              "kind": "external",
+              "count": 1
+            },
+            {
+              "target": "shapes.reduce",
+              "kind": "unresolved",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "id": "Badge",
+          "name": "Badge",
+          "kind": "function",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "web/app.tsx",
+            "line": 18,
+            "col": 14,
+            "end_line": 20
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": "O(1)",
+            "space": "O(1)",
+            "method": "loop-nesting"
+          },
+          "signature": {
+            "params": [
+              {
+                "name": "props",
+                "type": "{ label: string }"
+              }
+            ],
+            "returns": null,
+            "type_params": null,
+            "variadic": false
+          },
+          "concerns": [
+            "untyped-return"
+          ]
+        },
+        {
+          "id": "registry",
+          "name": "registry",
+          "kind": "const",
+          "visibility": "exported",
+          "visibility_idiom": "export",
+          "location": {
+            "file": "web/app.tsx",
+            "line": 23,
+            "col": 14,
+            "end_line": 23
+          },
+          "doc": {
+            "raw": "",
+            "format": ""
+          },
+          "is_entrypoint": false,
+          "complexity": {
+            "time": null,
+            "space": null,
+            "method": "deferred"
+          },
+          "concerns": [
+            "untyped-export"
+          ]
+        }
+      ]
+    }
+  }
+}

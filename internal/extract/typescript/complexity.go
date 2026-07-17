@@ -1,0 +1,96 @@
+package typescript
+
+import (
+	"goforge.dev/assayxport/internal/complexity"
+	"goforge.dev/assayxport/internal/ts"
+)
+
+// tsSummary produces the language-agnostic complexity Summary for a callable:
+// loop-nesting depth, self-recursion, and allocations inside loops. Nested
+// functions/classes are skipped so their loops do not inflate this one.
+func tsSummary(n ts.Node, name string, src []byte) complexity.Summary {
+	var s complexity.Summary
+	body, ok := n.ChildByFieldName("body")
+	if !ok {
+		return s
+	}
+	var walk func(x ts.Node, depth int)
+	walk = func(x ts.Node, depth int) {
+		if x.IsNull() {
+			return
+		}
+		switch x.Type() {
+		case "function_declaration", "generator_function_declaration",
+			"arrow_function", "function_expression", "method_definition",
+			"class_declaration", "abstract_class_declaration":
+			return // a nested scope: its loops belong to it, not to us
+		case "for_statement", "for_in_statement", "while_statement", "do_statement":
+			depth++
+			if depth > s.MaxLoopDepth {
+				s.MaxLoopDepth = depth
+			}
+		case "call_expression":
+			if depth >= 1 && isAllocCall(x, src) {
+				s.AllocInLoop = true
+				if depth > s.AllocDepth {
+					s.AllocDepth = depth
+				}
+			}
+			if isSelfCall(x, name, src) {
+				s.Recursive = true
+			}
+		case "new_expression":
+			if depth >= 1 {
+				s.AllocInLoop = true
+				if depth > s.AllocDepth {
+					s.AllocDepth = depth
+				}
+			}
+		case "array", "object":
+			if depth >= 1 {
+				s.AllocInLoop = true
+				if depth > s.AllocDepth {
+					s.AllocDepth = depth
+				}
+			}
+		}
+		for i := 0; i < x.NamedChildCount(); i++ {
+			walk(x.NamedChild(i), depth)
+		}
+	}
+	walk(body, 0)
+	return s
+}
+
+// isAllocCall reports whether a call is a growing collection mutation (.push,
+// .set, .add, .concat, ...): allocation-shaped when it happens inside a loop.
+func isAllocCall(call ts.Node, src []byte) bool {
+	fn, ok := call.ChildByFieldName("function")
+	if !ok || fn.Type() != "member_expression" {
+		return false
+	}
+	switch fieldText(fn, "property", src) {
+	case "push", "unshift", "concat", "set", "add", "append", "splice":
+		return true
+	}
+	return false
+}
+
+// isSelfCall reports whether a call targets the enclosing symbol by name
+// (bare `name(...)` or `this.name(...)`) -- a recursion signal.
+func isSelfCall(call ts.Node, name string, src []byte) bool {
+	if name == "" {
+		return false
+	}
+	fn, ok := call.ChildByFieldName("function")
+	if !ok {
+		return false
+	}
+	switch fn.Type() {
+	case "identifier":
+		return fn.Content(src) == name
+	case "member_expression":
+		return fieldText(fn, "object", src) == "this" && fieldText(fn, "property", src) == name
+	}
+	return false
+}

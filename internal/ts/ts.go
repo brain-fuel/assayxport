@@ -23,6 +23,12 @@ const (
 	Python Language = iota
 	// Java selects the tree-sitter Java grammar.
 	Java
+	// TypeScript selects the tree-sitter TypeScript grammar (.ts/.mts/.cts).
+	TypeScript
+	// TSX selects the tree-sitter TSX grammar (TypeScript + JSX, .tsx).
+	TSX
+	// JavaScript selects the tree-sitter JavaScript grammar (handles JSX, .js/.jsx/.mjs/.cjs).
+	JavaScript
 )
 
 // pythonLang holds the lazily-initialized Python grammar. Loading the grammar
@@ -53,6 +59,33 @@ func java() *gts.Language {
 	return javaLang
 }
 
+// The TypeScript family: three related grammars, each decoded once. .ts uses the
+// plain TypeScript grammar; .tsx needs the TSX grammar (JSX changes parsing);
+// .js/.jsx use the JavaScript grammar (which also accepts JSX).
+var (
+	tsOnce  sync.Once
+	tsLang  *gts.Language
+	tsxOnce sync.Once
+	tsxLang *gts.Language
+	jsOnce  sync.Once
+	jsLang  *gts.Language
+)
+
+func typescript() *gts.Language {
+	tsOnce.Do(func() { tsLang = grammars.TypescriptLanguage() })
+	return tsLang
+}
+
+func tsx() *gts.Language {
+	tsxOnce.Do(func() { tsxLang = grammars.TsxLanguage() })
+	return tsxLang
+}
+
+func javascript() *gts.Language {
+	jsOnce.Do(func() { jsLang = grammars.JavascriptLanguage() })
+	return jsLang
+}
+
 // Tree is a parsed syntax tree. It keeps the source bytes and grammar alongside
 // the root node so nodes can slice text and resolve field names.
 type Tree struct {
@@ -78,6 +111,12 @@ func Parse(lang Language, src []byte) (*Tree, error) {
 		g = python()
 	case Java:
 		g = java()
+	case TypeScript:
+		g = typescript()
+	case TSX:
+		g = tsx()
+	case JavaScript:
+		g = javascript()
 	default:
 		return nil, fmt.Errorf("ts: unsupported language %d", int(lang))
 	}

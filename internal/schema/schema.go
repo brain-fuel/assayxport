@@ -97,6 +97,13 @@ type Symbol struct {
 	Decorators  []string `json:"decorators,omitempty"`
 	Annotations []string `json:"annotations,omitempty"`
 
+	// Concerns are things that "work" but don't match up: type-soundness escape
+	// hatches and off-standard constructs a symbol carries (e.g. "any",
+	// "as-any", "non-null-assertion", "ts-ignore", "untyped-param",
+	// "untyped-return", "loose-equality"). Surfaced by the explorer so a symbol
+	// that compiles/runs but forfeits its type contract reads at a glance.
+	Concerns []string `json:"concerns,omitempty"`
+
 	Calls []Call `json:"calls,omitempty"`
 }
 

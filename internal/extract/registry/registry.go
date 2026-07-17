@@ -5,18 +5,21 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"sync"
 	"sync/atomic"
 
 	"goforge.dev/assayxport/internal/extract"
 	"goforge.dev/assayxport/internal/extract/golang"
 	"goforge.dev/assayxport/internal/extract/java"
 	"goforge.dev/assayxport/internal/extract/python"
+	"goforge.dev/assayxport/internal/extract/typescript"
 	"goforge.dev/assayxport/internal/schema"
 )
 
-// All returns every registered extractor (go, java, python), in a stable order.
+// All returns every registered extractor (go, java, python, typescript), in a
+// stable order.
 func All() []extract.Extractor {
-	return []extract.Extractor{golang.New(), java.New(), python.New()}
+	return []extract.Extractor{golang.New(), java.New(), python.New(), typescript.New()}
 }
 
 // Select returns the extractors whose Language() is in langs; error if any
@@ -70,8 +73,11 @@ func Run(exts []extract.Extractor, root string) (pkgs []schema.Package, language
 			errs = append(errs, fmt.Errorf("%s: %w", e.Language(), extErr))
 			continue
 		}
-		if len(got) > 0 {
-			langSet[e.Language()] = true
+		// Fold in each produced package's own language, not just the extractor's
+		// nominal one: a single extractor may emit more than one (the TS extractor
+		// tags plain-JS files "javascript" and typed files "typescript").
+		for _, p := range got {
+			langSet[p.Language] = true
 		}
 		pkgs = append(pkgs, got...)
 	}
@@ -93,14 +99,20 @@ func Run(exts []extract.Extractor, root string) (pkgs []schema.Package, language
 // StreamExtractors, so it must synchronize itself.
 func RunStream(exts []extract.Extractor, root string, emit func(schema.Package) error) (languages []string, warnings []error, err error) {
 	langSet := map[string]bool{}
+	var langMu sync.Mutex
 	var errs []error
 	produced := false
 	for _, e := range exts {
 		// A StreamExtractor may call emit concurrently from a worker pool, so the
-		// produced-count is atomic.
+		// produced-count is atomic and the language-set write is mutex-guarded.
 		var got atomic.Int64
 		count := func(p schema.Package) error {
 			got.Add(1)
+			// Fold in the package's own language (an extractor may emit more than
+			// one -- e.g. TS tags plain-JS files "javascript").
+			langMu.Lock()
+			langSet[p.Language] = true
+			langMu.Unlock()
 			return emit(p)
 		}
 		var extErr error
@@ -120,7 +132,6 @@ func RunStream(exts []extract.Extractor, root string, emit func(schema.Package) 
 			continue
 		}
 		if got.Load() > 0 {
-			langSet[e.Language()] = true
 			produced = true
 		}
 	}
