@@ -21,6 +21,27 @@ import (
 	"goforge.dev/assayxport/internal/schema"
 )
 
+// version is the released version, set for prebuilt binaries via
+//
+//	go build -ldflags "-X main.version=vX.Y.Z"
+//
+// When empty (the usual `go install goforge.dev/assayxport/cmd/ax@vX.Y.Z` path),
+// resolvedVersion reads the tag back out of the embedded build info.
+var version = ""
+
+// resolvedVersion reports ax's version: the ldflags override if set, else the
+// module version stamped into the binary by `go install ...@vX.Y.Z`, else
+// "(devel)" for a plain `go build`/`go run` from a checkout.
+func resolvedVersion() string {
+	if version != "" {
+		return version
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+		return bi.Main.Version
+	}
+	return "(devel)"
+}
+
 // stringsFlag is a repeatable string flag that collects values into a slice.
 type stringsFlag []string
 
@@ -44,6 +65,7 @@ commands:
   assay   write assayxport.json, .assayxport/ shards, and assayxport.html
   serve   assay and serve the explorer over HTTP (watches by default)
   watch   re-run assay whenever source files change
+  version print the ax version (also: ax --version)
 
 run "ax <command> -h" for that command's flags.`)
 }
@@ -68,6 +90,9 @@ func run(args []string) error {
 		return runServeCmd(rest)
 	case "watch":
 		return runWatchCmd(rest)
+	case "version", "--version", "-v":
+		fmt.Println("ax", resolvedVersion())
+		return nil
 	case "-h", "--help", "help":
 		usage()
 		return nil
