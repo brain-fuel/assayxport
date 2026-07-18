@@ -125,6 +125,28 @@ func New(idx schema.Index, fetch Fetcher) *Engine {
 	return e
 }
 
+// Merge swaps in a grown index (the progressive assay publishes a skeleton --
+// the full package set, with unparsed packages at symbol_count 0 and shard ""
+// -- then fills counts and shard paths in place as packages parse). It rebuilds
+// the index maps and the navigation tree so levels reflect the new counts,
+// while PRESERVING all shard-derived state: the loaded flags, the symbol index,
+// the reverse-call map, and the loader's cache and scheduler. Those are keyed
+// by shard path or ref, and a shard path, once assigned to a package, never
+// changes -- so a shard already hydrated stays hydrated across a Merge, its
+// symbols still resolve, and no re-fetch is triggered.
+func (e *Engine) Merge(idx schema.Index) {
+	e.idx = idx
+	e.pkgByID = make(map[string]schema.PackageEntry, len(idx.Packages))
+	e.pkgByShard = make(map[string]string, len(idx.Packages))
+	for _, pe := range idx.Packages {
+		e.pkgByID[pe.ID] = pe
+		e.pkgByShard[pe.Shard] = pe.ID
+	}
+	e.tree = hierarchy.Build(idx)
+	// loaded / symIndex / callers / sched / cache are intentionally untouched:
+	// they key off shard path or ref, which the grown index leaves unchanged.
+}
+
 // Prefetch queues the shards of pkgIDs for background loading at the given
 // intent's priority. Already-loaded packages are skipped. It only enqueues;
 // NextPrefetch hands the actual work out under the concurrency cap.
@@ -216,7 +238,16 @@ func (e *Engine) Level(path string) (LevelView, bool) {
 	}
 	items := make([]layout.Item, len(lv.Children))
 	for i, c := range lv.Children {
-		items[i] = layout.Item{ID: c.Path, Radius: layout.RadiusFor(c.Symbols)}
+		// Skeleton fallback: while the progressive assay is still filling, a node
+		// whose subtree has no parsed symbols yet would size to the empty minimum
+		// and read as an indistinct dot. Size it by its package count instead so
+		// the tree stays legible until symbols arrive (and, because the same
+		// radius is what the client draws, sizes and positions stay consistent).
+		sz := c.Symbols
+		if sz == 0 {
+			sz = c.Packages
+		}
+		items[i] = layout.Item{ID: c.Path, Radius: layout.RadiusFor(sz)}
 	}
 	pos := layout.Place(items)
 	view := LevelView{

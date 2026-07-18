@@ -65,6 +65,33 @@ func baseStem(rel string) string {
 	return moduleID(filepath.Base(rel))
 }
 
+// Skeleton enumerates one module package per discovered file WITHOUT parsing --
+// id/path/name/language only, no symbols. It shares discover() with
+// ExtractStream, so every skeleton id matches the id its real package will carry.
+func (*Extractor) Skeleton(root string) ([]schema.Package, error) {
+	files, err := discover(root)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]schema.Package, 0, len(files))
+	for _, f := range files {
+		_, isTS, _ := langFor(filepath.Base(f.Rel))
+		lang := "typescript"
+		if !isTS {
+			lang = "javascript"
+		}
+		out = append(out, schema.Package{
+			ID:       moduleID(f.Rel),
+			Language: lang,
+			Path:     f.Rel,
+			Name:     baseStem(f.Rel),
+			Level:    "module",
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out, nil
+}
+
 // extractFile parses one discovered file into its module package. It holds no
 // shared state, so it is safe to call from many workers at once (the tree-sitter
 // backend is cgo-free with a fresh parser per call).

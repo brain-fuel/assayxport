@@ -14,6 +14,7 @@
 //
 //	axapi.index()            -> JSON string of the manifest index (sync; fetched at boot)
 //	axapi.ensureShard(pkgID) -> Promise<JSON string> of that package's shard
+//	axapi.merge(indexJSON)   -> null, or {"error":...}; folds a grown index in (sync)
 //	axapi.callers(ref)       -> JSON string, inbound call edges known so far (sync)
 //	axapi.search(q, limit)   -> JSON string, ranked matches over index + loaded shards (sync)
 //
@@ -94,6 +95,19 @@ func install(eng *graph.Engine, indexJSON []byte) {
 				return `{"error":"unknown node"}`
 			}
 			return mustMarshal(view)
+		}),
+		// merge folds a grown index (the progressive assay's fuller snapshot)
+		// into the engine, so levels reflect newly-parsed packages while already
+		// hydrated shards stay loaded. Returns null on success, {"error":...} on
+		// a bad payload. The page calls it as the assay fills in (see the status
+		// poller in explorer.html).
+		"merge": js.FuncOf(func(_ js.Value, args []js.Value) any {
+			var idx schema.Index
+			if err := json.Unmarshal([]byte(arg(args, 0)), &idx); err != nil {
+				return fmt.Sprintf(`{"error":%q}`, err.Error())
+			}
+			eng.Merge(idx)
+			return nil
 		}),
 		"ensureShard": js.FuncOf(func(_ js.Value, args []js.Value) any {
 			pkgID := arg(args, 0)

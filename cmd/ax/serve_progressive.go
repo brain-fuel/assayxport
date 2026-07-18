@@ -1,0 +1,193 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sync"
+
+	"goforge.dev/assayxport/internal/emit"
+	"goforge.dev/assayxport/internal/extract/golang"
+	"goforge.dev/assayxport/internal/extract/registry"
+	"goforge.dev/assayxport/internal/schema"
+)
+
+// Progressive serve: publish a symbol-free skeleton of the whole tree the instant
+// the walk finishes (so the explorer renders structure in ~1s), then fill each
+// package's shard and counts into a live index as extraction streams them in.
+// The client reconciles by re-fetching /api/index (always the full current state,
+// so a missed update self-heals) whenever /api/status reports new packages ready.
+//
+// This replaces the "one 503 until the entire assay lands" first-paint barrier;
+// re-assays in watch mode still build-then-swap (buildDiskSnapshot) to avoid a
+// flash of empty structure.
+
+// liveIndex is the mutable, growing index a progressive assay fills. It starts as
+// a skeleton (every package, identity only) and patches each entry in place with
+// its shard path and counts as the package is extracted. All access is guarded so
+// GET /api/index sees a consistent snapshot even mid-fill.
+type liveIndex struct {
+	mu    sync.Mutex
+	idx   schema.Index
+	byID  map[string]int  // package id -> position in idx.Packages
+	dir   string          // generation dir the shards are written under
+	used  map[string]bool // assigned shard paths (collision set + valid /api/shard keys)
+	ready map[string]bool // shard paths whose file exists on disk
+	done  bool            // extraction finished
+}
+
+func newLiveIndex(skeleton []schema.Package, languages []string, dir string) *liveIndex {
+	li := &liveIndex{
+		idx: schema.Index{
+			SchemaVersion: schema.Version,
+			Tool:          "assayxport",
+			Languages:     languages,
+			Root:          ".",
+			Packages:      make([]schema.PackageEntry, 0, len(skeleton)),
+		},
+		byID:  make(map[string]int, len(skeleton)),
+		dir:   dir,
+		used:  map[string]bool{},
+		ready: map[string]bool{},
+	}
+	for _, p := range skeleton {
+		li.byID[p.ID] = len(li.idx.Packages)
+		li.idx.Packages = append(li.idx.Packages, emit.SkeletonEntry(p))
+	}
+	return li
+}
+
+// reservePath assigns a collision-free shard path (serialized on used).
+func (li *liveIndex) reservePath(pkgPath, pkgID string) string {
+	li.mu.Lock()
+	defer li.mu.Unlock()
+	return emit.AssignShard(pkgPath, pkgID, li.used)
+}
+
+// apply patches (or, on a skeleton miss, appends) a fully-extracted package's
+// entry and marks its shard ready.
+func (li *liveIndex) apply(entry schema.PackageEntry) {
+	li.mu.Lock()
+	if i, ok := li.byID[entry.ID]; ok {
+		li.idx.Packages[i] = entry
+	} else {
+		li.byID[entry.ID] = len(li.idx.Packages)
+		li.idx.Packages = append(li.idx.Packages, entry)
+	}
+	li.ready[entry.Shard] = true
+	li.mu.Unlock()
+}
+
+func (li *liveIndex) setModule(module string) {
+	li.mu.Lock()
+	li.idx.Module = module
+	li.mu.Unlock()
+}
+
+func (li *liveIndex) finish() {
+	li.mu.Lock()
+	li.done = true
+	li.mu.Unlock()
+}
+
+func (li *liveIndex) marshal() ([]byte, error) {
+	li.mu.Lock()
+	defer li.mu.Unlock()
+	return json.Marshal(li.idx)
+}
+
+func (li *liveIndex) shardReady(path string) bool {
+	li.mu.Lock()
+	defer li.mu.Unlock()
+	return li.ready[path]
+}
+
+// serveStatus is the cheap GET /api/status body: how far the fill has gotten, so
+// the client polls this and only re-fetches the full index when ready climbs.
+type serveStatus struct {
+	Complete bool `json:"complete"`
+	Ready    int  `json:"ready"`
+	Total    int  `json:"total"`
+}
+
+func (li *liveIndex) status() serveStatus {
+	li.mu.Lock()
+	defer li.mu.Unlock()
+	return serveStatus{Complete: li.done, Ready: len(li.ready), Total: len(li.idx.Packages)}
+}
+
+// snapshotState returns a consistent copy of the marshaled index and the sorted
+// list of shard paths ready so far, for streaming /assayxport.json without holding
+// the lock across the (slow) file copies.
+func (li *liveIndex) snapshotState() (index []byte, readyPaths []string, err error) {
+	li.mu.Lock()
+	defer li.mu.Unlock()
+	index, err = json.Marshal(li.idx)
+	if err != nil {
+		return nil, nil, err
+	}
+	readyPaths = make([]string, 0, len(li.ready))
+	for p := range li.ready {
+		readyPaths = append(readyPaths, p)
+	}
+	return index, readyPaths, nil
+}
+
+// runProgressive performs one progressive assay of path into dir: it publishes the
+// skeleton via cur.set (so /api/index answers immediately), streams every package's
+// shard to disk while patching the live index, and marks it done. cur holds a
+// snapshot referencing the live index for the whole run, so handlers always read
+// the current state. The client discovers progress by polling /api/status (cheap)
+// and re-fetches /api/index only when the ready count climbs -- no server push, so
+// a missed signal self-heals on the next poll.
+func runProgressive(path string, langs stringsFlag, quiet bool, dir string, cur *current) error {
+	capAssayMemory()
+	exts, err := registry.Select(langs)
+	if err != nil {
+		return err
+	}
+	skeleton, skelLangs, err := registry.Skeleton(exts, path)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Join(dir, ".assayxport"), 0o755); err != nil {
+		return err
+	}
+	li := newLiveIndex(skeleton, skelLangs, dir)
+	// Publish the skeleton immediately: /api/index now returns 200 with the whole
+	// package tree (no symbols yet), so the explorer renders structure at once.
+	cur.set(&snapshot{live: li, dir: dir})
+
+	emitPkg := func(p schema.Package) error {
+		prep, perr := emit.PrepareShard(p) // marshal off the lock
+		if perr != nil {
+			return perr
+		}
+		sp := li.reservePath(p.Path, p.ID)
+		full := filepath.Join(dir, filepath.FromSlash(sp))
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(full, prep.Body, 0o644); err != nil {
+			return err
+		}
+		li.apply(emit.EntryOf(p, prep.SymbolCount, prep.Entrypoints, sp))
+		return nil
+	}
+
+	_, _, runErr := registry.RunStream(exts, path, emitPkg)
+	// Fill the module hint (only known after the Go extractor runs) and mark done
+	// regardless of a tolerated per-language warning, so the client stops polling.
+	for _, e := range exts {
+		if ge, ok := e.(*golang.Extractor); ok {
+			li.setModule(ge.Module())
+			break
+		}
+	}
+	li.finish()
+	if runErr != nil {
+		return fmt.Errorf("assay: %w", runErr)
+	}
+	return nil
+}

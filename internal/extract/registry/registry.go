@@ -52,6 +52,36 @@ func Select(langs []string) ([]extract.Extractor, error) {
 	return out, nil
 }
 
+// Skeleton returns a fast, symbol-free package enumeration for every extractor
+// that implements extract.SkeletonExtractor -- the structural tree `ax serve`
+// publishes immediately, before any parsing. Extractors that cannot enumerate
+// cheaply (e.g. Go, whose package set comes from a full type-load) are skipped;
+// their packages simply appear via streamed deltas once extraction reaches them.
+// The returned languages are those that contributed a skeleton, folded from the
+// per-package Language (an extractor may emit more than one).
+func Skeleton(exts []extract.Extractor, root string) (pkgs []schema.Package, languages []string, err error) {
+	langSet := map[string]bool{}
+	for _, e := range exts {
+		se, ok := e.(extract.SkeletonExtractor)
+		if !ok {
+			continue
+		}
+		got, serr := se.Skeleton(root)
+		if serr != nil {
+			return nil, nil, fmt.Errorf("%s skeleton: %w", e.Language(), serr)
+		}
+		for _, p := range got {
+			langSet[p.Language] = true
+		}
+		pkgs = append(pkgs, got...)
+	}
+	for l := range langSet {
+		languages = append(languages, l)
+	}
+	sort.Strings(languages)
+	return pkgs, languages, nil
+}
+
 // Run executes each extractor over root and returns the merged packages, the
 // sorted set of languages that produced at least one package, and any
 // per-extractor errors that were tolerated (see below).

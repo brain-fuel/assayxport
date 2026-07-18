@@ -443,6 +443,70 @@ function lazyBoot(){
   G.visited.clear();updateAssayed();
   showLevel("",true);
   startIdleLoop();
+  startStatusPoll();
+}
+// ---- progressive reconcile (lazy mode) ----
+// ax serve publishes a skeleton index in ~1s (the full package set, unparsed
+// packages at symbol_count 0 / shard "") and fills counts and shard paths in the
+// background. The poller watches /api/status; whenever more packages are ready it
+// re-pulls /api/index and merges it, reconciling the current view. It stops on
+// complete after one final merge, and never runs outside lazy mode -- so a
+// completed or embedded index is unaffected (one merge at most, then done).
+const POLL={timer:null,lastReady:-1,done:false};
+function startStatusPoll(){
+  if(!window.__LAZY||POLL.timer||POLL.done)return;
+  const tick=()=>{
+    POLL.timer=null;
+    fetch("/api/status").then(r=>r.json()).then(st=>{
+      const ready=st.ready|0,total=st.total|0;
+      if(st.complete){
+        POLL.done=true;
+        mergeIndexAndRefresh().finally(()=>{if(window.__axStatus)window.__axStatus("")});
+        return;
+      }
+      if(window.__axStatus)window.__axStatus("Analyzing… "+ready+"/"+total);
+      if(ready>POLL.lastReady){POLL.lastReady=ready;mergeIndexAndRefresh()}
+    }).catch(()=>{/* transient: retry on the next tick */})
+      .finally(()=>{if(!POLL.done)POLL.timer=setTimeout(tick,600)});
+  };
+  POLL.timer=setTimeout(tick,600);
+}
+// mergeIndexAndRefresh pulls the current (grown) index, folds it into the engine
+// (axapi.merge), refreshes the JS-side index-derived state, then reconciles the
+// view. Returns a promise so the poller can clear the banner after the final
+// merge lands.
+function mergeIndexAndRefresh(){
+  return fetch("/api/index").then(r=>r.text()).then(text=>{
+    if(!window.axapi||!axapi.merge)return;
+    let res;try{res=axapi.merge(text)}catch(e){console.warn("merge",e);return}
+    if(res){try{const o=JSON.parse(res);if(o&&o.error){console.warn("merge",o.error);return}}catch(e){}}
+    let index;try{index=JSON.parse(text)}catch(e){return}
+    D.meta=index;
+    D.totalSyms=(index.packages||[]).reduce((a,p)=>a+(p.symbol_count||0),0);
+    pkgById=new Map((index.packages||[]).map(pe=>[pe.id,pe]));
+    updateAssayed();
+    refreshCurrentLevel();
+  }).catch(e=>{console.warn("merge fetch",e)});
+}
+// refreshCurrentLevel re-renders the current level from the merged index without
+// disturbing where the user is: it re-runs showLevel (so island sizes and now-
+// ready shards reconcile, and the tree rebuilds) but restores the camera and
+// selection showLevel resets, and re-hydrates any shard that was open so its
+// planets don't vanish. Cheap -- the level comes from the index and every re-
+// hydrated shard is already cached in the engine.
+function refreshCurrentLevel(){
+  if(DATA_MODE!=="hier")return;
+  const cam={...G.cam};
+  const selPkg=G.selPkg,sel=G.selected,islIn=G.islandIn;
+  const wasLoaded=new Set();
+  for(const isl of W.islands)if(isl.loaded&&isl.pkgId)wasLoaded.add(isl.pkgId);
+  showLevel(NAV.path,true);
+  G.cam=cam;G.target=null; // keep the viewport put (don't refit or fly on a poll)
+  for(const isl of W.islands)if(isl.pkgId&&isl.shard&&wasLoaded.has(isl.pkgId))hydrateIsland(isl);
+  if(selPkg&&W.byId.get(selPkg)){G.selPkg=selPkg;G.islandIn=islIn||selPkg;LOAD.pin(selPkg)}
+  else if(islIn&&W.byId.get(islIn))G.islandIn=islIn;
+  if(sel&&D.symIndex.has(sel))G.selected=sel;
+  renderCard();crumbs();
 }
 // startIdleLoop turns spare browser time into loading work: it keeps the current
 // level's shards warming as scheduler slots free up, and sheds memory when the JS
@@ -527,6 +591,10 @@ function recomputeBounds(){
 async function enterIsland(isl){
   if(!isl)return;
   if(isl.group){showLevel(isl.node.path,false);return}
+  // Pending package (progressive assay hasn't parsed it yet: no shard): there is
+  // nothing to open, and its empty shard path must never be fetched. It becomes
+  // openable once a merge fills its shard in.
+  if(DATA_MODE==="hier"&&isl.pkgId&&!isl.shard){toast("parsing…");return}
   await hydrateIsland(isl);
   // Pin what you are now looking at so it is never evicted, then shed any
   // overflow the fetch pushed us past (a no-op until the budget is exceeded).
@@ -539,6 +607,9 @@ const hydrating=new Map();
 // into planets positioned within the island.
 function hydrateIsland(isl){
   if(!isl||isl.loaded||!isl.pkgId)return Promise.resolve();
+  // A pending package has no shard yet (empty path); skip it rather than fetch
+  // "/api/shard?path=" (which 404s). A later merge assigns its shard.
+  if(DATA_MODE==="hier"&&!isl.shard)return Promise.resolve();
   if(hydrating.has(isl.id))return hydrating.get(isl.id);
   const pr=(async()=>{
     let sh;
@@ -613,7 +684,7 @@ const LOAD={
 // prefetchLevel warms every not-yet-loaded package shard on the current level so
 // opening a sibling is instant. Groups have no shard of their own (only their
 // "self" island does), so we key off pkgId presence.
-function prefetchLevel(islands){LOAD.prefetch(islands.filter(i=>i.pkgId&&!i.loaded).map(i=>i.pkgId))}
+function prefetchLevel(islands){LOAD.prefetch(islands.filter(i=>i.pkgId&&i.shard&&!i.loaded).map(i=>i.pkgId))}
 // releaseEvicted mirrors the engine's eviction on the client: an evicted package
 // loses its symbols from the JS index and its islands reseal, so re-opening it
 // re-fetches (the engine already cleared its own shard + symIndex).
@@ -1384,7 +1455,9 @@ window.__app={G,W,D,select,selectPkg,travel,flyToRef,toggleTree,doSearch:q=>{doS
     // clear it once the index arrives and lazyBoot runs.
     window.__axStatus=function(msg){
       const t=$("#status"); if(!t)return;
-      if(msg){t.innerHTML='<span class="spin"></span>Analyzing the codebase…';t.style.display="block";}
+      // "analyzing" is the engine's boot-time keyword (index not ready yet); the
+      // status poller passes a live "Analyzing… N/M" progress string.
+      if(msg){t.innerHTML='<span class="spin"></span>'+esc(msg==="analyzing"?"Analyzing the codebase…":msg);t.style.display="block";}
       else{t.style.display="none";}
     };
     const ready=function(){ if(window.__axStatus)window.__axStatus(""); lazyBoot(); };

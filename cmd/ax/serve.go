@@ -9,6 +9,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"hash/fnv"
@@ -41,6 +42,8 @@ const (
 // mirroring the extractors' inputs.
 var watchExts = map[string]bool{
 	".go": true, ".py": true, ".java": true,
+	".ts": true, ".tsx": true, ".mts": true, ".cts": true,
+	".js": true, ".jsx": true, ".mjs": true, ".cjs": true,
 }
 
 // watchFiles are basename triggers regardless of extension.
@@ -254,6 +257,30 @@ func runServeCmd(args []string) error {
 				last = waitForChange(path, last)
 			}
 			start := time.Now()
+
+			// First assay in lazy mode is progressive: publish the skeleton at once
+			// (cur.set inside runProgressive) so the explorer renders structure in
+			// ~1s, then fill shards + counts into the live index. Re-assays on save
+			// build fully and swap (below) to avoid a flash of empty structure.
+			if lazy && first {
+				g := atomic.AddUint64(&gen, 1)
+				dir := filepath.Join(tmpRoot, fmt.Sprintf("gen-%d", g))
+				err := runProgressive(path, langs, *quiet, dir, cur)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, "ax: assay failed:", err)
+					if !watch {
+						return
+					}
+				}
+				debug.FreeOSMemory()
+				prevDir = dir
+				first = false
+				if !watch {
+					return
+				}
+				continue
+			}
+
 			snap, dir, err := build()
 			if err != nil {
 				if first {
@@ -331,7 +358,35 @@ func runServeCmd(args []string) error {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
+		if s.live != nil {
+			b, err := s.live.marshal()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			_, _ = w.Write(b)
+			return
+		}
 		_, _ = w.Write(s.indexJSON)
+	})
+	// /api/status is the cheap progress poll for a progressive assay: the client
+	// re-fetches /api/index only when `ready` climbs, and stops when `complete`.
+	mux.HandleFunc("/api/status", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		s := cur.get()
+		if s == nil {
+			_, _ = io.WriteString(w, `{"complete":false,"ready":0,"total":0}`)
+			return
+		}
+		if s.live != nil {
+			b, _ := json.Marshal(s.live.status())
+			_, _ = w.Write(b)
+			return
+		}
+		// A completed build-then-swap snapshot is fully ready.
+		n := len(s.shardPaths)
+		_, _ = io.WriteString(w, fmt.Sprintf(`{"complete":true,"ready":%d,"total":%d}`, n, n))
 	})
 	mux.HandleFunc("/api/shard", func(w http.ResponseWriter, r *http.Request) {
 		s := cur.get()
@@ -349,6 +404,28 @@ func runServeCmd(args []string) error {
 				return
 			}
 			_, _ = w.Write(body)
+			return
+		}
+		// Progressive assay: a shard is a valid key only once its file exists on
+		// disk; a package still being parsed 404s (the client treats it as pending
+		// and does not open it until /api/status shows it ready).
+		if s.live != nil {
+			if !s.live.shardReady(p) {
+				http.NotFound(w, r)
+				return
+			}
+			full := filepath.Join(s.dir, filepath.FromSlash(p))
+			if full != s.dir && !strings.HasPrefix(full, s.dir+string(os.PathSeparator)) {
+				http.NotFound(w, r)
+				return
+			}
+			f, err := os.Open(full)
+			if err != nil {
+				http.NotFound(w, r)
+				return
+			}
+			defer f.Close()
+			_, _ = io.Copy(w, f)
 			return
 		}
 		// Disk mode: only paths the manifest emitted are valid keys (so `../`
@@ -383,6 +460,15 @@ func runServeCmd(args []string) error {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
+		if s.live != nil {
+			// Progressive: stream the live index followed by the shards written so
+			// far. Mid-fill this is a valid, if partial, manifest; once complete it
+			// is the whole thing.
+			if err := streamLiveCombined(w, s.live); err != nil {
+				fmt.Fprintln(os.Stderr, "ax: stream /assayxport.json:", err)
+			}
+			return
+		}
 		if lazy {
 			if err := streamCombined(w, s.dir, s.shardPaths); err != nil {
 				fmt.Fprintln(os.Stderr, "ax: stream /assayxport.json:", err)

@@ -22,7 +22,10 @@ func TestDiscover(t *testing.T) {
 			t.Fatalf("not sorted: %q > %q", fs[i-1].Rel, fs[i].Rel)
 		}
 	}
-	cases := []struct{ rel, mod, pkg string; isInit bool }{
+	cases := []struct {
+		rel, mod, pkg string
+		isInit        bool
+	}{
 		{"pkg/__init__.py", "pkg", "pkg", true},
 		{"pkg/mod.py", "pkg.mod", "pkg", false},
 		{"pkg/sub/__init__.py", "pkg.sub", "pkg.sub", true},

@@ -13,7 +13,7 @@ import (
 // Probe-verified node/field names (gotreesitter grammars.PythonLanguage):
 //   - loops:          for_statement, while_statement
 //   - comprehensions: list_comprehension, set_comprehension,
-//                     dictionary_comprehension, generator_expression
+//     dictionary_comprehension, generator_expression
 //   - calls:          "call" node with "function" field (identifier or attribute)
 //   - attr call:      function field is "attribute" node; method name via "attribute" field
 //   - literals:       list, dictionary, set

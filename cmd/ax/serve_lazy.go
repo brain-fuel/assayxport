@@ -56,6 +56,12 @@ func gzAsset(gz []byte, contentType string) http.HandlerFunc {
 type snapshot struct {
 	indexJSON []byte // GET /api/index: the marshaled index (both modes)
 
+	// progressive lazy field: when non-nil, this snapshot is a live, still-filling
+	// assay. /api/index, /api/shard, and /api/status read the current state from it
+	// rather than the immutable fields below (which a completed build-then-swap
+	// re-assay uses).
+	live *liveIndex
+
 	// lazy (disk-backed) fields
 	dir        string          // generation dir holding assayxport.json + shards
 	shardPaths map[string]bool // valid /api/shard?path= keys (traversal guard)
@@ -131,6 +137,50 @@ func buildDiskSnapshot(idx schema.Index, dir string) (*snapshot, error) {
 		paths[pe.Shard] = true
 	}
 	return &snapshot{indexJSON: indexJSON, dir: dir, shardPaths: paths}, nil
+}
+
+// streamLiveCombined writes the /assayxport.json blob for a progressive assay:
+// the live index inline, then each ready shard file streamed from disk in sorted
+// path order. Mid-fill it is a valid but partial manifest.
+func streamLiveCombined(w io.Writer, li *liveIndex) error {
+	index, readyPaths, err := li.snapshotState()
+	if err != nil {
+		return err
+	}
+	sort.Strings(readyPaths)
+	if _, err := io.WriteString(w, `{"index":`); err != nil {
+		return err
+	}
+	if _, err := w.Write(index); err != nil {
+		return err
+	}
+	if _, err := io.WriteString(w, `,"shards":{`); err != nil {
+		return err
+	}
+	for i, p := range readyPaths {
+		key, err := json.Marshal(p)
+		if err != nil {
+			return err
+		}
+		sep := ""
+		if i > 0 {
+			sep = ","
+		}
+		if _, err := io.WriteString(w, sep+string(key)+":"); err != nil {
+			return err
+		}
+		f, err := os.Open(filepath.Join(li.dir, filepath.FromSlash(p)))
+		if err != nil {
+			return err
+		}
+		_, cpErr := io.Copy(w, f)
+		f.Close()
+		if cpErr != nil {
+			return cpErr
+		}
+	}
+	_, err = io.WriteString(w, `}}`)
+	return err
 }
 
 // streamCombined writes the /assayxport.json compatibility blob for disk mode by

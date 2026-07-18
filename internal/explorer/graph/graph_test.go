@@ -135,6 +135,63 @@ func TestEnsureShardForUnknownPkg(t *testing.T) {
 	}
 }
 
+func TestMergeGrowsIndexPreservingLoadedShards(t *testing.T) {
+	// Skeleton snapshot: package a is parsed (2 syms, real shard); package b is
+	// still pending (symbol_count 0, empty shard) but present, so the level shows
+	// the full package set from the first paint.
+	skeleton := schema.Index{
+		SchemaVersion: "2",
+		Packages: []schema.PackageEntry{
+			{ID: "app/a", Name: "a", Path: "a", Shard: ".assayxport/a.json", SymbolCount: 2},
+			{ID: "app/b", Name: "b", Path: "b", Shard: "", SymbolCount: 0},
+		},
+	}
+	_, fetch, fetches := buildFixture()
+	e := New(skeleton, fetch)
+
+	// Hydrate a's shard before the merge.
+	if _, err := e.EnsureShardForPkg("app/a"); err != nil {
+		t.Fatalf("load a: %v", err)
+	}
+	if _, ok := e.Symbol("app/a#Alpha"); !ok {
+		t.Fatal("Alpha not resolved after loading a")
+	}
+
+	// The fuller index arrives: b is now parsed with a real shard and count.
+	full, _, _ := buildFixture()
+	e.Merge(full)
+
+	// The level reflects b's filled-in count and shard path.
+	lv, ok := e.Level("")
+	if !ok {
+		t.Fatal("root level missing after merge")
+	}
+	var bNode *LevelNode
+	for i := range lv.Nodes {
+		if lv.Nodes[i].Path == "b" {
+			bNode = &lv.Nodes[i]
+		}
+	}
+	if bNode == nil {
+		t.Fatal("package b missing from level after merge")
+	}
+	if bNode.Symbols != 1 || bNode.Shard != ".assayxport/b.json" {
+		t.Fatalf("b after merge = {symbols:%d shard:%q}, want {1 .assayxport/b.json}", bNode.Symbols, bNode.Shard)
+	}
+
+	// The shard loaded before the merge still resolves and was not re-fetched:
+	// Merge preserves shard-derived state.
+	if _, ok := e.Symbol("app/a#Alpha"); !ok {
+		t.Fatal("Alpha stopped resolving after merge -- loaded shard state was dropped")
+	}
+	if fetches[".assayxport/a.json"] != 1 {
+		t.Fatalf("a re-fetched across merge: %d", fetches[".assayxport/a.json"])
+	}
+	if fetches[".assayxport/b.json"] != 0 {
+		t.Fatalf("merge fetched pending package b: %d", fetches[".assayxport/b.json"])
+	}
+}
+
 func TestSearchRanksExactAndExportedHigher(t *testing.T) {
 	idx, fetch, _ := buildFixture()
 	e := New(idx, fetch)
