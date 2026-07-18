@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"goforge.dev/assayxport/internal/emit"
+	"goforge.dev/assayxport/internal/extract"
 	"goforge.dev/assayxport/internal/extract/golang"
 	"goforge.dev/assayxport/internal/extract/registry"
 	"goforge.dev/assayxport/internal/schema"
@@ -141,7 +142,7 @@ func (li *liveIndex) snapshotState() (index []byte, readyPaths []string, err err
 // the current state. The client discovers progress by polling /api/status (cheap)
 // and re-fetches /api/index only when the ready count climbs -- no server push, so
 // a missed signal self-heals on the next poll.
-func runProgressive(path string, langs stringsFlag, quiet bool, dir string, cur *current) error {
+func runProgressive(path string, langs stringsFlag, quiet bool, dir string, cur *current, fr *focusRegistry) error {
 	capAssayMemory()
 	exts, err := registry.Select(langs)
 	if err != nil {
@@ -176,7 +177,25 @@ func runProgressive(path string, langs stringsFlag, quiet bool, dir string, cur 
 		return nil
 	}
 
-	_, _, runErr := registry.RunStream(exts, path, emitPkg)
+	// Demand-capable extractors (currently TypeScript) parse in a focus-steered
+	// order; the rest stream in their fixed walk order. Demand runs first so the
+	// focus-aware experience is not blocked behind a whole-module loader.
+	var demandExts []extract.DemandExtractor
+	var streamExts []extract.Extractor
+	for _, e := range exts {
+		if de, ok := e.(extract.DemandExtractor); ok {
+			demandExts = append(demandExts, de)
+		} else {
+			streamExts = append(streamExts, e)
+		}
+	}
+	var runErr error
+	if len(demandExts) > 0 {
+		runErr = demandDrive(path, demandExts, fr, emitPkg)
+	}
+	if runErr == nil && len(streamExts) > 0 {
+		_, _, runErr = registry.RunStream(streamExts, path, emitPkg)
+	}
 	// Fill the module hint (only known after the Go extractor runs) and mark done
 	// regardless of a tolerated per-language warning, so the client stops polling.
 	for _, e := range exts {

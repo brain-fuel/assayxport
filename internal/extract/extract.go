@@ -41,3 +41,18 @@ type SkeletonExtractor interface {
 	Extractor
 	Skeleton(root string) ([]schema.Package, error)
 }
+
+// DemandExtractor is an optional extension for languages whose per-package parse
+// is independent, so `ax serve` can drive extraction in an order it chooses --
+// parsing the packages a client is actually looking at first -- instead of a
+// fixed file walk. It enumerates cheaply via Skeleton, then parses one enumerated
+// package at a time via ExtractOne; the serve layer owns the scheduling.
+//
+// pkg is a skeleton package returned by Skeleton (identity only); ExtractOne
+// parses its single source unit and returns the full package. Language loaders
+// with a whole-module parse (Go's type-load) do not implement this and stream in
+// their fixed order instead.
+type DemandExtractor interface {
+	SkeletonExtractor
+	ExtractOne(root string, pkg schema.Package) (schema.Package, error)
+}

@@ -243,6 +243,9 @@ func runServeCmd(args []string) error {
 
 	cur := &current{}
 	h := newHub()
+	// Per-client focus for demand-driven extraction: a browser POSTs the level it
+	// is viewing to /api/focus and the assay parses those packages first.
+	fr := newFocusRegistry()
 
 	// The first assay runs in the background so the port binds immediately and
 	// the page shows an "analyzing" state; on completion (and on every save in
@@ -265,7 +268,7 @@ func runServeCmd(args []string) error {
 			if lazy && first {
 				g := atomic.AddUint64(&gen, 1)
 				dir := filepath.Join(tmpRoot, fmt.Sprintf("gen-%d", g))
-				err := runProgressive(path, langs, *quiet, dir, cur)
+				err := runProgressive(path, langs, *quiet, dir, cur, fr)
 				if err != nil {
 					fmt.Fprintln(os.Stderr, "ax: assay failed:", err)
 					if !watch {
@@ -387,6 +390,32 @@ func runServeCmd(args []string) error {
 		// A completed build-then-swap snapshot is fully ready.
 		n := len(s.shardPaths)
 		_, _ = io.WriteString(w, fmt.Sprintf(`{"complete":true,"ready":%d,"total":%d}`, n, n))
+	})
+	// /api/focus lets a client steer demand-driven extraction: it POSTs the level
+	// it is now viewing ({client, path}) and the assay parses packages under that
+	// path first. Multiple clients' foci merge as a union; a client is dropped when
+	// it goes stale (focusTTL) or explicitly (drop:true, e.g. page unload). It is a
+	// best-effort hint -- a no-op once the assay is complete.
+	mux.HandleFunc("/api/focus", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		var req struct {
+			Client string `json:"client"`
+			Path   string `json:"path"`
+			Drop   bool   `json:"drop"`
+		}
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(&req); err != nil || req.Client == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if req.Drop {
+			fr.drop(req.Client)
+		} else {
+			fr.set(req.Client, req.Path)
+		}
+		w.WriteHeader(http.StatusNoContent)
 	})
 	mux.HandleFunc("/api/shard", func(w http.ResponseWriter, r *http.Request) {
 		s := cur.get()

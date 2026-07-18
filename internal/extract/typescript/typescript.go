@@ -92,6 +92,19 @@ func (*Extractor) Skeleton(root string) ([]schema.Package, error) {
 	return out, nil
 }
 
+// ExtractOne parses the single file behind a skeleton package (its Path is the
+// slash-relative file path Skeleton produced), so `ax serve` can parse packages
+// in a demand-driven order rather than a fixed walk. It reconstructs the same
+// absolute path discover would have and reuses extractFile.
+func (*Extractor) ExtractOne(root string, pkg schema.Package) (schema.Package, error) {
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return schema.Package{}, err
+	}
+	abs := filepath.Join(absRoot, filepath.FromSlash(pkg.Path))
+	return extractFile(tsFile{Abs: abs, Rel: pkg.Path})
+}
+
 // extractFile parses one discovered file into its module package. It holds no
 // shared state, so it is safe to call from many workers at once (the tree-sitter
 // backend is cgo-free with a fresh parser per call).

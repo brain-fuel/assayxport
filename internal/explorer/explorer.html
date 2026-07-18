@@ -444,6 +444,7 @@ function lazyBoot(){
   showLevel("",true);
   startIdleLoop();
   startStatusPoll();
+  startFocusHeartbeat();
 }
 // ---- progressive reconcile (lazy mode) ----
 // ax serve publishes a skeleton index in ~1s (the full package set, unparsed
@@ -508,6 +509,31 @@ function refreshCurrentLevel(){
   if(sel&&D.symIndex.has(sel))G.selected=sel;
   renderCard();crumbs();
 }
+// ---- demand-driven extraction focus (lazy mode) ----
+// While the assay is still filling, tell the server which level we are viewing so
+// it parses those packages first (POST /api/focus). It is a best-effort hint: it
+// stops once the assay completes, heartbeats so a stale tab is dropped server-side
+// (focusTTL), and drops itself on page unload. A random per-page client id lets
+// the server merge several tabs' foci as a union.
+const CLIENT_ID=Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
+let focusHB=null;
+function postFocus(path){
+  if(!window.__LAZY||POLL.done)return; // only matters while parsing is in flight
+  try{fetch("/api/focus",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({client:CLIENT_ID,path:path||""})}).catch(()=>{})}catch(e){}
+}
+function startFocusHeartbeat(){
+  if(!window.__LAZY||focusHB)return;
+  focusHB=setInterval(()=>{
+    if(POLL.done){clearInterval(focusHB);focusHB=null;return}
+    postFocus(NAV.path);
+  },5000);
+}
+window.addEventListener("pagehide",()=>{
+  if(!window.__LAZY)return;
+  try{navigator.sendBeacon&&navigator.sendBeacon("/api/focus",
+    new Blob([JSON.stringify({client:CLIENT_ID,drop:true})],{type:"application/json"}))}catch(e){}
+});
 // startIdleLoop turns spare browser time into loading work: it keeps the current
 // level's shards warming as scheduler slots free up, and sheds memory when the JS
 // heap gets tight -- lowering the cache budget and evicting LRU unpinned shards,
@@ -540,6 +566,7 @@ function showLevel(path,instant){
   try{view=JSON.parse(axapi.level(path))}catch(e){console.warn("level",path,e);return}
   if(view.error){console.warn("level",path,view.error);return}
   NAV.path=view.path||"";NAV.name=view.name||(D.meta.module||D.meta.root||"root");
+  postFocus(NAV.path); // steer demand-driven parsing toward the level we just opened
   const islands=(view.nodes||[]).map(levelIsland);
   // A group that is also a package (own code + sub-packages): add a "self"
   // island for its own symbols so they stay reachable while descending.

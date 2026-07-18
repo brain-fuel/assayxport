@@ -20,7 +20,7 @@ const tsFixture = "../../internal/extract/typescript/testdata/proj"
 func TestRunProgressive(t *testing.T) {
 	dir := t.TempDir()
 	cur := &current{}
-	if err := runProgressive(tsFixture, nil, true, dir, cur); err != nil {
+	if err := runProgressive(tsFixture, nil, true, dir, cur, newFocusRegistry()); err != nil {
 		t.Fatalf("runProgressive: %v", err)
 	}
 	s := cur.get()
