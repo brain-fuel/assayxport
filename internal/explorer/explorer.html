@@ -497,6 +497,12 @@ function mergeIndexAndRefresh(){
 // hydrated shard is already cached in the engine.
 function refreshCurrentLevel(){
   if(DATA_MODE!=="hier")return;
+  // Version gate: the engine's summary tree stamps every level with the last
+  // merge that touched its subtree. If the level we are looking at still
+  // reports the version we rendered, this poll's changes all landed elsewhere
+  // -- skip the re-render (no relayout, no re-hydrate, no reflow).
+  let cur;try{cur=JSON.parse(axapi.level(NAV.path))}catch(e){cur=null}
+  if(cur&&!cur.error&&cur.version&&cur.version===NAV.ver){renderCard();return}
   const cam={...G.cam};
   const selPkg=G.selPkg,sel=G.selected,islIn=G.islandIn;
   const wasLoaded=new Set();
@@ -566,6 +572,7 @@ function showLevel(path,instant){
   try{view=JSON.parse(axapi.level(path))}catch(e){console.warn("level",path,e);return}
   if(view.error){console.warn("level",path,view.error);return}
   NAV.path=view.path||"";NAV.name=view.name||(D.meta.module||D.meta.root||"root");
+  NAV.ver=view.version||0; // what the reconcile poll compares against
   postFocus(NAV.path); // steer demand-driven parsing toward the level we just opened
   const islands=(view.nodes||[]).map(levelIsland);
   // A group that is also a package (own code + sub-packages): add a "self"

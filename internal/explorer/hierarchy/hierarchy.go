@@ -4,22 +4,55 @@
 // paths and their per-package aggregates) -- no on-disk schema change -- and
 // exposes one level at a time via Level, the unit GET /api/tree returns.
 //
+// Subtree aggregates are a monoid (Summary), and the tree is built and
+// maintained through that algebra alone: Build partitions the index into
+// chunks whose partial trees merge in any order (associativity), and Apply
+// folds a grown index snapshot in as deltas propagated up parent chains
+// (O(changed x depth)) instead of rebuilding -- the progressive serve
+// publishes a snapshot every poll, and before Apply each poll paid a full
+// rebuild. Every change stamps a version up its root path, so a client can
+// ask "did the level I am looking at change?" and skip re-rendering when the
+// answer is no.
+//
 // It has no dependency on syscall/js, so it builds and tests on every GOOS;
 // the browser only ever consumes the JSON Level produces.
 package hierarchy
 
 import (
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 
 	"goforge.dev/assayxport/internal/schema"
 )
 
+// Summary is one subtree's aggregate: everything a level view needs to size
+// and summarize a node without descending into it. It is a monoid -- the
+// product of two counting monoids and boolean OR -- with the zero value as
+// identity and Plus as the associative, commutative combine. That algebra is
+// what the tree leans on: partial trees over index chunks merge in any order,
+// and a changed package folds in as a delta along its root path.
+type Summary struct {
+	Symbols       int  // total symbols in the subtree
+	Packages      int  // total assayed packages in the subtree
+	HasEntrypoint bool // any package in the subtree is an entrypoint
+}
+
+// Plus combines two summaries; Plus with the zero Summary is the identity.
+func (s Summary) Plus(o Summary) Summary {
+	return Summary{
+		Symbols:       s.Symbols + o.Symbols,
+		Packages:      s.Packages + o.Packages,
+		HasEntrypoint: s.HasEntrypoint || o.HasEntrypoint,
+	}
+}
+
 // Node is one node of the package tree. A node is a group (an intermediate
 // path segment with children), a package (an assayed PackageEntry), or both --
-// a package can itself contain nested sub-packages, so IsPackage and Children
-// are independent. Aggregates are rolled up over the whole subtree so a level
-// view can size and summarize a node without descending into it.
+// a package can itself contain nested sub-packages, so IsPkg and Children
+// are independent. Sum aggregates the whole subtree (including this node) so
+// a level view can size and summarize a node without descending into it.
 type Node struct {
 	Path     string           // full slash path from the root ("" is the root)
 	Name     string           // last path segment (display label)
@@ -27,12 +60,22 @@ type Node struct {
 	PkgID    string           // package id, when IsPkg
 	Shard    string           // shard path, when IsPkg
 	OwnSyms  int              // symbols in this package alone, when IsPkg
+	OwnEntry bool             // this package is itself an entrypoint, when IsPkg
 	Children map[string]*Node // by child name
 
-	// Subtree aggregates (include this node).
-	Symbols       int  // total symbols in the subtree
-	Packages      int  // total assayed packages in the subtree
-	HasEntrypoint bool // any package in the subtree is an entrypoint
+	Sum Summary // subtree aggregate (includes this node's own contribution)
+	Ver uint64  // tree version that last changed anything in this subtree
+
+	parent *Node // link to the containing node (nil at the root), for deltas
+}
+
+// own is this node's leaf contribution to its subtree summary.
+func (n *Node) own() Summary {
+	s := Summary{Symbols: n.OwnSyms, HasEntrypoint: n.OwnEntry}
+	if n.IsPkg {
+		s.Packages = 1
+	}
+	return s
 }
 
 // Tree is the root of a built hierarchy plus a path index for O(1) lookup of
@@ -40,61 +83,228 @@ type Node struct {
 type Tree struct {
 	Root   *Node
 	byPath map[string]*Node
-	idx    schema.Index
+	pkgs   int    // package nodes in the tree; Apply's consistency check
+	ver    uint64 // bumped once per Apply, stamped onto changed nodes
 }
 
-// Build constructs the hierarchy from idx by splitting each package's path into
-// segments and inserting it, then rolls subtree aggregates up from the leaves.
-func Build(idx schema.Index) *Tree {
-	root := &Node{Path: "", Name: "", Children: map[string]*Node{}}
-	t := &Tree{Root: root, byPath: map[string]*Node{"": root}, idx: idx}
+// buildChunkMin is the smallest chunk worth a goroutine of its own: below
+// this the spawn-and-merge overhead outweighs the parallel insert work.
+const buildChunkMin = 512
 
-	for _, pe := range idx.Packages {
-		segs := splitPath(pe.Path)
-		cur := root
-		path := ""
-		for _, seg := range segs {
-			if path == "" {
-				path = seg
-			} else {
-				path += "/" + seg
-			}
-			child, ok := cur.Children[seg]
-			if !ok {
-				child = &Node{Path: path, Name: seg, Children: map[string]*Node{}}
-				cur.Children[seg] = child
-				t.byPath[path] = child
-			}
-			cur = child
-		}
-		// cur is the node for this package's path. Two packages can share a
-		// path only if the manifest is malformed; last write wins, harmless.
-		cur.IsPkg = true
-		cur.PkgID = pe.ID
-		cur.Shard = pe.Shard
-		cur.OwnSyms = pe.SymbolCount
-		if pe.IsEntrypoint {
-			cur.HasEntrypoint = true
-		}
+// Build constructs the hierarchy from idx. Large indexes are partitioned
+// across GOMAXPROCS goroutines whose partial trees are merged -- Summary's
+// associativity makes the chunk boundaries invisible in the result -- and
+// small ones (or a single-proc runtime, e.g. js/wasm) build sequentially.
+func Build(idx schema.Index) *Tree {
+	workers := runtime.GOMAXPROCS(0)
+	if max := len(idx.Packages) / buildChunkMin; workers > max {
+		workers = max
 	}
-	rollup(root)
+	if workers < 2 {
+		return buildPartial(idx.Packages)
+	}
+	return buildParallel(idx.Packages, workers)
+}
+
+// buildParallel builds one partial tree per worker over an even slice of the
+// package list and folds them together with merge.
+func buildParallel(pkgs []schema.PackageEntry, workers int) *Tree {
+	parts := make([]*Tree, workers)
+	var wg sync.WaitGroup
+	for w := range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			parts[w] = buildPartial(pkgs[len(pkgs)*w/workers : len(pkgs)*(w+1)/workers])
+		}()
+	}
+	wg.Wait()
+	t := parts[0]
+	for _, p := range parts[1:] {
+		t.merge(p)
+	}
 	return t
 }
 
-// rollup fills Symbols/Packages/HasEntrypoint for n from its own package (if
-// any) plus every child's already-rolled aggregates, depth-first.
-func rollup(n *Node) {
-	n.Symbols = n.OwnSyms
-	if n.IsPkg {
-		n.Packages = 1
-	}
-	for _, c := range n.Children {
-		rollup(c)
-		n.Symbols += c.Symbols
-		n.Packages += c.Packages
-		if c.HasEntrypoint {
-			n.HasEntrypoint = true
+// buildPartial builds a complete tree over a slice of the index: insert each
+// package, then roll subtree summaries up from the leaves. It is the
+// list-to-tree homomorphism Build maps over chunks; merge is the matching
+// tree-level combine. Two packages can share a path only if the manifest is
+// malformed; within a chunk the last write wins, harmless.
+func buildPartial(pkgs []schema.PackageEntry) *Tree {
+	root := &Node{Children: map[string]*Node{}}
+	t := &Tree{Root: root, byPath: map[string]*Node{"": root}, ver: 1}
+	for i := range pkgs {
+		pe := &pkgs[i]
+		n := t.ensure(pe.Path)
+		if !n.IsPkg {
+			t.pkgs++
 		}
+		n.IsPkg = true
+		n.PkgID, n.Shard = pe.ID, pe.Shard
+		n.OwnSyms, n.OwnEntry = pe.SymbolCount, pe.IsEntrypoint
+	}
+	rollup(root, t.ver)
+	return t
+}
+
+// ensure returns the node at path, creating any missing nodes along the way.
+// Created nodes carry empty summaries; the caller's rollup or bump fills them.
+func (t *Tree) ensure(path string) *Node {
+	cur := t.Root
+	p := ""
+	for _, seg := range splitPath(path) {
+		if p == "" {
+			p = seg
+		} else {
+			p += "/" + seg
+		}
+		child, ok := cur.Children[seg]
+		if !ok {
+			child = &Node{Path: p, Name: seg, Children: map[string]*Node{}, parent: cur, Ver: t.ver}
+			cur.Children[seg] = child
+			t.byPath[p] = child
+		}
+		cur = child
+	}
+	return cur
+}
+
+// rollup computes every subtree summary bottom-up and stamps ver. Only bulk
+// construction uses it; incremental change goes through Apply's delta path.
+func rollup(n *Node, ver uint64) Summary {
+	n.Sum = n.own()
+	for _, c := range n.Children {
+		n.Sum = n.Sum.Plus(rollup(c, ver))
+	}
+	n.Ver = ver
+	return n.Sum
+}
+
+// merge folds src into t, node by node: shared paths combine summaries with
+// Plus, unshared subtrees are grafted whole. Correct whenever the two trees
+// cover disjoint package sets, which Build's partitioning guarantees (a path
+// duplicated across chunks -- a malformed manifest -- double-counts, and
+// Apply's consistency check then repairs it with a rebuild).
+func (t *Tree) merge(src *Tree) {
+	t.pkgs += src.pkgs
+	mergeNode(t, t.Root, src.Root)
+}
+
+func mergeNode(t *Tree, dst, src *Node) {
+	dst.Sum = dst.Sum.Plus(src.Sum)
+	if src.IsPkg {
+		dst.IsPkg = true
+		dst.PkgID, dst.Shard = src.PkgID, src.Shard
+		dst.OwnSyms, dst.OwnEntry = src.OwnSyms, src.OwnEntry
+	}
+	for name, sc := range src.Children {
+		dc, ok := dst.Children[name]
+		if !ok {
+			sc.parent = dst
+			dst.Children[name] = sc
+			t.adopt(sc)
+			continue
+		}
+		mergeNode(t, dc, sc)
+	}
+}
+
+// adopt registers a grafted subtree in the path index.
+func (t *Tree) adopt(n *Node) {
+	t.byPath[n.Path] = n
+	for _, c := range n.Children {
+		t.adopt(c)
+	}
+}
+
+// Apply folds a grown index snapshot into the tree in place. The progressive
+// serve publishes the full package set up front (the skeleton) and afterwards
+// only fills in symbol counts, shard paths, and entrypoint flags, so an apply
+// is a handful of deltas propagated up parent chains -- O(changed x depth) --
+// where Merge previously paid a full rebuild per poll; unchanged entries cost
+// only the comparison. Every touched node and its ancestors are stamped with
+// a new version, so Level reports change exactly where change happened.
+//
+// The delta path assumes the snapshot grows monotonically: packages never
+// leave the index and an entrypoint flag never turns back off. A snapshot
+// that violates that (or carries duplicate paths) falls back to a fresh Build
+// stamped at the new version, so the tree is correct either way -- the fast
+// path is an optimization, never an assumption the caller must uphold.
+//
+// It returns the number of entries that changed the tree (0: no level
+// anywhere needs re-rendering).
+func (t *Tree) Apply(idx schema.Index) int {
+	t.ver++
+	prev := t.pkgs
+	changed, matched := 0, 0
+	for i := range idx.Packages {
+		pe := &idx.Packages[i]
+		n, ok := t.byPath[pathKey(pe.Path)]
+		if ok && n.IsPkg {
+			matched++
+			if n.OwnEntry && !pe.IsEntrypoint {
+				return t.rebuild(idx) // OR cannot propagate a retraction
+			}
+			if n.PkgID == pe.ID && n.Shard == pe.Shard &&
+				n.OwnSyms == pe.SymbolCount && n.OwnEntry == pe.IsEntrypoint {
+				continue
+			}
+			delta := Summary{
+				Symbols:       pe.SymbolCount - n.OwnSyms,
+				HasEntrypoint: pe.IsEntrypoint && !n.OwnEntry,
+			}
+			n.PkgID, n.Shard = pe.ID, pe.Shard
+			n.OwnSyms, n.OwnEntry = pe.SymbolCount, pe.IsEntrypoint
+			t.bump(n, delta)
+			changed++
+			continue
+		}
+		// A path new to the tree, or an existing group becoming a package.
+		if n == nil {
+			n = t.ensure(pe.Path)
+		}
+		n.IsPkg = true
+		n.PkgID, n.Shard = pe.ID, pe.Shard
+		n.OwnSyms, n.OwnEntry = pe.SymbolCount, pe.IsEntrypoint
+		t.pkgs++
+		t.bump(n, n.own())
+		changed++
+	}
+	if matched != prev {
+		// A package this tree knows is absent from the snapshot (or a duplicate
+		// path matched twice): not a monotonic grow, so deltas can't express it.
+		return t.rebuild(idx)
+	}
+	return changed
+}
+
+// bump applies delta along n's root path and stamps this apply's version.
+// The stamp walks to the root even when the delta is all-zero (a shard path
+// filling in changes level content without changing any count), so every
+// level that shows the changed node reports a new Version.
+func (t *Tree) bump(n *Node, delta Summary) {
+	for m := n; m != nil; m = m.parent {
+		m.Sum = m.Sum.Plus(delta)
+		m.Ver = t.ver
+	}
+}
+
+// rebuild replaces the tree wholesale (Apply's fallback). Every node stamps
+// to the new version -- content may have moved anywhere, so every level must
+// report changed.
+func (t *Tree) rebuild(idx schema.Index) int {
+	nt := Build(idx)
+	nt.ver = t.ver
+	stamp(nt.Root, t.ver)
+	*t = *nt
+	return len(idx.Packages)
+}
+
+func stamp(n *Node, ver uint64) {
+	n.Ver = ver
+	for _, c := range n.Children {
+		stamp(c, ver)
 	}
 }
 
@@ -118,11 +328,15 @@ type LevelEntry struct {
 // O(this node's breadth), not O(all packages), which is the whole point. When
 // the node is itself an assayed package (a "group-package": own code plus
 // sub-packages), SelfPkgID/SelfShard/SelfSymbols expose its own symbols so the
-// client can still open them while descending into its children.
+// client can still open them while descending into its children. Version is
+// the tree version that last changed anything in this subtree: a client that
+// re-polls during a progressive fill can compare it against the version it
+// rendered and skip the level entirely when nothing under it moved.
 type Level struct {
 	Path        string       `json:"path"`
 	Name        string       `json:"name"`
 	IsPkg       bool         `json:"is_pkg"`
+	Version     uint64       `json:"version"`
 	SelfPkgID   string       `json:"self_pkg_id,omitempty"`
 	SelfShard   string       `json:"self_shard,omitempty"`
 	SelfSymbols int          `json:"self_symbols,omitempty"`
@@ -138,7 +352,7 @@ func (t *Tree) Level(path string) (Level, bool) {
 	if !ok {
 		return Level{}, false
 	}
-	lv := Level{Path: n.Path, Name: n.Name, IsPkg: n.IsPkg}
+	lv := Level{Path: n.Path, Name: n.Name, IsPkg: n.IsPkg, Version: n.Ver}
 	if n.IsPkg && len(n.Children) > 0 {
 		// A group-package: expose its own symbols so descending here can still
 		// open them alongside the sub-packages (a leaf package has no children,
@@ -149,9 +363,9 @@ func (t *Tree) Level(path string) (Level, bool) {
 	}
 	for _, c := range n.Children {
 		e := LevelEntry{
-			Path: c.Path, Name: c.Name, Symbols: c.Symbols,
-			Packages: c.Packages, Children: len(c.Children),
-			HasEntrypoint: c.HasEntrypoint,
+			Path: c.Path, Name: c.Name, Symbols: c.Sum.Symbols,
+			Packages: c.Sum.Packages, Children: len(c.Children),
+			HasEntrypoint: c.Sum.HasEntrypoint,
 		}
 		// A node is a "package" for the client when it is an assayed package
 		// with no sub-packages to descend into; a package that also groups
@@ -176,6 +390,19 @@ func (t *Tree) Level(path string) (Level, bool) {
 		return lv.Children[i].Path < lv.Children[j].Path
 	})
 	return lv, true
+}
+
+// pathKey is the byPath map key for a raw manifest path: the cleaned segments
+// rejoined, exactly as ensure built them. Almost every manifest path is
+// already canonical; detect that without allocating -- Apply calls this for
+// every entry on every poll -- and clean only the odd one out.
+func pathKey(p string) string {
+	if p == "" || p == "." || p[0] == '/' || strings.HasPrefix(p, "./") ||
+		strings.HasSuffix(p, "/") || strings.HasSuffix(p, "/.") ||
+		strings.Contains(p, "\\") || strings.Contains(p, "//") || strings.Contains(p, "/./") {
+		return strings.Join(splitPath(p), "/")
+	}
+	return p
 }
 
 // splitPath splits a package path into clean slash segments, tolerating "."

@@ -125,24 +125,31 @@ func New(idx schema.Index, fetch Fetcher) *Engine {
 	return e
 }
 
-// Merge swaps in a grown index (the progressive assay publishes a skeleton --
+// Merge folds in a grown index (the progressive assay publishes a skeleton --
 // the full package set, with unparsed packages at symbol_count 0 and shard ""
-// -- then fills counts and shard paths in place as packages parse). It rebuilds
-// the index maps and the navigation tree so levels reflect the new counts,
-// while PRESERVING all shard-derived state: the loaded flags, the symbol index,
-// the reverse-call map, and the loader's cache and scheduler. Those are keyed
-// by shard path or ref, and a shard path, once assigned to a package, never
-// changes -- so a shard already hydrated stays hydrated across a Merge, its
-// symbols still resolve, and no re-fetch is triggered.
+// -- then fills counts and shard paths in place as packages parse). The index
+// maps update in place and the navigation tree absorbs the snapshot as deltas
+// (hierarchy.Tree.Apply, which itself falls back to a rebuild on a snapshot
+// that shrank), so a poll where little changed costs little -- this runs every
+// ~600ms while an assay fills. All shard-derived state is PRESERVED: the
+// loaded flags, the symbol index, the reverse-call map, and the loader's cache
+// and scheduler. Those are keyed by shard path or ref, and a shard path, once
+// assigned to a package, never changes -- so a shard already hydrated stays
+// hydrated across a Merge, its symbols still resolve, and no re-fetch is
+// triggered.
 func (e *Engine) Merge(idx schema.Index) {
 	e.idx = idx
-	e.pkgByID = make(map[string]schema.PackageEntry, len(idx.Packages))
-	e.pkgByShard = make(map[string]string, len(idx.Packages))
+	if len(idx.Packages) < len(e.pkgByID) {
+		// Not a grown snapshot: entries vanished, so overwriting in place would
+		// leave stale ids behind. Start the maps over.
+		e.pkgByID = make(map[string]schema.PackageEntry, len(idx.Packages))
+		e.pkgByShard = make(map[string]string, len(idx.Packages))
+	}
 	for _, pe := range idx.Packages {
 		e.pkgByID[pe.ID] = pe
 		e.pkgByShard[pe.Shard] = pe.ID
 	}
-	e.tree = hierarchy.Build(idx)
+	e.tree.Apply(idx)
 	// loaded / symIndex / callers / sched / cache are intentionally untouched:
 	// they key off shard path or ref, which the grown index leaves unchanged.
 }
@@ -216,11 +223,15 @@ type LevelNode struct {
 // LevelView is one navigable level: the node at path and its immediate children,
 // each already laid out. The client renders only this -- a handful to a few
 // hundred nodes -- never the whole tree, which is what makes a 6000-package
-// repo explorable. ok is false for an unknown path.
+// repo explorable. ok is false for an unknown path. Version is the tree
+// version that last changed anything under this node; a client re-polling
+// during a progressive fill compares it against the version it rendered and
+// skips the level when nothing under it moved.
 type LevelView struct {
 	Path        string      `json:"path"`
 	Name        string      `json:"name"`
 	IsPkg       bool        `json:"is_pkg"`
+	Version     uint64      `json:"version"`
 	SelfPkgID   string      `json:"self_pkg_id,omitempty"`
 	SelfShard   string      `json:"self_shard,omitempty"`
 	SelfSymbols int         `json:"self_symbols,omitempty"`
@@ -251,7 +262,7 @@ func (e *Engine) Level(path string) (LevelView, bool) {
 	}
 	pos := layout.Place(items)
 	view := LevelView{
-		Path: lv.Path, Name: lv.Name, IsPkg: lv.IsPkg,
+		Path: lv.Path, Name: lv.Name, IsPkg: lv.IsPkg, Version: lv.Version,
 		SelfPkgID: lv.SelfPkgID, SelfShard: lv.SelfShard, SelfSymbols: lv.SelfSymbols,
 		Nodes: make([]LevelNode, len(lv.Children)),
 	}

@@ -192,6 +192,43 @@ func TestMergeGrowsIndexPreservingLoadedShards(t *testing.T) {
 	}
 }
 
+func TestMergeVersionGatesUntouchedLevels(t *testing.T) {
+	// Two subtrees; y/two is still pending. A merge that only fills y/two must
+	// bump the versions of "" and "y" but leave "x" alone -- that version is
+	// what lets the page skip re-rendering a level the merge did not touch.
+	skeleton := schema.Index{
+		SchemaVersion: "2",
+		Packages: []schema.PackageEntry{
+			{ID: "app/x/one", Name: "one", Path: "x/one", Shard: ".assayxport/x/one.json", SymbolCount: 2},
+			{ID: "app/y/two", Name: "two", Path: "y/two", Shard: "", SymbolCount: 0},
+		},
+	}
+	e := New(skeleton, func(string) (schema.Shard, error) { return schema.Shard{}, errors.New("unused") })
+	x0, _ := e.Level("x")
+	y0, _ := e.Level("y")
+	root0, _ := e.Level("")
+
+	grown := skeleton
+	grown.Packages = append([]schema.PackageEntry{}, skeleton.Packages...)
+	grown.Packages[1].Shard = ".assayxport/y/two.json"
+	grown.Packages[1].SymbolCount = 6
+	e.Merge(grown)
+
+	x1, _ := e.Level("x")
+	y1, _ := e.Level("y")
+	root1, _ := e.Level("")
+	if x1.Version != x0.Version {
+		t.Fatalf("x version changed (%d -> %d) though the merge only touched y", x0.Version, x1.Version)
+	}
+	if y1.Version == y0.Version || root1.Version == root0.Version {
+		t.Fatalf("y/root versions should bump: y %d->%d, root %d->%d",
+			y0.Version, y1.Version, root0.Version, root1.Version)
+	}
+	if y1.Nodes[0].Symbols != 6 || y1.Nodes[0].Shard != ".assayxport/y/two.json" {
+		t.Fatalf("y/two not filled in after merge: %+v", y1.Nodes[0])
+	}
+}
+
 func TestSearchRanksExactAndExportedHigher(t *testing.T) {
 	idx, fetch, _ := buildFixture()
 	e := New(idx, fetch)
