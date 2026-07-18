@@ -65,73 +65,114 @@ func baseStem(rel string) string {
 	return moduleID(filepath.Base(rel))
 }
 
-// Extract discovers all TS/JS files under root and returns one module package
-// per file, sorted by id. Files are parsed in parallel (the tree-sitter backend
-// is cgo-free with a fresh parser per call); results are folded deterministically.
-func (*Extractor) Extract(root string) ([]schema.Package, error) {
+// extractFile parses one discovered file into its module package. It holds no
+// shared state, so it is safe to call from many workers at once (the tree-sitter
+// backend is cgo-free with a fresh parser per call).
+func extractFile(f tsFile) (schema.Package, error) {
+	src, err := os.ReadFile(f.Abs)
+	if err != nil {
+		return schema.Package{}, err
+	}
+	g, isTS, _ := langFor(filepath.Base(f.Rel))
+	id := moduleID(f.Rel)
+	syms, moduleDoc, cerr := moduleSymbols(tsGrammar(g), f.Rel, id, src, isTS)
+	if cerr != nil {
+		return schema.Package{}, cerr
+	}
+	lang := "typescript"
+	if !isTS {
+		lang = "javascript"
+	}
+	return schema.Package{
+		ID:       id,
+		Language: lang,
+		Path:     f.Rel,
+		Name:     baseStem(f.Rel),
+		Level:    "module",
+		Doc:      moduleDoc,
+		Symbols:  syms,
+	}, nil
+}
+
+// ExtractStream discovers all TS/JS files under root and emits one module package
+// per file as soon as it is parsed, from a worker pool. Emitting per file (rather
+// than buffering the whole tree like Extract) keeps peak memory to a few in-flight
+// packages and lets `ax serve` publish shards progressively instead of waiting for
+// the entire repo. emit is called concurrently and must synchronize itself
+// (emit.Writer.Add does). The first parse error aborts the pool.
+func (*Extractor) ExtractStream(root string, emit func(schema.Package) error) error {
 	files, err := discover(root)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	type result struct {
-		pkg schema.Package
-		err error
-	}
-	results := make([]result, len(files))
 
 	workers := runtime.NumCPU() - 1
 	if workers < 1 {
 		workers = 1
 	}
-	var wg sync.WaitGroup
+	var (
+		wg       sync.WaitGroup
+		mu       sync.Mutex
+		first    error
+		stopOnce sync.Once
+	)
+	done := make(chan struct{}) // closed once, on the first error, to abort the pool
+	fail := func(e error) {
+		mu.Lock()
+		if first == nil {
+			first = e
+		}
+		mu.Unlock()
+		stopOnce.Do(func() { close(done) })
+	}
 	jobs := make(chan int)
 	for w := 0; w < workers; w++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			for i := range jobs {
-				f := files[i]
-				src, rerr := os.ReadFile(f.Abs)
-				if rerr != nil {
-					results[i] = result{err: rerr}
-					continue
+				pkg, e := extractFile(files[i])
+				if e != nil {
+					fail(e)
+					return
 				}
-				g, isTS, _ := langFor(filepath.Base(f.Rel))
-				id := moduleID(f.Rel)
-				syms, moduleDoc, cerr := moduleSymbols(tsGrammar(g), f.Rel, id, src, isTS)
-				if cerr != nil {
-					results[i] = result{err: cerr}
-					continue
+				if e := emit(pkg); e != nil {
+					fail(e)
+					return
 				}
-				lang := "typescript"
-				if !isTS {
-					lang = "javascript"
-				}
-				results[i] = result{pkg: schema.Package{
-					ID:       id,
-					Language: lang,
-					Path:     f.Rel,
-					Name:     baseStem(f.Rel),
-					Level:    "module",
-					Doc:      moduleDoc,
-					Symbols:  syms,
-				}}
 			}
 		}()
 	}
+	// Feed jobs, but bail the moment a worker signals an error so the send never
+	// blocks on a drained pool.
+feed:
 	for i := range files {
-		jobs <- i
+		select {
+		case jobs <- i:
+		case <-done:
+			break feed
+		}
 	}
 	close(jobs)
 	wg.Wait()
+	return first
+}
 
-	out := make([]schema.Package, 0, len(files))
-	for i := range results {
-		if results[i].err != nil {
-			return nil, results[i].err
-		}
-		out = append(out, results[i].pkg)
+// Extract discovers all TS/JS files under root and returns one module package per
+// file, sorted by id -- the buffered counterpart of ExtractStream for callers
+// (--stdout, --no-wasm, tests) that need the whole manifest at once.
+func (e *Extractor) Extract(root string) ([]schema.Package, error) {
+	var (
+		mu  sync.Mutex
+		out []schema.Package
+	)
+	if err := e.ExtractStream(root, func(p schema.Package) error {
+		mu.Lock()
+		out = append(out, p)
+		mu.Unlock()
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out, nil
