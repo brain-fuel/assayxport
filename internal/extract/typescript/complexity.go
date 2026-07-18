@@ -54,8 +54,8 @@ func tsSummary(n ts.Node, name string, src []byte) complexity.Summary {
 				}
 			}
 		}
-		for i := 0; i < x.NamedChildCount(); i++ {
-			walk(x.NamedChild(i), depth)
+		for _, c := range x.NamedChildren() {
+			walk(c, depth)
 		}
 	}
 	walk(body, 0)

@@ -92,8 +92,8 @@ func walkNode(n ts.Node, fn func(ts.Node)) {
 		return
 	}
 	fn(n)
-	for i := 0; i < n.NamedChildCount(); i++ {
-		walkNode(n.NamedChild(i), fn)
+	for _, c := range n.NamedChildren() {
+		walkNode(c, fn)
 	}
 }
 

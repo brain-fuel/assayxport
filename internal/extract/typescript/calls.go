@@ -31,8 +31,7 @@ type tsFileCtx struct {
 // imports for call classification.
 func buildFileCtx(root ts.Node, src []byte, unitID string) *tsFileCtx {
 	ctx := &tsFileCtx{unitID: unitID, funcs: map[string]bool{}, classes: map[string]bool{}, imports: map[string]string{}}
-	for i := 0; i < root.NamedChildCount(); i++ {
-		n := root.NamedChild(i)
+	for _, n := range root.NamedChildren() {
 		if n.Type() == "import_statement" {
 			addImport(n, src, ctx)
 			continue
@@ -47,8 +46,7 @@ func buildFileCtx(root ts.Node, src []byte, unitID string) *tsFileCtx {
 		case "class_declaration", "abstract_class_declaration":
 			ctx.classes[fieldText(d, "name", src)] = true
 		case "lexical_declaration", "variable_declaration":
-			for j := 0; j < d.NamedChildCount(); j++ {
-				dr := d.NamedChild(j)
+			for _, dr := range d.NamedChildren() {
 				if dr.Type() != "variable_declarator" {
 					continue
 				}
@@ -72,8 +70,7 @@ func addImport(n ts.Node, src []byte, ctx *tsFileCtx) {
 	if clause.IsNull() {
 		return
 	}
-	for i := 0; i < clause.NamedChildCount(); i++ {
-		c := clause.NamedChild(i)
+	for _, c := range clause.NamedChildren() {
 		switch c.Type() {
 		case "identifier": // default import
 			ctx.imports[c.Content(src)] = spec
@@ -82,8 +79,7 @@ func addImport(n ts.Node, src []byte, ctx *tsFileCtx) {
 				ctx.imports[id.Content(src)] = spec
 			}
 		case "named_imports":
-			for j := 0; j < c.NamedChildCount(); j++ {
-				isp := c.NamedChild(j)
+			for _, isp := range c.NamedChildren() {
 				if isp.Type() != "import_specifier" {
 					continue
 				}
@@ -128,8 +124,8 @@ func tsCalls(n ts.Node, unitID string, src []byte, ctx *tsFileCtx) []schema.Call
 				raw = append(raw, e)
 			}
 		}
-		for i := 0; i < x.NamedChildCount(); i++ {
-			walk(x.NamedChild(i))
+		for _, c := range x.NamedChildren() {
+			walk(c)
 		}
 	}
 	walk(body)

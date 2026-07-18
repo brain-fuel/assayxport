@@ -168,6 +168,28 @@ func (n Node) NamedChild(i int) Node {
 	return Node{n: n.n.NamedChild(i), lang: n.lang}
 }
 
+// NamedChildren returns all named children in order, materializing the child
+// list in a single O(children) pass.
+//
+// Prefer this over a `for i := 0; i < n.NamedChildCount(); i++ { n.NamedChild(i) }`
+// loop: in the backend both NamedChildCount and NamedChild(i) walk the child
+// list from the start, so an index loop is O(children^2) per node and, applied
+// recursively over a subtree, blows up on large source files (a ~900 KB file
+// froze the whole assay). Iterating the materialized slice is linear.
+func (n Node) NamedChildren() []Node {
+	if n.n == nil {
+		return nil
+	}
+	kids := n.n.Children()
+	out := make([]Node, 0, len(kids))
+	for _, c := range kids {
+		if c != nil && c.IsNamed() {
+			out = append(out, Node{n: c, lang: n.lang})
+		}
+	}
+	return out
+}
+
 // ChildByFieldName returns the child under field f (e.g. "name", "parameters",
 // "body", "return_type") and whether it was found.
 func (n Node) ChildByFieldName(f string) (Node, bool) {

@@ -21,8 +21,8 @@ func moduleSymbols(lang ts.Language, relFile, unitID string, src []byte, isTS bo
 	ctx := buildFileCtx(root, src, unitID)
 
 	var syms []schema.Symbol
-	for i := 0; i < root.NamedChildCount(); i++ {
-		decl, exported := unwrapExport(root.NamedChild(i))
+	for _, rc := range root.NamedChildren() {
+		decl, exported := unwrapExport(rc)
 		if decl.IsNull() {
 			continue
 		}
@@ -38,8 +38,7 @@ func unwrapExport(n ts.Node) (ts.Node, bool) {
 	if n.Type() != "export_statement" {
 		return n, false
 	}
-	for i := 0; i < n.NamedChildCount(); i++ {
-		c := n.NamedChild(i)
+	for _, c := range n.NamedChildren() {
 		if isDeclType(c.Type()) {
 			return c, true
 		}
@@ -129,8 +128,7 @@ func classSymbols(n ts.Node, ownerPrefix string, exported bool, relFile, unitID 
 	if !ok {
 		return out
 	}
-	for i := 0; i < body.NamedChildCount(); i++ {
-		m := body.NamedChild(i)
+	for _, m := range body.NamedChildren() {
 		memberExported := true // class members default public; visibility set from modifiers
 		switch m.Type() {
 		case "method_definition":
@@ -199,8 +197,7 @@ func fieldSymbol(n ts.Node, ownerPrefix, relFile string, src []byte, isTS bool) 
 func varSymbols(decl ts.Node, ownerPrefix string, exported bool, relFile, unitID string, src []byte, isTS bool, ctx *tsFileCtx) []schema.Symbol {
 	isVar := strings.HasPrefix(strings.TrimSpace(decl.Content(src)), "var")
 	var out []schema.Symbol
-	for i := 0; i < decl.NamedChildCount(); i++ {
-		d := decl.NamedChild(i)
+	for _, d := range decl.NamedChildren() {
 		if d.Type() != "variable_declarator" {
 			continue
 		}
@@ -274,8 +271,7 @@ func paramList(n ts.Node, src []byte) []schema.Param {
 		return nil
 	}
 	var out []schema.Param
-	for i := 0; i < ps.NamedChildCount(); i++ {
-		p := ps.NamedChild(i)
+	for _, p := range ps.NamedChildren() {
 		var param schema.Param
 		if pat, ok := p.ChildByFieldName("pattern"); ok {
 			param.Name = collapseWS(pat.Content(src))
@@ -297,8 +293,7 @@ func typeParamsOf(n ts.Node, src []byte) []schema.TypeParam {
 		return nil
 	}
 	var out []schema.TypeParam
-	for i := 0; i < tp.NamedChildCount(); i++ {
-		t := tp.NamedChild(i)
+	for _, t := range tp.NamedChildren() {
 		if t.Type() != "type_parameter" {
 			continue
 		}
@@ -366,8 +361,8 @@ func fieldText(n ts.Node, field string, src []byte) string {
 }
 
 func childOfType(n ts.Node, typ string) ts.Node {
-	for i := 0; i < n.NamedChildCount(); i++ {
-		if c := n.NamedChild(i); c.Type() == typ {
+	for _, c := range n.NamedChildren() {
+		if c.Type() == typ {
 			return c
 		}
 	}
@@ -377,8 +372,8 @@ func childOfType(n ts.Node, typ string) ts.Node {
 // decoratorsOf collects `@Decorator` names attached to a declaration.
 func decoratorsOf(n ts.Node, src []byte) []string {
 	var out []string
-	for i := 0; i < n.NamedChildCount(); i++ {
-		if c := n.NamedChild(i); c.Type() == "decorator" {
+	for _, c := range n.NamedChildren() {
+		if c.Type() == "decorator" {
 			out = append(out, strings.TrimPrefix(collapseWS(firstLine(c.Content(src))), "@"))
 		}
 	}
