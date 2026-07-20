@@ -217,3 +217,24 @@ func TestWriteDirPrunesStaleShards(t *testing.T) {
 		t.Errorf("assayxport.json missing after prune: %v", err)
 	}
 }
+
+func TestFinalizePermitIsUseOnceAtGoBoundary(t *testing.T) {
+	w, err := NewWriter(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	permit, err := w.Finalizer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cell := LinOf(permit)
+	if _, err := FinalizeWriter(cell, "example.com/test", nil); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if recover() == nil {
+			t.Fatal("second finalization permit consumption did not panic")
+		}
+	}()
+	_, _ = FinalizeWriter(cell, "example.com/test", nil)
+}

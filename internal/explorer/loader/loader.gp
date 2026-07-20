@@ -14,6 +14,7 @@ package loader
 import (
 	"sort"
 
+	"goforge.dev/assayxport/internal/schema"
 	"goforge.dev/cadence"
 )
 
@@ -43,16 +44,16 @@ type Policy struct{}
 
 func (Policy) StrategyFor(_ string, ctx cadence.RequestContext, prof cadence.Profile) cadence.Strategy {
 	if ctx.NoJS {
-		return cadence.Strategy{Kind: cadence.Eager}
+		return cadence.Eager()
 	}
 	p, _ := prof.(Profile)
 	switch p.Intent {
 	case Pinned, Visible:
-		return cadence.Strategy{Kind: cadence.Deferred, Where: cadence.Client, On: cadence.OnLoad}
+		return cadence.Deferred(cadence.Client(), cadence.OnLoad())
 	case Hovered:
-		return cadence.Strategy{Kind: cadence.Deferred, Where: cadence.Client, On: cadence.OnHover}
+		return cadence.Deferred(cadence.Client(), cadence.OnHover())
 	default: // Adjacent, Distant
-		return cadence.Strategy{Kind: cadence.Deferred, Where: cadence.Client, On: cadence.OnVisible}
+		return cadence.Deferred(cadence.Client(), cadence.OnVisible())
 	}
 }
 
@@ -61,16 +62,17 @@ func (Policy) StrategyFor(_ string, ctx cadence.RequestContext, prof cadence.Pro
 // one place: OnLoad > OnHover > OnVisible.
 func Priority(in Intent) int {
 	s := Policy{}.StrategyFor("", cadence.RequestContext{}, Profile{Intent: in})
-	switch {
-	case s.Kind == cadence.Eager:
-		return 100
-	case s.On == cadence.OnLoad:
-		return 40
-	case s.On == cadence.OnHover:
-		return 30
-	default: // OnVisible
-		return 20 + int(in) // break ties by intent so Adjacent > Distant
-	}
+	return cadence.StrategyFold(s, cadence.StrategyCases[int]{
+		Eager: func() int { return 100 },
+		Deferred: func(_ cadence.Where, on cadence.Trigger) int {
+			return cadence.TriggerFold(on, cadence.TriggerCases[int]{
+				OnLoad: func() int { return 40 },
+				OnHover: func() int { return 30 },
+				OnVisible: func() int { return 20 + int(in) },
+			})
+		},
+		Live: func() int { return 100 },
+	})
 }
 
 // Scheduler is a bounded-concurrency priority queue over ids (shard paths). It
@@ -79,33 +81,49 @@ func Priority(in Intent) int {
 // fetches finish on their own and report Done.
 type Scheduler struct {
 	Cap      int
-	want     map[string]int
-	inflight map[string]bool
+	want     map[schema.PackageID]schema.Priority
+	inflight map[schema.PackageID]bool
+	state    map[schema.PackageID]LoadState
 }
+
+type LoadState enum {
+	PendingLoad(priority schema.Priority)
+	InFlightLoad
+	LoadedLoad(size schema.ByteSize)
+	EvictedLoad
+}
+
+// FetchPermit is minted only when a pending package moves in flight.
+type FetchPermit struct { id schema.PackageID }
+
+func FetchPermitID(p FetchPermit) string { return schema.PackageIDString(p.id) }
 
 func NewScheduler(capacity int) *Scheduler {
 	if capacity < 1 {
 		capacity = 1
 	}
-	return &Scheduler{Cap: capacity, want: map[string]int{}, inflight: map[string]bool{}}
+	return &Scheduler{Cap: capacity, want: map[schema.PackageID]schema.Priority{}, inflight: map[schema.PackageID]bool{}, state: map[schema.PackageID]LoadState{}}
 }
 
 // Want enqueues id at prio (or raises its priority). An already-inflight id is
 // ignored (it is already being fetched).
 func (s *Scheduler) Want(id string, prio int) {
-	if s.inflight[id] {
+	key := schema.MustPackageID(id)
+	priority := schema.Priority(prio)
+	if s.inflight[key] {
 		return
 	}
-	if p, ok := s.want[id]; !ok || prio > p {
-		s.want[id] = prio
+	if p, ok := s.want[key]; !ok || priority > p {
+		s.want[key] = priority
+		s.state[key] = PendingLoad(priority)
 	}
 }
 
 // Forget drops a pending id (e.g. it just loaded by another path).
-func (s *Scheduler) Forget(id string) { delete(s.want, id) }
+func (s *Scheduler) Forget(id string) { key := schema.MustPackageID(id); delete(s.want, key); s.state[key] = EvictedLoad() }
 
 // Reset clears the pending queue. In-flight fetches are left to finish.
-func (s *Scheduler) Reset() { s.want = map[string]int{} }
+func (s *Scheduler) Reset() { s.want = map[schema.PackageID]schema.Priority{} }
 
 // Inflight reports how many fetches are outstanding.
 func (s *Scheduler) Inflight() int { return len(s.inflight) }
@@ -116,13 +134,23 @@ func (s *Scheduler) Pending() int { return len(s.want) }
 // Next returns up to (Cap - inflight) highest-priority pending ids, moving them
 // to in-flight. Ties break by id for determinism.
 func (s *Scheduler) Next() []string {
+	permits := s.NextPermits()
+	if len(permits) == 0 { return nil }
+	out := make([]string, len(permits))
+	for i, permit := range permits { out[i] = FetchPermitID(permit) }
+	return out
+}
+
+// NextPermits performs the pending→in-flight transition and returns the
+// capability required to complete it.
+func (s *Scheduler) NextPermits() []FetchPermit {
 	slots := s.Cap - len(s.inflight)
 	if slots <= 0 || len(s.want) == 0 {
 		return nil
 	}
 	type kv struct {
-		id string
-		p  int
+		id schema.PackageID
+		p  schema.Priority
 	}
 	all := make([]kv, 0, len(s.want))
 	for id, p := range s.want {
@@ -132,43 +160,59 @@ func (s *Scheduler) Next() []string {
 		if all[i].p != all[j].p {
 			return all[i].p > all[j].p
 		}
-		return all[i].id < all[j].id
+		return schema.PackageIDString(all[i].id) < schema.PackageIDString(all[j].id)
 	})
-	out := make([]string, 0, slots)
+	out := make([]FetchPermit, 0, slots)
 	for _, e := range all {
 		if slots <= 0 {
 			break
 		}
 		delete(s.want, e.id)
 		s.inflight[e.id] = true
-		out = append(out, e.id)
+		s.state[e.id] = InFlightLoad()
+		out = append(out, FetchPermit{id: e.id})
 		slots--
 	}
 	return out
 }
 
 // Done marks an in-flight fetch complete (success or failure).
-func (s *Scheduler) Done(id string) { delete(s.inflight, id) }
+func (s *Scheduler) Done(id string) { delete(s.inflight, schema.MustPackageID(id)) }
+
+// Complete consumes a permit exactly once on every Go+ path. Generated Go
+// callers receive the runtime use-once cell as an additional boundary guard.
+func Complete(s *Scheduler, 1 permit FetchPermit) {
+	id := permit.id
+	delete(s.inflight, id)
+	s.state[id] = LoadedLoad(schema.ByteSize(0))
+}
+
+func (s *Scheduler) State(id string) LoadState {
+	key := schema.MustPackageID(id)
+	if state, ok := s.state[key]; ok { return state }
+	return EvictedLoad()
+}
 
 // Cache is an LRU of loaded ids with a byte budget and a pin set. Pinned ids
 // (the open package, the current level) are never evicted. A Budget <= 0
 // disables eviction entirely.
 type Cache struct {
-	Budget int64
-	size   map[string]int64
+	Budget schema.ByteBudget
+	size   map[string]schema.ByteSize
 	seq    map[string]int64
 	pin    map[string]bool
 	clock  int64
-	total  int64
+	total  schema.ByteSize
 }
 
 func NewCache(budget int64) *Cache {
-	return &Cache{Budget: budget, size: map[string]int64{}, seq: map[string]int64{}, pin: map[string]bool{}}
+	return &Cache{Budget: schema.ByteBudget(budget), size: map[string]schema.ByteSize{}, seq: map[string]int64{}, pin: map[string]bool{}}
 }
 
 // Note records that id is loaded and occupies size bytes, marking it most
 // recently used.
-func (c *Cache) Note(id string, size int64) {
+func (c *Cache) Note(id string, rawSize int64) {
+	size := schema.ByteSize(rawSize)
 	if _, ok := c.size[id]; !ok {
 		c.total += size
 	} else {
@@ -189,7 +233,7 @@ func (c *Cache) Pinned(id string) bool { return c.pin[id] }
 
 // Loaded reports whether id is in the cache. Total returns the current bytes.
 func (c *Cache) Loaded(id string) bool { _, ok := c.size[id]; return ok }
-func (c *Cache) Total() int64          { return c.total }
+func (c *Cache) Total() int64          { return int64(c.total) }
 
 // Forget removes id from the cache (after it has been evicted).
 func (c *Cache) Forget(id string) {
@@ -205,7 +249,7 @@ func (c *Cache) Forget(id string) {
 // cache; the caller drops each returned id (in the engine and the DOM) and then
 // calls Forget. Returns nil when within budget or eviction is disabled.
 func (c *Cache) Overflow() []string {
-	if c.Budget <= 0 || c.total <= c.Budget {
+	if c.Budget <= 0 || c.total <= schema.ByteSize(c.Budget) {
 		return nil
 	}
 	type kv struct {
@@ -222,7 +266,7 @@ func (c *Cache) Overflow() []string {
 	out := []string{}
 	t := c.total
 	for _, e := range cand {
-		if t <= c.Budget {
+		if t <= schema.ByteSize(c.Budget) {
 			break
 		}
 		out = append(out, e.id)

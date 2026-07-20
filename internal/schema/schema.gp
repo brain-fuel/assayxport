@@ -196,8 +196,10 @@ type Call struct {
 	Count    int       `json:"count"`               // number of call sites merged into this edge
 }
 
-// DedupeCalls merges raw per-site edges (Count ignored, each element is one
-// site) into the canonical form documented on Call. The merge key is the
+// DedupeCalls merges edges into the canonical form documented on Call. A
+// non-positive Count represents one raw site; an already aggregated positive
+// Count is preserved. This makes normalization idempotent while retaining the
+// historical behavior for extractor-produced raw sites. The merge key is the
 // full vector - Target, Kind, Ref, Arity, ArgTypes - so two sites that carry
 // different evidence stay distinct edges rather than blurring into one.
 // Returns nil for no edges so the field is omitted entirely.
@@ -211,12 +213,14 @@ func DedupeCalls(raw []Call) []Call {
 	}
 	byKey := make(map[string]*slot, len(raw))
 	for _, c := range raw {
+		n := c.Count
+		if n < 1 { n = 1 }
 		c.Count = 0
 		k := callKey(c)
 		if s, ok := byKey[k]; ok {
-			s.n++
+			s.n += n
 		} else {
-			byKey[k] = &slot{c: c, n: 1}
+			byKey[k] = &slot{c: c, n: n}
 		}
 	}
 	out := make([]Call, 0, len(byKey))

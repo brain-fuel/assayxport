@@ -10,20 +10,22 @@ func TestPolicyFallbackLaw(t *testing.T) {
 	// Under no-JS every strategy must be Eager (cadence's fallback law).
 	for _, in := range []Intent{Distant, Adjacent, Hovered, Visible, Pinned} {
 		s := Policy{}.StrategyFor("r", cadence.RequestContext{NoJS: true}, Profile{Intent: in})
-		if s.Kind != cadence.Eager {
-			t.Fatalf("no-JS intent %d gave %v, want Eager", in, s.Kind)
+		if _, ok := s.(cadence.Eager); !ok {
+			t.Fatalf("no-JS intent %d gave %T, want Eager", in, s)
 		}
 	}
 }
 
 func TestPolicyMapsIntentToTrigger(t *testing.T) {
 	cases := map[Intent]cadence.Trigger{
-		Visible: cadence.OnLoad, Pinned: cadence.OnLoad,
-		Hovered: cadence.OnHover, Adjacent: cadence.OnVisible, Distant: cadence.OnVisible,
+		Visible: cadence.OnLoad{}, Pinned: cadence.OnLoad{},
+		Hovered: cadence.OnHover{}, Adjacent: cadence.OnVisible{}, Distant: cadence.OnVisible{},
 	}
 	for in, want := range cases {
 		s := Policy{}.StrategyFor("r", cadence.RequestContext{}, Profile{Intent: in})
-		if s.Kind != cadence.Deferred || s.Where != cadence.Client || s.On != want {
+		d, ok := s.(cadence.Deferred)
+		_, client := d.Where.(cadence.Client)
+		if !ok || !client || !cadence.TriggerEqual(d.On, want) {
 			t.Fatalf("intent %d gave %+v, want Deferred/Client/%v", in, s, want)
 		}
 	}
@@ -72,6 +74,23 @@ func TestSchedulerDedupAndRaise(t *testing.T) {
 	if s.Pending() != 0 {
 		t.Fatalf("re-queued an inflight id: pending=%d", s.Pending())
 	}
+}
+
+func TestFetchPermitIsUseOnceAtGoBoundary(t *testing.T) {
+	s := NewScheduler(1)
+	s.Want("pkg", 10)
+	permit := s.NextPermits()[0]
+	cell := LinOf(permit)
+	Complete(s, cell)
+	if _, ok := s.State("pkg").(LoadedLoad); !ok {
+		t.Fatalf("completed permit left state %T", s.State("pkg"))
+	}
+	defer func() {
+		if recover() == nil {
+			t.Fatal("second permit consumption did not panic")
+		}
+	}()
+	Complete(s, cell)
 }
 
 func TestCacheEvictsLRUUnpinned(t *testing.T) {

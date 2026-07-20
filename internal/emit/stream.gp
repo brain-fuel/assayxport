@@ -85,7 +85,7 @@ func assignShard(pkgPath, pkgID string, used map[string]bool) string {
 		}
 	}
 	used[sp] = true
-	return sp
+	return schema.ShardPathString(schema.MustShardPath(sp))
 }
 
 // pruneShards deletes any *.json under <outDir>/.assayxport/ that is not in the
@@ -136,7 +136,11 @@ type Writer struct {
 	mu    sync.Mutex
 	seq   int
 	items []staged
+	finalizerIssued bool
+	finalized bool
 }
+
+type FinalizePermit struct { writer *Writer }
 
 // NewWriter prepares dir for streaming (creating its shard staging area).
 func NewWriter(dir string) (*Writer, error) {
@@ -151,6 +155,12 @@ func NewWriter(dir string) (*Writer, error) {
 // package's symbols are needed only for the marshal here; the caller may release
 // them once Add returns.
 func (w *Writer) Add(p schema.Package) error {
+	w.mu.Lock()
+	if w.finalizerIssued {
+		w.mu.Unlock()
+		return fmt.Errorf("assayxport: add after finalization began")
+	}
+	w.mu.Unlock()
 	shard, entrypoints := shardOf(p)
 	b, err := marshal(shard)
 	if err != nil {
@@ -171,6 +181,34 @@ func (w *Writer) Add(p schema.Package) error {
 // staged file into place), writes the index, and prunes stale shards. It returns
 // the built index (the same value Manifest would have produced).
 func (w *Writer) Finalize(module string, languages []string) (schema.Index, error) {
+	permit, err := w.Finalizer()
+	if err != nil { return schema.Index{}, err }
+	return FinalizeWriter(permit, module, languages)
+}
+
+// Finalizer mints the sole capability that can commit this writer.
+func (w *Writer) Finalizer() (FinalizePermit, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.finalizerIssued { return FinalizePermit{}, fmt.Errorf("assayxport: writer finalizer already issued") }
+	w.finalizerIssued = true
+	return FinalizePermit{writer: w}, nil
+}
+
+// FinalizeWriter consumes the finalization capability exactly once.
+func FinalizeWriter(1 permit FinalizePermit, module string, languages []string) (schema.Index, error) {
+	w := permit.writer
+	return w.finalize(module, languages)
+}
+
+func (w *Writer) finalize(module string, languages []string) (schema.Index, error) {
+	w.mu.Lock()
+	if w.finalized {
+		w.mu.Unlock()
+		return schema.Index{}, fmt.Errorf("assayxport: writer already finalized")
+	}
+	w.finalized = true
+	w.mu.Unlock()
 	sort.Slice(w.items, func(i, j int) bool {
 		a, b := w.items[i].entry, w.items[j].entry
 		if a.ID != b.ID {

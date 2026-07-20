@@ -105,7 +105,7 @@ func TestDeterministicOrder(t *testing.T) {
 
 // ---- the summary monoid and the structures built on it ----
 
-func TestSummaryMonoidLaws(t *testing.T) {
+func TestSummaryMonoidCommutativity(t *testing.T) {
 	vals := []Summary{
 		{}, {Symbols: 1}, {Packages: 1, HasEntrypoint: true},
 		{Symbols: 3, Packages: 2}, {Symbols: 5, Packages: 1, HasEntrypoint: true},

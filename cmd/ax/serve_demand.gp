@@ -108,7 +108,8 @@ func underFocus(pkgPath string, focusPaths []string) bool {
 // demandItem pairs a skeleton package with the extractor that parses it.
 type demandItem struct {
 	ext extract.DemandExtractor
-	pkg schema.Package
+	pkg extract.ProgressivePackage[extract.ScheduledPhase]
+	permit loader.FetchPermit
 }
 
 // demandDrive parses every skeleton package of the demand extractors, ordering
@@ -125,7 +126,8 @@ func demandDrive(root string, demandExts []extract.DemandExtractor, fr *focusReg
 			return err
 		}
 		for _, p := range pkgs {
-			items[p.ID] = demandItem{ext: ext, pkg: p}
+			discovered := extract.Discover(p)
+			items[p.ID] = demandItem{ext: ext, pkg: extract.Schedule(discovered)}
 		}
 	}
 	if len(items) == 0 {
@@ -136,13 +138,14 @@ func demandDrive(root string, demandExts []extract.DemandExtractor, fr *focusReg
 	if workers < 1 {
 		workers = 1
 	}
-	sched := loader.NewScheduler(workers)
+	workerCount := schema.WorkerCount(workers)
+	sched := loader.NewScheduler(int(workerCount))
 	for id := range items {
 		sched.Want(id, loader.Priority(loader.Distant))
 	}
 
-	workCh := make(chan demandItem, workers)
-	doneCh := make(chan string, workers)
+	workCh := make(chan demandItem, int(workerCount))
+	doneCh := make(chan loader.FetchPermit, int(workerCount))
 	errCh := make(chan error, len(items))
 	wake := make(chan struct{}, 1)
 	fr.setOnChange(func() {
@@ -154,19 +157,24 @@ func demandDrive(root string, demandExts []extract.DemandExtractor, fr *focusReg
 	defer fr.setOnChange(nil)
 
 	var wg sync.WaitGroup
-	for w := 0; w < workers; w++ {
+	for w := 0; w < int(workerCount); w++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			for it := range workCh {
-				out, err := it.ext.ExtractOne(root, it.pkg)
+				active := extract.BeginExtraction(it.pkg)
+				skeleton := extract.ExtractingValue(active)
+				out, err := extract.ExtractOneWith(extract.DemandExtractorCapability, it.ext, root, skeleton)
 				if err == nil {
-					err = emit(out)
+					ready := extract.FinishExtraction(active, out)
+					err = emit(extract.ReadyValue(ready))
+				} else {
+					_ = extract.FailExtraction(active, err)
 				}
 				if err != nil {
 					errCh <- err
 				}
-				doneCh <- it.pkg.ID
+				doneCh <- it.permit
 			}
 		}()
 	}
@@ -181,14 +189,18 @@ func demandDrive(root string, demandExts []extract.DemandExtractor, fr *focusReg
 			return
 		}
 		for id, it := range items {
-			if !finished[id] && underFocus(it.pkg.Path, paths) {
+			pkg := extract.ScheduledValue(it.pkg)
+			if !finished[id] && underFocus(pkg.Path, paths) {
 				sched.Want(id, loader.Priority(loader.Visible))
 			}
 		}
 	}
 	pump := func() {
-		for _, id := range sched.Next() {
-			workCh <- items[id]
+		for _, permit := range sched.NextPermits() {
+			id := loader.FetchPermitID(permit)
+			item := items[id]
+			item.permit = permit
+			workCh <- item
 		}
 	}
 
@@ -197,9 +209,10 @@ func demandDrive(root string, demandExts []extract.DemandExtractor, fr *focusReg
 	pump()
 	for remaining > 0 {
 		select {
-		case id := <-doneCh:
+		case permit := <-doneCh:
+			id := loader.FetchPermitID(permit)
 			finished[id] = true
-			sched.Done(id)
+			loader.Complete(sched, permit)
 			remaining--
 			pump()
 		case <-wake:

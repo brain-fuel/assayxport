@@ -181,7 +181,7 @@ func (e *Engine) UnpinAll()           { e.cache.UnpinAll() }
 
 // SetBudget adjusts the cache's byte budget (the browser lowers it under memory
 // pressure). A budget <= 0 disables eviction.
-func (e *Engine) SetBudget(b int64) { e.cache.Budget = b }
+func (e *Engine) SetBudget(b int64) { e.cache.Budget = schema.ByteBudget(b) }
 
 // CacheBytes reports the estimated bytes currently held (for diagnostics).
 func (e *Engine) CacheBytes() int64 { return e.cache.Total() }
@@ -231,7 +231,7 @@ type LevelView struct {
 	Path        string      `json:"path"`
 	Name        string      `json:"name"`
 	IsPkg       bool        `json:"is_pkg"`
-	Version     uint64      `json:"version"`
+	Version     schema.TreeVersion `json:"version"`
 	SelfPkgID   string      `json:"self_pkg_id,omitempty"`
 	SelfShard   string      `json:"self_shard,omitempty"`
 	SelfSymbols int         `json:"self_symbols,omitempty"`
@@ -335,10 +335,11 @@ func (e *Engine) integrate(sh schema.Shard) {
 			// Only internal edges name a resolvable target in this manifest;
 			// external/builtin/dynamic/unresolved edges have no Ref to hang a
 			// reverse edge on.
-			if c.Ref == "" {
+			callee, internal := schema.InternalCallRef(c)
+			if !internal {
 				continue
 			}
-			e.callers[c.Ref] = append(e.callers[c.Ref], Caller{From: from, Kind: c.Kind, Count: c.Count})
+			e.callers[callee] = append(e.callers[callee], Caller{From: from, Kind: c.Kind, Count: c.Count})
 		}
 	}
 }

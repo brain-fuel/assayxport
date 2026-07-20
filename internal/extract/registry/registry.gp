@@ -66,7 +66,7 @@ func Skeleton(exts []extract.Extractor, root string) (pkgs []schema.Package, lan
 		if !ok {
 			continue
 		}
-		got, serr := se.Skeleton(root)
+		got, serr := extract.SkeletonWith(extract.SkeletonExtractorCapability, se, root)
 		if serr != nil {
 			return nil, nil, fmt.Errorf("%s skeleton: %w", e.Language(), serr)
 		}
@@ -95,12 +95,20 @@ func Skeleton(exts []extract.Extractor, root string) (pkgs []schema.Package, lan
 // joined into the fatal return, so a genuinely broken single-language scan
 // still fails cleanly.
 func Run(exts []extract.Extractor, root string) (pkgs []schema.Package, languages []string, warnings []error, err error) {
+	return extract.LegacyOutcome(RunOutcome(exts, root))
+}
+
+// RunOutcome is the semantic extraction API. Run remains the plain-Go
+// compatibility boundary and exhaustively folds this sum into legacy returns.
+func RunOutcome(exts []extract.Extractor, root string) extract.ExtractionOutcome {
 	langSet := map[string]bool{}
-	var errs []error
+	var failures []extract.ExtractionFailure
+	var pkgs []schema.Package
+	var languages []string
 	for _, e := range exts {
 		got, extErr := e.Extract(root)
 		if extErr != nil {
-			errs = append(errs, fmt.Errorf("%s: %w", e.Language(), extErr))
+			failures = append(failures, extract.ExtractionFailure{Language: e.Language(), Cause: extErr})
 			continue
 		}
 		// Fold in each produced package's own language, not just the extractor's
@@ -111,14 +119,15 @@ func Run(exts []extract.Extractor, root string) (pkgs []schema.Package, language
 		}
 		pkgs = append(pkgs, got...)
 	}
-	if len(pkgs) == 0 && len(errs) > 0 {
-		return nil, nil, nil, errors.Join(errs...)
+	if len(pkgs) == 0 && len(failures) > 0 {
+		return extract.ExtractionFailed(failures)
 	}
 	for l := range langSet {
 		languages = append(languages, l)
 	}
 	sort.Strings(languages)
-	return pkgs, languages, errs, nil
+	if len(failures) > 0 { return extract.ExtractionPartial(pkgs, languages, failures) }
+	return extract.ExtractionComplete(pkgs, languages)
 }
 
 // RunStream is the streaming counterpart of Run: each extractor's packages are
@@ -147,7 +156,7 @@ func RunStream(exts []extract.Extractor, root string, emit func(schema.Package) 
 		}
 		var extErr error
 		if se, ok := e.(extract.StreamExtractor); ok {
-			extErr = se.ExtractStream(root, count)
+			extErr = extract.StreamWith(extract.StreamExtractorCapability, se, root, count)
 		} else {
 			var pkgs []schema.Package
 			pkgs, extErr = e.Extract(root)

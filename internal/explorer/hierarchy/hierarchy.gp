@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"goforge.dev/assayxport/internal/schema"
+	"goforge.dev/goplus/std/algebra"
 )
 
 // Summary is one subtree's aggregate: everything a level view needs to size
@@ -39,13 +40,18 @@ type Summary struct {
 	HasEntrypoint bool // any package in the subtree is an entrypoint
 }
 
+// SummaryMonoid promotes the documented aggregation laws into generated
+// properties used by parallel build and incremental reconciliation.
+instance SummaryMonoid algebra.Monoid[Summary] {
+	Combine(a, b Summary) Summary {
+		return Summary{Symbols: a.Symbols + b.Symbols, Packages: a.Packages + b.Packages, HasEntrypoint: a.HasEntrypoint || b.HasEntrypoint}
+	}
+	Empty() Summary { return Summary{} }
+}
+
 // Plus combines two summaries; Plus with the zero Summary is the identity.
 func (s Summary) Plus(o Summary) Summary {
-	return Summary{
-		Symbols:       s.Symbols + o.Symbols,
-		Packages:      s.Packages + o.Packages,
-		HasEntrypoint: s.HasEntrypoint || o.HasEntrypoint,
-	}
+	return SummaryMonoid.Combine(s, o)
 }
 
 // Node is one node of the package tree. A node is a group (an intermediate
@@ -64,7 +70,7 @@ type Node struct {
 	Children map[string]*Node // by child name
 
 	Sum Summary // subtree aggregate (includes this node's own contribution)
-	Ver uint64  // tree version that last changed anything in this subtree
+	Ver schema.TreeVersion  // tree version that last changed anything in this subtree
 
 	parent *Node // link to the containing node (nil at the root), for deltas
 }
@@ -84,7 +90,7 @@ type Tree struct {
 	Root   *Node
 	byPath map[string]*Node
 	pkgs   int    // package nodes in the tree; Apply's consistency check
-	ver    uint64 // bumped once per Apply, stamped onto changed nodes
+	ver    schema.TreeVersion // bumped once per Apply, stamped onto changed nodes
 }
 
 // buildChunkMin is the smallest chunk worth a goroutine of its own: below
@@ -172,7 +178,7 @@ func (t *Tree) ensure(path string) *Node {
 
 // rollup computes every subtree summary bottom-up and stamps ver. Only bulk
 // construction uses it; incremental change goes through Apply's delta path.
-func rollup(n *Node, ver uint64) Summary {
+func rollup(n *Node, ver schema.TreeVersion) Summary {
 	n.Sum = n.own()
 	for _, c := range n.Children {
 		n.Sum = n.Sum.Plus(rollup(c, ver))
@@ -301,7 +307,7 @@ func (t *Tree) rebuild(idx schema.Index) int {
 	return len(idx.Packages)
 }
 
-func stamp(n *Node, ver uint64) {
+func stamp(n *Node, ver schema.TreeVersion) {
 	n.Ver = ver
 	for _, c := range n.Children {
 		stamp(c, ver)
@@ -336,7 +342,7 @@ type Level struct {
 	Path        string       `json:"path"`
 	Name        string       `json:"name"`
 	IsPkg       bool         `json:"is_pkg"`
-	Version     uint64       `json:"version"`
+	Version     schema.TreeVersion `json:"version"`
 	SelfPkgID   string       `json:"self_pkg_id,omitempty"`
 	SelfShard   string       `json:"self_shard,omitempty"`
 	SelfSymbols int          `json:"self_symbols,omitempty"`

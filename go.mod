@@ -4,8 +4,10 @@ go 1.26
 
 require (
 	github.com/odvcencio/gotreesitter v0.20.7
-	goforge.dev/cadence v0.1.1
+	goforge.dev/cadence v0.3.0
+	goforge.dev/goplus/std v0.17.0
 	golang.org/x/tools v0.33.0
+	pgregory.net/rapid v1.3.0
 )
 
 require (

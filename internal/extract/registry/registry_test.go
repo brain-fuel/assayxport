@@ -6,6 +6,7 @@ import (
 
 	"goforge.dev/assayxport/internal/extract"
 	"goforge.dev/assayxport/internal/schema"
+	"goforge.dev/goplus/std/result"
 )
 
 // mixedFixture is the polyglot fixture: a Go package (calc) plus a Python
@@ -25,6 +26,9 @@ func TestRunPolyglotMerge(t *testing.T) {
 	seen := map[string]bool{}
 	for _, p := range pkgs {
 		seen[p.Language] = true
+		if _, failure := result.Unpack(schema.SemanticPackageOf(p)); failure != nil {
+			t.Fatalf("semantic package %s: %#v", p.ID, failure)
+		}
 	}
 	if !seen["go"] || !seen["java"] || !seen["python"] {
 		t.Fatalf("merged units missing a language: %v", seen)
@@ -146,6 +150,9 @@ func TestRunToleratesOneLanguageError(t *testing.T) {
 	if len(warns) != 1 {
 		t.Fatalf("warnings = %v, want the tolerated go failure", warns)
 	}
+	if _, ok := RunOutcome(exts, ".").(extract.ExtractionPartial); !ok {
+		t.Fatal("typed outcome did not preserve partial success")
+	}
 }
 
 // TestRunAllFailReturnsError confirms that when every extractor errors and none
@@ -158,5 +165,8 @@ func TestRunAllFailReturnsError(t *testing.T) {
 	_, _, _, err := Run(exts, ".")
 	if err == nil {
 		t.Fatal("Run with all extractors failing = nil error, want joined error")
+	}
+	if _, ok := RunOutcome(exts, ".").(extract.ExtractionFailed); !ok {
+		t.Fatal("typed outcome did not represent total failure")
 	}
 }

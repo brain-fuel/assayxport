@@ -148,6 +148,28 @@ Java overloads of the same arity but different parameter types; there, delegatio
 may still read as `recursive`. When in doubt the estimator prefers to null the
 bound rather than fabricate one.
 
+## Semantic model in Go+
+
+AssayXport keeps its stable JSON structs as an explicit wire boundary. Its
+internal invariants are now executable Go+ abstractions:
+
+- resolution, evidence, overload results, complexity, languages, symbol kinds,
+  visibility, documentation, invocation, hierarchy nodes, and concerns are
+  exhaustive sums;
+- package/symbol ids, symbol references, source paths, and shard paths are
+  validated opaque values, with distinct position, arity, count, byte,
+  version, priority, and worker-count units;
+- complete, useful-partial, and failed extraction form one outcome sum;
+- streaming, skeleton, and demand extraction are capability classes with a
+  generated package-identity law;
+- hierarchy summaries are a law-tested monoid, while call normalization is a
+  law-tested `goforge.dev/goplus/std/canonical.Canonical` instance;
+- progressive packages carry indexed phases, and scheduler/writer transitions
+  use quantity-1 permits with generated use-once guards for Go callers.
+
+Committed `_gp.go` files preserve ordinary Go installation. Regeneration uses
+Go+ v0.16.1 or newer and `goforge.dev/goplus/std` v0.17.0.
+
 ## License
 
 MIT. Third-party components (the tree-sitter runtime and the Python and Java
