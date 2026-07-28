@@ -3,7 +3,7 @@
 
 // Package loader is the explorer's loading algebra: it decides what to fetch
 // next (a priority Scheduler) and what to drop when memory runs short (an LRU
-// Cache with pins), expressed over goforge.dev/cadence's Strategy vocabulary.
+// Cache with pins), expressed over goforge.dev/cadence's execution plans.
 //
 // It is pure state with no I/O and no syscall/js, so it unit-tests on every
 // GOOS. The browser layer (cmd/axwasm + explorer.html) is the interpreter: it
@@ -24,7 +24,7 @@ import (
 )
 
 // Intent is how much a region is needed right now. Higher intent loads sooner
-// and is evicted later. It is the value we carry in cadence's Profile.
+// and is evicted later. It is the value carried by the adaptive policy.
 type Intent int
 
 const (
@@ -35,48 +35,54 @@ const (
 	Pinned                 // the open package / current level; never evicted
 )
 
-// Profile is the adaptive signal a Policy reads. It satisfies cadence.Profile
-// (which is interface{}), so a cadence Policy can switch on it.
+// Profile is the adaptive signal a Policy reads.
 type Profile struct {
 	Intent   Intent
 	Pressure bool // memory is over budget
 }
 
-// Policy is the explorer's adaptive cadence.Policy: it maps a region and the
-// current Profile to a cadence.Strategy. Under no-JS it returns Eager, honoring
-// cadence's fallback law (the static ax assay file renders everything inline).
+// Policy maps viewport intent to one validated Cadence execution plan. The
+// orthogonal plan axes make state ownership and transport explicit rather than
+// inferring both from a legacy strategy variant.
 type Policy struct{}
 
-func (Policy) StrategyFor(_ string, ctx cadence.RequestContext, prof cadence.Profile) cadence.Strategy {
+func (Policy) PlanFor(_ string, ctx cadence.RequestContext, prof Profile) cadence.ValidatedPlan {
 	if ctx.NoJS {
-		return cadence.Eager{}
+		return cadence.Static()
 	}
-	p, _ := prof.(Profile)
-	switch p.Intent {
+	switch prof.Intent {
 	case Pinned, Visible:
-		return cadence.Deferred{Where: cadence.Client{}, On: cadence.OnLoad{}}
+		return cadence.ClientOnly(cadence.ActivateLoad{})
 	case Hovered:
-		return cadence.Deferred{Where: cadence.Client{}, On: cadence.OnHover{}}
+		return cadence.ClientOnly(cadence.ActivateIntent{})
 	default: // Adjacent, Distant
-		return cadence.Deferred{Where: cadence.Client{}, On: cadence.OnVisible{}}
+		return cadence.ClientOnly(cadence.ActivateVisible{})
 	}
 }
 
+// StrategyFor is retained temporarily for source compatibility with the
+// pre-v0.4 loader law tests. New production code must use PlanFor.
+// Deprecated: use PlanFor.
+func (Policy) StrategyFor(region string, ctx cadence.RequestContext, prof cadence.Profile) cadence.Strategy {
+	p, _ := prof.(Profile)
+	plan := Policy{}.PlanFor(region, ctx, p).Plan()
+	return cadence.ActivationFold(plan.Activation, cadence.ActivationCases[cadence.Strategy]{
+		ActivateRequest: func() cadence.Strategy { return cadence.Eager{} },
+		ActivateLoad:    func() cadence.Strategy { return cadence.Deferred{Where: cadence.Client{}, On: cadence.OnLoad{}} },
+		ActivateVisible: func() cadence.Strategy { return cadence.Deferred{Where: cadence.Client{}, On: cadence.OnVisible{}} },
+		ActivateIntent:  func() cadence.Strategy { return cadence.Deferred{Where: cadence.Client{}, On: cadence.OnHover{}} },
+	})
+}
+
 // Priority maps an intent to a scheduler priority (higher fetches first). It is
-// derived through the Policy so the ordering and the declared strategy stay in
-// one place: OnLoad > OnHover > OnVisible.
+// derived through the Policy so ordering and activation remain one declaration.
 func Priority(in Intent) int {
-	s := Policy{}.StrategyFor("", cadence.RequestContext{}, Profile{Intent: in})
-	return cadence.StrategyFold(s, cadence.StrategyCases[int]{
-		Eager: func() int { return 100 },
-		Deferred: func(_ cadence.Where, on cadence.Trigger) int {
-			return cadence.TriggerFold(on, cadence.TriggerCases[int]{
-				OnLoad:    func() int { return 40 },
-				OnHover:   func() int { return 30 },
-				OnVisible: func() int { return 20 + int(in) },
-			})
-		},
-		Live: func() int { return 100 },
+	plan := Policy{}.PlanFor("", cadence.RequestContext{}, Profile{Intent: in}).Plan()
+	return cadence.ActivationFold(plan.Activation, cadence.ActivationCases[int]{
+		ActivateRequest: func() int { return 100 },
+		ActivateLoad:    func() int { return 40 },
+		ActivateIntent:  func() int { return 30 },
+		ActivateVisible: func() int { return 20 + int(in) },
 	})
 }
 
