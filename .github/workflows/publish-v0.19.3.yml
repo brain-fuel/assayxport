@@ -1,0 +1,27 @@
+name: Publish assayxport v0.19.3 release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-v0.19.3.yml
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view v0.19.3 >/dev/null 2>&1 ||
+            gh release create v0.19.3 \
+              --verify-tag \
+              --title "assayxport v0.19.3" \
+              --generate-notes
