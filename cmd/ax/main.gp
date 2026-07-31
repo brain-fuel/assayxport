@@ -3,6 +3,7 @@
 // plus a self-contained interactive explorer (assayxport.html).
 //
 //	ax assay .              write manifest + explorer at the project root
+//	ax verify trace.json     verify stable artifact and ADR trace closure
 //	ax serve .              assay, serve the explorer, re-assay on save
 //	ax watch .              re-assay on save, writing files each time
 package main
@@ -63,6 +64,7 @@ func usage() {
 
 commands:
   assay   write assayxport.json, .assayxport/ shards, and assayxport.html
+  verify  validate an assayxport.trace/v3 artifact graph and release closure
   serve   assay and serve the explorer over HTTP (watches by default)
   watch   re-run assay whenever source files change
   version print the ax version (also: ax --version)
@@ -80,6 +82,8 @@ func run(args []string) error {
 	switch cmd {
 	case "assay":
 		return runAssayCmd(rest)
+	case "verify":
+		return runVerifyCmd(rest)
 	case "scan":
 		// Deprecated alias for assay. Kept so existing scripts and docs
 		// keep working; the notice goes to stderr so piped stdout stays

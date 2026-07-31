@@ -20,6 +20,23 @@ go install goforge.dev/assayxport/cmd/ax@latest
 
 The binary is `ax` — short for AssayXport, and short to type.
 
+## Trace graph preview
+
+The unreleased trace foundation keeps durable artifact identity separate from
+file paths and line numbers. A release can compare semantic unit digests with
+its prior lock and reject changed deployable code that has no
+release-note-to-ADR path.
+
+```bash
+ax verify assayxport.trace.json
+ax verify assayxport.trace.json \
+  -baseline previous.trace.json \
+  -release release.v0.20.0
+```
+
+This graph is domain-neutral. A consumer such as GoTP owns its compatibility
+claims and refers to assayxport artifact IDs for source and test evidence.
+
 ## Use
 
 ```bash
