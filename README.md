@@ -8,9 +8,9 @@
 > reparsing everything.
 
 Part of the [goforge](https://goforge.dev) suite. Supports Go (native
-`go/packages`), Python, and Java (both via a pure-Go, cgo-free tree-sitter
-parser). One scan produces a single deterministic manifest covering every
-supported language found in the tree.
+`go/packages`), Python, Java, TypeScript, and JavaScript source, plus compiled
+JVM artifacts. One scan produces a deterministic manifest through the same
+schema and explorer regardless of how declarations were acquired.
 
 ## Install
 
@@ -43,12 +43,54 @@ claims and refers to assayxport artifact IDs for source and test evidence.
 ax scan .                # writes assayxport.json + .assayxport/ shards
 ax scan ./pkg --stdout   # print combined JSON, write nothing
 ax scan . --lang java    # restrict to one language (repeatable)
+
+# Compiled JVM API (the preferred command name is `assay`; `scan` is an alias)
+ax assay ./slf4j-api-2.0.17.jar --stdout
+ax assay mvn:org.slf4j:slf4j-api:2.0.17 --stdout
+ax assay mvn:com.example:widget:1.2.3 --out ./report
 ```
+
+### Compiled JVM artifacts
+
+Local JAR and Maven scans parse `.class` files directly in Go. They do not
+execute or load classes, resolve referenced dependencies, invoke Java, or need
+ASM/JDK tooling. Public types and public/protected members are emitted as normal
+Java package and symbol records, including descriptors, generic signatures,
+declared exceptions, annotations, constants, records, sealed hierarchies, and
+nested types. Synthetic and bridge declarations are suppressed.
+
+Maven Central is the default repository. Any Artifactory, Nexus, or other
+Maven-layout repository can be selected without vendor-specific integration:
+
+```bash
+ax assay mvn:com.example:widget:1.2.3 \
+  --maven-repo https://artifactory.example.com/artifactory/libs-release
+```
+
+Artifacts are read from and atomically cached in `~/.m2/repository`; override
+that with `--maven-cache`. Basic or bearer authentication is accepted through
+`--maven-user`/`--maven-password` and `--maven-token`, or the corresponding
+`AX_MAVEN_USERNAME`, `AX_MAVEN_PASSWORD`, and `AX_MAVEN_TOKEN` environment
+variables. Credentials are never included in manifests or errors. Timestamped
+release artifacts are supported; unresolved `-SNAPSHOT` coordinates are
+rejected with an actionable error.
+
+Multi-release JARs honor `Multi-Release: true` and choose, per class, the
+highest definition no newer than `--java-release`. The deterministic default is
+Java 25 and does not depend on an installed JDK. Versioned entries in ordinary
+JARs are ignored.
+
+Classfiles normally contain no Javadoc or honest source location and this
+extractor does not fabricate either. Locations identify the stable JAR entry;
+calls and complexity remain empty/deferred because declaration scanning does
+not interpret bytecode. Use source scanning when docs, source lines, syntactic
+calls, or source-derived complexity are required.
 
 ### Languages
 
-By default `scan` runs every registered extractor (Go, Python, Java) and merges
-the results into one manifest whose `languages` field lists what was found. Use
+By default `scan` runs every registered source extractor (Go, Python, Java,
+TypeScript/JavaScript) and merges the results into one manifest whose
+`languages` field lists what was found. Use
 `--lang` to restrict the run; it is repeatable, so `--lang python --lang go`
 runs only those two. An unregistered language name is an error that lists the
 available ones.

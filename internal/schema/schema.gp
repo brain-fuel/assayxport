@@ -9,7 +9,8 @@ import (
 )
 
 // Version is the schema_version value written into every index and shard.
-// "2" added the per-symbol call graph (Symbol.Calls); the change is additive.
+// "2" added the per-symbol call graph. Compiled-artifact metadata is additive
+// and optional, so source manifests and the schema version remain unchanged.
 const Version = "2"
 
 // Index is the root manifest written to assayxport.json.
@@ -92,6 +93,17 @@ type Symbol struct {
 	TypeKind   string     `json:"type_kind,omitempty"`
 	Underlying string     `json:"underlying,omitempty"`
 	Type       string     `json:"type,omitempty"`
+	// BinaryName and hierarchy fields preserve facts that classfiles expose but
+	// source-oriented fields cannot represent without inventing a second model.
+	BinaryName   string   `json:"binary_name,omitempty"`
+	Extends      []string `json:"extends,omitempty"`
+	Implements   []string `json:"implements,omitempty"`
+	Permits      []string `json:"permits,omitempty"`
+	Constant     string   `json:"constant,omitempty"`
+	ConstantKind string   `json:"constant_kind,omitempty"`
+	Descriptor   string   `json:"descriptor,omitempty"`
+	Modifiers    []string `json:"modifiers,omitempty"`
+	DefaultValue string   `json:"default_value,omitempty"`
 
 	InAll       *bool    `json:"in_all,omitempty"`
 	Decorators  []string `json:"decorators,omitempty"`
@@ -115,12 +127,16 @@ type Signature struct {
 	Receiver   *Param      `json:"receiver,omitempty"`
 	Variadic   bool        `json:"variadic"`
 	Modifiers  []string    `json:"modifiers,omitempty"`
+	Descriptor string      `json:"descriptor,omitempty"`
+	Throws     []string    `json:"throws,omitempty"`
 }
 
 // Param is one parameter, result, or receiver. Name may be empty.
 type Param struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
+	Name          string   `json:"name"`
+	Type          string   `json:"type"`
+	Annotations   []string `json:"annotations,omitempty"`
+	NameSynthetic bool     `json:"name_synthetic,omitempty"`
 }
 
 // TypeParam is one generic type parameter.
@@ -129,7 +145,9 @@ type TypeParam struct {
 	Constraint string `json:"constraint"`
 }
 
-// Location is a 1-based source position with a relative POSIX file path.
+// Location is a 1-based source position with a stable relative POSIX path.
+// Declaration-only artifact extractors use an archive entry and zero positions
+// rather than pretending that a source file or source line was inspected.
 type Location struct {
 	File    string `json:"file"`
 	Line    int    `json:"line"`
@@ -214,7 +232,9 @@ func DedupeCalls(raw []Call) []Call {
 	byKey := make(map[string]*slot, len(raw))
 	for _, c := range raw {
 		n := c.Count
-		if n < 1 { n = 1 }
+		if n < 1 {
+			n = 1
+		}
 		c.Count = 0
 		k := callKey(c)
 		if s, ok := byKey[k]; ok {

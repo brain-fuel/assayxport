@@ -12,15 +12,20 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"runtime/debug"
+	"strings"
 
+	"goforge.dev/assayxport/internal/artifact/maven"
 	"goforge.dev/assayxport/internal/emit"
 	"goforge.dev/assayxport/internal/explorer"
 	"goforge.dev/assayxport/internal/extract/golang"
+	"goforge.dev/assayxport/internal/extract/jvm"
 	"goforge.dev/assayxport/internal/extract/registry"
 	"goforge.dev/assayxport/internal/schema"
 )
@@ -228,6 +233,12 @@ func runAssayCmd(args []string) error {
 	stdout := fs.Bool("stdout", false, "print combined JSON to stdout; write no files")
 	quiet := fs.Bool("quiet", false, "suppress progress on stderr")
 	noHTML := fs.Bool("no-html", false, "skip writing assayxport.html")
+	javaRelease := fs.Int("java-release", jvm.DefaultJavaRelease, "target Java release for multi-release JARs")
+	mavenRepo := fs.String("maven-repo", maven.Central, "Maven-compatible repository base URL")
+	mavenCache := fs.String("maven-cache", "", "Maven cache directory (default: ~/.m2/repository)")
+	mavenUser := fs.String("maven-user", os.Getenv("AX_MAVEN_USERNAME"), "repository username (or AX_MAVEN_USERNAME)")
+	mavenPassword := fs.String("maven-password", os.Getenv("AX_MAVEN_PASSWORD"), "repository password (or AX_MAVEN_PASSWORD)")
+	mavenToken := fs.String("maven-token", os.Getenv("AX_MAVEN_TOKEN"), "repository bearer token (or AX_MAVEN_TOKEN)")
 	var langs stringsFlag
 	fs.Var(&langs, "lang", "language to assay (repeatable; default: all)")
 	fs.Usage = func() {
@@ -241,6 +252,41 @@ func runAssayCmd(args []string) error {
 	// Allow flags-then-path ordering too.
 	if fs.NArg() > 0 {
 		path = fs.Arg(0)
+	}
+	artifactPath, artifactName, isArtifact, err := resolveArtifactInput(context.Background(), path, artifactOptions{
+		repository: *mavenRepo, cache: *mavenCache, username: *mavenUser,
+		password: *mavenPassword, token: *mavenToken,
+	})
+	if err != nil {
+		return err
+	}
+	if isArtifact {
+		if len(langs) > 0 && !(len(langs) == 1 && langs[0] == "java") {
+			return fmt.Errorf("compiled JVM artifacts only support --lang java")
+		}
+		idx, shards, err := assayJAR(artifactPath, artifactName, *javaRelease)
+		if err != nil {
+			return err
+		}
+		if *stdout {
+			b, e := emit.Combined(idx, shards)
+			if e != nil {
+				return e
+			}
+			_, e = os.Stdout.Write(b)
+			return e
+		}
+		outDir := *out
+		if outDir == "" {
+			outDir = "."
+		}
+		if err := writeAll(outDir, idx, shards, *noHTML); err != nil {
+			return err
+		}
+		if !*quiet {
+			fmt.Fprintf(os.Stderr, "ax: wrote %d packages from %s to %s\n", len(idx.Packages), artifactName, outDir)
+		}
+		return nil
 	}
 
 	if *stdout {
@@ -290,4 +336,44 @@ func runAssayCmd(args []string) error {
 		fmt.Fprintf(os.Stderr, "ax: wrote %d packages (assayxport.json + shards + assayxport.html) to %s\n", len(idx.Packages), outDir)
 	}
 	return nil
+}
+
+type artifactOptions struct{ repository, cache, username, password, token string }
+
+// resolveArtifactInput identifies and resolves artifacts without coupling the
+// resolver to classfile extraction. Directory inputs remain on the established
+// source-tree path.
+func resolveArtifactInput(ctx context.Context, input string, opt artifactOptions) (localPath, stableName string, artifact bool, err error) {
+	if strings.HasPrefix(input, "mvn:") {
+		coord, e := maven.Parse(input)
+		if e != nil {
+			return "", "", true, e
+		}
+		r := maven.Resolver{BaseURL: opt.repository, CacheDir: opt.cache, UserAgent: "assayxport/" + resolvedVersion(), Credentials: maven.Credentials{Username: opt.username, Password: opt.password, BearerToken: opt.token}}
+		got, e := r.Resolve(ctx, coord)
+		if e != nil {
+			return "", "", true, e
+		}
+		return got.Path, "mvn:" + coord.String(), true, nil
+	}
+	info, e := os.Stat(input)
+	if e != nil {
+		return "", "", false, e
+	}
+	if info.IsDir() {
+		return input, "", false, nil
+	}
+	if strings.EqualFold(filepath.Ext(input), ".jar") {
+		return input, filepath.Base(input), true, nil
+	}
+	return "", "", false, fmt.Errorf("unsupported assay input %q: expected a directory, .jar file, or mvn: coordinate", input)
+}
+
+func assayJAR(localPath, stableName string, release int) (schema.Index, map[string]schema.Shard, error) {
+	pkgs, err := jvm.ExtractJAR(localPath, jvm.Options{JavaRelease: release, ArtifactName: stableName})
+	if err != nil {
+		return schema.Index{}, nil, err
+	}
+	idx, shards := emit.Manifest(pkgs, "", []string{"java"})
+	return idx, shards, nil
 }
