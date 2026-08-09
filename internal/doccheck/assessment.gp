@@ -1,0 +1,81 @@
+// Package doccheck validates Maven documentation artifacts independently
+// from compiled JVM extraction.
+package doccheck
+
+import (
+	"archive/zip"
+	"fmt"
+	"io"
+	"path/filepath"
+	"sort"
+	"strings"
+)
+
+type Status string
+
+const (
+	Complete Status = "complete"
+	Placeholder Status = "placeholder"
+	Missing Status = "missing"
+	Invalid Status = "invalid"
+)
+
+type Assessment struct {
+	Status Status `json:"status"`
+	Issues []string `json:"issues,omitempty"`
+	Entries []string `json:"entries,omitempty"`
+}
+
+// InspectJavadoc recognizes output from the standard doclet by structure. A
+// filename or a README is never accepted as evidence of API documentation.
+func InspectJavadoc(path string) (Assessment, error) {
+	zr, err := zip.OpenReader(path)
+	if err != nil {
+		return Assessment{Status: Invalid, Issues: []string{"DOC_JAVADOC_INVALID"}}, fmt.Errorf("open Javadoc JAR: %w", err)
+	}
+	defer zr.Close()
+	entries := make([]string, 0, len(zr.File))
+	hasElements, hasIndex, hasTypePage := false, false, false
+	for _, file := range zr.File {
+		name := filepath.ToSlash(file.Name)
+		entries = append(entries, name)
+		switch name {
+		case "element-list": hasElements = nonempty(file)
+		case "index-all.html", "allclasses-index.html": hasIndex = true
+		}
+		if strings.HasSuffix(name, ".html") && strings.Contains(name, "/") &&
+			!strings.HasSuffix(name, "package-summary.html") && !strings.HasSuffix(name, "module-summary.html") &&
+			!strings.Contains(name, "-index.html") && !strings.HasSuffix(name, "help-doc.html") {
+			hasTypePage = true
+		}
+	}
+	sort.Strings(entries)
+	if !hasElements || !hasIndex || !hasTypePage {
+		return Assessment{Status: Placeholder, Issues: []string{"DOC_JAVADOC_PLACEHOLDER"}, Entries: entries}, nil
+	}
+	return Assessment{Status: Complete, Entries: entries}, nil
+}
+
+// InspectSources requires at least one source declaration; metadata-only and
+// README-only source archives are placeholders.
+func InspectSources(path string) (Assessment, error) {
+	zr, err := zip.OpenReader(path)
+	if err != nil { return Assessment{Status: Invalid, Issues: []string{"DOC_SOURCES_INVALID"}}, fmt.Errorf("open sources JAR: %w", err) }
+	defer zr.Close()
+	entries, hasSource := []string{}, false
+	for _, file := range zr.File {
+		name := filepath.ToSlash(file.Name); entries = append(entries, name)
+		if strings.HasSuffix(name, ".java") { hasSource = true }
+	}
+	sort.Strings(entries)
+	if !hasSource { return Assessment{Status: Placeholder, Issues: []string{"DOC_SOURCES_PLACEHOLDER"}, Entries: entries}, nil }
+	return Assessment{Status: Complete, Entries: entries}, nil
+}
+
+func nonempty(file *zip.File) bool {
+	r, err := file.Open()
+	if err != nil { return false }
+	defer r.Close()
+	data, err := io.ReadAll(io.LimitReader(r, 4096))
+	return err == nil && strings.TrimSpace(string(data)) != ""
+}

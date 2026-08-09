@@ -22,11 +22,13 @@ import (
 	"strings"
 
 	"goforge.dev/assayxport/internal/artifact/maven"
+	"goforge.dev/assayxport/internal/doccheck"
 	"goforge.dev/assayxport/internal/emit"
 	"goforge.dev/assayxport/internal/explorer"
 	"goforge.dev/assayxport/internal/extract/golang"
 	"goforge.dev/assayxport/internal/extract/jvm"
 	"goforge.dev/assayxport/internal/extract/registry"
+	"goforge.dev/assayxport/internal/publication"
 	"goforge.dev/assayxport/internal/schema"
 )
 
@@ -72,6 +74,7 @@ func usage() {
 
 commands:
   assay   write assayxport.json, .assayxport/ shards, and assayxport.html
+  publish validate release inputs, prepare, and publish Maven artifacts
   verify  validate an assayxport.trace/v3 artifact graph and release closure
   serve   assay and serve the explorer over HTTP (watches by default)
   watch   re-run assay whenever source files change
@@ -92,6 +95,8 @@ func run(args []string) error {
 		return runAssayCmd(rest)
 	case "verify":
 		return runVerifyCmd(rest)
+	case "publish":
+		return runPublishCmd(rest)
 	case "scan":
 		// Deprecated alias for assay. Kept so existing scripts and docs
 		// keep working; the notice goes to stderr so piped stdout stays
@@ -112,6 +117,31 @@ func run(args []string) error {
 		usage()
 		return fmt.Errorf("unknown subcommand %q", cmd)
 	}
+}
+
+func runPublishCmd(args []string) error {
+	fs := flag.NewFlagSet("ax publish", flag.ContinueOnError)
+	prepare := fs.Bool("prepare", false, "run every local gate and write the signed bundle without uploading")
+	fs.Usage = func() { fmt.Fprintln(os.Stderr, "usage: ax publish [--prepare]"); fs.PrintDefaults() }
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() != 0 {
+		return fmt.Errorf("[PUBLISH_ARGUMENT_INVALID] unexpected argument %q\n  Fix: run `ax publish` or `ax publish --prepare` from the project root", fs.Arg(0))
+	}
+	root, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("[PROJECT_ROOT_UNAVAILABLE] %v\n  Fix: change to a readable project checkout and rerun the command", err)
+	}
+	_, report := publication.Preflight(root)
+	if !report.OK() {
+		return report
+	}
+	mode := "publication"
+	if *prepare {
+		mode = "bundle preparation"
+	}
+	return fmt.Errorf("[PUBLISH_TRANSACTION_UNAVAILABLE] %s is not enabled in this development build\n  Fix: install an assayxport release that includes the Central transaction, or complete the transaction implementation before releasing; no upload was attempted", mode)
 }
 
 // splitPath pulls an optional leading positional path out of args so
@@ -239,6 +269,7 @@ func runAssayCmd(args []string) error {
 	mavenUser := fs.String("maven-user", os.Getenv("AX_MAVEN_USERNAME"), "repository username (or AX_MAVEN_USERNAME)")
 	mavenPassword := fs.String("maven-password", os.Getenv("AX_MAVEN_PASSWORD"), "repository password (or AX_MAVEN_PASSWORD)")
 	mavenToken := fs.String("maven-token", os.Getenv("AX_MAVEN_TOKEN"), "repository bearer token (or AX_MAVEN_TOKEN)")
+	documentation := fs.String("documentation", "off", "documentation policy: off, resolve, or require")
 	var langs stringsFlag
 	fs.Var(&langs, "lang", "language to assay (repeatable; default: all)")
 	fs.Usage = func() {
@@ -253,12 +284,47 @@ func runAssayCmd(args []string) error {
 	if fs.NArg() > 0 {
 		path = fs.Arg(0)
 	}
+	if *documentation != "off" && *documentation != "resolve" && *documentation != "require" {
+		return fmt.Errorf("invalid --documentation mode %q: want off, resolve, or require", *documentation)
+	}
 	artifactPath, artifactName, isArtifact, err := resolveArtifactInput(context.Background(), path, artifactOptions{
 		repository: *mavenRepo, cache: *mavenCache, username: *mavenUser,
 		password: *mavenPassword, token: *mavenToken,
 	})
 	if err != nil {
 		return err
+	}
+	if strings.HasPrefix(path, "mvn:") && *documentation != "off" {
+		coord, err := maven.Parse(path)
+		if err != nil {
+			return err
+		}
+		resolver := maven.Resolver{BaseURL: *mavenRepo, CacheDir: *mavenCache, UserAgent: "assayxport/" + resolvedVersion(), Credentials: maven.Credentials{Username: *mavenUser, Password: *mavenPassword, BearerToken: *mavenToken}}
+		for _, classifier := range []string{"sources", "javadoc"} {
+			candidate := coord
+			candidate.Classifier = classifier
+			resolved, resolveErr := resolver.Resolve(context.Background(), candidate)
+			if resolveErr != nil {
+				if *documentation == "require" {
+					return fmt.Errorf("documentation classifier %s: %w", classifier, resolveErr)
+				}
+				fmt.Fprintf(os.Stderr, "ax: documentation %s: missing (%v)\n", classifier, resolveErr)
+				continue
+			}
+			var assessment doccheck.Assessment
+			if classifier == "sources" {
+				assessment, err = doccheck.InspectSources(resolved.Path)
+			} else {
+				assessment, err = doccheck.InspectJavadoc(resolved.Path)
+			}
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(os.Stderr, "ax: documentation %s: %s\n", classifier, assessment.Status)
+			if *documentation == "require" && assessment.Status != doccheck.Complete {
+				return fmt.Errorf("documentation classifier %s is %s", classifier, assessment.Status)
+			}
+		}
 	}
 	if isArtifact {
 		if len(langs) > 0 && !(len(langs) == 1 && langs[0] == "java") {
