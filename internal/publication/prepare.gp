@@ -25,7 +25,7 @@ import (
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
 )
 
-type Prepared struct { Bundle, SigningKey, Fingerprint string; Files []string }
+type Prepared struct { Bundle, SigningKey, Fingerprint string; PublicKey []byte; Files []string }
 
 // Prepare creates the complete signed Central bundle without network access.
 func Prepare(ctx context.Context, root string, c Config) (Prepared,error) {
@@ -51,7 +51,8 @@ func Prepare(ctx context.Context, root string, c Config) (Prepared,error) {
 	if err:=os.MkdirAll(filepath.Dir(output),0o755);err!=nil{return Prepared{},err}
 	repo:=strings.ReplaceAll(c.GroupID,".","/")+"/"+c.ArtifactID+"/"+c.Version
 	if err:=writeBundle(output,repo,files,epoch);err!=nil{return Prepared{},err}
-	return Prepared{Bundle:output,SigningKey:key.path,Fingerprint:key.fingerprint,Files:sortedKeys(files)},nil
+	publicKey,err:=serializePublicKey(key.entity);if err!=nil{return Prepared{},err}
+	return Prepared{Bundle:output,SigningKey:key.path,Fingerprint:key.fingerprint,PublicKey:publicKey,Files:sortedKeys(files)},nil
 }
 
 type pomProject struct { XMLName xml.Name `xml:"project"`; XMLNS string `xml:"xmlns,attr"`; XSI string `xml:"xmlns:xsi,attr"`; Schema string `xml:"xsi:schemaLocation,attr"`; Model string `xml:"modelVersion"`; Group string `xml:"groupId"`; Artifact string `xml:"artifactId"`; Version string `xml:"version"`; Packaging string `xml:"packaging"`; Name string `xml:"name"`; Description string `xml:"description"`; URL string `xml:"url"`; Licenses []pomLicense `xml:"licenses>license"`; Developers []pomDeveloper `xml:"developers>developer"`; SCM pomSCM `xml:"scm"` }
@@ -66,6 +67,7 @@ func ensureKey(path,name,email string,epoch time.Time)(signingKey,error){if path
 	return signingKey{entity,path,strings.ToUpper(hex.EncodeToString(entity.PrimaryKey.Fingerprint))},nil}
 func signingConfig(epoch time.Time)*packet.Config{deterministic:=false;return &packet.Config{DefaultHash:crypto.SHA256,Time:func()time.Time{return epoch.UTC()},NonDeterministicSignaturesViaNotation:&deterministic}}
 func sign(entity *openpgp.Entity,data []byte,epoch time.Time)([]byte,error){var b bytes.Buffer;if err:=openpgp.ArmoredDetachSign(&b,entity,bytes.NewReader(data),signingConfig(epoch));err!=nil{return nil,err};if _,err:=openpgp.CheckArmoredDetachedSignature(openpgp.EntityList{entity},bytes.NewReader(data),bytes.NewReader(b.Bytes()),signingConfig(epoch));err!=nil{return nil,err};return b.Bytes(),nil}
+func serializePublicKey(entity *openpgp.Entity)([]byte,error){var b bytes.Buffer;w,err:=armor.Encode(&b,openpgp.PublicKeyType,nil);if err!=nil{return nil,err};if err=entity.Serialize(w);err!=nil{return nil,err};if err=w.Close();err!=nil{return nil,err};return b.Bytes(),nil}
 func commitEpoch(root string)(time.Time,error){raw:=strings.TrimSpace(os.Getenv("SOURCE_DATE_EPOCH"));if raw==""{raw=gitOutput(root,"log","-1","--format=%ct")};seconds,err:=strconv.ParseInt(raw,10,64);if err!=nil||seconds<0{return time.Time{},fmt.Errorf("publication requires SOURCE_DATE_EPOCH or a Git commit timestamp")};return time.Unix(seconds,0).UTC(),nil}
 func addChecksums(files map[string][]byte,name string,data []byte){m:=md5.Sum(data);files[name+".md5"]=[]byte(hex.EncodeToString(m[:]));s1:=sha1.Sum(data);files[name+".sha1"]=[]byte(hex.EncodeToString(s1[:]));s256:=sha256.Sum256(data);files[name+".sha256"]=[]byte(hex.EncodeToString(s256[:]));s512:=sha512.Sum512(data);files[name+".sha512"]=[]byte(hex.EncodeToString(s512[:]))}
 func sortedKeys(files map[string][]byte)[]string{names:=make([]string,0,len(files));for name:=range files{names=append(names,name)};sort.Strings(names);return names}

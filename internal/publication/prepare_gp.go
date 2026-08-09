@@ -30,6 +30,7 @@ import (
 
 type Prepared struct {
 	Bundle, SigningKey, Fingerprint string
+	PublicKey                       []byte
 	Files                           []string
 }
 
@@ -101,7 +102,11 @@ func Prepare(ctx context.Context, root string, c Config) (Prepared, error) {
 	if err := writeBundle(output, repo, files, epoch); err != nil {
 		return Prepared{}, err
 	}
-	return Prepared{Bundle: output, SigningKey: key.path, Fingerprint: key.fingerprint, Files: sortedKeys(files)}, nil
+	publicKey, err := serializePublicKey(key.entity)
+	if err != nil {
+		return Prepared{}, err
+	}
+	return Prepared{Bundle: output, SigningKey: key.path, Fingerprint: key.fingerprint, PublicKey: publicKey, Files: sortedKeys(files)}, nil
 }
 
 type pomProject struct {
@@ -207,6 +212,20 @@ func sign(entity *openpgp.Entity, data []byte, epoch time.Time) ([]byte, error) 
 		return nil, err
 	}
 	if _, err := openpgp.CheckArmoredDetachedSignature(openpgp.EntityList{entity}, bytes.NewReader(data), bytes.NewReader(b.Bytes()), signingConfig(epoch)); err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
+}
+func serializePublicKey(entity *openpgp.Entity) ([]byte, error) {
+	var b bytes.Buffer
+	w, err := armor.Encode(&b, openpgp.PublicKeyType, nil)
+	if err != nil {
+		return nil, err
+	}
+	if err = entity.Serialize(w); err != nil {
+		return nil, err
+	}
+	if err = w.Close(); err != nil {
 		return nil, err
 	}
 	return b.Bytes(), nil

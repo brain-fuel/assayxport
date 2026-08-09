@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"goforge.dev/assayxport/internal/artifact/maven"
 	"goforge.dev/assayxport/internal/doccheck"
@@ -159,7 +160,18 @@ func runPublishCmd(args []string) error {
 	if *prepare {
 		return nil
 	}
-	return fmt.Errorf("[CENTRAL_UPLOAD_UNAVAILABLE] the signed bundle is ready, but upload is not enabled in this build\n  Fix: inspect %s, then use `ax publish --prepare` until the Central client is released; no upload was attempted", prepared.Bundle)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+	deployment, err := publication.Publish(ctx, root, cfg, prepared)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Central deployment:", deployment.DeploymentID)
+	fmt.Println("Central state:", deployment.DeploymentState)
+	for _, purl := range deployment.PURLs {
+		fmt.Println(purl)
+	}
+	return nil
 }
 
 // splitPath pulls an optional leading positional path out of args so
