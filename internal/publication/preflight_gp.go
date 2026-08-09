@@ -19,6 +19,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"goforge.dev/assayxport/internal/doccheck"
 )
 
 type Issue struct{ Code, Problem, Fix string }
@@ -358,6 +360,18 @@ func validateBuild(root string, c Config) []Issue {
 		sum := sha256.Sum256(bytes)
 		if hex.EncodeToString(sum[:]) != out.SHA256 {
 			issues = append(issues, Issue{"BUILD_OUTPUT_STALE", "artifact digest does not match the manifest: " + out.Path, "Regenerate all Java artifacts and publication.json in one `go tool goplus build --target java ./...` invocation."})
+		}
+		if strings.HasSuffix(out.Path, "-sources.jar") {
+			assessment, err := doccheck.InspectSources(artifact)
+			if err != nil || assessment.Status != doccheck.Complete {
+				issues = append(issues, Issue{"DOC_SOURCES_INVALID", "sources JAR is missing Java declarations or is malformed", "Rebuild with Go+ schema v2; the sources JAR must contain generated project and runtime Java sources."})
+			}
+		}
+		if strings.HasSuffix(out.Path, "-javadoc.jar") {
+			assessment, err := doccheck.InspectJavadoc(artifact)
+			if err != nil || assessment.Status != doccheck.Complete {
+				issues = append(issues, Issue{"DOC_JAVADOC_INVALID", "Javadoc JAR is not genuine standard-doclet output", "Install JDK 25+ and rebuild; README-only placeholder documentation is not publishable."})
+			}
 		}
 	}
 	return issues

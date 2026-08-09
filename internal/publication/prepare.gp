@@ -1,0 +1,72 @@
+package publication
+
+import (
+	"archive/zip"
+	"bytes"
+	"context"
+	"crypto"
+	"crypto/md5"
+	"crypto/sha1"
+	"crypto/sha256"
+	"crypto/sha512"
+	"encoding/hex"
+	"encoding/json"
+	"encoding/xml"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
+)
+
+type Prepared struct { Bundle, SigningKey, Fingerprint string; Files []string }
+
+// Prepare creates the complete signed Central bundle without network access.
+func Prepare(ctx context.Context, root string, c Config) (Prepared,error) {
+	manifestPath,_:=safePath(root,c.BuildManifest); data,err:=os.ReadFile(manifestPath);if err!=nil{return Prepared{},err}
+	var manifest buildManifest;if err:=json.Unmarshal(data,&manifest);err!=nil{return Prepared{},err}
+	base:=c.ArtifactID+"-"+c.Version; files:=map[string][]byte{}
+	for _,out:=range manifest.Outputs {
+		path,ok:=safePath(root,out.Path);if !ok{return Prepared{},fmt.Errorf("unsafe artifact path %s",out.Path)}
+		artifact,err:=os.ReadFile(path);if err!=nil{return Prepared{},err}
+		name:=base+".jar";if strings.HasSuffix(out.Path,"-sources.jar"){name=base+"-sources.jar"}else if strings.HasSuffix(out.Path,"-javadoc.jar"){name=base+"-javadoc.jar"}
+		if _,exists:=files[name];exists{return Prepared{},fmt.Errorf("multiple build outputs map to %s",name)};files[name]=artifact
+	}
+	for _,name:=range []string{base+".jar",base+"-sources.jar",base+"-javadoc.jar"}{if len(files[name])==0{return Prepared{},fmt.Errorf("build manifest does not identify %s",name)}}
+	files[base+".pom"]=pom(c)
+	epoch,err:=commitEpoch(root);if err!=nil{return Prepared{},err}
+	key,err:=ensureKey(strings.TrimSpace(os.Getenv("AX_MAVEN_SIGNING_KEY")),c.DeveloperName,c.DeveloperEmail,epoch);if err!=nil{return Prepared{},err}
+	primary:=sortedKeys(files)
+	for _,name:=range primary {
+		sig,err:=sign(key.entity,files[name],epoch);if err!=nil{return Prepared{},fmt.Errorf("signing %s: %w",name,err)};files[name+".asc"]=sig
+		addChecksums(files,name,files[name]);addChecksums(files,name+".asc",sig)
+	}
+	output,ok:=safePath(root,c.Bundle);if !ok{return Prepared{},fmt.Errorf("unsafe bundle path %s",c.Bundle)}
+	if err:=os.MkdirAll(filepath.Dir(output),0o755);err!=nil{return Prepared{},err}
+	repo:=strings.ReplaceAll(c.GroupID,".","/")+"/"+c.ArtifactID+"/"+c.Version
+	if err:=writeBundle(output,repo,files,epoch);err!=nil{return Prepared{},err}
+	return Prepared{Bundle:output,SigningKey:key.path,Fingerprint:key.fingerprint,Files:sortedKeys(files)},nil
+}
+
+type pomProject struct { XMLName xml.Name `xml:"project"`; XMLNS string `xml:"xmlns,attr"`; XSI string `xml:"xmlns:xsi,attr"`; Schema string `xml:"xsi:schemaLocation,attr"`; Model string `xml:"modelVersion"`; Group string `xml:"groupId"`; Artifact string `xml:"artifactId"`; Version string `xml:"version"`; Packaging string `xml:"packaging"`; Name string `xml:"name"`; Description string `xml:"description"`; URL string `xml:"url"`; Licenses []pomLicense `xml:"licenses>license"`; Developers []pomDeveloper `xml:"developers>developer"`; SCM pomSCM `xml:"scm"` }
+type pomLicense struct{Name string `xml:"name"`;URL string `xml:"url"`;Distribution string `xml:"distribution"`}
+type pomDeveloper struct{ID string `xml:"id"`;Name string `xml:"name"`;Email string `xml:"email"`;URL string `xml:"url"`}
+type pomSCM struct{Connection string `xml:"connection"`;DeveloperConnection string `xml:"developerConnection"`;URL string `xml:"url"`}
+func pom(c Config)[]byte{p:=pomProject{XMLNS:"http://maven.apache.org/POM/4.0.0",XSI:"http://www.w3.org/2001/XMLSchema-instance",Schema:"http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd",Model:"4.0.0",Group:c.GroupID,Artifact:c.ArtifactID,Version:c.Version,Packaging:"jar",Name:c.Name,Description:c.Description,URL:c.URL,Licenses:[]pomLicense{{c.LicenseName,c.LicenseURL,"repo"}},Developers:[]pomDeveloper{{c.DeveloperID,c.DeveloperName,c.DeveloperEmail,c.DeveloperURL}},SCM:pomSCM{c.SCMConnection,c.SCMDeveloperConnection,c.SCMURL}};b,_:=xml.MarshalIndent(p,"","  ");return append([]byte("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"),append(b,'\n')...)}
+
+type signingKey struct{entity *openpgp.Entity;path,fingerprint string}
+func ensureKey(path,name,email string,epoch time.Time)(signingKey,error){if path==""{dir,err:=os.UserConfigDir();if err!=nil{return signingKey{},err};path=filepath.Join(dir,"assayxport","maven-central-private.asc")};path,err:=filepath.Abs(path);if err!=nil{return signingKey{},err};var entity *openpgp.Entity
+	if data,e:=os.ReadFile(path);e==nil{entities,e:=openpgp.ReadArmoredKeyRing(bytes.NewReader(data));if e!=nil||len(entities)!=1||entities[0].PrivateKey==nil{return signingKey{},fmt.Errorf("invalid signing key %s",path)};entity=entities[0]}else if !os.IsNotExist(e){return signingKey{},e}else{cfg:=signingConfig(epoch);cfg.RSABits=3072;entity,err=openpgp.NewEntity(name,"GoForge Maven Central",email,cfg);if err!=nil{return signingKey{},err};var b bytes.Buffer;w,err:=armor.Encode(&b,openpgp.PrivateKeyType,nil);if err!=nil{return signingKey{},err};if err=entity.SerializePrivate(w,cfg);err!=nil{return signingKey{},err};if err=w.Close();err!=nil{return signingKey{},err};if err=os.MkdirAll(filepath.Dir(path),0o700);err!=nil{return signingKey{},err};if err=os.WriteFile(path,b.Bytes(),0o600);err!=nil{return signingKey{},err}}
+	return signingKey{entity,path,strings.ToUpper(hex.EncodeToString(entity.PrimaryKey.Fingerprint))},nil}
+func signingConfig(epoch time.Time)*packet.Config{deterministic:=false;return &packet.Config{DefaultHash:crypto.SHA256,Time:func()time.Time{return epoch.UTC()},NonDeterministicSignaturesViaNotation:&deterministic}}
+func sign(entity *openpgp.Entity,data []byte,epoch time.Time)([]byte,error){var b bytes.Buffer;if err:=openpgp.ArmoredDetachSign(&b,entity,bytes.NewReader(data),signingConfig(epoch));err!=nil{return nil,err};if _,err:=openpgp.CheckArmoredDetachedSignature(openpgp.EntityList{entity},bytes.NewReader(data),bytes.NewReader(b.Bytes()),signingConfig(epoch));err!=nil{return nil,err};return b.Bytes(),nil}
+func commitEpoch(root string)(time.Time,error){raw:=strings.TrimSpace(os.Getenv("SOURCE_DATE_EPOCH"));if raw==""{raw=gitOutput(root,"log","-1","--format=%ct")};seconds,err:=strconv.ParseInt(raw,10,64);if err!=nil||seconds<0{return time.Time{},fmt.Errorf("publication requires SOURCE_DATE_EPOCH or a Git commit timestamp")};return time.Unix(seconds,0).UTC(),nil}
+func addChecksums(files map[string][]byte,name string,data []byte){m:=md5.Sum(data);files[name+".md5"]=[]byte(hex.EncodeToString(m[:]));s1:=sha1.Sum(data);files[name+".sha1"]=[]byte(hex.EncodeToString(s1[:]));s256:=sha256.Sum256(data);files[name+".sha256"]=[]byte(hex.EncodeToString(s256[:]));s512:=sha512.Sum512(data);files[name+".sha512"]=[]byte(hex.EncodeToString(s512[:]))}
+func sortedKeys(files map[string][]byte)[]string{names:=make([]string,0,len(files));for name:=range files{names=append(names,name)};sort.Strings(names);return names}
+func writeBundle(path,repo string,files map[string][]byte,epoch time.Time)error{var b bytes.Buffer;zw:=zip.NewWriter(&b);for _,name:=range sortedKeys(files){h:=&zip.FileHeader{Name:repo+"/"+name,Method:zip.Deflate};h.SetModTime(epoch);h.SetMode(0o644);w,err:=zw.CreateHeader(h);if err!=nil{return err};if _,err=w.Write(files[name]);err!=nil{return err}};if err:=zw.Close();err!=nil{return err};return os.WriteFile(path,b.Bytes(),0o644)}

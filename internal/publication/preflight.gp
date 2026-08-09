@@ -16,6 +16,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"goforge.dev/assayxport/internal/doccheck"
 )
 
 type Issue struct { Code, Problem, Fix string }
@@ -153,7 +155,10 @@ func validateBuild(root string, c Config) []Issue {
 	var m buildManifest; if err:=json.Unmarshal(data,&m); err!=nil { return []Issue{{"BUILD_MANIFEST_INVALID",err.Error(),"Regenerate it with `go tool goplus build --target java ./...`; do not hand-edit publication.json."}} }
 	issues:=[]Issue{}; if m.Schema!="goplus.java.build/v2" { issues=append(issues,Issue{"BUILD_MANIFEST_SCHEMA",fmt.Sprintf("build manifest schema is %q",m.Schema),"Rebuild with the required Go+ release so it emits goplus.java.build/v2."}) }
 	if len(m.Outputs)<3 { issues=append(issues,Issue{"BUILD_OUTPUTS_INCOMPLETE","build manifest does not list main, sources, and Javadoc artifacts","Rebuild with Go+ schema v2 and configure jar, sources_jar, and javadoc_jar outputs."}) }
-	for _, out:=range m.Outputs { artifact, safe:=safePath(root,out.Path); if !safe { issues=append(issues,Issue{"BUILD_OUTPUT_PATH_INVALID","manifest output escapes project root: "+out.Path,"Regenerate the manifest; output paths must be relative and remain inside the checkout."}); continue }; bytes,e:=os.ReadFile(artifact); if e!=nil { issues=append(issues,Issue{"BUILD_OUTPUT_MISSING","manifest output is missing: "+out.Path,"Run `go tool goplus build --target java ./...` and do not move artifacts before publishing."}); continue }; sum:=sha256.Sum256(bytes); if hex.EncodeToString(sum[:])!=out.SHA256 { issues=append(issues,Issue{"BUILD_OUTPUT_STALE","artifact digest does not match the manifest: "+out.Path,"Regenerate all Java artifacts and publication.json in one `go tool goplus build --target java ./...` invocation."}) } }
+	for _, out:=range m.Outputs { artifact, safe:=safePath(root,out.Path); if !safe { issues=append(issues,Issue{"BUILD_OUTPUT_PATH_INVALID","manifest output escapes project root: "+out.Path,"Regenerate the manifest; output paths must be relative and remain inside the checkout."}); continue }; bytes,e:=os.ReadFile(artifact); if e!=nil { issues=append(issues,Issue{"BUILD_OUTPUT_MISSING","manifest output is missing: "+out.Path,"Run `go tool goplus build --target java ./...` and do not move artifacts before publishing."}); continue }; sum:=sha256.Sum256(bytes); if hex.EncodeToString(sum[:])!=out.SHA256 { issues=append(issues,Issue{"BUILD_OUTPUT_STALE","artifact digest does not match the manifest: "+out.Path,"Regenerate all Java artifacts and publication.json in one `go tool goplus build --target java ./...` invocation."}) }
+		if strings.HasSuffix(out.Path,"-sources.jar") { assessment,err:=doccheck.InspectSources(artifact);if err!=nil||assessment.Status!=doccheck.Complete{issues=append(issues,Issue{"DOC_SOURCES_INVALID","sources JAR is missing Java declarations or is malformed","Rebuild with Go+ schema v2; the sources JAR must contain generated project and runtime Java sources."})} }
+		if strings.HasSuffix(out.Path,"-javadoc.jar") { assessment,err:=doccheck.InspectJavadoc(artifact);if err!=nil||assessment.Status!=doccheck.Complete{issues=append(issues,Issue{"DOC_JAVADOC_INVALID","Javadoc JAR is not genuine standard-doclet output","Install JDK 25+ and rebuild; README-only placeholder documentation is not publishable."})} }
+	}
 	return issues
 }
 func safePath(root, rel string)(string,bool){ if filepath.IsAbs(rel){return "",false}; clean:=filepath.Clean(filepath.FromSlash(rel)); if clean==".."||strings.HasPrefix(clean,".."+string(filepath.Separator)){return "",false}; return filepath.Join(root,clean),true }

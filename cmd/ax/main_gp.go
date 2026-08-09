@@ -146,15 +146,20 @@ func runPublishCmd(args []string) error {
 		fmt.Println("review every TODO value, then run: ax publish --prepare")
 		return nil
 	}
-	_, report := publication.Preflight(root)
+	cfg, report := publication.Preflight(root)
 	if !report.OK() {
 		return report
 	}
-	mode := "publication"
-	if *prepare {
-		mode = "bundle preparation"
+	prepared, err := publication.Prepare(context.Background(), root, cfg)
+	if err != nil {
+		return fmt.Errorf("[BUNDLE_PREPARATION_FAILED] %v\n  Fix: correct the signing or artifact error, then rerun `ax publish --prepare`; no upload was attempted", err)
 	}
-	return fmt.Errorf("[PUBLISH_TRANSACTION_UNAVAILABLE] %s is not enabled in this development build\n  Fix: install an assayxport release that includes the Central transaction, or complete the transaction implementation before releasing; no upload was attempted", mode)
+	fmt.Println("Central bundle:", prepared.Bundle)
+	fmt.Println("OpenPGP fingerprint:", prepared.Fingerprint)
+	if *prepare {
+		return nil
+	}
+	return fmt.Errorf("[CENTRAL_UPLOAD_UNAVAILABLE] the signed bundle is ready, but upload is not enabled in this build\n  Fix: inspect %s, then use `ax publish --prepare` until the Central client is released; no upload was attempted", prepared.Bundle)
 }
 
 // splitPath pulls an optional leading positional path out of args so
