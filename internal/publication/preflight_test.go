@@ -9,8 +9,33 @@ import (
 
 func TestPreflightMissingConfigIsActionable(t *testing.T) {
 	_, report := Preflight(t.TempDir())
-	if report.OK() || !strings.Contains(report.Error(), "[CONFIG_MISSING]") || !strings.Contains(report.Error(), "Fix: Create assayxport.toml") {
+	if report.OK() || len(report.Issues) != 1 || !strings.Contains(report.Error(), "[CONFIG_MISSING]") || !strings.Contains(report.Error(), "ax publish --init") {
 		t.Fatalf("report is not actionable:\n%s", report.Error())
+	}
+}
+
+func TestInitWritesInferredTemplateAndNeverOverwrites(t *testing.T) {
+	root := t.TempDir()
+	writeTestFile(t, filepath.Join(root, "go.mod"), "module goforge.dev/demo\n")
+	if err := os.Mkdir(filepath.Join(root, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	path, err := Init(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(data)
+	for _, want := range []string{`module = "goforge.dev/demo"`, `artifact_id = "demo"`, `version = "TODO_VERSION"`, `build_manifest = ".goplus/build/java/publication.json"`} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("template missing %s:\n%s", want, text)
+		}
+	}
+	if _, err := Init(root); err == nil || !strings.Contains(err.Error(), "[CONFIG_EXISTS]") {
+		t.Fatalf("second init error = %v", err)
 	}
 }
 

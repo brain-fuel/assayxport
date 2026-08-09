@@ -122,6 +122,7 @@ func run(args []string) error {
 func runPublishCmd(args []string) error {
 	fs := flag.NewFlagSet("ax publish", flag.ContinueOnError)
 	prepare := fs.Bool("prepare", false, "run every local gate and write the signed bundle without uploading")
+	initConfig := fs.Bool("init", false, "write a complete assayxport.toml template without overwriting")
 	fs.Usage = func() { fmt.Fprintln(os.Stderr, "usage: ax publish [--prepare]"); fs.PrintDefaults() }
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -132,6 +133,18 @@ func runPublishCmd(args []string) error {
 	root, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("[PROJECT_ROOT_UNAVAILABLE] %v\n  Fix: change to a readable project checkout and rerun the command", err)
+	}
+	if *initConfig {
+		if *prepare {
+			return fmt.Errorf("[PUBLISH_ARGUMENT_INVALID] --init and --prepare cannot be combined\n  Fix: run `ax publish --init`, review the file, then run `ax publish --prepare`")
+		}
+		path, err := publication.Init(root)
+		if err != nil {
+			return err
+		}
+		fmt.Println("wrote", path)
+		fmt.Println("review every TODO value, then run: ax publish --prepare")
+		return nil
 	}
 	_, report := publication.Preflight(root)
 	if !report.OK() {

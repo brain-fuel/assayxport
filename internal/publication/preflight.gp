@@ -10,6 +10,7 @@ import (
 	"net/mail"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -38,6 +39,7 @@ type Config struct { Version, Policy, GoModule, GoRepository, GroupID, ArtifactI
 // and actionable repair list.
 func Preflight(root string) (Config, Report) {
 	cfg, issues := loadConfig(filepath.Join(root, "assayxport.toml"))
+	for _, issue := range issues { if issue.Code == "CONFIG_MISSING" { return cfg, Report{Issues: []Issue{issue}} } }
 	issues = append(issues, validateConfig(cfg)...)
 	issues = append(issues, validateBuild(root, cfg)...)
 	sort.SliceStable(issues, func(i, j int) bool { return issues[i].Code < issues[j].Code })
@@ -46,7 +48,7 @@ func Preflight(root string) (Config, Report) {
 
 func loadConfig(path string) (Config, []Issue) {
 	f, err := os.Open(path)
-	if err != nil { return Config{}, []Issue{{"CONFIG_MISSING", fmt.Sprintf("cannot read %s: %v", path, err), "Create assayxport.toml using the documented schema_version = 1 template, then rerun `ax publish --prepare`."}} }
+	if err != nil { return Config{}, []Issue{{"CONFIG_MISSING", fmt.Sprintf("cannot read %s: %v", path, err), "Run `ax publish --init`, review every generated value, then rerun `ax publish --prepare`."}} }
 	defer f.Close()
 	cfg, section, schema := Config{}, "", 0
 	seen := map[string]bool{}
@@ -88,14 +90,61 @@ func validateConfig(c Config) []Issue {
 	required := []struct{name, value string}{{"version",c.Version},{"policy",c.Policy},{"go.module",c.GoModule},{"go.repository",c.GoRepository},{"maven.group_id",c.GroupID},{"maven.artifact_id",c.ArtifactID},{"maven.build_manifest",c.BuildManifest},{"maven.name",c.Name},{"maven.description",c.Description},{"maven.url",c.URL},{"maven.license_name",c.LicenseName},{"maven.license_url",c.LicenseURL},{"maven.developer_id",c.DeveloperID},{"maven.developer_name",c.DeveloperName},{"maven.developer_email",c.DeveloperEmail},{"maven.developer_url",c.DeveloperURL},{"maven.scm_url",c.SCMURL},{"maven.scm_connection",c.SCMConnection},{"maven.scm_developer_connection",c.SCMDeveloperConnection},{"maven.bundle",c.Bundle}}
 	for _, item := range required { if strings.TrimSpace(item.value)=="" { issues=append(issues, Issue{"CONFIG_REQUIRED_MISSING", "required setting "+item.name+" is missing or empty", "Add "+item.name+" to assayxport.toml with the authoritative publication value."}) } }
 	if c.Policy!="" && c.Policy!="goplus-dual" && c.Policy!="java-library" { issues=append(issues, Issue{"POLICY_UNSUPPORTED", "policy "+strconv.Quote(c.Policy)+" is unsupported", "Set policy = \"goplus-dual\" for Go+ dual publication or \"java-library\" for an ordinary Java library."}) }
-	if c.Version!="" && !regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`).MatchString(c.Version) { issues=append(issues, Issue{"VERSION_INVALID", "version must be a release X.Y.Z without a v prefix", "Set version to the Maven version, for example \"0.4.0\"; the Go version is derived as v0.4.0."}) }
+	if c.Version!="" && !placeholder(c.Version) && !regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`).MatchString(c.Version) { issues=append(issues, Issue{"VERSION_INVALID", "version must be a release X.Y.Z without a v prefix", "Set version to the Maven version, for example \"0.4.0\"; the Go version is derived as v0.4.0."}) }
 	if c.GroupID!="" && !regexp.MustCompile(`^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)+$`).MatchString(c.GroupID) { issues=append(issues,Issue{"MAVEN_GROUP_INVALID","maven.group_id is not a reverse-domain Maven group","Use a controlled reverse-domain group such as \"dev.goforge\"."}) }
 	if c.ArtifactID!="" && !regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`).MatchString(c.ArtifactID) { issues=append(issues,Issue{"MAVEN_ARTIFACT_INVALID","maven.artifact_id contains unsupported characters","Use a lowercase Maven artifact id containing letters, digits, dots, underscores, or hyphens."}) }
-	if c.DeveloperEmail!="" { if _,err:=mail.ParseAddress(c.DeveloperEmail); err!=nil { issues=append(issues,Issue{"DEVELOPER_EMAIL_INVALID","maven.developer_email is not a valid address","Set developer_email to a monitored publisher contact address."}) } }
-	for _, item:=range []struct{name,value string}{{"go.repository",c.GoRepository},{"maven.url",c.URL},{"maven.license_url",c.LicenseURL},{"maven.developer_url",c.DeveloperURL},{"maven.scm_url",c.SCMURL}} { if item.value!="" { parsed,err:=url.Parse(item.value); if err!=nil||parsed.Scheme!="https"||parsed.Host=="" { issues=append(issues,Issue{"URL_INVALID",item.name+" must be an absolute HTTPS URL","Set "+item.name+" to its canonical https:// URL."}) } } }
+	if c.DeveloperEmail!="" && !placeholder(c.DeveloperEmail) { if _,err:=mail.ParseAddress(c.DeveloperEmail); err!=nil { issues=append(issues,Issue{"DEVELOPER_EMAIL_INVALID","maven.developer_email is not a valid address","Set developer_email to a monitored publisher contact address."}) } }
+	for _, item:=range []struct{name,value string}{{"go.repository",c.GoRepository},{"maven.url",c.URL},{"maven.license_url",c.LicenseURL},{"maven.developer_url",c.DeveloperURL},{"maven.scm_url",c.SCMURL}} { if item.value!="" && !placeholder(item.value) { parsed,err:=url.Parse(item.value); if err!=nil||parsed.Scheme!="https"||parsed.Host=="" { issues=append(issues,Issue{"URL_INVALID",item.name+" must be an absolute HTTPS URL","Set "+item.name+" to its canonical https:// URL."}) } } }
 	if c.Bundle!="" { if _,ok:=safePath(".",c.Bundle); !ok { issues=append(issues,Issue{"BUNDLE_PATH_INVALID","maven.bundle escapes the project root","Use a relative path such as dist/central/name-version-bundle.zip."}) } }
+	for _, item:=range required { if strings.Contains(strings.ToUpper(item.value),"TODO") { issues=append(issues,Issue{"CONFIG_PLACEHOLDER_REMAINING",item.name+" still contains a TODO placeholder","Replace the generated placeholder in assayxport.toml with the authoritative value; publication never accepts TODO metadata."}) } }
 	return issues
 }
+func placeholder(value string)bool{return strings.Contains(strings.ToUpper(value),"TODO")}
+
+// Init writes a complete, reviewable template and never overwrites an existing
+// publication configuration.
+func Init(root string) (string,error) {
+	path:=filepath.Join(root,"assayxport.toml"); if _,err:=os.Stat(path); err==nil { return "",fmt.Errorf("[CONFIG_EXISTS] %s already exists\n  Fix: edit the existing file, or move it aside intentionally before rerunning `ax publish --init`",path) } else if !os.IsNotExist(err) { return "",err }
+	module:=readModule(filepath.Join(root,"go.mod")); if module=="" { module="TODO_GO_MODULE" }
+	artifact:=filepath.Base(module); if artifact=="."||artifact=="/"||strings.Contains(artifact,"TODO") { artifact="TODO_ARTIFACT_ID" }
+	repository:=gitOutput(root,"remote","get-url","origin"); httpsRepo:=repositoryHTTPS(repository); if httpsRepo=="" { httpsRepo="TODO_HTTPS_REPOSITORY" }
+	developer:=repositoryOwner(httpsRepo); if developer=="" { developer="TODO_DEVELOPER_ID" }
+	version:="TODO_VERSION"
+	name:=strings.ToUpper(artifact[:1])+artifact[1:]
+	page:="TODO_PROJECT_URL"; if strings.HasPrefix(module,"goforge.dev/") { page="https://goforge.dev/"+artifact+"/" }
+	template:=fmt.Sprintf(`# Generated by ax publish --init. Review every value before publishing.
+schema_version = 1
+version = %q # X.Y.Z; maps to Go vX.Y.Z
+policy = "goplus-dual"
+
+[go]
+module = %q
+repository = %q
+
+[maven]
+group_id = "dev.goforge"
+artifact_id = %q
+build_manifest = ".goplus/build/java/publication.json"
+name = %q
+description = "TODO: Describe the library for Maven Central"
+url = %q
+license_name = "TODO_LICENSE_NAME"
+license_url = "TODO_LICENSE_HTTPS_URL"
+developer_id = %q
+developer_name = "TODO_DEVELOPER_NAME"
+developer_email = "TODO_DEVELOPER_EMAIL"
+developer_url = %q
+scm_url = %q
+scm_connection = %q
+scm_developer_connection = %q
+bundle = %q
+`,version,module,httpsRepo,artifact,name,page,developer,httpsRepo,httpsRepo,"scm:git:"+httpsRepo+".git","scm:git:ssh://git@github.com/"+developer+"/"+artifact+".git","dist/central/"+artifact+"-"+version+"-bundle.zip")
+	if err:=os.WriteFile(path,[]byte(template),0o644); err!=nil{return "",err}; return path,nil
+}
+func readModule(path string)string{data,err:=os.ReadFile(path);if err!=nil{return ""};for _,line:=range strings.Split(string(data),"\n"){fields:=strings.Fields(line);if len(fields)==2&&fields[0]=="module"{return fields[1]}};return ""}
+func gitOutput(root string,args ...string)string{cmd:=exec.Command("git",append([]string{"-C",root},args...)...);out,err:=cmd.Output();if err!=nil{return ""};return strings.TrimSpace(string(out))}
+func repositoryHTTPS(raw string)string{raw=strings.TrimSuffix(raw,".git");if strings.HasPrefix(raw,"git@github.com:"){return "https://github.com/"+strings.TrimPrefix(raw,"git@github.com:")};if strings.HasPrefix(raw,"https://"){return raw};return ""}
+func repositoryOwner(raw string)string{parts:=strings.Split(strings.TrimSuffix(raw,"/"),"/");if len(parts)<2{return ""};return parts[len(parts)-2]}
 
 type buildManifest struct { Schema string `json:"schema"`; Outputs []struct{Path string `json:"path"`; SHA256 string `json:"sha256"`} `json:"outputs"` }
 func validateBuild(root string, c Config) []Issue {
