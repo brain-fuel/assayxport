@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -39,6 +40,82 @@ type releaseState struct {
 type CentralClient struct {
 	BaseURL, Username, Password string
 	HTTP                        *http.Client
+}
+
+// VerifyGoRelease proves the immutable Go half of a dual publication before
+// any credential is read or upload is attempted.
+func VerifyGoRelease(ctx context.Context, root string, cfg Config) error {
+	if cfg.Policy != "goplus-dual" {
+		return nil
+	}
+	tag := "v" + cfg.Version
+	head := gitOutput(root, "rev-parse", "HEAD")
+	cmd := exec.CommandContext(ctx, "git", "-C", root, "ls-remote", "--tags", "origin", "refs/tags/"+tag, "refs/tags/"+tag+"^{}")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("[REMOTE_TAG_UNAVAILABLE] cannot read %s from origin: %v: %s\n  Fix: verify the origin remote and network, then push the reviewed tag with `git push origin %s` before retrying", tag, err, strings.TrimSpace(string(out)), tag)
+	}
+	remote := ""
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) == 2 {
+			remote = fields[0]
+			if strings.HasSuffix(fields[1], "^{}") {
+				break
+			}
+		}
+	}
+	if remote == "" {
+		return fmt.Errorf("[REMOTE_TAG_MISSING] origin does not contain %s\n  Fix: push the approved immutable Go release first with `git push origin %s`, wait for it to become visible, then rerun `ax publish`", tag, tag)
+	}
+	if remote != head {
+		return fmt.Errorf("[REMOTE_TAG_COMMIT_MISMATCH] origin %s points to %s but the release checkout is %s\n  Fix: stop publication and reconcile the tag; Maven coordinates must be built from the exact remote Go tag commit", tag, remote, head)
+	}
+	proxy := strings.TrimRight(strings.TrimSpace(os.Getenv("AX_GO_PROXY_URL")), "/")
+	if proxy == "" {
+		proxy = "https://proxy.golang.org"
+	}
+	versionURL := proxy + "/" + proxyEscape(cfg.GoModule) + "/@v/" + tag + ".info"
+	if err := requireHTTP(ctx, versionURL, "GO_PROXY_VERSION_MISSING", "Publish "+tag+" first, then wait for proxy.golang.org to cache "+cfg.GoModule+"@"+tag+" before retrying."); err != nil {
+		return err
+	}
+	pkgSite := strings.TrimRight(strings.TrimSpace(os.Getenv("AX_PKG_GO_DEV_URL")), "/")
+	if pkgSite == "" {
+		pkgSite = "https://pkg.go.dev"
+	}
+	if err := requireHTTP(ctx, pkgSite+"/"+cfg.GoModule+"@"+tag, "PKG_GO_DEV_NOT_INDEXED", "Request/index "+cfg.GoModule+"@"+tag+" on pkg.go.dev and retry only after its documentation page returns successfully."); err != nil {
+		return err
+	}
+	return nil
+}
+
+func requireHTTP(ctx context.Context, endpoint, code, fix string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("[%s] %s: %v\n  Fix: %s", code, endpoint, err, fix)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
+		return fmt.Errorf("[%s] %s returned HTTP %d\n  Fix: %s", code, endpoint, resp.StatusCode, fix)
+	}
+	return nil
+}
+func proxyEscape(value string) string {
+	var b strings.Builder
+	for _, r := range value {
+		if r >= 'A' && r <= 'Z' {
+			b.WriteByte('!')
+			b.WriteRune(r - 'A' + 'a')
+		} else {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 // Publish uploads USER_MANAGED, waits for validation, explicitly promotes, and

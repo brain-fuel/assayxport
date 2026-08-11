@@ -72,3 +72,15 @@ func TestPublishRequiresCredentials(t *testing.T) {
 		t.Fatalf("error=%v", err)
 	}
 }
+
+func TestProxyEscapeAndHTTPFailureAreActionable(t *testing.T) {
+	if got := proxyEscape("Example.com/Mod"); got != "!example.com/!mod" {
+		t.Fatalf("proxy escape = %q", got)
+	}
+	server := httptest.NewServer(http.NotFoundHandler())
+	defer server.Close()
+	err := requireHTTP(context.Background(), server.URL+"/missing", "GO_PROXY_VERSION_MISSING", "publish the tag")
+	if err == nil || !strings.Contains(err.Error(), "[GO_PROXY_VERSION_MISSING]") || !strings.Contains(err.Error(), "Fix: publish the tag") {
+		t.Fatalf("error = %v", err)
+	}
+}

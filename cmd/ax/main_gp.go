@@ -162,6 +162,9 @@ func runPublishCmd(args []string) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
+	if err := publication.VerifyGoRelease(ctx, root, cfg); err != nil {
+		return err
+	}
 	deployment, err := publication.Publish(ctx, root, cfg, prepared)
 	if err != nil {
 		return err

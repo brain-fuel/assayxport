@@ -140,6 +140,7 @@ func runPublishCmd(args []string) error {
 	fmt.Println("OpenPGP fingerprint:", prepared.Fingerprint)
 	if *prepare { return nil }
 	ctx,cancel:=context.WithTimeout(context.Background(),30*time.Minute);defer cancel()
+	if err:=publication.VerifyGoRelease(ctx,root,cfg);err!=nil{return err}
 	deployment,err:=publication.Publish(ctx,root,cfg,prepared);if err!=nil{return err}
 	fmt.Println("Central deployment:",deployment.DeploymentID)
 	fmt.Println("Central state:",deployment.DeploymentState)
