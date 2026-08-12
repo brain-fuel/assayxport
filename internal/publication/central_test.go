@@ -48,7 +48,7 @@ func TestPublishUploadsValidatesPromotesAndPersists(t *testing.T) {
 	t.Setenv("MAVEN_CENTRAL_USERNAME", "user")
 	t.Setenv("MAVEN_CENTRAL_PASSWORD", "password")
 	t.Setenv("AX_MAVEN_CENTRAL_URL", server.URL)
-	d, err := Publish(context.Background(), root, Config{Version: "0.4.0", GroupID: "dev.goforge", ArtifactID: "demo"}, Prepared{Bundle: bundle}, "")
+	d, err := Publish(context.Background(), root, Config{Version: "0.4.0", GroupID: "dev.goforge", ArtifactID: "demo"}, Prepared{Bundle: bundle}, "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +67,7 @@ func TestPublishUploadsValidatesPromotesAndPersists(t *testing.T) {
 func TestPublishRequiresCredentials(t *testing.T) {
 	t.Setenv("MAVEN_CENTRAL_USERNAME", "")
 	t.Setenv("MAVEN_CENTRAL_PASSWORD", "")
-	_, err := Publish(context.Background(), t.TempDir(), Config{}, Prepared{}, "")
+	_, err := Publish(context.Background(), t.TempDir(), Config{}, Prepared{}, "", nil)
 	if err == nil || !strings.Contains(err.Error(), "[CENTRAL_CREDENTIALS_MISSING]") {
 		t.Fatalf("error=%v", err)
 	}
@@ -142,5 +142,25 @@ func TestProxyEscapeAndHTTPFailureAreActionable(t *testing.T) {
 	err := requireHTTP(context.Background(), server.URL+"/missing", "GO_PROXY_VERSION_MISSING", "publish the tag")
 	if err == nil || !strings.Contains(err.Error(), "[GO_PROXY_VERSION_MISSING]") || !strings.Contains(err.Error(), "Fix: publish the tag") {
 		t.Fatalf("error = %v", err)
+	}
+}
+
+func TestWaitTreatsPublishingAsPastValidated(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(Deployment{DeploymentID: "deployment-1", DeploymentState: "PUBLISHING"})
+	}))
+	defer server.Close()
+	var messages []string
+	d, err := (CentralClient{BaseURL: server.URL}).Wait(context.Background(), "deployment-1", "VALIDATED", func(message string) {
+		messages = append(messages, message)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.DeploymentState != "PUBLISHING" {
+		t.Fatalf("state=%s", d.DeploymentState)
+	}
+	if len(messages) != 1 || messages[0] != "Central state: PUBLISHING" {
+		t.Fatalf("progress=%v", messages)
 	}
 }

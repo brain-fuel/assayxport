@@ -125,8 +125,11 @@ func runPublishCmd(args []string) error {
 	prepare := fs.Bool("prepare", false, "run every local gate and write the signed bundle without uploading")
 	initConfig := fs.Bool("init", false, "write a complete assayxport.toml template without overwriting")
 	mavenSettingsPath := fs.String("maven-settings-path", "", "read Central credentials from this Maven settings XML file")
+	quiet := false
+	fs.BoolVar(&quiet, "q", false, "suppress publication progress")
+	fs.BoolVar(&quiet, "quiet", false, "suppress publication progress")
 	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: ax publish [--prepare] [--maven-settings-path path]")
+		fmt.Fprintln(os.Stderr, "usage: ax publish [--prepare] [-q|--quiet] [--maven-settings-path path]")
 		fs.PrintDefaults()
 	}
 	if err := fs.Parse(args); err != nil {
@@ -151,10 +154,18 @@ func runPublishCmd(args []string) error {
 		fmt.Println("review every TODO value, then run: ax publish --prepare")
 		return nil
 	}
+	progress := func(message string) {
+		if !quiet {
+			fmt.Fprintln(os.Stderr, "ax:", message)
+		}
+	}
+	progress("checking publication configuration, documentation, artifacts, and Git release state")
 	cfg, report := publication.Preflight(root)
 	if !report.OK() {
 		return report
 	}
+	progress("local publication preflight passed")
+	progress("preparing deterministic signed Central bundle")
 	prepared, err := publication.Prepare(context.Background(), root, cfg)
 	if err != nil {
 		return fmt.Errorf("[BUNDLE_PREPARATION_FAILED] %v\n  Fix: correct the signing or artifact error, then rerun `ax publish --prepare`; no upload was attempted", err)
@@ -166,10 +177,12 @@ func runPublishCmd(args []string) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
+	progress("verifying the remote Go tag, module proxy, and pkg.go.dev")
 	if err := publication.VerifyGoRelease(ctx, root, cfg); err != nil {
 		return err
 	}
-	deployment, err := publication.Publish(ctx, root, cfg, prepared, *mavenSettingsPath)
+	progress("remote Go release checks passed")
+	deployment, err := publication.Publish(ctx, root, cfg, prepared, *mavenSettingsPath, progress)
 	if err != nil {
 		return err
 	}

@@ -31,3 +31,12 @@ func TestPublishRejectsUnexpectedArgumentsWithExactCommand(t *testing.T) {
 		t.Fatalf("error = %v", err)
 	}
 }
+
+func TestPublishAcceptsQuietFlags(t *testing.T) {
+	for _, flag := range []string{"-q", "--quiet"} {
+		err := run([]string{"publish", flag, "--prepare"})
+		if err == nil || strings.Contains(err.Error(), "[PUBLISH_ARGUMENT_INVALID]") {
+			t.Fatalf("%s was not accepted: %v", flag, err)
+		}
+	}
+}

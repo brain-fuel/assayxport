@@ -42,6 +42,7 @@ type CentralClient struct {
 	BaseURL, Username, Password string
 	HTTP                        *http.Client
 }
+type Progress func(string)
 type mavenServer struct {
 	ID       string `xml:"id"`
 	Username string `xml:"username"`
@@ -129,11 +130,17 @@ func proxyEscape(value string) string {
 
 // Publish uploads USER_MANAGED, waits for validation, explicitly promotes, and
 // waits for publication. Non-secret state makes interrupted runs resumable.
-func Publish(ctx context.Context, root string, cfg Config, prepared Prepared, settingsPath string) (Deployment, error) {
+func Publish(ctx context.Context, root string, cfg Config, prepared Prepared, settingsPath string, progress Progress) (Deployment, error) {
+	report := func(message string) {
+		if progress != nil {
+			progress(message)
+		}
+	}
 	username, password, err := centralCredentials(root, settingsPath)
 	if err != nil {
 		return Deployment{}, err
 	}
+	report("Maven Central credentials loaded")
 	bundle, err := os.ReadFile(prepared.Bundle)
 	if err != nil {
 		return Deployment{}, err
@@ -152,10 +159,12 @@ func Publish(ctx context.Context, root string, cfg Config, prepared Prepared, se
 	id := state.DeploymentID
 	if id == "" {
 		if len(prepared.PublicKey) > 0 {
+			report("publishing the OpenPGP public key")
 			if err = publishPublicKey(ctx, prepared.PublicKey); err != nil {
 				return Deployment{}, err
 			}
 		}
+		report("uploading the Central bundle")
 		id, err = client.Upload(ctx, prepared.Bundle, cfg.GroupID+":"+cfg.ArtifactID+":"+cfg.Version)
 		if err != nil {
 			return Deployment{}, err
@@ -164,19 +173,28 @@ func Publish(ctx context.Context, root string, cfg Config, prepared Prepared, se
 		if err = writeReleaseState(statePath, state); err != nil {
 			return Deployment{}, err
 		}
+		report("Central deployment " + id + " uploaded")
+	} else {
+		report("resuming Central deployment " + id + " from saved state " + state.State)
 	}
-	deployment, err := client.Wait(ctx, id, "VALIDATED")
+	report("waiting for Central validation")
+	deployment, err := client.Wait(ctx, id, "VALIDATED", progress)
 	if err != nil {
 		return deployment, err
 	}
 	state.State = deployment.DeploymentState
 	_ = writeReleaseState(statePath, state)
 	if deployment.DeploymentState == "VALIDATED" {
+		report("requesting Central promotion")
 		if err = client.Promote(ctx, id); err != nil {
 			return deployment, err
 		}
+		report("Central promotion accepted")
+	} else {
+		report("Central is already " + deployment.DeploymentState + "; promotion does not need to be repeated")
 	}
-	deployment, err = client.Wait(ctx, id, "PUBLISHED")
+	report("waiting for publication to Maven Central")
+	deployment, err = client.Wait(ctx, id, "PUBLISHED", progress)
 	if err != nil {
 		return deployment, err
 	}
@@ -184,6 +202,7 @@ func Publish(ctx context.Context, root string, cfg Config, prepared Prepared, se
 	if err = writeReleaseState(statePath, state); err != nil {
 		return deployment, err
 	}
+	report("Central deployment is PUBLISHED")
 	return deployment, nil
 }
 func centralCredentials(root, configuredPath string) (string, string, error) {
@@ -335,17 +354,24 @@ func (c CentralClient) Promote(ctx context.Context, id string) error {
 	}
 	return nil
 }
-func (c CentralClient) Wait(ctx context.Context, id, target string) (Deployment, error) {
+func (c CentralClient) Wait(ctx context.Context, id, target string, progress Progress) (Deployment, error) {
+	last := ""
 	for {
 		d, err := c.Status(ctx, id)
 		if err != nil {
 			return d, err
 		}
-		if d.DeploymentState == target || target == "PUBLISHED" && d.DeploymentState == "PUBLISHED" {
-			return d, nil
+		if d.DeploymentState != last {
+			if progress != nil {
+				progress("Central state: " + d.DeploymentState)
+			}
+			last = d.DeploymentState
 		}
 		if d.DeploymentState == "FAILED" {
 			return d, fmt.Errorf("Central deployment failed: %v", d.Errors)
+		}
+		if stateRank(d.DeploymentState) >= stateRank(target) {
+			return d, nil
 		}
 		select {
 		case <-ctx.Done():
@@ -353,6 +379,21 @@ func (c CentralClient) Wait(ctx context.Context, id, target string) (Deployment,
 		case <-time.After(2 * time.Second):
 		}
 	}
+}
+func stateRank(state string) int {
+	switch state {
+	case "PENDING":
+		return 1
+	case "VALIDATING":
+		return 2
+	case "VALIDATED":
+		return 3
+	case "PUBLISHING":
+		return 4
+	case "PUBLISHED":
+		return 5
+	}
+	return 0
 }
 func (c CentralClient) base() string {
 	if c.BaseURL != "" {
