@@ -48,7 +48,7 @@ func TestPublishUploadsValidatesPromotesAndPersists(t *testing.T) {
 	t.Setenv("MAVEN_CENTRAL_USERNAME", "user")
 	t.Setenv("MAVEN_CENTRAL_PASSWORD", "password")
 	t.Setenv("AX_MAVEN_CENTRAL_URL", server.URL)
-	d, err := Publish(context.Background(), root, Config{Version: "0.4.0", GroupID: "dev.goforge", ArtifactID: "demo"}, Prepared{Bundle: bundle})
+	d, err := Publish(context.Background(), root, Config{Version: "0.4.0", GroupID: "dev.goforge", ArtifactID: "demo"}, Prepared{Bundle: bundle}, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,8 +67,68 @@ func TestPublishUploadsValidatesPromotesAndPersists(t *testing.T) {
 func TestPublishRequiresCredentials(t *testing.T) {
 	t.Setenv("MAVEN_CENTRAL_USERNAME", "")
 	t.Setenv("MAVEN_CENTRAL_PASSWORD", "")
-	_, err := Publish(context.Background(), t.TempDir(), Config{}, Prepared{})
+	_, err := Publish(context.Background(), t.TempDir(), Config{}, Prepared{}, "")
 	if err == nil || !strings.Contains(err.Error(), "[CENTRAL_CREDENTIALS_MISSING]") {
+		t.Fatalf("error=%v", err)
+	}
+}
+
+func TestCentralCredentialsReadRepositoryMavenSettings(t *testing.T) {
+	t.Setenv("MAVEN_CENTRAL_USERNAME", "")
+	t.Setenv("MAVEN_CENTRAL_PASSWORD", "")
+	root := t.TempDir()
+	settings := `<server><id>${server}</id><username>file-user</username><password>file-password</password></server>`
+	if err := os.WriteFile(filepath.Join(root, "maven_settings.xml"), []byte(settings), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	username, password, err := centralCredentials(root, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if username != "file-user" || password != "file-password" {
+		t.Fatal("repository settings credentials were not selected")
+	}
+}
+
+func TestCentralCredentialsAcceptExplicitStandardSettings(t *testing.T) {
+	t.Setenv("MAVEN_CENTRAL_USERNAME", "")
+	t.Setenv("MAVEN_CENTRAL_PASSWORD", "")
+	root := t.TempDir()
+	settings := `<settings><servers><server><id>other</id><username>wrong</username><password>wrong</password></server><server><id>central</id><username>selected</username><password>secret</password></server></servers></settings>`
+	if err := os.WriteFile(filepath.Join(root, "custom.xml"), []byte(settings), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	username, password, err := centralCredentials(root, "./custom.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if username != "selected" || password != "secret" {
+		t.Fatal("named Central server was not selected")
+	}
+}
+
+func TestCentralCredentialsEnvironmentIsAuthoritative(t *testing.T) {
+	t.Setenv("MAVEN_CENTRAL_USERNAME", "env-user")
+	t.Setenv("MAVEN_CENTRAL_PASSWORD", "env-password")
+	username, password, err := centralCredentials(t.TempDir(), "missing.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if username != "env-user" || password != "env-password" {
+		t.Fatal("environment credentials were not authoritative")
+	}
+}
+
+func TestCentralCredentialsRejectInsecureSettings(t *testing.T) {
+	t.Setenv("MAVEN_CENTRAL_USERNAME", "")
+	t.Setenv("MAVEN_CENTRAL_PASSWORD", "")
+	root := t.TempDir()
+	path := filepath.Join(root, "maven_settings.xml")
+	if err := os.WriteFile(path, []byte(`<server><username>user</username><password>password</password></server>`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, _, err := centralCredentials(root, "")
+	if err == nil || !strings.Contains(err.Error(), "[MAVEN_SETTINGS_PERMISSIONS_INSECURE]") || !strings.Contains(err.Error(), "chmod 600") {
 		t.Fatalf("error=%v", err)
 	}
 }

@@ -121,7 +121,8 @@ func runPublishCmd(args []string) error {
 	fs := flag.NewFlagSet("ax publish", flag.ContinueOnError)
 	prepare := fs.Bool("prepare", false, "run every local gate and write the signed bundle without uploading")
 	initConfig := fs.Bool("init", false, "write a complete assayxport.toml template without overwriting")
-	fs.Usage = func() { fmt.Fprintln(os.Stderr, "usage: ax publish [--prepare]"); fs.PrintDefaults() }
+	mavenSettingsPath := fs.String("maven-settings-path", "", "read Central credentials from this Maven settings XML file")
+	fs.Usage = func() { fmt.Fprintln(os.Stderr, "usage: ax publish [--prepare] [--maven-settings-path path]"); fs.PrintDefaults() }
 	if err := fs.Parse(args); err != nil { return err }
 	if fs.NArg() != 0 { return fmt.Errorf("[PUBLISH_ARGUMENT_INVALID] unexpected argument %q\n  Fix: run `ax publish` or `ax publish --prepare` from the project root", fs.Arg(0)) }
 	root, err := os.Getwd(); if err != nil { return fmt.Errorf("[PROJECT_ROOT_UNAVAILABLE] %v\n  Fix: change to a readable project checkout and rerun the command", err) }
@@ -141,7 +142,7 @@ func runPublishCmd(args []string) error {
 	if *prepare { return nil }
 	ctx,cancel:=context.WithTimeout(context.Background(),30*time.Minute);defer cancel()
 	if err:=publication.VerifyGoRelease(ctx,root,cfg);err!=nil{return err}
-	deployment,err:=publication.Publish(ctx,root,cfg,prepared);if err!=nil{return err}
+	deployment,err:=publication.Publish(ctx,root,cfg,prepared,*mavenSettingsPath);if err!=nil{return err}
 	fmt.Println("Central deployment:",deployment.DeploymentID)
 	fmt.Println("Central state:",deployment.DeploymentState)
 	for _,purl:=range deployment.PURLs{fmt.Println(purl)}

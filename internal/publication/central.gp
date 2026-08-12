@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -23,6 +24,8 @@ const CentralPortal = "https://central.sonatype.com"
 type Deployment struct{DeploymentID string `json:"deploymentId"`;DeploymentName string `json:"deploymentName"`;DeploymentState string `json:"deploymentState"`;PURLs []string `json:"purls"`;Errors any `json:"errors"`}
 type releaseState struct{Version string `json:"version"`;BundleSHA256 string `json:"bundle_sha256"`;DeploymentID string `json:"deployment_id"`;State string `json:"state"`}
 type CentralClient struct{BaseURL,Username,Password string;HTTP *http.Client}
+type mavenServer struct{ID string `xml:"id"`;Username string `xml:"username"`;Password string `xml:"password"`}
+type mavenSettings struct{Servers []mavenServer `xml:"servers>server"`}
 
 // VerifyGoRelease proves the immutable Go half of a dual publication before
 // any credential is read or upload is attempted.
@@ -48,8 +51,8 @@ func proxyEscape(value string)string{var b strings.Builder;for _,r:=range value{
 
 // Publish uploads USER_MANAGED, waits for validation, explicitly promotes, and
 // waits for publication. Non-secret state makes interrupted runs resumable.
-func Publish(ctx context.Context,root string,cfg Config,prepared Prepared)(Deployment,error){
-	username,password:=strings.TrimSpace(os.Getenv("MAVEN_CENTRAL_USERNAME")),strings.TrimSpace(os.Getenv("MAVEN_CENTRAL_PASSWORD"));if username==""||password==""{return Deployment{},fmt.Errorf("[CENTRAL_CREDENTIALS_MISSING] Maven Central credentials are absent\n  Fix: export MAVEN_CENTRAL_USERNAME and MAVEN_CENTRAL_PASSWORD using a Central Portal user token, then rerun `ax publish`")}
+func Publish(ctx context.Context,root string,cfg Config,prepared Prepared,settingsPath string)(Deployment,error){
+	username,password,err:=centralCredentials(root,settingsPath);if err!=nil{return Deployment{},err}
 	bundle,err:=os.ReadFile(prepared.Bundle);if err!=nil{return Deployment{},err};sum:=sha256.Sum256(bundle);digest:=hex.EncodeToString(sum[:])
 	statePath:=filepath.Join(root,".assayxport","releases",cfg.Version+".json");state,err:=readReleaseState(statePath);if err!=nil{return Deployment{},err};if state.BundleSHA256!=""&&state.BundleSHA256!=digest{return Deployment{},fmt.Errorf("[RELEASE_STATE_CONFLICT] saved deployment uses a different bundle digest\n  Fix: restore the exact prepared bundle or intentionally move %s aside before starting a new deployment",statePath)}
 	client:=CentralClient{BaseURL:strings.TrimSpace(os.Getenv("AX_MAVEN_CENTRAL_URL")),Username:username,Password:password};id:=state.DeploymentID
@@ -58,6 +61,18 @@ func Publish(ctx context.Context,root string,cfg Config,prepared Prepared)(Deplo
 	if deployment.DeploymentState=="VALIDATED"{if err=client.Promote(ctx,id);err!=nil{return deployment,err}}
 	deployment,err=client.Wait(ctx,id,"PUBLISHED");if err!=nil{return deployment,err};state.State=deployment.DeploymentState;if err=writeReleaseState(statePath,state);err!=nil{return deployment,err};return deployment,nil
 }
+func centralCredentials(root,configuredPath string)(string,string,error){
+	username,password:=strings.TrimSpace(os.Getenv("MAVEN_CENTRAL_USERNAME")),strings.TrimSpace(os.Getenv("MAVEN_CENTRAL_PASSWORD"))
+	if username!=""||password!=""{if username==""||password==""{return "","",fmt.Errorf("[CENTRAL_ENV_CREDENTIALS_INCOMPLETE] exactly one Maven Central environment variable is set\n  Fix: export both MAVEN_CENTRAL_USERNAME and MAVEN_CENTRAL_PASSWORD, or unset both to use maven_settings.xml")};return username,password,nil}
+	path:=strings.TrimSpace(configuredPath);explicit:=path!="";if path==""{path=filepath.Join(root,"maven_settings.xml")}else if !filepath.IsAbs(path){path=filepath.Join(root,path)}
+	data,err:=os.ReadFile(path);if os.IsNotExist(err)&&!explicit{return "","",fmt.Errorf("[CENTRAL_CREDENTIALS_MISSING] Maven Central credentials are absent and %s does not exist\n  Fix: export MAVEN_CENTRAL_USERNAME and MAVEN_CENTRAL_PASSWORD, create owner-only maven_settings.xml in the repository root, or pass `ax publish --maven-settings-path ./path/to/maven_settings.xml`",path)};if err!=nil{return "","",fmt.Errorf("[MAVEN_SETTINGS_UNREADABLE] cannot read %s: %v\n  Fix: correct --maven-settings-path and file permissions, then rerun `ax publish`",path,err)}
+	if info,statErr:=os.Stat(path);statErr==nil&&info.Mode().Perm()&0077!=0{return "","",fmt.Errorf("[MAVEN_SETTINGS_PERMISSIONS_INSECURE] %s is readable by group or other users\n  Fix: run `chmod 600 %q`, then rerun `ax publish`",path,path)}
+	servers,err:=parseMavenServers(data);if err!=nil{return "","",fmt.Errorf("[MAVEN_SETTINGS_INVALID] cannot parse %s: %v\n  Fix: provide a <server> document or standard <settings><servers><server> Maven document containing username and password",path,err)}
+	server,err:=selectMavenServer(servers);if err!=nil{return "","",fmt.Errorf("[MAVEN_SETTINGS_INVALID] %s: %v\n  Fix: keep one server entry, or give the Central entry id central, central-portal, or ossrh",path,err)}
+	username,password=strings.TrimSpace(server.Username),strings.TrimSpace(server.Password);if username==""||password==""{return "","",fmt.Errorf("[MAVEN_SETTINGS_CREDENTIALS_MISSING] %s does not contain both username and password\n  Fix: add the Central Portal user-token username and password to its <server> entry",path)};return username,password,nil
+}
+func parseMavenServers(data []byte)([]mavenServer,error){var root struct{XMLName xml.Name};if err:=xml.Unmarshal(data,&root);err!=nil{return nil,err};if root.XMLName.Local=="server"{var direct mavenServer;if err:=xml.Unmarshal(data,&direct);err!=nil{return nil,err};return []mavenServer{direct},nil};if root.XMLName.Local!="settings"{return nil,fmt.Errorf("root element must be <server> or <settings>")};var settings mavenSettings;if err:=xml.Unmarshal(data,&settings);err!=nil{return nil,err};return settings.Servers,nil}
+func selectMavenServer(servers []mavenServer)(mavenServer,error){if len(servers)==0{return mavenServer{},fmt.Errorf("no <server> entry found")};if len(servers)==1{return servers[0],nil};for _,wanted:=range []string{"central","central-portal","ossrh"}{for _,server:=range servers{if strings.EqualFold(strings.TrimSpace(server.ID),wanted){return server,nil}}};return mavenServer{},fmt.Errorf("multiple server entries are ambiguous")}
 func(c CentralClient)Upload(ctx context.Context,bundle,name string)(string,error){data,err:=os.ReadFile(bundle);if err!=nil{return "",err};var body bytes.Buffer;w:=multipart.NewWriter(&body);part,err:=w.CreateFormFile("bundle",filepath.Base(bundle));if err!=nil{return "",err};if _,err=part.Write(data);err!=nil{return "",err};if err=w.Close();err!=nil{return "",err};endpoint:=c.base()+"/api/v1/publisher/upload?publishingType=USER_MANAGED&name="+url.QueryEscape(name);req,err:=http.NewRequestWithContext(ctx,http.MethodPost,endpoint,&body);if err!=nil{return "",err};req.Header.Set("Content-Type",w.FormDataContentType());c.auth(req);resp,err:=c.client().Do(req);if err!=nil{return "",err};defer resp.Body.Close();out,_:=io.ReadAll(io.LimitReader(resp.Body,1<<20));if resp.StatusCode!=http.StatusCreated{return "",fmt.Errorf("Central upload: HTTP %d: %s",resp.StatusCode,strings.TrimSpace(string(out)))};return strings.TrimSpace(string(out)),nil}
 func(c CentralClient)Status(ctx context.Context,id string)(Deployment,error){req,err:=http.NewRequestWithContext(ctx,http.MethodPost,c.base()+"/api/v1/publisher/status?id="+url.QueryEscape(id),nil);if err!=nil{return Deployment{},err};c.auth(req);resp,err:=c.client().Do(req);if err!=nil{return Deployment{},err};defer resp.Body.Close();if resp.StatusCode!=http.StatusOK{body,_:=io.ReadAll(io.LimitReader(resp.Body,1<<20));return Deployment{},fmt.Errorf("Central status: HTTP %d: %s",resp.StatusCode,strings.TrimSpace(string(body)))};var d Deployment;if err=json.NewDecoder(resp.Body).Decode(&d);err!=nil{return d,err};return d,nil}
 func(c CentralClient)Promote(ctx context.Context,id string)error{req,err:=http.NewRequestWithContext(ctx,http.MethodPost,c.base()+"/api/v1/publisher/deployment/"+url.PathEscape(id),nil);if err!=nil{return err};c.auth(req);resp,err:=c.client().Do(req);if err!=nil{return err};defer resp.Body.Close();if resp.StatusCode!=http.StatusNoContent{body,_:=io.ReadAll(io.LimitReader(resp.Body,1<<20));return fmt.Errorf("Central promotion: HTTP %d: %s",resp.StatusCode,strings.TrimSpace(string(body)))};return nil}
