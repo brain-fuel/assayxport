@@ -143,9 +143,23 @@ func TestGitReleaseGateRequiresCleanMatchingTag(t *testing.T) {
 	if issues := validateGitRelease(root, Config{Version: "0.4.0"}); len(issues) != 0 {
 		t.Fatalf("tagged issues = %#v", issues)
 	}
+	if err := os.MkdirAll(filepath.Join(root, ".assayxport", "releases"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, filepath.Join(root, ".assayxport", "releases", "0.4.0.json"), "{}\n")
+	if issues := validateGitRelease(root, Config{Version: "0.4.0"}); len(issues) != 0 {
+		t.Fatalf("ax release state made checkout dirty: %#v", issues)
+	}
+	writeTestFile(t, filepath.Join(root, ".assayxport", "other.json"), "{}\n")
+	if issues := validateGitRelease(root, Config{Version: "0.4.0"}); len(issues) != 1 || issues[0].Code != "GIT_CHECKOUT_DIRTY" {
+		t.Fatalf("unrelated ax output was ignored: %#v", issues)
+	}
+	if err := os.Remove(filepath.Join(root, ".assayxport", "other.json")); err != nil {
+		t.Fatal(err)
+	}
 	writeTestFile(t, filepath.Join(root, "release.txt"), "dirty\n")
 	issues := validateGitRelease(root, Config{Version: "0.4.0"})
-	if len(issues) != 1 || issues[0].Code != "GIT_CHECKOUT_DIRTY" || !strings.Contains(issues[0].Fix, "git status --short") {
+	if len(issues) != 1 || issues[0].Code != "GIT_CHECKOUT_DIRTY" || !strings.Contains(issues[0].Fix, ".assayxport/releases/0.4.0.json") {
 		t.Fatalf("dirty issues = %#v", issues)
 	}
 }

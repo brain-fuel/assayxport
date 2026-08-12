@@ -214,9 +214,10 @@ func validateGitRelease(root string, c Config) []Issue {
 	if c.Version=="" || placeholder(c.Version) { return nil }
 	if gitOutput(root,"rev-parse","--is-inside-work-tree")!="true" { return []Issue{{"GIT_REPOSITORY_REQUIRED","publication root is not a Git checkout","Run from the repository root containing assayxport.toml, commit the release inputs, and tag v"+c.Version+"."}} }
 	issues:=[]Issue{}
-	if dirty:=gitOutput(root,"status","--porcelain");dirty!=""{issues=append(issues,Issue{"GIT_CHECKOUT_DIRTY","release checkout has uncommitted or untracked files","Commit the intended release files and remove or ignore generated scratch files; verify `git status --short` is empty before retrying."})}
+	if releaseCheckoutDirty(root,c.Version){issues=append(issues,Issue{"GIT_CHECKOUT_DIRTY","release checkout has uncommitted or untracked files other than ax's resumable release state","Commit the intended release files and remove or ignore generated scratch files; `git status --short` may contain only .assayxport/releases/"+c.Version+".json before retrying."})}
 	head:=gitOutput(root,"rev-parse","HEAD");tag:="v"+c.Version;tagCommit:=gitOutput(root,"rev-list","-n","1",tag)
 	if tagCommit==""{issues=append(issues,Issue{"GIT_TAG_MISSING","required local Go release tag "+tag+" does not exist","After every release gate passes, create the tag with `git tag -a "+tag+" -m \"release "+tag+"\"`, then rerun `ax publish --prepare`."})
 	} else if tagCommit!=head {issues=append(issues,Issue{"GIT_TAG_COMMIT_MISMATCH","tag "+tag+" points to "+tagCommit+" but checkout HEAD is "+head,"Check out the exact tagged commit with `git switch --detach "+tag+"`, or correct the unpublished tag before retrying."})}
 	return issues
 }
+func releaseCheckoutDirty(root,version string)bool{allowed:="?? .assayxport/releases/"+version+".json";status:=gitOutput(root,"status","--porcelain=v1","--untracked-files=all");for _,line:=range strings.Split(status,"\n"){if strings.TrimSpace(line)!=""&&line!=allowed{return true}};return false}
