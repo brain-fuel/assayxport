@@ -98,7 +98,29 @@ available ones.
 Go extraction is fully semantic via `go/packages`. Python and Java extraction is
 syntactic (tree-sitter): names, kinds, visibility, signatures as written, doc
 comments, decorators/annotations, and entrypoints are reliable; imported-name
-resolution and inferred types are not. Java visibility is the 4-way access
+resolution and inferred types are not.
+
+### Node / JavaScript / TypeScript
+
+TS/JS scans understand the Node ecosystem, not just the syntax. `package.json`
+manifests (the root one and any workspace ones, discovered with the same skip
+rules as source) contribute:
+
+- **Entrypoints**: npm `bin` targets (string or map form) and files opening
+  with a node shebang are marked `is_entrypoint`, with an invocation hint
+  (`npx <bin>` or `node <file>`) mirrored onto a top-level `main` function.
+- **Entry modules**: files named by `main`, `module`, or any string leaf of
+  the `exports` map inherit the package description as their module doc.
+
+Both module mechanisms are extracted: ES module `export` declarations
+(including `export default` of named, anonymous, and referenced values) and
+CommonJS assignments (`exports.name`, `module.exports.name`, wholesale
+`module.exports = {...}`), the latter tagged `visibility_idiom:
+"commonjs-export"`. Class member visibility honors `private`/`protected`
+modifiers and `#private` names. `--lang javascript`, `js`, `ts`, and `node`
+all select this extractor. `node_modules`, build output, and `.d.ts` ambient
+declarations are never scanned; a malformed `package.json` degrades gracefully
+rather than failing the scan. Java visibility is the 4-way access
 modifier (`public`/`protected`/`private`/`package-private`); consumers read the
 per-symbol `visibility_idiom` to interpret the `visibility` field across
 languages.

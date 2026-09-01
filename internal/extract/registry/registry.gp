@@ -22,9 +22,22 @@ func All() []extract.Extractor {
 	return []extract.Extractor{golang.New(), java.New(), python.New(), typescript.New()}
 }
 
+// langAliases maps the names people actually type to registered extractor
+// languages. The typescript extractor owns the whole Node surface, so
+// javascript/js/ts/node all select it.
+var langAliases = map[string]string{
+	"javascript": "typescript",
+	"js":         "typescript",
+	"ts":         "typescript",
+	"node":       "typescript",
+	"golang":     "go",
+	"py":         "python",
+}
+
 // Select returns the extractors whose Language() is in langs; error if any
 // requested language is not registered (message lists available languages).
-// Empty langs => All().
+// Common aliases (javascript, js, ts, node, golang, py) resolve to their
+// extractor and de-duplicate against it. Empty langs => All().
 func Select(langs []string) ([]extract.Extractor, error) {
 	if len(langs) == 0 {
 		return All(), nil
@@ -39,6 +52,9 @@ func Select(langs []string) ([]extract.Extractor, error) {
 	var out []extract.Extractor
 	seen := map[string]bool{}
 	for _, l := range langs {
+		if canon, ok := langAliases[l]; ok {
+			l = canon
+		}
 		e, ok := byLang[l]
 		if !ok {
 			return nil, fmt.Errorf("unknown language %q; available: %v", l, available)

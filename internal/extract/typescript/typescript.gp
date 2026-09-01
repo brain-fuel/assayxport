@@ -102,13 +102,14 @@ func (*Extractor) ExtractOne(root string, pkg schema.Package) (schema.Package, e
 		return schema.Package{}, err
 	}
 	abs := filepath.Join(absRoot, filepath.FromSlash(pkg.Path))
-	return extractFile(tsFile{Abs: abs, Rel: pkg.Path})
+	return extractFile(tsFile{Abs: abs, Rel: pkg.Path}, loadNodeContext(root))
 }
 
 // extractFile parses one discovered file into its module package. It holds no
-// shared state, so it is safe to call from many workers at once (the tree-sitter
-// backend is cgo-free with a fresh parser per call).
-func extractFile(f tsFile) (schema.Package, error) {
+// shared state beyond the read-only node context, so it is safe to call from
+// many workers at once (the tree-sitter backend is cgo-free with a fresh
+// parser per call).
+func extractFile(f tsFile, nc *nodeContext) (schema.Package, error) {
 	src, err := os.ReadFile(f.Abs)
 	if err != nil {
 		return schema.Package{}, err
@@ -123,7 +124,7 @@ func extractFile(f tsFile) (schema.Package, error) {
 	if !isTS {
 		lang = "javascript"
 	}
-	return schema.Package{
+	pkg := schema.Package{
 		ID:       id,
 		Language: lang,
 		Path:     f.Rel,
@@ -131,7 +132,9 @@ func extractFile(f tsFile) (schema.Package, error) {
 		Level:    "module",
 		Doc:      moduleDoc,
 		Symbols:  syms,
-	}, nil
+	}
+	applyNode(&pkg, f.Rel, src, nc)
+	return pkg, nil
 }
 
 // ExtractStream discovers all TS/JS files under root and emits one module package
@@ -145,6 +148,7 @@ func (*Extractor) ExtractStream(root string, emit func(schema.Package) error) er
 	if err != nil {
 		return err
 	}
+	nc := loadNodeContext(root)
 
 	workers := runtime.NumCPU() - 1
 	if workers < 1 {
@@ -171,7 +175,7 @@ func (*Extractor) ExtractStream(root string, emit func(schema.Package) error) er
 		go func() {
 			defer wg.Done()
 			for i := range jobs {
-				pkg, e := extractFile(files[i])
+				pkg, e := extractFile(files[i], nc)
 				if e != nil {
 					fail(e)
 					return

@@ -22,13 +22,127 @@ func moduleSymbols(lang ts.Language, relFile, unitID string, src []byte, isTS bo
 
 	var syms []schema.Symbol
 	for _, rc := range root.NamedChildren() {
+		if rc.Type() == "expression_statement" {
+			syms = append(syms, cjsSymbols(rc, relFile, unitID, src, isTS, ctx)...)
+			continue
+		}
 		decl, exported := unwrapExport(rc)
 		if decl.IsNull() {
+			if rc.Type() == "export_statement" {
+				syms = append(syms, defaultExportSymbols(rc, relFile, unitID, src, isTS, ctx)...)
+			}
 			continue
 		}
 		syms = append(syms, declSymbols(decl, "", exported, relFile, unitID, src, isTS, ctx)...)
 	}
 	return syms, "", nil
+}
+
+// defaultExportSymbols handles `export default <expression>` -- the export
+// forms unwrapExport cannot peel because no named declaration follows. A
+// default-exported identifier or literal becomes a `default` symbol recording
+// what it re-exports; anonymous function/class values are extracted as the
+// `default` callable/class.
+func defaultExportSymbols(n ts.Node, relFile, unitID string, src []byte, isTS bool, ctx *tsFileCtx) []schema.Symbol {
+	head := collapseWS(firstLine(n.Content(src)))
+	if !strings.HasPrefix(head, "export default") {
+		return nil
+	}
+	val, ok := n.ChildByFieldName("value")
+	if !ok {
+		return nil
+	}
+	switch val.Type() {
+	case "arrow_function", "function_expression", "generator_function":
+		s := funcSymbol(val, "", true, "function", relFile, unitID, src, isTS, ctx)
+		s.ID, s.Name = "default", "default"
+		s.Location = locationOf(n, relFile)
+		return []schema.Symbol{s}
+	case "class":
+		syms := classSymbols(val, "", true, relFile, unitID, src, isTS, ctx)
+		if len(syms) > 0 && syms[0].Name == "" {
+			syms[0].ID, syms[0].Name = "default", "default"
+		}
+		return syms
+	}
+	return []schema.Symbol{{
+		ID: "default", Name: "default", Kind: "const",
+		Visibility: "exported", VisibilityIdiom: "export",
+		Location:   locationOf(n, relFile),
+		Underlying: collapseWS(val.Content(src)),
+		Complexity: schema.DeferredComplexity(),
+	}}
+}
+
+// cjsSymbols handles CommonJS export statements at module top level:
+// `module.exports = ...`, `module.exports.name = ...`, and `exports.name = ...`.
+// Function values are extracted as functions; everything else is a const.
+// These carry visibility_idiom "commonjs-export" so consumers can tell the
+// export mechanism apart from ES modules.
+func cjsSymbols(stmt ts.Node, relFile, unitID string, src []byte, isTS bool, ctx *tsFileCtx) []schema.Symbol {
+	assign := childOfType(stmt, "assignment_expression")
+	if assign.IsNull() {
+		return nil
+	}
+	left, lok := assign.ChildByFieldName("left")
+	right, rok := assign.ChildByFieldName("right")
+	if !lok || !rok {
+		return nil
+	}
+	target := collapseWS(left.Content(src))
+	switch {
+	case target == "module.exports" || target == "exports":
+		// Wholesale assignment: an object literal exports each property;
+		// a single function or identifier exports as `default`.
+		if right.Type() == "object" {
+			var out []schema.Symbol
+			for _, prop := range right.NamedChildren() {
+				switch prop.Type() {
+				case "pair":
+					name := strings.Trim(fieldText(prop, "key", src), "\"'`")
+					if name == "" {
+						continue
+					}
+					v, _ := prop.ChildByFieldName("value")
+					out = append(out, cjsValueSymbol(name, prop, v, relFile, unitID, src, isTS, ctx))
+				case "shorthand_property_identifier":
+					name := prop.Content(src)
+					out = append(out, cjsValueSymbol(name, prop, ts.Node{}, relFile, unitID, src, isTS, ctx))
+				}
+			}
+			return out
+		}
+		return []schema.Symbol{cjsValueSymbol("default", stmt, right, relFile, unitID, src, isTS, ctx)}
+	case strings.HasPrefix(target, "module.exports."), strings.HasPrefix(target, "exports."):
+		name := target[strings.LastIndexByte(target, '.')+1:]
+		if name == "" || strings.Contains(name, "[") {
+			return nil
+		}
+		return []schema.Symbol{cjsValueSymbol(name, stmt, right, relFile, unitID, src, isTS, ctx)}
+	}
+	return nil
+}
+
+// cjsValueSymbol builds one CommonJS-exported symbol named name from the
+// assigned value (a null node, as in a shorthand property, yields a plain const).
+func cjsValueSymbol(name string, at ts.Node, val ts.Node, relFile, unitID string, src []byte, isTS bool, ctx *tsFileCtx) schema.Symbol {
+	if !val.IsNull() && (val.Type() == "arrow_function" || val.Type() == "function_expression" || val.Type() == "generator_function") {
+		s := funcSymbol(val, "", true, "function", relFile, unitID, src, isTS, ctx)
+		s.ID, s.Name = name, name
+		s.VisibilityIdiom = "commonjs-export"
+		s.Location = locationOf(at, relFile)
+		return s
+	}
+	s := schema.Symbol{
+		ID: name, Name: name, Kind: "const",
+		Visibility: "exported", VisibilityIdiom: "commonjs-export",
+		Location:   locationOf(at, relFile),
+		Complexity: schema.DeferredComplexity(),
+	}
+	if !val.IsNull() && val.Type() == "identifier" {
+		s.Underlying = val.Content(src)
+	}
+	return s
 }
 
 // unwrapExport peels an `export ...` statement to the declaration it exports,
@@ -139,7 +253,9 @@ func classSymbols(n ts.Node, ownerPrefix string, exported bool, relFile, unitID 
 			case "set":
 				mk = "setter"
 			}
-			out = append(out, funcSymbol(m, id, memberExported, mk, relFile, unitID, src, isTS, ctx))
+			ms := funcSymbol(m, id, memberExported, mk, relFile, unitID, src, isTS, ctx)
+			ms.Visibility = memberVisibility(m, src) // honor private/protected/#name modifiers
+			out = append(out, ms)
 		case "public_field_definition", "field_definition":
 			out = append(out, fieldSymbol(m, id, relFile, src, isTS))
 		}
@@ -339,10 +455,12 @@ func idiomOf(ownerPrefix string) string {
 
 func memberVisibility(n ts.Node, src []byte) string {
 	head := strings.TrimSpace(nodeHead(n, src))
+	head = strings.TrimPrefix(head, "static ")
 	switch {
-	case strings.HasPrefix(head, "private") || strings.Contains(head, "#"):
+	case strings.HasPrefix(head, "private "), strings.HasPrefix(head, "#"),
+		strings.HasPrefix(head, "static #"):
 		return "private"
-	case strings.HasPrefix(head, "protected"):
+	case strings.HasPrefix(head, "protected "):
 		return "protected"
 	default:
 		return "public"

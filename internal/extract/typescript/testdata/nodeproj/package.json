@@ -1,0 +1,9 @@
+{
+  "name": "@acme/nodeproj",
+  "version": "0.0.1",
+  "description": "Fixture package for Node semantics",
+  "type": "module",
+  "bin": "./src/cli.ts",
+  "main": "./dist/index.cjs",
+  "exports": { ".": { "import": "./src/index.ts" }, "./legacy": "./src/legacy.cjs" }
+}
