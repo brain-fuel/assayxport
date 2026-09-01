@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Add the domain-neutral `assayxport.trace/v3` artifact and relation graph.
+- Add stable declaration IDs, semantic change detection, and release-note to
+  ADR to deployable-code closure verification.
+- Add `ax verify` without changing the released v2 API manifest format.
+
+## v0.24.0
+
 - Add `ax diff <a> <b>`: assay two sources and report how they relate as a
   deterministic `assayxport-diff.json`. Sources are directories, local repos
   at a `#ref`, or remote repos (shallow-fetched via the system git into a
@@ -14,10 +21,6 @@
   exit 2 reserved for operational failure. Extraction failures are fatal for
   diff (never a silently partial comparison); `--lang` restricts languages
   explicitly and is recorded in the output header.
-- Add the domain-neutral `assayxport.trace/v3` artifact and relation graph.
-- Add stable declaration IDs, semantic change detection, and release-note to
-  ADR to deployable-code closure verification.
-- Add `ax verify` without changing the released v2 API manifest format.
 
 ## v0.23.0
 
