@@ -10,6 +10,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"math"
@@ -62,6 +63,13 @@ func (s *stringsFlag) Set(v string) error {
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
+		var ee *exitCodeError
+		if errors.As(err, &ee) {
+			if ee.msg != "" {
+				fmt.Fprintln(os.Stderr, "ax:", ee.msg)
+			}
+			os.Exit(ee.code)
+		}
 		fmt.Fprintln(os.Stderr, "ax:", err)
 		os.Exit(1)
 	}
@@ -72,6 +80,7 @@ func usage() {
 
 commands:
   assay   write assayxport.json, .assayxport/ shards, and assayxport.html
+  diff    compare two sources: exact drift or ranked correspondence
   publish validate release inputs, prepare, and publish Maven artifacts
   verify  validate an assayxport.trace/v3 artifact graph and release closure
   serve   assay and serve the explorer over HTTP (watches by default)
@@ -91,6 +100,8 @@ func run(args []string) error {
 	switch cmd {
 	case "assay":
 		return runAssayCmd(rest)
+	case "diff":
+		return runDiffCmd(rest)
 	case "verify":
 		return runVerifyCmd(rest)
 	case "publish":

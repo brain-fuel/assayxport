@@ -1,0 +1,274 @@
+package diff
+
+import "strings"
+
+// The shared cross-language type-kind vocabulary. Every parameter and return
+// type normalizes -- syntactically, from the type string as recorded in the
+// manifest -- into one of these kinds, following the precedent set by
+// visibility_idiom: one wire vocabulary, per-language normalization at the
+// edge.
+//
+//	scalar     numbers, booleans, chars
+//	string     text (and byte-strings)
+//	collection ordered/unordered element containers, arrays, varargs
+//	map        key-value containers
+//	error      errors and exceptions
+//	func       callables and functional-interface values
+//	object     any other named type
+//	unknown    missing or unresolvable annotations (any, interface{}, ...)
+//
+// kindNone is internal only: void/None/unit returns normalize to it and the
+// kind-sequence builder drops them, so a Go func with no results and a
+// Python function annotated "-> None" present the same shape.
+const (
+	kindScalar     = "scalar"
+	kindString     = "string"
+	kindCollection = "collection"
+	kindMap        = "map"
+	kindError      = "error"
+	kindFunc       = "func"
+	kindObject     = "object"
+	kindUnknown    = "unknown"
+	kindNone       = "none"
+)
+
+// normalizeTypeKind maps one declared type, in the named language, to the
+// shared vocabulary. It is deliberately syntactic: it inspects the written
+// head symbol, never resolves imports or aliases.
+func normalizeTypeKind(language, typ string) string {
+	t := strings.TrimSpace(typ)
+	if t == "" {
+		return kindUnknown
+	}
+	switch language {
+	case "go":
+		return goKind(t)
+	case "python":
+		return pythonKind(t)
+	case "java":
+		return javaKind(t)
+	default: // typescript, javascript, and anything future
+		return tsKind(t)
+	}
+}
+
+var goScalars = map[string]bool{
+	"bool": true, "int": true, "int8": true, "int16": true, "int32": true,
+	"int64": true, "uint": true, "uint8": true, "uint16": true, "uint32": true,
+	"uint64": true, "uintptr": true, "float32": true, "float64": true,
+	"complex64": true, "complex128": true, "byte": true, "rune": true,
+}
+
+func goKind(t string) string {
+	switch {
+	case strings.HasPrefix(t, "..."):
+		return kindCollection
+	case strings.HasPrefix(t, "*"):
+		return goKind(strings.TrimPrefix(t, "*"))
+	case strings.HasPrefix(t, "[]"), strings.HasPrefix(t, "["):
+		return kindCollection
+	case strings.HasPrefix(t, "map["):
+		return kindMap
+	case strings.HasPrefix(t, "func(") || strings.HasPrefix(t, "func "):
+		return kindFunc
+	case strings.HasPrefix(t, "chan ") || strings.HasPrefix(t, "<-chan ") || strings.HasPrefix(t, "chan<- "):
+		return kindObject
+	case t == "string":
+		return kindString
+	case t == "error":
+		return kindError
+	case t == "any" || strings.HasPrefix(t, "interface{"):
+		return kindUnknown
+	case goScalars[t]:
+		return kindScalar
+	default:
+		return kindObject
+	}
+}
+
+var pythonScalars = map[string]bool{"int": true, "float": true, "bool": true, "complex": true}
+
+var pythonCollections = map[string]bool{
+	"list": true, "tuple": true, "set": true, "frozenset": true,
+	"sequence": true, "iterable": true, "iterator": true, "generator": true,
+	"bytes": false, // handled as string below
+}
+
+var pythonMaps = map[string]bool{
+	"dict": true, "mapping": true, "mutablemapping": true, "defaultdict": true,
+	"ordereddict": true, "counter": true,
+}
+
+func pythonKind(t string) string {
+	head, inner := splitGeneric(t, '[', ']')
+	head = tailIdentifier(head) // typing.List -> List
+	lower := strings.ToLower(head)
+	switch {
+	case lower == "optional" || lower == "union":
+		// The first union member carries the shape ("Optional[int]" -> int).
+		if first := firstTopLevelArg(inner); first != "" {
+			return pythonKind(first)
+		}
+		return kindUnknown
+	case pythonScalars[lower]:
+		return kindScalar
+	case lower == "str" || lower == "bytes" || lower == "bytearray":
+		return kindString
+	case pythonCollections[lower]:
+		return kindCollection
+	case pythonMaps[lower]:
+		return kindMap
+	case lower == "callable":
+		return kindFunc
+	case lower == "none" || lower == "nonetype":
+		return kindNone
+	case lower == "any" || lower == "object":
+		return kindUnknown
+	case strings.HasSuffix(head, "Error") || strings.HasSuffix(head, "Exception"):
+		return kindError
+	default:
+		return kindObject
+	}
+}
+
+var javaScalars = map[string]bool{
+	"boolean": true, "byte": true, "short": true, "int": true, "long": true,
+	"float": true, "double": true, "char": true,
+	"Boolean": true, "Byte": true, "Short": true, "Integer": true, "Long": true,
+	"Float": true, "Double": true, "Character": true, "Number": true,
+	"BigInteger": true, "BigDecimal": true,
+}
+
+var javaCollections = map[string]bool{
+	"List": true, "Set": true, "Collection": true, "Queue": true, "Deque": true,
+	"Iterable": true, "Iterator": true, "ArrayList": true, "LinkedList": true,
+	"HashSet": true, "TreeSet": true, "Stream": true, "Optional": false,
+}
+
+var javaMaps = map[string]bool{
+	"Map": true, "HashMap": true, "TreeMap": true, "LinkedHashMap": true,
+	"ConcurrentHashMap": true, "SortedMap": true, "NavigableMap": true,
+}
+
+var javaFuncs = map[string]bool{
+	"Function": true, "BiFunction": true, "Supplier": true, "Consumer": true,
+	"BiConsumer": true, "Predicate": true, "BiPredicate": true, "Runnable": true,
+	"Callable": true, "UnaryOperator": true, "BinaryOperator": true,
+}
+
+func javaKind(t string) string {
+	if strings.HasSuffix(t, "...") || strings.HasSuffix(t, "[]") {
+		return kindCollection
+	}
+	head, inner := splitGeneric(t, '<', '>')
+	head = tailIdentifier(head)
+	switch {
+	case head == "Optional":
+		if first := firstTopLevelArg(inner); first != "" {
+			return javaKind(first)
+		}
+		return kindUnknown
+	case head == "void" || head == "Void":
+		return kindNone
+	case javaScalars[head]:
+		return kindScalar
+	case head == "String" || head == "CharSequence" || head == "StringBuilder" || head == "StringBuffer":
+		return kindString
+	case javaCollections[head]:
+		return kindCollection
+	case javaMaps[head]:
+		return kindMap
+	case javaFuncs[head]:
+		return kindFunc
+	case head == "Throwable" || strings.HasSuffix(head, "Exception") || strings.HasSuffix(head, "Error"):
+		return kindError
+	case head == "Object":
+		return kindUnknown
+	default:
+		return kindObject
+	}
+}
+
+func tsKind(t string) string {
+	if strings.HasSuffix(t, "[]") {
+		return kindCollection
+	}
+	if strings.Contains(t, "=>") {
+		return kindFunc
+	}
+	head, _ := splitGeneric(t, '<', '>')
+	head = tailIdentifier(head)
+	switch strings.ToLower(head) {
+	case "number", "boolean", "bigint":
+		return kindScalar
+	case "string":
+		return kindString
+	case "array", "set", "readonlyarray", "iterable":
+		return kindCollection
+	case "map", "record", "weakmap":
+		return kindMap
+	case "function":
+		return kindFunc
+	case "void", "undefined", "null", "never":
+		return kindNone
+	case "any", "unknown", "object", "":
+		return kindUnknown
+	case "error":
+		return kindError
+	default:
+		if strings.HasSuffix(head, "Error") {
+			return kindError
+		}
+		return kindObject
+	}
+}
+
+// splitGeneric returns the head before the first open bracket and the inner
+// argument text ("Map<K, V>" -> "Map", "K, V").
+func splitGeneric(t string, open, close byte) (head, inner string) {
+	i := strings.IndexByte(t, open)
+	if i < 0 {
+		return t, ""
+	}
+	j := strings.LastIndexByte(t, close)
+	if j <= i {
+		return t[:i], ""
+	}
+	return t[:i], t[i+1 : j]
+}
+
+// firstTopLevelArg returns the first comma-separated argument at bracket
+// depth zero, skipping literal None (so Optional[X] reads as X).
+func firstTopLevelArg(inner string) string {
+	depth := 0
+	start := 0
+	emit := func(part string) string { return strings.TrimSpace(part) }
+	for i := 0; i < len(inner); i++ {
+		switch inner[i] {
+		case '[', '<', '(':
+			depth++
+		case ']', '>', ')':
+			depth--
+		case ',':
+			if depth == 0 {
+				if p := emit(inner[start:i]); p != "" && !strings.EqualFold(p, "none") {
+					return p
+				}
+				start = i + 1
+			}
+		}
+	}
+	if p := emit(inner[start:]); p != "" && !strings.EqualFold(p, "none") {
+		return p
+	}
+	return ""
+}
+
+// tailIdentifier strips a qualification prefix: "typing.List" -> "List",
+// "java.util.Map" -> "Map".
+func tailIdentifier(s string) string {
+	if i := strings.LastIndexByte(s, '.'); i >= 0 {
+		return s[i+1:]
+	}
+	return s
+}

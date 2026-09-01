@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Add `ax diff <a> <b>`: assay two sources and report how they relate as a
+  deterministic `assayxport-diff.json`. Sources are directories, local repos
+  at a `#ref`, or remote repos (shallow-fetched via the system git into a
+  commit-addressed cache; `--offline` uses only the cache). `--mode drift`
+  reports exact per-symbol changes (signature, visibility, entrypoint,
+  complexity, call edges) between related sources; `--mode correspond` ranks
+  similar function pairs across unrelated codebases by signature shape, name
+  tokens, and call-neighborhood overlap, on an integer 0-1000 scale with no
+  network or model calls. `--exit-code` follows git-diff convention with
+  exit 2 reserved for operational failure. Extraction failures are fatal for
+  diff (never a silently partial comparison); `--lang` restricts languages
+  explicitly and is recorded in the output header.
 - Add the domain-neutral `assayxport.trace/v3` artifact and relation graph.
 - Add stable declaration IDs, semantic change detection, and release-note to
   ADR to deployable-code closure verification.

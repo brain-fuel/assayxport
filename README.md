@@ -133,6 +133,55 @@ languages.
 Output is deterministic: relative paths, no timestamps, stable ordering. Equal
 inputs produce byte-identical files.
 
+## Compare two sources
+
+`ax diff` assays two sources and reports how they relate as a deterministic
+`assayxport-diff.json` (or `--stdout`, or `--format text` for a summary).
+Each source is a local directory, a local repo at a ref (`#` separator), or
+a remote repo — any combination:
+
+```bash
+ax diff . ../fork                                  # two working trees
+ax diff .#v1.2.0 .#main                            # two refs of one repo
+ax diff . https://github.com/owner/repo#main       # local vs remote
+ax diff git@github.com:a/x.git https://github.com/b/y   # remote vs remote
+```
+
+Local refs are materialized with `git archive` into a scratch directory —
+the working tree, index, stash, and HEAD are never touched. Remotes resolve
+via `git ls-remote` and shallow-fetch through the system git binary (your
+credential helpers, ssh agent, and proxy config apply; credentials are never
+prompted for) into a commit-addressed cache; `--offline` forbids the network
+and uses only the cache. Labels are stable (`host/owner/repo#<sha12>`) and
+the output never contains filesystem locations; `--label-a`/`--label-b`
+override them.
+
+Two modes, because two questions:
+
+- **`--mode drift`** — for sources that share identity (two refs, a fork and
+  its upstream). Matches packages and symbols by id and reports exact
+  changes: added, removed, signature, visibility, entrypoint status,
+  complexity estimate, call edges. Auto-selected when both sources resolve
+  to the same repository or Go module.
+- **`--mode correspond`** — for unrelated codebases. Ranks candidate
+  function pairs for human review (never asserted equivalence) by three
+  separately-reported integer signals: normalized signature shape, name
+  token similarity, and call-neighborhood overlap. Deterministic and fully
+  offline — no embeddings, no model calls, integers on a 0–1000 scale.
+  Trivial symbols (below `--min-lines`, default 5) are excluded;
+  cross-language pairs are scored but tagged, and `--same-language-only`
+  drops them.
+
+The output header records each source's resolved commit, the extraction mode
+per language (`semantic` for Go, `syntactic` for tree-sitter languages), the
+diff mode, and every threshold that shaped the result, so a diff is
+reproducible from its own header. Unlike `ax assay`, a per-language
+extraction failure is **fatal** — a diff over a half-loaded package graph
+would be confidently wrong — and the only way to skip a failing language is
+an explicit `--lang` restriction, which the header records. `--exit-code`
+follows git-diff convention (1 = differences found), with exit 2 reserved
+for operational failure so CI can tell the two apart.
+
 ## Call graph
 
 Every function-like symbol carries a `calls` list: its distinct callees, each

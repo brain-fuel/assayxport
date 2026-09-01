@@ -90,6 +90,13 @@ func marshal(v any) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// Marshal renders v in the manifest's canonical JSON form: 2-space indent,
+// no HTML escaping, trailing newline. It exists so sibling artifacts (the
+// diff document) share the exact serialization discipline of the manifest.
+func Marshal(v any) ([]byte, error) {
+	return marshal(v)
+}
+
 // WriteDir writes the index and all shards under outDir, then removes any
 // stale *.json files inside <outDir>/.assayxport/ that are not among the
 // shards just written. Only files inside .assayxport/ are ever deleted;
