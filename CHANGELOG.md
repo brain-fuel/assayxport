@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.25.0
 
 - Add `ax publish` policy `maven-repository`: publish every artifact of a
   Maven reactor from a build-staged, unsigned repository-layout directory as
