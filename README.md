@@ -300,6 +300,82 @@ internal invariants are now executable Go+ abstractions:
 Committed `_gp.go` files preserve ordinary Go installation. Regeneration uses
 Go+ v0.16.1 or newer and `goforge.dev/goplus/std` v0.17.0.
 
+## Publish a Maven reactor to Central
+
+`ax publish` validates release inputs, prepares one deterministic signed
+bundle, and uploads it to the Central Portal. It uploads with
+`USER_MANAGED`, waits for `VALIDATED`, promotes explicitly, waits for
+`PUBLISHED`, and keeps resumable state in `.assayxport/releases/<version>.json`.
+Credentials come from `MAVEN_CENTRAL_USERNAME` and `MAVEN_CENTRAL_PASSWORD`,
+`maven_settings.xml` in the root, or `--maven-settings-path`. The OpenPGP key
+is `AX_MAVEN_SIGNING_KEY`, default
+`<user config dir>/assayxport/maven-central-private.asc`.
+
+Policies `goplus-dual` and `java-library` publish one artifact per project.
+Policy `maven-repository` publishes every artifact of a Maven reactor that the
+project's own build staged, unsigned, in Maven repository layout:
+
+```toml
+schema_version = 1
+version = "0.36.0"
+policy = "maven-repository"
+group_id = "dev.goforge"
+staging = "hosts/jvm/target/central-staging"   # relative to the root
+artifacts = "lawspec-parent,lawspec,lawspec-darwin-arm64"  # or ["a", "b"] on one line
+# bundle = "hosts/jvm/target/central-bundle.zip"  # default: <staging>-bundle.zip
+```
+
+The root is the Git checkout (the working directory, or the one directory
+argument). Preflight keeps the clean-checkout and `v<version>` tag gates, so
+keep `staging` and `bundle` in an ignored build directory. It never runs
+`VerifyGoRelease`, and it accumulates every problem with a code and a fix:
+
+| Code | Rejects |
+|---|---|
+| `STAGING_MISSING`, `STAGING_PATH_INVALID` | no staging directory, or one outside the root |
+| `REPO_ARTIFACT_NOT_STAGED`, `REPO_ARTIFACT_NOT_NAMED`, `REPO_ARTIFACT_DUPLICATE` | `artifacts` and the staged set disagree |
+| `STAGING_SNAPSHOT`, `STAGING_VERSION_MISMATCH`, `REPO_POM_SNAPSHOT`, `REPO_POM_PARENT_MISMATCH` | SNAPSHOTs, or any version other than `version` |
+| `REPO_POM_MISSING`, `REPO_POM_INVALID`, `REPO_POM_COORDINATE_MISMATCH` | a POM absent, unreadable, or whose groupId, artifactId or version (own or from `<parent>`) differs from its path |
+| `REPO_JAR_MISSING`, `REPO_SOURCES_MISSING`, `REPO_JAVADOC_MISSING` | a non-`pom` packaging without a non-empty main, `-sources` or `-javadoc` jar |
+| `REPO_POM_METADATA_MISSING` | name, description, url, licenses, developers or scm absent after following `<parent>` within the staged set (name and description are not inherited) |
+| `STAGING_SIGNATURE_PRESENT` | a build-made `.asc` |
+| `STAGING_FILE_UNEXPECTED`, `STAGING_UNREADABLE` | files outside `<group path>/<artifactId>/<version>/`, or not named `<artifactId>-<version>*` |
+| `CONFIG_KEY_UNSUPPORTED`, `BUNDLE_INSIDE_STAGING` | go/maven keys under this policy, or a bundle inside the staging directory |
+
+Signatures are rejected, not ignored: the bundle is signed once with the ax
+key, so build with the signer off (Maven: `-Dgpg.skip`). Build checksums
+(`.md5`, `.sha1`, `.sha256`, `.sha512`) and Maven's `maven-metadata*.xml` are
+ignored and never published; ax regenerates checksums for every file and
+signature. Prepare signs each staged file, writes one bundle with the staging
+layout, and ordering, timestamps and signatures make it byte-for-byte
+reproducible. Upload, validation, promotion and resume are unchanged.
+
+`ax publish --config <path>` reads the configuration from another file, so a
+release whose immutable tag holds no `assayxport.toml` can still be published:
+
+```sh
+ax publish --prepare --config ~/releases/lawspec-0.36.0/assayxport.toml
+```
+
+### Staging a Maven build
+
+The Central publishing plugin (`central-publishing-maven-plugin` 0.9.0 with
+`<extensions>true</extensions>`) binds `publish` to `deploy`, stages into
+`target/central-staging` of the first module that declares it, then bundles
+and uploads. Its `skipPublishing` property skips staging as well, so it
+cannot produce a staging directory; running `deploy` would also need Central
+credentials. Stage with the stock deploy plugin instead, which the extension
+leaves callable from the command line. For the LawSpec 0.36.0 reactor:
+
+```sh
+mvn -f hosts/jvm -Prelease,all-platforms -Drevision=0.36.0 -Dgpg.skip -DskipTests \
+  package deploy:deploy \
+  -DaltDeploymentRepository=staging::file:$PWD/hosts/jvm/target/central-staging
+```
+
+Remove the staging directory first: it accumulates across builds, and ax
+rejects what it finds.
+
 ## License
 
 MIT. Third-party components (the tree-sitter runtime and the Python and Java

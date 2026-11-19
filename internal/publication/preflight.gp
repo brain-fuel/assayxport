@@ -41,6 +41,8 @@ type Config struct {
 	Name, Description, URL, LicenseName, LicenseURL string
 	DeveloperID, DeveloperName, DeveloperEmail, DeveloperURL string
 	SCMURL, SCMConnection, SCMDeveloperConnection, Bundle string
+	Staging string
+	Artifacts []string
 	Waivers []Waiver
 }
 
@@ -48,10 +50,18 @@ type Config struct {
 // It deliberately accumulates errors so one run gives the operator a complete
 // and actionable repair list.
 func Preflight(root string) (Config, Report) {
-	cfg, issues := loadConfig(filepath.Join(root, "assayxport.toml"))
+	return PreflightConfig(root, filepath.Join(root, "assayxport.toml"))
+}
+
+// PreflightConfig is Preflight with the configuration read from configPath,
+// which may live outside the Git checkout at root. Relative paths inside the
+// configuration still resolve against root, and the clean-checkout and tag
+// gates still apply to root.
+func PreflightConfig(root, configPath string) (Config, Report) {
+	cfg, issues := loadConfig(configPath)
 	for _, issue := range issues { if issue.Code == "CONFIG_MISSING" { return cfg, Report{Issues: []Issue{issue}} } }
 	issues = append(issues, validateConfig(cfg)...)
-	issues = append(issues, validateBuild(root, cfg)...)
+	if cfg.Policy == PolicyMavenRepository { issues = append(issues, validateRepository(root, cfg)...) } else { issues = append(issues, validateBuild(root, cfg)...) }
 	issues = append(issues, validateGitRelease(root, cfg)...)
 	sort.SliceStable(issues, func(i, j int) bool { return issues[i].Code < issues[j].Code })
 	return cfg, Report{Issues: issues}
@@ -81,6 +91,7 @@ func loadConfig(path string) (Config, []Issue) {
 		if !ok { issues = append(issues, Issue{"CONFIG_SYNTAX", fmt.Sprintf("%s:%d is not key = value", path, lineNo), "Write the setting as a TOML key followed by = and a quoted string value."}); continue }
 		qualified := section + "." + key; if seen[qualified] { issues = append(issues, Issue{"CONFIG_DUPLICATE", fmt.Sprintf("%s:%d repeats %s", path, lineNo, qualified), "Remove the duplicate setting so publication metadata has one unambiguous value."}); continue }; seen[qualified] = true
 		if section == "" && key == "schema_version" { n, e := strconv.Atoi(raw); if e != nil { issues = append(issues, Issue{"CONFIG_SCHEMA_INVALID", "schema_version is not an integer", "Set schema_version = 1."}) } else { schema = n }; continue }
+		if section == "" && key == "artifacts" && strings.HasPrefix(raw, "[") { var list []string; if e := json.Unmarshal([]byte(raw), &list); e != nil { issues = append(issues, Issue{"CONFIG_VALUE_INVALID", fmt.Sprintf("%s:%d artifacts must be a single-line array of quoted strings", path, lineNo), "Write artifacts = [\"a\", \"b\"] on one line, or a comma-separated quoted string."}) } else { cfg.Artifacts = append(cfg.Artifacts, list...) }; continue }
 		value, e := strconv.Unquote(raw); if e != nil { issues = append(issues, Issue{"CONFIG_VALUE_INVALID", fmt.Sprintf("%s:%d value for %s must be quoted", path, lineNo, qualified), "Use a TOML quoted string, for example key = \"value\"."}); continue }
 		if section == "documentation.waivers" {
 			if waiverIndex < 0 || !setWaiver(&cfg.Waivers[waiverIndex], key, value) { issues = append(issues, Issue{"CONFIG_UNKNOWN_KEY", fmt.Sprintf("%s:%d contains unknown waiver key %s", path, lineNo, key), "Use only issue, symbol, reason, and through in each [[documentation.waivers]] entry."}) }
@@ -101,6 +112,7 @@ func setWaiver(w *Waiver, key, value string) bool {
 func set(c *Config, key, value string) bool {
 	switch key {
 	case ".version": c.Version=value; case ".policy": c.Policy=value
+	case ".group_id": c.GroupID=value; case ".staging": c.Staging=value; case ".bundle": c.Bundle=value; case ".artifacts": c.Artifacts=append(c.Artifacts, splitList(value)...)
 	case "go.module": c.GoModule=value; case "go.repository": c.GoRepository=value
 	case "maven.group_id": c.GroupID=value; case "maven.artifact_id": c.ArtifactID=value; case "maven.build_manifest": c.BuildManifest=value
 	case "maven.name": c.Name=value; case "maven.description": c.Description=value; case "maven.url": c.URL=value
@@ -112,10 +124,12 @@ func set(c *Config, key, value string) bool {
 }
 
 func validateConfig(c Config) []Issue {
+	if c.Policy == PolicyMavenRepository { return validateRepositoryConfig(c) }
 	issues := []Issue{}
+	if c.Staging != "" || len(c.Artifacts) > 0 { issues = append(issues, Issue{"CONFIG_KEY_UNSUPPORTED", "staging and artifacts are only used by policy \"maven-repository\"", "Remove them, or set policy = \"maven-repository\"."}) }
 	required := []struct{name, value string}{{"version",c.Version},{"policy",c.Policy},{"go.module",c.GoModule},{"go.repository",c.GoRepository},{"maven.group_id",c.GroupID},{"maven.artifact_id",c.ArtifactID},{"maven.build_manifest",c.BuildManifest},{"maven.name",c.Name},{"maven.description",c.Description},{"maven.url",c.URL},{"maven.license_name",c.LicenseName},{"maven.license_url",c.LicenseURL},{"maven.developer_id",c.DeveloperID},{"maven.developer_name",c.DeveloperName},{"maven.developer_email",c.DeveloperEmail},{"maven.developer_url",c.DeveloperURL},{"maven.scm_url",c.SCMURL},{"maven.scm_connection",c.SCMConnection},{"maven.scm_developer_connection",c.SCMDeveloperConnection},{"maven.bundle",c.Bundle}}
 	for _, item := range required { if strings.TrimSpace(item.value)=="" { issues=append(issues, Issue{"CONFIG_REQUIRED_MISSING", "required setting "+item.name+" is missing or empty", "Add "+item.name+" to assayxport.toml with the authoritative publication value."}) } }
-	if c.Policy!="" && c.Policy!="goplus-dual" && c.Policy!="java-library" { issues=append(issues, Issue{"POLICY_UNSUPPORTED", "policy "+strconv.Quote(c.Policy)+" is unsupported", "Set policy = \"goplus-dual\" for Go+ dual publication or \"java-library\" for an ordinary Java library."}) }
+	if c.Policy!="" && c.Policy!="goplus-dual" && c.Policy!="java-library" && c.Policy!=PolicyMavenRepository { issues=append(issues, Issue{"POLICY_UNSUPPORTED", "policy "+strconv.Quote(c.Policy)+" is unsupported", "Set policy = \"goplus-dual\" for Go+ dual publication, \"java-library\" for an ordinary Java library, or \"maven-repository\" for a staged multi-artifact Maven release."}) }
 	if c.Version!="" && !placeholder(c.Version) && !regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`).MatchString(c.Version) { issues=append(issues, Issue{"VERSION_INVALID", "version must be a release X.Y.Z without a v prefix", "Set version to the Maven version, for example \"0.4.0\"; the Go version is derived as v0.4.0."}) }
 	if c.GroupID!="" && !regexp.MustCompile(`^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)+$`).MatchString(c.GroupID) { issues=append(issues,Issue{"MAVEN_GROUP_INVALID","maven.group_id is not a reverse-domain Maven group","Use a controlled reverse-domain group such as \"dev.goforge\"."}) }
 	if c.ArtifactID!="" && !regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`).MatchString(c.ArtifactID) { issues=append(issues,Issue{"MAVEN_ARTIFACT_INVALID","maven.artifact_id contains unsupported characters","Use a lowercase Maven artifact id containing letters, digits, dots, underscores, or hyphens."}) }

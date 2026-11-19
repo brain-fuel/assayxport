@@ -36,6 +36,9 @@ type Prepared struct {
 
 // Prepare creates the complete signed Central bundle without network access.
 func Prepare(ctx context.Context, root string, c Config) (Prepared, error) {
+	if c.Policy == PolicyMavenRepository {
+		return prepareRepository(ctx, root, c)
+	}
 	manifestPath, _ := safePath(root, c.BuildManifest)
 	data, err := os.ReadFile(manifestPath)
 	if err != nil {
@@ -263,7 +266,11 @@ func writeBundle(path, repo string, files map[string][]byte, epoch time.Time) er
 	var b bytes.Buffer
 	zw := zip.NewWriter(&b)
 	for _, name := range sortedKeys(files) {
-		h := &zip.FileHeader{Name: repo + "/" + name, Method: zip.Deflate}
+		entry := name
+		if repo != "" {
+			entry = repo + "/" + name
+		}
+		h := &zip.FileHeader{Name: entry, Method: zip.Deflate}
 		h.SetModTime(epoch)
 		h.SetMode(0o644)
 		w, err := zw.CreateHeader(h)

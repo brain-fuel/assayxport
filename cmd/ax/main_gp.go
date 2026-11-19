@@ -136,24 +136,38 @@ func runPublishCmd(args []string) error {
 	prepare := fs.Bool("prepare", false, "run every local gate and write the signed bundle without uploading")
 	initConfig := fs.Bool("init", false, "write a complete assayxport.toml template without overwriting")
 	mavenSettingsPath := fs.String("maven-settings-path", "", "read Central credentials from this Maven settings XML file")
+	configPath := fs.String("config", "", "read the publication configuration from this file instead of <root>/assayxport.toml (it may live outside the checkout)")
 	quiet := false
 	fs.BoolVar(&quiet, "q", false, "suppress publication progress")
 	fs.BoolVar(&quiet, "quiet", false, "suppress publication progress")
 	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: ax publish [--prepare] [-q|--quiet] [--maven-settings-path path]")
+		fmt.Fprintln(os.Stderr, "usage: ax publish [--prepare] [-q|--quiet] [--config path] [--maven-settings-path path] [root]")
 		fs.PrintDefaults()
 	}
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	if fs.NArg() != 0 {
-		return fmt.Errorf("[PUBLISH_ARGUMENT_INVALID] unexpected argument %q\n  Fix: run `ax publish` or `ax publish --prepare` from the project root", fs.Arg(0))
+	if fs.NArg() > 1 {
+		return fmt.Errorf("[PUBLISH_ARGUMENT_INVALID] unexpected argument %q\n  Fix: run `ax publish` or `ax publish --prepare` from the project root, or pass the checkout directory as the only argument", fs.Arg(1))
 	}
 	root, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("[PROJECT_ROOT_UNAVAILABLE] %v\n  Fix: change to a readable project checkout and rerun the command", err)
 	}
+	if fs.NArg() == 1 {
+		info, statErr := os.Stat(fs.Arg(0))
+		if statErr != nil || !info.IsDir() {
+			return fmt.Errorf("[PUBLISH_ARGUMENT_INVALID] unexpected argument %q (not a directory)\n  Fix: run `ax publish` or `ax publish --prepare` from the project root, or pass the checkout directory as the only argument", fs.Arg(0))
+		}
+		root, err = filepath.Abs(fs.Arg(0))
+		if err != nil {
+			return fmt.Errorf("[PUBLISH_ARGUMENT_INVALID] %v\n  Fix: pass a readable checkout directory", err)
+		}
+	}
 	if *initConfig {
+		if *configPath != "" {
+			return fmt.Errorf("[PUBLISH_ARGUMENT_INVALID] --init and --config cannot be combined\n  Fix: run `ax publish --init` in the checkout, then move the reviewed file and pass it with --config")
+		}
 		if *prepare {
 			return fmt.Errorf("[PUBLISH_ARGUMENT_INVALID] --init and --prepare cannot be combined\n  Fix: run `ax publish --init`, review the file, then run `ax publish --prepare`")
 		}
@@ -171,7 +185,14 @@ func runPublishCmd(args []string) error {
 		}
 	}
 	progress("checking publication configuration, documentation, artifacts, and Git release state")
-	cfg, report := publication.Preflight(root)
+	configFile := filepath.Join(root, "assayxport.toml")
+	if *configPath != "" {
+		configFile, err = filepath.Abs(*configPath)
+		if err != nil {
+			return fmt.Errorf("[PUBLISH_ARGUMENT_INVALID] %v\n  Fix: pass a readable --config path", err)
+		}
+	}
+	cfg, report := publication.PreflightConfig(root, configFile)
 	if !report.OK() {
 		return report
 	}

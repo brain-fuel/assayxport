@@ -165,7 +165,7 @@ func Publish(ctx context.Context, root string, cfg Config, prepared Prepared, se
 			}
 		}
 		report("uploading the Central bundle")
-		id, err = client.Upload(ctx, prepared.Bundle, cfg.GroupID+":"+cfg.ArtifactID+":"+cfg.Version)
+		id, err = client.Upload(ctx, prepared.Bundle, deploymentName(cfg))
 		if err != nil {
 			return Deployment{}, err
 		}

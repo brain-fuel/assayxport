@@ -29,6 +29,7 @@ type Prepared struct { Bundle, SigningKey, Fingerprint string; PublicKey []byte;
 
 // Prepare creates the complete signed Central bundle without network access.
 func Prepare(ctx context.Context, root string, c Config) (Prepared,error) {
+	if c.Policy==PolicyMavenRepository { return prepareRepository(ctx,root,c) }
 	manifestPath,_:=safePath(root,c.BuildManifest); data,err:=os.ReadFile(manifestPath);if err!=nil{return Prepared{},err}
 	var manifest buildManifest;if err:=json.Unmarshal(data,&manifest);err!=nil{return Prepared{},err}
 	base:=c.ArtifactID+"-"+c.Version; files:=map[string][]byte{}
@@ -71,4 +72,4 @@ func serializePublicKey(entity *openpgp.Entity)([]byte,error){var b bytes.Buffer
 func commitEpoch(root string)(time.Time,error){raw:=strings.TrimSpace(os.Getenv("SOURCE_DATE_EPOCH"));if raw==""{raw=gitOutput(root,"log","-1","--format=%ct")};seconds,err:=strconv.ParseInt(raw,10,64);if err!=nil||seconds<0{return time.Time{},fmt.Errorf("publication requires SOURCE_DATE_EPOCH or a Git commit timestamp")};return time.Unix(seconds,0).UTC(),nil}
 func addChecksums(files map[string][]byte,name string,data []byte){m:=md5.Sum(data);files[name+".md5"]=[]byte(hex.EncodeToString(m[:]));s1:=sha1.Sum(data);files[name+".sha1"]=[]byte(hex.EncodeToString(s1[:]));s256:=sha256.Sum256(data);files[name+".sha256"]=[]byte(hex.EncodeToString(s256[:]));s512:=sha512.Sum512(data);files[name+".sha512"]=[]byte(hex.EncodeToString(s512[:]))}
 func sortedKeys(files map[string][]byte)[]string{names:=make([]string,0,len(files));for name:=range files{names=append(names,name)};sort.Strings(names);return names}
-func writeBundle(path,repo string,files map[string][]byte,epoch time.Time)error{var b bytes.Buffer;zw:=zip.NewWriter(&b);for _,name:=range sortedKeys(files){h:=&zip.FileHeader{Name:repo+"/"+name,Method:zip.Deflate};h.SetModTime(epoch);h.SetMode(0o644);w,err:=zw.CreateHeader(h);if err!=nil{return err};if _,err=w.Write(files[name]);err!=nil{return err}};if err:=zw.Close();err!=nil{return err};return os.WriteFile(path,b.Bytes(),0o644)}
+func writeBundle(path,repo string,files map[string][]byte,epoch time.Time)error{var b bytes.Buffer;zw:=zip.NewWriter(&b);for _,name:=range sortedKeys(files){entry:=name;if repo!=""{entry=repo+"/"+name};h:=&zip.FileHeader{Name:entry,Method:zip.Deflate};h.SetModTime(epoch);h.SetMode(0o644);w,err:=zw.CreateHeader(h);if err!=nil{return err};if _,err=w.Write(files[name]);err!=nil{return err}};if err:=zw.Close();err!=nil{return err};return os.WriteFile(path,b.Bytes(),0o644)}

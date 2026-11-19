@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Add `ax publish` policy `maven-repository`: publish every artifact of a
+  Maven reactor from a build-staged, unsigned repository-layout directory as
+  one deterministic signed bundle. Preflight checks the named and staged sets,
+  versions and SNAPSHOTs, POM coordinates, main/sources/javadoc jars, and
+  inherited Central metadata, and rejects build signatures. It never runs the
+  Go release verification.
+- Add `ax publish --config <path>` and an optional checkout-directory argument
+  so the configuration can live outside a tagged, immutable checkout; the
+  clean-checkout and tag gates are unchanged.
 - Add the domain-neutral `assayxport.trace/v3` artifact and relation graph.
 - Add stable declaration IDs, semantic change detection, and release-note to
   ADR to deployable-code closure verification.
