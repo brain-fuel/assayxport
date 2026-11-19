@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.26.0
 
 - `maven-repository` releases may span several groups: an `artifacts` entry is
   `artifactId` (group `group_id`) or `groupId:artifactId`, and every group must
