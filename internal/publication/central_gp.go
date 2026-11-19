@@ -305,7 +305,7 @@ func (c CentralClient) Upload(ctx context.Context, bundle, name string) (string,
 	}
 	req.Header.Set("Content-Type", w.FormDataContentType())
 	c.auth(req)
-	resp, err := c.client().Do(req)
+	resp, err := c.uploadClient().Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -410,6 +410,18 @@ func (c CentralClient) client() *http.Client {
 func (c CentralClient) auth(req *http.Request) {
 	token := base64.StdEncoding.EncodeToString([]byte(c.Username + ":" + c.Password))
 	req.Header.Set("Authorization", "Bearer "+token)
+}
+
+// uploadClient sends a bundle, which can be hundreds of megabytes: no
+// whole-request deadline, which would cut a slow upload off mid-body, only
+// bounds on connecting and on Central's answer once the body is sent. The
+// caller's context still cancels it. A client set on CentralClient (tests)
+// is used as it is.
+func (c CentralClient) uploadClient() *http.Client {
+	if c.HTTP != nil {
+		return c.HTTP
+	}
+	return &http.Client{Transport: &http.Transport{Proxy: http.ProxyFromEnvironment, TLSHandshakeTimeout: 30 * time.Second, ResponseHeaderTimeout: 30 * time.Minute}}
 }
 func readReleaseState(path string) (releaseState, error) {
 	data, err := os.ReadFile(path)

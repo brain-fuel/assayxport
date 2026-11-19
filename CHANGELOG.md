@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.25.1
+
+- `ax publish` no longer cuts a Central bundle upload off after two minutes:
+  the upload has no whole-request deadline, only bounds on connecting and on
+  Central's answer once the bundle is sent. A bundle of hundreds of megabytes
+  (a Maven reactor with native binaries) timed out mid-upload.
+
 ## v0.25.0
 
 - Add `ax publish` policy `maven-repository`: publish every artifact of a
