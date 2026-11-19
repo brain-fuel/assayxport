@@ -291,3 +291,104 @@ func TestPreflightConfigReadsConfigOutsideCheckout(t *testing.T) {
 		t.Fatalf("dirty = %#v", report.Issues)
 	}
 }
+
+// stageIn stages one file for an arbitrary group.
+func stageIn(t *testing.T, root, group, artifact, version, name, body string) {
+	t.Helper()
+	dir := filepath.Join(root, "target", "central-staging", filepath.FromSlash(strings.ReplaceAll(group, ".", "/")), artifact, version)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, filepath.Join(dir, name), body)
+}
+
+const gradleMarker = "dev.example.demo.gradle.plugin"
+
+// gradleFixture stages dev.example:demo (jar with a .module) beside the
+// plugin marker in subgroup dev.example.demo, whose path
+// dev/example/demo/<marker>/1.2.3 sits under artifact demo's own directory.
+func gradleFixture(t *testing.T) (string, Config) {
+	t.Helper()
+	root := t.TempDir()
+	stageValid(t, root)
+	stageFile(t, root, "demo", "1.2.3", "demo-1.2.3.module", `{"formatVersion":"1.1"}`)
+	stageFile(t, root, "demo", "1.2.3", "demo-1.2.3.module.sha1", "stale")
+	marker := strings.Replace(pomText("dev.example.demo", gradleMarker, "1.2.3", "pom", "", named+metadata), "<packaging>pom</packaging>", "<packaging>pom</packaging><dependencies><dependency><groupId>dev.example</groupId><artifactId>demo</artifactId><version>1.2.3</version></dependency></dependencies>", 1)
+	stageIn(t, root, "dev.example.demo", gradleMarker, "1.2.3", gradleMarker+"-1.2.3.pom", marker)
+	stageIn(t, root, "dev.example.demo", gradleMarker, "1.2.3", gradleMarker+"-1.2.3.module", `{"formatVersion":"1.1"}`)
+	cfg, issues := loadConfigFromText(t, root, strings.Replace(repoConfig, `artifacts = "demo-parent,demo,demo-pom-only"`, `artifacts = "demo-parent,demo,demo-pom-only,dev.example.demo:`+gradleMarker+`"`, 1))
+	if len(issues) != 0 {
+		t.Fatalf("config issues: %#v", issues)
+	}
+	return root, cfg
+}
+
+func TestRepositoryAttributesOverlappingGroupPathsAndModuleFiles(t *testing.T) {
+	root, cfg := gradleFixture(t)
+	if issues := validateConfig(cfg); len(issues) != 0 {
+		t.Fatalf("config issues: %#v", issues)
+	}
+	if issues := validateRepository(root, cfg); len(issues) != 0 {
+		t.Fatalf("issues = %#v", issues)
+	}
+	artifacts, issues := scanStaging(root, cfg)
+	if len(issues) != 0 {
+		t.Fatalf("scan issues = %#v", issues)
+	}
+	if artifacts["dev.example:demo"] == nil || artifacts["dev.example.demo:"+gradleMarker] == nil || artifacts["dev.example:demo"].Files["demo-1.2.3.module"] == "" {
+		t.Fatalf("attribution wrong: %v", artifacts)
+	}
+	t.Setenv("SOURCE_DATE_EPOCH", "1700000000")
+	t.Setenv("AX_MAVEN_SIGNING_KEY", filepath.Join(root, "key.asc"))
+	prepared, err := Prepare(t.Context(), root, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries := bundleEntries(t, prepared.Bundle)
+	for _, want := range []string{
+		"dev/example/demo/1.2.3/demo-1.2.3.module",
+		"dev/example/demo/1.2.3/demo-1.2.3.jar",
+		"dev/example/demo/" + gradleMarker + "/1.2.3/" + gradleMarker + "-1.2.3.pom",
+		"dev/example/demo/" + gradleMarker + "/1.2.3/" + gradleMarker + "-1.2.3.module",
+	} {
+		for _, suffix := range []string{"", ".asc", ".md5", ".sha1", ".sha256", ".sha512"} {
+			if _, ok := entries[want+suffix]; !ok {
+				t.Fatalf("bundle lacks %s%s", want, suffix)
+			}
+		}
+	}
+	if entries["dev/example/demo/1.2.3/demo-1.2.3.module.sha1"] == "stale" {
+		t.Fatal("module checksum was not regenerated")
+	}
+}
+
+func TestRepositoryGroupsMustBeWithinNamespace(t *testing.T) {
+	cfg := Config{Version: "1.2.3", Policy: "maven-repository", GroupID: "dev.example", Staging: "s", Artifacts: []string{"a", "dev.example.sub:b", "dev.examples:c", "org.other:d", "dev.example:a", "x:y:z"}}
+	issues := validateConfig(cfg)
+	got := codes(issues)
+	if strings.Count(got, "REPO_GROUP_OUTSIDE_NAMESPACE") != 2 || strings.Count(got, "REPO_ARTIFACT_DUPLICATE") != 1 || strings.Count(got, "MAVEN_ARTIFACT_INVALID") != 1 {
+		t.Fatalf("codes = %s", got)
+	}
+	// dev.examples is not a subgroup of dev.example despite the string prefix.
+	if !inNamespace(cfg, "dev.example.sub.deeper") || inNamespace(cfg, "dev.examples") {
+		t.Fatal("inNamespace is wrong")
+	}
+}
+
+func TestRepositoryRejectsStagedGroupOutsideNamespaceAndUnnamedSubgroup(t *testing.T) {
+	root, cfg := gradleFixture(t)
+	stageIn(t, root, "org.other", "thing", "1.2.3", "thing-1.2.3.pom", "<project/>")
+	stageIn(t, root, "dev.example.extra", "more", "1.2.3", "more-1.2.3.pom", pomText("dev.example.extra", "more", "1.2.3", "pom", "", named+metadata))
+	got := codes(validateRepository(root, cfg))
+	if got != "REPO_ARTIFACT_NOT_NAMED,STAGING_GROUP_OUTSIDE_NAMESPACE" {
+		t.Fatalf("codes = %s", got)
+	}
+}
+
+func TestRepositoryMarkerPomMustMatchItsSubgroupPath(t *testing.T) {
+	root, cfg := gradleFixture(t)
+	stageIn(t, root, "dev.example.demo", gradleMarker, "1.2.3", gradleMarker+"-1.2.3.pom", pomText("dev.example", gradleMarker, "1.2.3", "pom", "", named+metadata))
+	if got := codes(validateRepository(root, cfg)); got != "REPO_POM_COORDINATE_MISMATCH" {
+		t.Fatalf("codes = %s", got)
+	}
+}

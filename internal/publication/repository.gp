@@ -18,9 +18,11 @@ import (
 const PolicyMavenRepository = "maven-repository"
 
 // stagedArtifact is one artifact directory of the staging repository:
-// <staging>/<group path>/<artifactId>/<version>/. Only publishable files are
+// <staging>/<group path>/<artifactId>/<version>/. The group is the group_id
+// or one of its subgroups. Only publishable files are
 // listed in Files; build checksums and Maven bookkeeping are ignored.
 type stagedArtifact struct {
+	Group   string
 	ID      string
 	Files   map[string]string // file name -> absolute path
 	POM     repoPOM
@@ -48,6 +50,37 @@ type repoCoordinate struct {
 	GroupID    string `xml:"groupId"`
 	ArtifactID string `xml:"artifactId"`
 	Version    string `xml:"version"`
+}
+
+// inNamespace reports whether group is group_id itself or a subgroup of it;
+// Central's namespace verification covers subgroups.
+func inNamespace(c Config, group string) bool {
+	return group == c.GroupID || strings.HasPrefix(group, c.GroupID+".")
+}
+
+// artifactCoordinate resolves an artifacts entry: "groupId:artifactId", or a
+// bare artifactId meaning group_id:artifactId.
+func artifactCoordinate(c Config, entry string) (string, string, bool) {
+	parts := strings.Split(entry, ":")
+	switch len(parts) {
+	case 1:
+		return c.GroupID, parts[0], true
+	case 2:
+		return parts[0], parts[1], parts[0] != "" && parts[1] != ""
+	}
+	return "", "", false
+}
+
+func coordinateKey(group, id string) string { return group + ":" + id }
+
+// artifactKeys resolves every artifacts entry, skipping malformed ones (which
+// config validation reports).
+func artifactKeys(c Config) []string {
+	keys := []string{}
+	for _, entry := range c.Artifacts {
+		if group, id, ok := artifactCoordinate(c, entry); ok { keys = append(keys, coordinateKey(group, id)) }
+	}
+	return keys
 }
 
 var checksumSuffixes = []string{".md5", ".sha1", ".sha256", ".sha512"}
@@ -83,14 +116,18 @@ func validateRepositoryConfig(c Config) []Issue {
 		if strings.TrimSpace(item.value) == "" { issues = append(issues, Issue{"CONFIG_REQUIRED_MISSING", "required setting " + item.name + " is missing or empty", "Add " + item.name + " to assayxport.toml with the authoritative publication value."}) }
 		if placeholder(item.value) { issues = append(issues, Issue{"CONFIG_PLACEHOLDER_REMAINING", item.name + " still contains a TODO placeholder", "Replace the placeholder in assayxport.toml with the authoritative value."}) }
 	}
-	if len(c.Artifacts) == 0 { issues = append(issues, Issue{"CONFIG_REQUIRED_MISSING", "required setting artifacts is missing or empty", "List every artifactId the build stages, for example artifacts = \"lawspec-parent,lawspec\"."}) }
+	if len(c.Artifacts) == 0 { issues = append(issues, Issue{"CONFIG_REQUIRED_MISSING", "required setting artifacts is missing or empty", "List every artifact the build stages as artifactId or groupId:artifactId, for example artifacts = \"lawspec-parent,dev.goforge.lawspec:dev.goforge.lawspec.gradle.plugin\"."}) }
 	if c.Version != "" && !placeholder(c.Version) && !regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`).MatchString(c.Version) { issues = append(issues, Issue{"VERSION_INVALID", "version must be a release X.Y.Z without a v prefix", "Set version to the Maven release version, for example \"0.36.0\"; SNAPSHOT versions are never published."}) }
 	if c.GroupID != "" && !regexp.MustCompile(`^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)+$`).MatchString(c.GroupID) { issues = append(issues, Issue{"MAVEN_GROUP_INVALID", "group_id is not a reverse-domain Maven group", "Use a controlled reverse-domain group such as \"dev.goforge\"."}) }
 	seen := map[string]bool{}
-	for _, id := range c.Artifacts {
-		if !regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`).MatchString(id) { issues = append(issues, Issue{"MAVEN_ARTIFACT_INVALID", "artifact " + fmt.Sprintf("%q", id) + " contains unsupported characters", "Use lowercase Maven artifact ids containing letters, digits, dots, underscores, or hyphens."}) }
-		if seen[id] { issues = append(issues, Issue{"REPO_ARTIFACT_DUPLICATE", "artifact " + id + " is listed more than once", "List each artifactId once in artifacts."}) }
-		seen[id] = true
+	for _, entry := range c.Artifacts {
+		group, id, ok := artifactCoordinate(c, entry)
+		if !ok || !regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`).MatchString(id) { issues = append(issues, Issue{"MAVEN_ARTIFACT_INVALID", "artifact " + fmt.Sprintf("%q", entry) + " is not artifactId or groupId:artifactId, or contains unsupported characters", "Use lowercase Maven artifact ids containing letters, digits, dots, underscores, or hyphens, optionally prefixed by a groupId and a colon."}); continue }
+		if group != c.GroupID && !regexp.MustCompile(`^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)+$`).MatchString(group) { issues = append(issues, Issue{"MAVEN_GROUP_INVALID", "artifact " + fmt.Sprintf("%q", entry) + " has a group that is not a reverse-domain Maven group", "Use a reverse-domain group such as \"dev.goforge.lawspec\"."}); continue }
+		if !inNamespace(c, group) { issues = append(issues, Issue{"REPO_GROUP_OUTSIDE_NAMESPACE", "artifact " + fmt.Sprintf("%q", entry) + " has group " + group + ", which is neither " + c.GroupID + " nor one of its subgroups", "Central verifies one namespace per release; publish other groups separately, or widen group_id to a namespace that contains them."}); continue }
+		key := coordinateKey(group, id)
+		if seen[key] { issues = append(issues, Issue{"REPO_ARTIFACT_DUPLICATE", "artifact " + key + " is listed more than once", "List each artifact once in artifacts."}) }
+		seen[key] = true
 	}
 	if c.Staging != "" {
 		if _, ok := safePath(".", c.Staging); !ok { issues = append(issues, Issue{"STAGING_PATH_INVALID", "staging escapes the project root", "Use a relative path inside the checkout, for example hosts/jvm/target/central-staging."}) }
@@ -127,7 +164,6 @@ func scanStaging(root string, c Config) (map[string]*stagedArtifact, []Issue) {
 	}
 	issues := []Issue{}
 	artifacts := map[string]*stagedArtifact{}
-	groupParts := strings.Split(c.GroupID, ".")
 	reported := map[string]bool{}
 	report := func(key string, issue Issue) {
 		if !reported[key] { reported[key] = true; issues = append(issues, issue) }
@@ -140,31 +176,44 @@ func scanStaging(root string, c Config) (map[string]*stagedArtifact, []Issue) {
 		parts := strings.Split(filepath.ToSlash(rel), "/")
 		name := d.Name()
 		if isBookkeeping(name) { return nil }
-		n := len(groupParts)
-		if !d.Type().IsRegular() || len(parts) != n+3 || strings.Join(parts[:n], ".") != c.GroupID {
-			report("unexpected:"+rel, Issue{"STAGING_FILE_UNEXPECTED", "staging contains " + filepath.ToSlash(rel) + ", which is not a regular file at <group path>/<artifactId>/<version>/<file> for group " + c.GroupID, "Stage only this group's artifacts in Maven repository layout; remove the stray file or fix group_id."})
+		// A file is <group path>/<artifactId>/<version>/<file>. Taking the last
+		// three components first keeps nested groups unambiguous: group
+		// dev.goforge.lawspec/<marker>/<v>/ and artifact dev.goforge:lawspec's
+		// dev/goforge/lawspec/<v>/ share a directory prefix but not a depth.
+		n := len(parts) - 3
+		if !d.Type().IsRegular() || n < 1 {
+			report("unexpected:"+rel, Issue{"STAGING_FILE_UNEXPECTED", "staging contains " + filepath.ToSlash(rel) + ", which is not a regular file at <group path>/<artifactId>/<version>/<file>", "Stage only this release's artifacts in Maven repository layout; remove the stray file."})
+			return nil
+		}
+		group := strings.Join(parts[:n], ".")
+		if !inNamespace(c, group) {
+			report("unexpected:"+rel, Issue{"STAGING_GROUP_OUTSIDE_NAMESPACE", "staging contains " + filepath.ToSlash(rel) + ", whose group " + group + " is neither " + c.GroupID + " nor one of its subgroups", "Stage only artifacts within the group_id namespace; remove the stray file or fix group_id."})
 			return nil
 		}
 		id, version := parts[n], parts[n+1]
+		key := coordinateKey(group, id)
 		if strings.HasSuffix(version, "-SNAPSHOT") {
-			report("snapshot:"+id+":"+version, Issue{"STAGING_SNAPSHOT", "staging holds SNAPSHOT version " + version + " of " + id, "Build the release with -Drevision=" + c.Version + " (or the build's equivalent) and restage; Central never accepts SNAPSHOTs."})
+			report("snapshot:"+key+":"+version, Issue{"STAGING_SNAPSHOT", "staging holds SNAPSHOT version " + version + " of " + key, "Build the release with -Drevision=" + c.Version + " (or the build's equivalent) and restage; Central never accepts SNAPSHOTs."})
 			return nil
 		}
 		if version != c.Version {
-			report("version:"+id+":"+version, Issue{"STAGING_VERSION_MISMATCH", "staging holds " + id + " version " + version + " but the release version is " + c.Version, "Restage from a clean build of " + c.Version + ", or correct version in assayxport.toml."})
+			report("version:"+key+":"+version, Issue{"STAGING_VERSION_MISMATCH", "staging holds " + key + " version " + version + " but the release version is " + c.Version, "Restage from a clean build of " + c.Version + ", or correct version in assayxport.toml."})
 			return nil
 		}
 		if !strings.HasPrefix(name, id+"-"+version) {
 			report("unexpected:"+rel, Issue{"STAGING_FILE_UNEXPECTED", "staging file " + filepath.ToSlash(rel) + " is not named " + id + "-" + version + "*", "Remove the stray file; every file in an artifact directory must start with <artifactId>-<version>."})
 			return nil
 		}
-		a := artifacts[id]
-		if a == nil { a = &stagedArtifact{ID: id, Files: map[string]string{}}; artifacts[id] = a }
+		a := artifacts[key]
+		if a == nil { a = &stagedArtifact{Group: group, ID: id, Files: map[string]string{}}; artifacts[key] = a }
 		switch {
 		case strings.HasSuffix(name, ".asc"):
-			signatures[id] = append(signatures[id], name)
+			signatures[key] = append(signatures[key], name)
 		case isChecksum(name):
 		default:
+			// Everything else is publishable: .pom, jars, and Gradle Module
+			// Metadata (<artifact>-<version>.module), which Central accepts and
+			// which is signed and checksummed like any other file.
 			a.Files[name] = path
 		}
 		return nil
@@ -196,16 +245,16 @@ func validateRepository(root string, c Config) []Issue {
 	artifacts, issues := scanStaging(root, c)
 	if artifacts == nil && len(issues) > 0 { return issues }
 	named := map[string]bool{}
-	for _, id := range c.Artifacts { named[id] = true }
+	for _, id := range artifactKeys(c) { named[id] = true }
 	staged := make([]string, 0, len(artifacts))
 	for id := range artifacts { staged = append(staged, id) }
 	sort.Strings(staged)
-	for _, id := range c.Artifacts {
+	for _, id := range artifactKeys(c) {
 		if artifacts[id] == nil { issues = append(issues, Issue{"REPO_ARTIFACT_NOT_STAGED", "artifact " + id + " is named in assayxport.toml but absent from staging", "Stage it (build it with the release profile) or remove it from artifacts."}) }
 	}
 	for _, id := range staged {
 		a := artifacts[id]
-		if !named[id] { issues = append(issues, Issue{"REPO_ARTIFACT_NOT_NAMED", "artifact " + id + " is staged but not named in assayxport.toml", "Add " + id + " to artifacts, or stop the build staging it; nothing unnamed is published."}) ; continue }
+		if !named[id] { issues = append(issues, Issue{"REPO_ARTIFACT_NOT_NAMED", "artifact " + id + " is staged but not named in assayxport.toml", "Add " + id + " to artifacts (as groupId:artifactId when its group is not group_id), or stop the build staging it; nothing unnamed is published."}) ; continue }
 		issues = append(issues, validateStagedArtifact(a, artifacts, c)...)
 	}
 	return issues
@@ -218,10 +267,10 @@ func validateStagedArtifact(a *stagedArtifact, all map[string]*stagedArtifact, c
 	if a.POMBad { return append(issues, Issue{"REPO_POM_INVALID", base + ".pom is not a readable Maven POM", "Rebuild the module; the staged POM must be well-formed XML with a <project> root."}) }
 	pom := a.POM
 	group, version := firstNonEmpty(pom.GroupID, pom.Parent.GroupID), firstNonEmpty(pom.Version, pom.Parent.Version)
-	if group != c.GroupID || pom.ArtifactID != a.ID || version != c.Version {
-		issues = append(issues, Issue{"REPO_POM_COORDINATE_MISMATCH", fmt.Sprintf("%s.pom declares %s:%s:%s but its path says %s:%s:%s", base, group, pom.ArtifactID, version, c.GroupID, a.ID, c.Version), "Rebuild with a resolved version (Maven: flatten ${revision}) so the POM matches its repository path."})
+	if group != a.Group || pom.ArtifactID != a.ID || version != c.Version {
+		issues = append(issues, Issue{"REPO_POM_COORDINATE_MISMATCH", fmt.Sprintf("%s.pom declares %s:%s:%s but its path says %s:%s:%s", base, group, pom.ArtifactID, version, a.Group, a.ID, c.Version), "Rebuild with a resolved version (Maven: flatten ${revision}) so the POM matches its repository path."})
 	}
-	if pom.Parent.GroupID == c.GroupID && pom.Parent.Version != c.Version {
+	if inNamespace(c, pom.Parent.GroupID) && pom.Parent.Version != c.Version {
 		issues = append(issues, Issue{"REPO_POM_PARENT_MISMATCH", fmt.Sprintf("%s.pom has parent %s:%s:%s, not release version %s", base, pom.Parent.GroupID, pom.Parent.ArtifactID, pom.Parent.Version, c.Version), "Release the parent in the same reactor at " + c.Version + "; Central rejects SNAPSHOT or unpublished parents."})
 	}
 	for _, dep := range append([]repoCoordinate{pom.Parent}, pom.Dependencies...) {
@@ -254,8 +303,7 @@ func chain(a *stagedArtifact, all map[string]*stagedArtifact, c Config) []repoPO
 	for depth := 0; a != nil && a.HasPOM && !a.POMBad && depth < 32; depth++ {
 		out = append(out, a.POM)
 		parent := a.POM.Parent
-		if parent.GroupID != c.GroupID { break }
-		a = all[parent.ArtifactID]
+		a = all[coordinateKey(parent.GroupID, parent.ArtifactID)]
 	}
 	return out
 }
@@ -280,14 +328,14 @@ func prepareRepository(ctx context.Context, root string, c Config) (Prepared, er
 	artifacts, issues := scanStaging(root, c)
 	if len(issues) > 0 { return Prepared{}, fmt.Errorf("staging changed since preflight: %s", issues[0].Problem) }
 	files := map[string][]byte{}
-	groupPath := strings.ReplaceAll(c.GroupID, ".", "/")
-	for _, id := range c.Artifacts {
-		a := artifacts[id]
-		if a == nil { return Prepared{}, fmt.Errorf("artifact %s is not staged", id) }
+	for _, key := range artifactKeys(c) {
+		a := artifacts[key]
+		if a == nil { return Prepared{}, fmt.Errorf("artifact %s is not staged", key) }
+		groupPath := strings.ReplaceAll(a.Group, ".", "/")
 		for name, path := range a.Files {
 			data, err := os.ReadFile(path)
 			if err != nil { return Prepared{}, err }
-			files[groupPath+"/"+id+"/"+c.Version+"/"+name] = data
+			files[groupPath+"/"+a.ID+"/"+c.Version+"/"+name] = data
 		}
 	}
 	epoch, err := commitEpoch(root)

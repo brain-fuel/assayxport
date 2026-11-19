@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- `maven-repository` releases may span several groups: an `artifacts` entry is
+  `artifactId` (group `group_id`) or `groupId:artifactId`, and every group must
+  be `group_id` or a subgroup of it. New codes `REPO_GROUP_OUTSIDE_NAMESPACE`
+  (config) and `STAGING_GROUP_OUTSIDE_NAMESPACE` (staged files). The staging
+  scan attributes files by their last three path components, so a subgroup's
+  directory nested under another artifact's directory is read correctly. This
+  carries a Gradle plugin and its marker POM in the same bundle.
+- Gradle Module Metadata (`.module`) is explicitly a publishable file: signed,
+  checksummed, and never reported as unexpected.
+
 ## v0.25.1
 
 - `ax publish` no longer cuts a Central bundle upload off after two minutes:

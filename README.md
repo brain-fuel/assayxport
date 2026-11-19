@@ -322,6 +322,8 @@ policy = "maven-repository"
 group_id = "dev.goforge"
 staging = "hosts/jvm/target/central-staging"   # relative to the root
 artifacts = "lawspec-parent,lawspec,lawspec-darwin-arm64"  # or ["a", "b"] on one line
+# an entry is artifactId, or groupId:artifactId for a subgroup of group_id, e.g.
+# "dev.goforge.lawspec:dev.goforge.lawspec.gradle.plugin" (a Gradle plugin marker)
 # bundle = "hosts/jvm/target/central-bundle.zip"  # default: <staging>-bundle.zip
 ```
 
@@ -334,6 +336,7 @@ keep `staging` and `bundle` in an ignored build directory. It never runs
 |---|---|
 | `STAGING_MISSING`, `STAGING_PATH_INVALID` | no staging directory, or one outside the root |
 | `REPO_ARTIFACT_NOT_STAGED`, `REPO_ARTIFACT_NOT_NAMED`, `REPO_ARTIFACT_DUPLICATE` | `artifacts` and the staged set disagree |
+| `REPO_GROUP_OUTSIDE_NAMESPACE`, `STAGING_GROUP_OUTSIDE_NAMESPACE` | a named or staged group that is neither `group_id` nor a subgroup of it |
 | `STAGING_SNAPSHOT`, `STAGING_VERSION_MISMATCH`, `REPO_POM_SNAPSHOT`, `REPO_POM_PARENT_MISMATCH` | SNAPSHOTs, or any version other than `version` |
 | `REPO_POM_MISSING`, `REPO_POM_INVALID`, `REPO_POM_COORDINATE_MISMATCH` | a POM absent, unreadable, or whose groupId, artifactId or version (own or from `<parent>`) differs from its path |
 | `REPO_JAR_MISSING`, `REPO_SOURCES_MISSING`, `REPO_JAVADOC_MISSING` | a non-`pom` packaging without a non-empty main, `-sources` or `-javadoc` jar |
@@ -349,6 +352,16 @@ ignored and never published; ax regenerates checksums for every file and
 signature. Prepare signs each staged file, writes one bundle with the staging
 layout, and ordering, timestamps and signatures make it byte-for-byte
 reproducible. Upload, validation, promotion and resume are unchanged.
+
+One release can span several groups, as long as each is `group_id` or a
+subgroup of it (Central verifies the namespace including subgroups). A Gradle
+plugin marker has the plugin id as its group and `<id>.gradle.plugin` as its
+artifact, so `dev.goforge.lawspec` stages at `dev/goforge/lawspec/`, the same
+directory that holds artifact `dev.goforge:lawspec`'s version directories. The
+scan reads a file's group, artifact and version from its last three path
+components, so both attribute correctly. Gradle Module Metadata
+(`<artifact>-<version>.module`) is published like any other file: signed and
+checksummed, never flagged.
 
 `ax publish --config <path>` reads the configuration from another file, so a
 release whose immutable tag holds no `assayxport.toml` can still be published:
