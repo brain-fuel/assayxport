@@ -120,6 +120,19 @@ type Symbol struct {
 	Concerns []string `json:"concerns,omitempty"`
 
 	Calls []Call `json:"calls,omitempty"`
+
+	// When is the build condition under which this symbol exists (Haskell
+	// CPP). It is not one C preprocessor expression. It is alternatives joined
+	// by " || "; each is a path of nested directives joined by " && ", read
+	// from the left, where a part that fails ends the path and the parts after
+	// it are not evaluated. A part is one directive's expression as written in
+	// the source: bare when it is a name, one macro call or a number, otherwise
+	// in parentheses; !(...) is the directive failing; #ifdef X is written
+	// defined(X). Two values are C strings and are never decided: "unread" (the
+	// file has more builds than are read) and, as a part, ("unreadable #if at
+	// line N"). Omitted when the symbol is unconditional. The grammar is in the
+	// README.
+	When string `json:"when,omitempty"`
 }
 
 // Signature describes a func or method.
@@ -215,6 +228,7 @@ type Call struct {
 	Arity    *int      `json:"arity,omitempty"`     // call-site argument count (overloading languages)
 	ArgTypes []*string `json:"arg_types,omitempty"` // per-position type evidence; null = unknown
 	Count    int       `json:"count"`               // number of call sites merged into this edge
+	When     string    `json:"when,omitempty"`      // build condition under which the edge exists, in the form of Symbol.When; omitted when none
 }
 
 // DedupeCalls merges edges into the canonical form documented on Call. A
@@ -266,6 +280,8 @@ func callKey(c Call) string {
 	b.WriteByte(0)
 	b.WriteString(c.Ref)
 	b.WriteByte(0)
+	b.WriteString(c.When)
+	b.WriteByte(0)
 	if c.Arity != nil {
 		b.WriteString(strconv.Itoa(*c.Arity))
 	}
@@ -291,6 +307,9 @@ func callLess(a, b Call) bool {
 	}
 	if a.Ref != b.Ref {
 		return a.Ref < b.Ref
+	}
+	if a.When != b.When {
+		return a.When < b.When
 	}
 	aa, ba := -1, -1
 	if a.Arity != nil {

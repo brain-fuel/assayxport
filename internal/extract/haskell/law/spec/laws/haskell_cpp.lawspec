@@ -1,0 +1,909 @@
+unit assayxport.haskell.cpp
+-- ref:DR-0035 ref:DR-0040 ref:DR-0046 (LawSpec is the law surface; owner direction 2026-11-13: every CPP branch is read)
+
+import assayxport.contract as c (Package, Decl, CallEdge)
+import assayxport.conditions.policy as wp (Env, Binding, Outcome, CExpr, BinOp, UnOp, Literal, refEval, pick, mix, emptyEnv, completed, buildCap, unreadText)
+
+-- S1.j, next cycle 2 (docs/contributions/S1.j/next-cycle-2/design.md,
+-- section 4), rewritten in next cycle 4 for review 7, B1
+-- (next-cycle-4/design.md, section 3), and its rule C2 rewritten in next
+-- cycle 6 for review 8, B1 (next-cycle-6/design.md, section 3): a term is a
+-- choice where the preprocessor's walk first meets it, not where it first
+-- stands in the source. The REFERENCE for reading a source
+-- with CPP conditionals: a model of such a source, the text it stands for,
+-- its builds, the copy an extractor must read for each build, the
+-- condition of a line, and what one environment keeps. The extractor
+-- never sees the model; it reads the text.
+--
+-- Nothing here is an implementation stub.
+--
+-- A TERM is one directive's condition as written (`#ifdef X` reads
+-- `defined(X)`). Two directives with the same text are the same term: they
+-- have one value in any build. A BUILD gives a value to every term it
+-- reads, and a line stands in it when every literal on the line's path
+-- holds. So a build never takes the `#if X` arm of one group and the
+-- `#else` of another `#if X`.
+
+-- ---------------------------------------------------------------------------
+-- The first model (cycle 2): whole declarations, each arm with its own
+-- names. A module is a list of sections. A section is a block of code, or
+-- a group: `#if` arms, an optional `#else`. An arm's body is a list of
+-- blocks and of nested groups; a nested group's arms hold one block each.
+--
+-- An arm's `form` picks its directive and its condition, on a name N made
+-- from the arm's place:
+--   first arm   0 `#if N`      1 `#ifdef N`       2 `#ifndef N`
+--               3 `#if defined(N) && N >= 2`      4 `#  if N`
+--   later arm   0, 4 `#elif N`   1 `#elif defined(N)`   2 `#elif !defined(N)`
+--               3 `#elif defined(N) && N >= 2`
+
+type Leaf is a record{
+  forms :: List Integer
+  hasElse :: Bool}
+end type
+
+type Inner is one of | InCode | InGroup of type Leaf end type
+
+type Arm is a record{
+  form :: Integer
+  body :: List Inner}
+end type
+
+type Section is one of
+  | Code
+  | Group of type record{ arms :: List Arm , hasElse :: Bool , elseBody :: List Inner}
+end type
+
+-- One line of the source. `terms` are the literals of its path, outermost
+-- first: for a group's arm the negations of its earlier arms, then its own
+-- term. A directive that opens an arm stands in that arm. `reads` marks an
+-- `#if` or `#elif` line: the preprocessor evaluates its own term, the last
+-- of `terms`, when the literals before it hold. `name` is the name such a
+-- line tests ("" for any other line).
+type Row is a record{
+  text :: Text
+  terms :: List Literal
+  directive :: Bool
+  reads :: Bool
+  name :: Text}
+end type
+
+function nameOf (group :: Integer) (arm :: Integer) -> Text is "C" ++ prelude.textOf group ++ "_" ++ prelude.textOf arm end function
+
+function definedAnd (n :: Text) -> CExpr is
+  Bin record{ op = BLand , left = IsDefined n , right = Bin record{ op = BGe , left = Name n , right = Lit 2}}
+end function
+
+function termOf (first :: Bool) (form :: Integer) (n :: Text) -> Literal is
+  if form = 1 then Literal record{ negated = false , text = "defined(" ++ n ++ ")" , expr = IsDefined n}
+  else (if form = 2 then
+    (if first then Literal record{ negated = true , text = "defined(" ++ n ++ ")" , expr = IsDefined n}
+     else Literal record{ negated = false , text = "!defined(" ++ n ++ ")" , expr = Un record{ op = UNot , arg = IsDefined n}} end if)
+  else (if form = 3 then Literal record{ negated = false , text = "defined(" ++ n ++ ") && " ++ n ++ " >= 2" , expr = definedAnd n}
+  else Literal record{ negated = false , text = n , expr = Name n} end if) end if) end if
+end function
+
+function directiveOf (first :: Bool) (form :: Integer) (n :: Text) -> Text is
+  if first then
+    (if form = 1 then "#ifdef " ++ n else (if form = 2 then "#ifndef " ++ n else (if form = 3 then "#if defined(" ++ n ++ ") && " ++ n ++ " >= 2"
+     else (if form = 4 then "#  if " ++ n ++ "  " else "#if " ++ n end if) end if) end if) end if)
+  else "#elif " ++ (termOf false form n).text end if
+end function
+
+function negate (t :: Literal) -> Literal is t with negated = !t.negated end function
+
+-- A line of code, or a directive that reads no term (`#else`, `#endif`).
+function row (text :: Text) (terms :: List Literal) (directive :: Bool) -> Row is
+  Row record{ text = text ++ "\n" , terms = terms , directive = directive , reads = false , name = ""}
+end function
+
+-- An `#if`, `#ifdef`, `#ifndef` or `#elif` line: `terms` end with its own.
+function opener (text :: Text) (terms :: List Literal) (name :: Text) -> Row is
+  Row record{ text = text ++ "\n" , terms = terms , directive = true , reads = true , name = name}
+end function
+
+-- A block of code, by its number: four kinds of whole declarations, with
+-- names no other block uses and calls no other block decides.
+function blockRows (id :: Integer) (terms :: List Literal) -> List Row is
+  let n = prelude.textOf id in let k = prelude.rem id 4 in
+    (if k = 0 then [row ("v" ++ n ++ " = zz 1") terms false]
+     else (if k = 1 then [row ("v" ++ n ++ " :: Int") terms false, row ("v" ++ n ++ " = 2") terms false]
+     else (if k = 2 then [row ("data T" ++ n ++ " = K" ++ n ++ " Int") terms false]
+     else [row ("-- | Doc " ++ n ++ ".") terms false, row ("v" ++ n ++ " x =") terms false, row "  map x" terms false] end if) end if) end if)
+  end let end let
+end function
+
+-- A nested group: `forms` are its arms still to write, `k` the next arm's
+-- number, `before` the negations of the arms already written.
+function leafRows (group :: Integer) (terms :: List Literal) (forms :: List Integer) (k :: Integer) (before :: List Literal) (hasElse :: Bool) -> List Row is
+  first matching case of forms :
+    when Nil then
+      (if hasElse then [row "#else" (terms ++ before) true] ++ blockRows (group * 10 + k) (terms ++ before) ++ [row "#endif" terms true]
+       else [row "#endif" (terms ++ before) true] end if)
+    when Cons f rest then
+      (let own = termOf (k = 0) f (nameOf group k) in
+        [opener (directiveOf (k = 0) f (nameOf group k)) (terms ++ before ++ [own]) (nameOf group k)]
+          ++ blockRows (group * 10 + k) (terms ++ before ++ [own])
+          ++ leafRows group terms rest (k + 1) (before ++ [negate own]) hasElse end let)
+  end case
+end function
+
+function innerRows (base :: Integer) (terms :: List Literal) (items :: List Inner) (i :: Integer) -> List Row is
+  first matching case of items :
+    when Nil then []
+    when Cons it rest then
+      (first matching case of it :
+        when InCode then blockRows (base * 10 + i) terms
+        when InGroup leaf then leafRows (base * 10 + i) terms leaf.forms 0 [] leaf.hasElse
+      end case) ++ innerRows base terms rest (i + 1)
+  end case
+end function
+
+function armsRows (group :: Integer) (arms :: List Arm) (k :: Integer) (before :: List Literal) (hasElse :: Bool) (elseBody :: List Inner) -> List Row is
+  first matching case of arms :
+    when Nil then
+      (if hasElse then [row "#else" before true] ++ innerRows (group * 10 + k) before elseBody 1 ++ [row "#endif" [] true]
+       else [row "#endif" before true] end if)
+    when Cons a rest then
+      (let own = termOf (k = 0) a.form (nameOf group k) in
+        [opener (directiveOf (k = 0) a.form (nameOf group k)) (before ++ [own]) (nameOf group k)]
+          ++ innerRows (group * 10 + k) (before ++ [own]) a.body 1
+          ++ armsRows group rest (k + 1) (before ++ [negate own]) hasElse elseBody end let)
+  end case
+end function
+
+function sectionRows (ss :: List Section) (i :: Integer) -> List Row is
+  first matching case of ss :
+    when Nil then []
+    when Cons s rest then
+      (first matching case of s :
+        when Code then blockRows (i * 4 + prelude.rem i 4) []
+        when Group g then armsRows i g.arms 0 [] g.hasElse g.elseBody
+      end case) ++ sectionRows rest (i + 1)
+  end case
+end function
+
+-- The module's lines. Sections are numbered from 1, so no name repeats.
+function rowsOf (ss :: List Section) -> List Row is
+  [row "{-# LANGUAGE CPP #-}" [] false, row "module M where" [] false] ++ sectionRows ss 1
+end function
+
+-- ---------------------------------------------------------------------------
+-- The texts.
+
+function sourceOf (rs :: List Row) -> Text is
+  first matching case of rs : when Nil then "" when Cons r rest then r.text ++ sourceOf rest end case
+end function
+
+-- The source as written.
+function render (ss :: List Section) -> Text is sourceOf (rowsOf ss) end function
+
+function blankIf (b :: Bool) (r :: Row) -> Text is if b then "\n" else r.text end if end function
+
+-- Every arm at once, the directive lines blank. It parses, because every
+-- block is a whole declaration with its own names; no build is this text.
+function allArmsText (rs :: List Row) -> Text is
+  first matching case of rs : when Nil then "" when Cons r rest then blankIf r.directive r ++ allArmsText rest end case
+end function
+
+function allArms (ss :: List Section) -> Text is allArmsText (rowsOf ss) end function
+
+-- ---------------------------------------------------------------------------
+-- Builds (rule C2, as next cycle 6 has it). A build is the values of the
+-- terms it reads: 1 true, 0 false. The source is walked from its first line
+-- as the preprocessor walks it. A directive is REACHED when every literal
+-- before its own holds under the values so far: the arms that enclose it
+-- are taken and the earlier arms of its own group have failed. At a reached
+-- directive whose term has no value yet the term is a choice, true before
+-- false; a directive that is not reached, or whose term has its value from
+-- an earlier directive of the same text, is no choice. Every way through
+-- is a build, and the builds stand in that order.
+--
+-- Cycle 4 took the terms in the order they first stand in the source, and
+-- asked of each whether some directive reading it was reached "under the
+-- values chosen so far". A term whose first directive is skipped, and whose
+-- later directive is guarded by a term that first stands after it, was then
+-- no choice and got no value: its group's lines were in no copy (review 8,
+-- B1). The walk has no such order to get wrong: it asks of a directive only
+-- when it is at it.
+
+function litHolds (asg :: KeyVal Text Integer) (l :: Literal) -> Bool is
+  first matching case of prelude.lookup l.text asg :
+    when Present v then (v != 0) != l.negated
+    when Absent then false
+  end case
+end function
+
+function allHold (asg :: KeyVal Text Integer) (ls :: List Literal) -> Bool is prelude.all (litHolds asg) ls end function
+
+function ownText (ls :: List Literal) -> Text is
+  first matching case of prelude.at (prelude.length ls - 1) ls : when Present l then l.text when Absent then "" end case
+end function
+
+-- The directive of this row is reached under the values so far.
+function reached (asg :: KeyVal Text Integer) (r :: Row) -> Bool is
+  r.reads && allHold asg (prelude.take (prelude.length r.terms - 1) r.terms)
+end function
+
+function valued (asg :: KeyVal Text Integer) (t :: Text) -> Bool is
+  first matching case of prelude.lookup t asg : when Present v then true when Absent then false end case
+end function
+
+-- The row is a choice: its directive is reached, and its term has no value.
+function choiceAt (asg :: KeyVal Text Integer) (r :: Row) -> Bool is reached asg r && !(valued asg (ownText r.terms)) end function
+
+-- The terms, each once, in the order they first stand in the source. No
+-- rule of the builds reads this order: it only names the terms.
+function termsIn (rs :: List Row) (seen :: List Text) -> List Text is
+  first matching case of rs :
+    when Nil then seen
+    when Cons r rest then termsIn rest (if r.reads && !(seen contains ownText r.terms) then seen ++ [ownText r.terms] else seen end if)
+  end case
+end function
+
+-- The number of builds, counted no further than `budget + 1`.
+function countBuilds (rs :: List Row) (asg :: KeyVal Text Integer) (budget :: Integer) -> Integer is
+  first matching case of rs :
+    when Nil then 1
+    when Cons r rest then
+      (if choiceAt asg r then
+        (let a = countBuilds rest (prelude.put (ownText r.terms) 1 asg) budget in
+          (if a > budget then a else a + countBuilds rest (prelude.put (ownText r.terms) 0 asg) (budget - a) end if) end let)
+       else countBuilds rest asg budget end if)
+  end case
+end function
+
+function buildsFrom (rs :: List Row) (asg :: KeyVal Text Integer) -> List (KeyVal Text Integer) is
+  first matching case of rs :
+    when Nil then [asg]
+    when Cons r rest then
+      (if choiceAt asg r then buildsFrom rest (prelude.put (ownText r.terms) 1 asg) ++ buildsFrom rest (prelude.put (ownText r.terms) 0 asg)
+       else buildsFrom rest asg end if)
+  end case
+end function
+
+-- The first build: every term it reads is true.
+function firstBuild (rs :: List Row) (asg :: KeyVal Text Integer) -> KeyVal Text Integer is
+  first matching case of rs :
+    when Nil then asg
+    when Cons r rest then firstBuild rest (if choiceAt asg r then prelude.put (ownText r.terms) 1 asg else asg end if)
+  end case
+end function
+
+-- A build's copy: the source with every directive line, and every line
+-- that does not stand in the build, made empty. No line moves.
+function copyOf (asg :: KeyVal Text Integer) (rs :: List Row) -> Text is
+  first matching case of rs :
+    when Nil then ""
+    when Cons r rest then blankIf (r.directive || !(allHold asg r.terms)) r ++ copyOf asg rest
+  end case
+end function
+
+function copiesOf (rs :: List Row) (builds :: List (KeyVal Text Integer)) -> List Text is
+  first matching case of builds : when Nil then [] when Cons b rest then [copyOf b rs] ++ copiesOf rs rest end case
+end function
+
+function hasGroup (rs :: List Row) -> Bool is
+  first matching case of rs : when Nil then false when Cons r rest then r.reads || hasGroup rest end case
+end function
+
+function buildCount (rs :: List Row) -> Integer is countBuilds rs (prelude.keyValOf []) (buildCap unitValue) end function
+
+-- More builds than are read (`wp.buildCap`).
+function overCapRows (rs :: List Row) -> Bool is buildCount rs > buildCap unitValue end function
+
+-- The copies an extractor reads, in order: one per build. A source with
+-- more builds than the cap is read in its first build alone. A source with
+-- no conditional is its own single copy.
+function copiesOfRows (rs :: List Row) -> List Text is
+  if !(hasGroup rs) then [sourceOf rs]
+  else (if overCapRows rs then [firstCopyOfRows rs]
+  else copiesOf rs (buildsFrom rs (prelude.keyValOf [])) end if) end if
+end function
+
+-- The first build's copy.
+function firstCopyOfRows (rs :: List Row) -> Text is copyOf (firstBuild rs (prelude.keyValOf [])) rs end function
+
+function copies (ss :: List Section) -> List Text is copiesOfRows (rowsOf ss) end function
+
+function overCap (ss :: List Section) -> Bool is overCapRows (rowsOf ss) end function
+
+function firstCopy (ss :: List Section) -> Text is firstCopyOfRows (rowsOf ss) end function
+
+-- ---------------------------------------------------------------------------
+-- The builds with no rule of choice at all (next cycle 6; review 8, B1).
+-- Rule C2 above says which terms are choices, and it was wrong twice in
+-- what it took for a choice. This reference has no such notion. It takes
+-- EVERY assignment of a value to every term of the source (2^k of them)
+-- and, under each, walks the source as the preprocessor does: a directive
+-- that is reached is evaluated, and nothing else is. What it evaluated, in
+-- the order met, is the assignment's TRACE. Two assignments with one trace
+-- keep the same lines; the builds are the distinct traces. They are put in
+-- order by the values in the order met, true before false (two traces that
+-- agree so far meet the same directive next, so no trace is the start of
+-- another). Rule C2 must give exactly these copies, in this order: HCP-4,
+-- and HSC-1 for the extractor. Only for sources of few terms: 2^k.
+
+function withValue (t :: Text) (v :: Integer) (as :: List (KeyVal Text Integer)) -> List (KeyVal Text Integer) is
+  first matching case of as : when Nil then [] when Cons a rest then [prelude.put t v a] ++ withValue t v rest end case
+end function
+
+-- Every assignment of the terms.
+function assignments (ts :: List Text) -> List (KeyVal Text Integer) is
+  first matching case of ts :
+    when Nil then [prelude.keyValOf []]
+    when Cons t rest then withValue t 1 (assignments rest) ++ withValue t 0 (assignments rest)
+  end case
+end function
+
+function valueIn (full :: KeyVal Text Integer) (t :: Text) -> Integer is
+  first matching case of prelude.lookup t full : when Present v then v when Absent then 0 end case
+end function
+
+-- What the preprocessor evaluates under a full assignment: the values of
+-- the terms of the directives it reaches, in the order it first meets them.
+function traceOf (rs :: List Row) (full :: KeyVal Text Integer) (seen :: List Text) -> List Integer is
+  first matching case of rs :
+    when Nil then []
+    when Cons r rest then
+      (if reached full r && !(seen contains ownText r.terms) then [valueIn full (ownText r.terms)] ++ traceOf rest full (seen ++ [ownText r.terms])
+       else traceOf rest full seen end if)
+  end case
+end function
+
+type Walked is a record{
+  trace :: List Integer
+  copy :: Text}
+end type
+
+-- `a` stands before `b`: where they first differ, `a` has the true value.
+function traceBefore (a :: List Integer) (b :: List Integer) -> Bool is
+  first matching case of a :
+    when Nil then false
+    when Cons x xs then
+      (first matching case of b :
+        when Nil then false
+        when Cons y ys then (if x = y then traceBefore xs ys else x > y end if)
+      end case)
+  end case
+end function
+
+function insertWalked (w :: Walked) (ws :: List Walked) -> List Walked is
+  first matching case of ws :
+    when Nil then [w]
+    when Cons h rest then
+      (if h.trace = w.trace then ws else (if traceBefore w.trace h.trace then [w] ++ ws else [h] ++ insertWalked w rest end if) end if)
+  end case
+end function
+
+function walkedAll (rs :: List Row) (fulls :: List (KeyVal Text Integer)) (acc :: List Walked) -> List Walked is
+  first matching case of fulls :
+    when Nil then acc
+    when Cons f rest then walkedAll rs rest (insertWalked (Walked record{ trace = traceOf rs f [] , copy = copyOf f rs}) acc)
+  end case
+end function
+
+function copiesOfWalked (ws :: List Walked) -> List Text is
+  first matching case of ws : when Nil then [] when Cons w rest then [w.copy] ++ copiesOfWalked rest end case
+end function
+
+-- The copies of every build, in the builds' order, by every assignment.
+function everyCopies (rs :: List Row) -> List Text is
+  if !(hasGroup rs) then [sourceOf rs] else copiesOfWalked (walkedAll rs (assignments (termsIn rs [])) []) end if
+end function
+
+-- ---------------------------------------------------------------------------
+-- Conditions as text (rule C7; the writer is `wp.conditionText`).
+
+-- A path's condition: one cube.
+function conditionText (ts :: List Literal) -> Text is wp.conditionText [ts] end function
+
+function conditionAt (rs :: List Row) (line :: Integer) -> Text is
+  first matching case of prelude.at (line - 1) rs : when Present r then conditionText r.terms when Absent then "" end case
+end function
+
+function edgesAt (t :: Text) (es :: List CallEdge) -> List CallEdge is
+  first matching case of es : when Nil then [] when Cons e rest then [e with condition = t] ++ edgesAt t rest end case
+end function
+
+function declsAt (rs :: List Row) (ds :: List Decl) -> List Decl is
+  first matching case of ds :
+    when Nil then []
+    when Cons d rest then
+      [d with condition = conditionAt rs d.location.line , calls = edgesAt (conditionAt rs d.location.line) d.calls] ++ declsAt rs rest
+  end case
+end function
+
+function packagesAt (rs :: List Row) (ps :: List Package) -> List Package is
+  first matching case of ps : when Nil then [] when Cons p rest then [p with symbols = declsAt rs p.symbols] ++ packagesAt rs rest end case
+end function
+
+-- The extraction of `allArms`, each symbol and each of its edges given the
+-- condition of the line the symbol starts on. In the first model a fact's
+-- builds are exactly those of its line's path, so this is its condition.
+function conditioned (ss :: List Section) (ps :: List Package) -> List Package is packagesAt (rowsOf ss) ps end function
+
+function unreadDecls (ds :: List Decl) -> List Decl is
+  first matching case of ds :
+    when Nil then []
+    when Cons d rest then [d with condition = unreadText unitValue , calls = edgesAt (unreadText unitValue) d.calls] ++ unreadDecls rest
+  end case
+end function
+
+-- What a source with more builds than the cap gives: the extraction of its
+-- first build, every symbol and edge with the text that is never decided.
+function unread (ps :: List Package) -> List Package is
+  first matching case of ps : when Nil then [] when Cons p rest then [p with symbols = unreadDecls p.symbols] ++ unread rest end case
+end function
+
+-- ---------------------------------------------------------------------------
+-- One environment's build.
+
+function termHolds (env :: Env) (t :: Literal) -> Bool is
+  first matching case of refEval env t.expr :
+    when Known v then (v != 0) != t.negated
+    when Unknown u then false
+    when Bad then false
+  end case
+end function
+
+function buildText (env :: Env) (rs :: List Row) -> Text is
+  first matching case of rs :
+    when Nil then ""
+    when Cons r rest then blankIf (r.directive || !(prelude.all (termHolds env) r.terms)) r ++ buildText env rest
+  end case
+end function
+
+-- What the preprocessor leaves under a complete environment, line numbers
+-- kept.
+function buildOf (env :: Env) (ss :: List Section) -> Text is buildText env (rowsOf ss) end function
+
+-- ---------------------------------------------------------------------------
+-- Drawn values.
+
+function leafOf (seed :: Integer) -> Leaf is
+  Leaf record{ forms = (if pick seed 1 2 = 0 then [pick seed 2 5] else [pick seed 2 5, pick seed 3 5] end if) , hasElse = pick seed 4 2 = 0}
+end function
+
+function innersOf (seed :: Integer) (n :: Integer) -> List Inner is
+  if n <= 0 then [] else [(if pick seed (10 + n) 3 = 0 then InGroup (leafOf (mix seed (20 + n))) else InCode end if)] ++ innersOf seed (n - 1) end if
+end function
+
+function armsOf (seed :: Integer) (n :: Integer) -> List Arm is
+  if n <= 0 then [] else [Arm record{ form = pick seed (30 + n) 5 , body = innersOf (mix seed (40 + n)) (pick seed (50 + n) 3)}] ++ armsOf seed (n - 1) end if
+end function
+
+function sectionsOf (seed :: Integer) (n :: Integer) -> List Section is
+  if n <= 0 then [] else
+    [(if pick seed (60 + n) 4 = 0 then Code
+      else Group record{ arms = armsOf (mix seed (70 + n)) (1 + pick seed (80 + n) 3) , hasElse = pick seed (90 + n) 2 = 0 ,
+                         elseBody = innersOf (mix seed (100 + n)) (pick seed (110 + n) 3)} end if)] ++ sectionsOf seed (n - 1)
+  end if
+end function
+
+-- A module of up to four sections.
+function moduleOf (seed :: Integer) -> List Section is sectionsOf seed (pick seed 120 5) end function
+
+function bindRows (seed :: Integer) (rs :: List Row) (k :: Integer) (acc :: KeyVal Text Binding) -> KeyVal Text Binding is
+  first matching case of rs :
+    when Nil then acc
+    when Cons r rest then
+      bindRows seed rest (k + 1)
+        (if r.reads then
+          (let c0 = pick seed (200 + k) 4 in
+            (if c0 = 0 then acc else prelude.put r.name (wp.definedAs (c0 - 1)) acc end if) end let)
+         else acc end if)
+  end case
+end function
+
+function envOfRows (seed :: Integer) (rs :: List Row) -> Env is
+  completed ((emptyEnv unitValue) with names = bindRows seed rs 0 (prelude.keyValOf []))
+end function
+
+-- A complete environment over the module's names: each is undefined, 0, 1
+-- or 2.
+function buildEnv (seed :: Integer) (ss :: List Section) -> Env is envOfRows seed (rowsOf ss) end function
+
+-- ---------------------------------------------------------------------------
+-- The second model (cycle 4; review 7, B1): a module whose facts depend on
+-- one another across groups, as real sources do. Its conditions test three
+-- names in four forms, so that two groups often share a term, or have
+-- opposite ones (`#ifdef P` and `#ifndef P`).
+--
+--   {-# LANGUAGE CPP #-}
+--   module M
+--     ( d1
+--   [#if ..]              the export of d2, in a group or not
+--     , d2
+--   [#endif]
+--     , d3
+--     ) where
+--   two import pieces     `foo1` and `foo2`: from one module; from one of
+--                         two, by a group; or from one, in a group with no
+--                         `#else`
+--   v0 x = x
+--   three declarations    d1, d2, d3, each calling an imported name:
+--     0  d = foo 1                        a plain value
+--     1  d = foo 1 / #if / + v0 1 / #else / + foo' 2 / #endif
+--                                         its tail in a group, with `#else`
+--     2  d = foo 1 / #if / + v0 1 / #endif   its tail in a group
+--     3  #if / d = foo 2 / #endif         whole, in a group
+--     4  #if / d x = foo x / #if / + v0 x / #endif / #endif
+--                                         whole in a group, its tail in a
+--                                         nested one (the optional-
+--                                         dependency idiom)
+--     5  #if / d :: Int / #else / d :: Integer / #endif / d = foo 3
+--                                         a signature in each arm
+--     6  d x = / #if / foo x / #else / v0 x / #endif / + g x / where /
+--        #if / g = foo1 / #else / g = foo2 / #endif
+--                                         two groups in one declaration
+--
+-- Every build of such a module is a module that parses.
+
+function poolName (i :: Integer) -> Text is
+  first matching case of i : when 0 then "P" when 1 then "Q" otherwise "R" end case
+end function
+
+-- Forms 0, 1, 2 and 4 of `termOf`: the terms are `N` and `defined(N)`.
+function poolForm (i :: Integer) -> Integer is
+  first matching case of i : when 0 then 0 when 1 then 1 when 2 then 2 otherwise 4 end case
+end function
+
+-- A group with one written arm: its directive, the lines of the arm, and
+-- the lines of its `#else` (none: no `#else` is written).
+function oneGroup (outer :: List Literal) (form :: Integer) (n :: Text) (yes :: List Text) (hasElse :: Bool) (no :: List Text) -> List Row is
+  let own = termOf true form n in
+    [opener (directiveOf true form n) (outer ++ [own]) n] ++ codeRows yes (outer ++ [own])
+      ++ (if hasElse then [row "#else" (outer ++ [negate own]) true] ++ codeRows no (outer ++ [negate own]) ++ [row "#endif" outer true]
+          else [row "#endif" (outer ++ [negate own]) true] end if)
+  end let
+end function
+
+function codeRows (lines :: List Text) (terms :: List Literal) -> List Row is
+  first matching case of lines : when Nil then [] when Cons l rest then [row l terms false] ++ codeRows rest terms end case
+end function
+
+function tangleForm (seed :: Integer) (k :: Integer) -> Integer is poolForm (pick seed (500 + k) 4) end function
+function tangleName (seed :: Integer) (k :: Integer) -> Text is poolName (pick seed (520 + k) 3) end function
+
+function importRows (seed :: Integer) (i :: Integer) -> List Row is
+  let n = prelude.textOf i in let kind = pick seed (540 + i) 3 in
+    (if kind = 0 then codeRows ["import X" ++ n ++ " (foo" ++ n ++ ")"] []
+     else oneGroup [] (tangleForm seed i) (tangleName seed i) ["import X" ++ n ++ " (foo" ++ n ++ ")"] (kind = 1) ["import Y" ++ n ++ " (foo" ++ n ++ ")"] end if)
+  end let end let
+end function
+
+function fooOf (seed :: Integer) (k :: Integer) -> Text is if pick seed (560 + k) 2 = 0 then "foo1" else "foo2" end if end function
+
+function declRows (seed :: Integer) (j :: Integer) -> List Row is
+  let d = "d" ++ prelude.textOf j in let foo = fooOf seed j in let kind = pick seed (580 + j) 7 in
+  let f1 = tangleForm seed (10 + j) in let n1 = tangleName seed (10 + j) in
+  let f2 = tangleForm seed (20 + j) in let n2 = tangleName seed (20 + j) in
+    (if kind = 0 then codeRows [d ++ " = " ++ foo ++ " 1"] []
+     else (if kind = 1 then codeRows [d ++ " = " ++ foo ++ " 1"] [] ++ oneGroup [] f1 n1 ["  + v0 1"] true ["  + " ++ fooOf seed (30 + j) ++ " 2"]
+     else (if kind = 2 then codeRows [d ++ " = " ++ foo ++ " 1"] [] ++ oneGroup [] f1 n1 ["  + v0 1"] false []
+     else (if kind = 3 then oneGroup [] f1 n1 [d ++ " = " ++ foo ++ " 2"] false []
+     else (if kind = 4 then
+       (let own = termOf true f1 n1 in
+         [opener (directiveOf true f1 n1) [own] n1] ++ codeRows [d ++ " x = " ++ foo ++ " x"] [own]
+           ++ oneGroup [own] f2 n2 ["  + v0 x"] false [] ++ [row "#endif" [negate own] true] end let)
+     else (if kind = 5 then oneGroup [] f1 n1 [d ++ " :: Int"] true [d ++ " :: Integer"] ++ codeRows [d ++ " = " ++ foo ++ " 3"] []
+     else codeRows [d ++ " x ="] [] ++ oneGroup [] f1 n1 ["  " ++ foo ++ " x"] true ["  v0 x"] ++ codeRows ["  + g x", "  where"] []
+            ++ oneGroup [] f2 n2 ["    g = foo1"] true ["    g = foo2"] end if) end if) end if) end if) end if) end if)
+  end let end let end let end let end let end let end let
+end function
+
+function exportRows (seed :: Integer) -> List Row is
+  codeRows ["module M", "  ( d1"] []
+    ++ (if pick seed 600 2 = 0 then codeRows ["  , d2"] [] else oneGroup [] (tangleForm seed 0) (tangleName seed 0) ["  , d2"] false [] end if)
+    ++ codeRows ["  , d3", "  ) where"] []
+end function
+
+-- A module of the second model, as its lines.
+function tangle (seed :: Integer) -> List Row is
+  codeRows ["{-# LANGUAGE CPP #-}"] [] ++ exportRows seed ++ importRows seed 1 ++ importRows seed 2 ++ codeRows ["v0 x = x"] []
+    ++ declRows seed 1 ++ declRows seed 2 ++ declRows seed 3
+end function
+
+function poolBinding (seed :: Integer) (k :: Integer) (acc :: KeyVal Text Binding) -> KeyVal Text Binding is
+  let c0 = pick seed (620 + k) 4 in (if c0 = 0 then acc else prelude.put (poolName k) (wp.definedAs (c0 - 1)) acc end if) end let
+end function
+
+-- A complete environment over the second model's three names: each is
+-- undefined, 0, 1 or 2.
+function tangleEnv (seed :: Integer) -> Env is
+  completed ((emptyEnv unitValue) with names = poolBinding seed 0 (poolBinding seed 1 (poolBinding seed 2 (prelude.keyValOf []))))
+end function
+
+-- Every complete environment over the three names, by its number 0 to 63:
+-- each name is undefined, 0, 1 or 2.
+function poolState (n :: Text) (c0 :: Integer) (acc :: KeyVal Text Binding) -> KeyVal Text Binding is
+  if c0 = 0 then acc else prelude.put n (wp.definedAs (c0 - 1)) acc end if
+end function
+
+function poolEnvAt (i :: Integer) -> Env is
+  completed ((emptyEnv unitValue) with names =
+    poolState "P" (prelude.rem i 4) (poolState "Q" (prelude.rem (prelude.quot i 4) 4) (poolState "R" (prelude.rem (prelude.quot i 16) 4) (prelude.keyValOf []))))
+end function
+
+-- ---------------------------------------------------------------------------
+-- The third model (next cycle 6; review 8, B1): free nesting. The second
+-- model is a list of shapes someone thought of, and review 8's shape was
+-- not among them. This one draws the STRUCTURE: groups of one to three
+-- written arms (`#if`, `#ifdef` or `#ifndef`, then `#elif N` or `#elif
+-- defined(N)`), with or without `#else`, nested to three levels, every
+-- condition over the same three names. So a term recurs anywhere: under a
+-- guard that first stands after it, in a later arm of a group whose first
+-- arm nests it, in an `#elif` of its own group (an arm in no build).
+--
+--   {-# LANGUAGE CPP #-}
+--   module M where
+--   the import of `foo1`      as the second model's: plain, chosen by a
+--                             group, or in one arm only
+--   import Z (bar)
+--   v0 x = x
+--   three sections, each one of
+--     a tree of groups whose arms hold whole declarations
+--                             `w<place> = foo1 <place>` or `.. = bar ..`
+--     `t<i> :: Int`, `t<i> = foo1 <i>`, and a tree of groups whose arms
+--     hold tails of it        `  + bar <place>`, `  + foo1 <place>` or
+--                             `  + <place>`
+--   z = bar 0
+--
+-- An arm holds its lines, or nothing, and then perhaps a nested group. At
+-- most six terms (`N` and `defined(N)` of three names): at most 64 builds.
+-- Every build is a module that parses.
+
+function weaveName (seed :: Integer) (place :: Integer) -> Text is poolName (pick seed (700 + place) 3) end function
+
+-- A first arm's form: 0 `#if N`, 1 `#ifdef N`, 2 `#ifndef N`. A later
+-- arm's: 0 `#elif N`, 1 `#elif defined(N)`.
+function weaveForm (seed :: Integer) (place :: Integer) (first :: Bool) -> Integer is
+  if first then pick seed (1700 + place) 3 else pick seed (1700 + place) 2 end if
+end function
+
+function leafLines (seed :: Integer) (tail :: Bool) (place :: Integer) -> List Text is
+  let n = prelude.textOf place in let k = pick seed (2700 + place) 3 in
+    (if tail then [(if k = 0 then "  + bar " ++ n else (if k = 1 then "  + foo1 " ++ n else "  + " ++ n end if) end if)]
+     else [(if k = 0 then "w" ++ n ++ " = bar " ++ n else "w" ++ n ++ " = foo1 " ++ n end if)] end if)
+  end let end let
+end function
+
+-- The arms of one group still to write, and its end. `group` is the
+-- group's place, `k` the next arm's number, `left` the arms still to
+-- write, `outer` the path the group stands in, `before` the negations of
+-- its arms already written. Every call takes one from `fuel`.
+function weaveArms (seed :: Integer) (group :: Integer) (outer :: List Literal) (before :: List Literal) (k :: Integer) (left :: Integer)
+                   (depth :: Integer) (tail :: Bool) (fuel :: Integer) -> List Row is
+  if fuel <= 0 then [row "#endif" outer true]
+  else (if left <= 0 then
+    (if pick seed (3700 + group) 2 = 0
+     then [row "#else" (outer ++ before) true] ++ codeRows (leafLines seed tail (group * 10 + 9)) (outer ++ before) ++ [row "#endif" outer true]
+     else [row "#endif" outer true] end if)
+  else
+    (let place = group * 10 + k in let n = weaveName seed place in let form = weaveForm seed place (k = 0) in
+     let own = termOf (k = 0) form n in let path = outer ++ before ++ [own] in
+      [opener (directiveOf (k = 0) form n) path n]
+        ++ (if pick seed (4700 + place) 4 = 0 then [] else codeRows (leafLines seed tail place) path end if)
+        ++ (if depth > 0 && pick seed (5700 + place) 2 = 0
+            then weaveArms seed place path [] 0 (1 + pick seed (6700 + place) 2) (depth - 1) tail (fuel - 1) else [] end if)
+        ++ weaveArms seed group outer (before ++ [negate own]) (k + 1) (left - 1) depth tail (fuel - 1)
+     end let end let end let end let end let) end if) end if
+end function
+
+function weaveSection (seed :: Integer) (i :: Integer) -> List Row is
+  let tail = pick seed (7700 + i) 2 = 0 in let n = prelude.textOf i in
+    (if tail then codeRows ["t" ++ n ++ " :: Int", "t" ++ n ++ " = foo1 " ++ n] [] else [] end if)
+      ++ weaveArms seed i [] [] 0 (1 + pick seed (8700 + i) 3) 2 tail 16
+  end let end let
+end function
+
+-- A module of the third model, as its lines.
+function weave (seed :: Integer) -> List Row is
+  codeRows ["{-# LANGUAGE CPP #-}", "module M where"] [] ++ importRows seed 1 ++ codeRows ["import Z (bar)", "v0 x = x"] []
+    ++ weaveSection seed 1 ++ weaveSection seed 2 ++ weaveSection seed 3 ++ codeRows ["z = bar 0"] []
+end function
+
+-- ---------------------------------------------------------------------------
+-- Review 8's three sources (`tmpdir/review8/b2`, `b3`, `b5`), as rows.
+
+-- `#if N`, a group on B inside it, `#endif`.
+function under (n :: Text) (form :: Integer) (yes :: List Text) (hasElse :: Bool) (no :: List Text) -> List Row is
+  let own = termOf true 0 n in
+    [opener ("#if " ++ n) [own] n] ++ oneGroup [own] form "B" yes hasElse no ++ [row "#endif" [negate own] true]
+  end let
+end function
+
+-- (c): `#if P` / `#if B` / a / `#endif` / `#elif Q` / q / `#elif B` / b / `#endif`.
+function reproElif (u :: Unit) -> List Row is
+  let p = termOf true 0 "P" in let q = termOf false 0 "Q" in let b = termOf false 0 "B" in
+    codeRows ["{-# LANGUAGE CPP #-}", "module M where"] []
+      ++ [opener "#if P" [p] "P"] ++ oneGroup [p] 0 "B" ["a = 1"] false []
+      ++ [opener "#elif Q" [negate p, q] "Q"] ++ codeRows ["q = 0"] [negate p, q]
+      ++ [opener "#elif B" [negate p, negate q, b] "B"] ++ codeRows ["b = 2"] [negate p, negate q, b]
+      ++ [row "#endif" [negate p, negate q, negate b] true] ++ codeRows ["c = 3"] []
+  end let end let end let
+end function
+
+-- (b): `#ifdef B` under `#if P`, and again under `#if Q`.
+function reproLost (u :: Unit) -> List Row is
+  codeRows ["{-# LANGUAGE CPP #-}", "module M where"] [] ++ under "P" 1 ["a = 1"] false [] ++ under "Q" 1 ["b = 2"] false [] ++ codeRows ["c = 3"] []
+end function
+
+-- (a): the second `#ifdef B` holds the tail of `f`.
+function reproTail (u :: Unit) -> List Row is
+  codeRows ["{-# LANGUAGE CPP #-}", "module M where", "import Z (bar)"] [] ++ under "P" 1 ["x = 1"] false []
+    ++ codeRows ["f :: Int", "f = 1"] [] ++ under "Q" 1 ["  + bar 2"] true ["  + 3"]
+end function
+
+-- ---------------------------------------------------------------------------
+-- The reference agrees with itself.
+
+function newlines (t :: Text) (i :: Integer) -> Integer is
+  if i <= 0 then 0 else (if prelude.take 1 (prelude.drop (i - 1) t) = "\n" then 1 else 0 end if) + newlines t (i - 1) end if
+end function
+
+function sameLength (n :: Integer) (t :: Text) -> Bool is newlines t (prelude.length t) = n end function
+
+function inList (xs :: List Text) (t :: Text) -> Bool is xs contains t end function
+
+-- What each of the pool's 64 environments keeps is among the copies.
+function poolBuildsIn (rs :: List Row) (copies :: List Text) (n :: Integer) -> Bool is
+  if n <= 0 then true else inList copies (buildText (poolEnvAt (n - 1)) rs) && poolBuildsIn rs copies (n - 1) end if
+end function
+
+law "|every copy has the source's line count, and an environment's build is one of the copies| is
+  id: "HCP-1"
+  description :
+    "No copy moves a line. For a source within the cap, what any complete
+    environment keeps is the copy of one of the builds: the builds are
+    every build. Beyond the cap there is one copy, the first build's.
+    Next cycle 6: also for the third model (free nesting), and there and
+    in the second model for every one of the 64 environments over the
+    three names, not for one drawn."
+  end description
+  definition :
+    for all (seed :: Integer) (se :: Integer) =>
+      (let m = moduleOf seed in
+        prelude.all (sameLength (prelude.length (rowsOf m))) (copies m)
+          && (if overCap m then copies m = [firstCopy m] else inList (copies m) (buildOf (buildEnv se m) m) end if) end let)
+        && (let t = tangle seed in
+          prelude.all (sameLength (prelude.length t)) (copiesOfRows t) && !(overCapRows t) && inList (copiesOfRows t) (buildText (tangleEnv se) t)
+            && poolBuildsIn t (copiesOfRows t) 64 end let)
+        && (let w = weave seed in
+          prelude.all (sameLength (prelude.length w)) (copiesOfRows w) && !(overCapRows w) && poolBuildsIn w (copiesOfRows w) 64 end let)
+    end for all
+  end definition
+end law
+
+law "|a path's condition is written as the rules say| is
+  id: "HCP-2"
+  definition :
+    conditionText [] = ""
+    && conditionText [termOf true 0 "A"] = "A"
+    && conditionText [termOf true 3 "A"] = "(defined(A) && A >= 2)"
+    && conditionText [termOf true 2 "A"] = "!(defined(A))"
+    && conditionText [negate (termOf true 2 "A")] = "defined(A)"
+    && conditionText [negate (termOf true 0 "A"), termOf false 2 "B"] = "!(A) && (!defined(B))"
+    && conditionText [termOf true 1 "A", negate (termOf true 3 "B"), termOf false 3 "C"] = "defined(A) && !(defined(B) && B >= 2) && (defined(C) && C >= 2)"
+  end definition
+end law
+
+function ifdefP (yes :: Text) -> List Row is oneGroup [] 1 "P" [yes] false [] end function
+
+law "|two groups with one condition are one choice; opposite conditions are the same choice turned| is
+  id: "HCP-3"
+  description :
+    "Review 7, B1 (b). Three `#ifdef P` groups give two builds, not eight:
+    no build has the first group's lines without the others'. `#ifndef P`
+    after `#ifdef P` gives two builds as well, each with one group's lines.
+    Two different names give four, in the order of the first term's value,
+    true first. A term inside a group that fails is no choice. Nine
+    independent groups are more builds than are read."
+  end description
+  definition :
+    copiesOfRows (ifdefP "a = 1" ++ ifdefP "b = 2" ++ ifdefP "c = 3") = ["\na = 1\n\n\nb = 2\n\n\nc = 3\n\n", "\n\n\n\n\n\n\n\n\n"]
+    && copiesOfRows (ifdefP "a = 1" ++ oneGroup [] 2 "P" ["b = 2"] false []) = ["\na = 1\n\n\n\n\n", "\n\n\n\nb = 2\n\n"]
+    && copiesOfRows (ifdefP "a = 1" ++ oneGroup [] 0 "P" ["b = 2"] true ["c = 3"])
+         = ["\na = 1\n\n\nb = 2\n\n\n\n", "\na = 1\n\n\n\n\nc = 3\n\n", "\n\n\n\nb = 2\n\n\n\n", "\n\n\n\n\n\nc = 3\n\n"]
+    && copiesOfRows (oneGroup [] 0 "P" ["a = 1"] false [] ++ oneGroup [] 0 "Q" ["b = 2"] false [])
+         = ["\na = 1\n\n\nb = 2\n\n", "\na = 1\n\n\n\n\n", "\n\n\n\nb = 2\n\n", "\n\n\n\n\n\n"]
+    && buildCount (tangleNest unitValue) = 3
+    && buildCount (wideRows 8) = 256 && !(overCapRows (wideRows 8))
+    && overCapRows (wideRows 9) && prelude.length (copiesOfRows (wideRows 9)) = 1
+  end definition
+end law
+
+law "|the builds are exactly what the preprocessor keeps under every assignment of the terms| is
+  id: "HCP-4"
+  description :
+    "Review 8, B1: the law that does not share rule C2's rule. For any
+    module of the second and of the third model, and for a module of the
+    first with at most eight terms: the copies rule C2 gives (a choice
+    where the walk meets a term with no value) are, one for one and in
+    order, the copies got with no rule of choice: every assignment of the
+    terms, each walked as the preprocessor walks, the distinct outcomes
+    kept. So no build is missing (the defect of cycle 4's rule), none is
+    invented, and none stands twice. HCP-1 holds only that an
+    environment's build is among the copies, for the environments it
+    tries; this is an equality, over every assignment."
+  end description
+  definition :
+    for all (seed :: Integer) =>
+      copiesOfRows (tangle seed) = everyCopies (tangle seed)
+        && copiesOfRows (weave seed) = everyCopies (weave seed)
+        && (let m = rowsOf (moduleOf seed) in prelude.length (termsIn m []) > 8 || copiesOfRows m = everyCopies m end let)
+    end for all
+  end definition
+end law
+
+law "|review 8's three sources: a term whose later directive is guarded by a term written after it| is
+  id: "HCP-5"
+  description :
+    "Review 8, B1, repros (c), (b) and (a), to the letter. In each, B is
+    first read inside `#if P`, and again where P does not matter: under
+    `#if Q`, or in a later arm of P's own group. With P false the second
+    directive is still reached, so B is a choice there: the builds are
+    five, seven and seven. Cycle 4's rule gave four, six and six: with P
+    false it never asked for B, and `b = 2` (or the tail `+ bar 2`) was
+    in no copy. The copies are listed as next-cycle-6/tools/cppbuilds.py
+    printed them, and are those of every assignment."
+  end description
+  definition :
+    sourceOf (reproElif unitValue) = "{-# LANGUAGE CPP #-}\nmodule M where\n#if P\n#if B\na = 1\n#endif\n#elif Q\nq = 0\n#elif B\nb = 2\n#endif\nc = 3\n"
+    && copiesOfRows (reproElif unitValue) = reproElifCopies unitValue
+    && everyCopies (reproElif unitValue) = reproElifCopies unitValue
+    && sourceOf (reproLost unitValue) = "{-# LANGUAGE CPP #-}\nmodule M where\n#if P\n#ifdef B\na = 1\n#endif\n#endif\n#if Q\n#ifdef B\nb = 2\n#endif\n#endif\nc = 3\n"
+    && copiesOfRows (reproLost unitValue) = reproLostCopies unitValue
+    && everyCopies (reproLost unitValue) = reproLostCopies unitValue
+    && sourceOf (reproTail unitValue)
+         = "{-# LANGUAGE CPP #-}\nmodule M where\nimport Z (bar)\n#if P\n#ifdef B\nx = 1\n#endif\n#endif\nf :: Int\nf = 1\n#if Q\n#ifdef B\n  + bar 2\n#else\n  + 3\n#endif\n#endif\n"
+    && copiesOfRows (reproTail unitValue) = reproTailCopies unitValue
+    && everyCopies (reproTail unitValue) = reproTailCopies unitValue
+    && buildCount (reproElif unitValue) = 5 && buildCount (reproLost unitValue) = 7 && buildCount (reproTail unitValue) = 7
+    && inList (copiesOfRows (reproLost unitValue)) "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\n\n\nb = 2\n\n\nc = 3\n"
+  end definition
+end law
+
+function reproElifCopies (u :: Unit) -> List Text is
+  ["{-# LANGUAGE CPP #-}\nmodule M where\n\n\na = 1\n\n\n\n\n\n\nc = 3\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\n\n\n\n\nc = 3\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\nq = 0\n\n\n\nc = 3\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\n\n\nb = 2\n\nc = 3\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\n\n\n\n\nc = 3\n"]
+end function
+
+function reproLostCopies (u :: Unit) -> List Text is
+  ["{-# LANGUAGE CPP #-}\nmodule M where\n\n\na = 1\n\n\n\n\nb = 2\n\n\nc = 3\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\na = 1\n\n\n\n\n\n\n\nc = 3\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\n\n\n\n\n\nc = 3\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\n\n\n\n\n\nc = 3\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\n\n\nb = 2\n\n\nc = 3\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\n\n\n\n\n\nc = 3\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\n\n\n\n\n\nc = 3\n"]
+end function
+
+function reproTailCopies (u :: Unit) -> List Text is
+  ["{-# LANGUAGE CPP #-}\nmodule M where\nimport Z (bar)\n\n\nx = 1\n\n\nf :: Int\nf = 1\n\n\n  + bar 2\n\n\n\n\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\nimport Z (bar)\n\n\nx = 1\n\n\nf :: Int\nf = 1\n\n\n\n\n\n\n\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\nimport Z (bar)\n\n\n\n\n\nf :: Int\nf = 1\n\n\n\n\n  + 3\n\n\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\nimport Z (bar)\n\n\n\n\n\nf :: Int\nf = 1\n\n\n\n\n\n\n\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\nimport Z (bar)\n\n\n\n\n\nf :: Int\nf = 1\n\n\n  + bar 2\n\n\n\n\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\nimport Z (bar)\n\n\n\n\n\nf :: Int\nf = 1\n\n\n\n\n  + 3\n\n\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\nimport Z (bar)\n\n\n\n\n\nf :: Int\nf = 1\n\n\n\n\n\n\n\n"]
+end function
+
+-- `#ifdef P` with `#if Q` inside it: Q is read only where P is defined.
+function tangleNest (u :: Unit) -> List Row is
+  let own = termOf true 1 "P" in
+    [opener "#ifdef P" [own] "P"] ++ oneGroup [own] 0 "Q" ["a = 1"] false [] ++ [row "#endif" [negate own] true]
+  end let
+end function
+
+-- A module of n groups on n names, a declaration in each.
+function wideRows (n :: Integer) -> List Row is
+  if n <= 0 then codeRows ["module W where"] []
+  else wideRows (n - 1) ++ oneGroup [] 0 ("W" ++ prelude.textOf n) ["w" ++ prelude.textOf n ++ " = " ++ prelude.textOf n] false [] end if
+end function
+
+end unit

@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+- Add a Haskell extractor (`--lang haskell`, alias `hs`): one package per `.hs`
+  module; functions, constants, operators, data and newtype types with their
+  constructors and record fields, type synonyms, classes with methods and
+  superclasses, and instances (new symbol kind `instance`); export lists for
+  visibility, Haddock docs (new format `haddock`), `Main` entrypoints, and call
+  edges by the same honesty ladder as the other syntactic extractors. Skips
+  dot-directories, `dist-newstyle/` and `dist/`; `.lhs` and `.hs-boot` are not
+  read.
+- Haskell CPP: `#if`/`#ifdef` sources are read in every build, and each fact
+  carries a `when` condition naming the builds that see it (`"unread"` past a
+  cap of 256 builds). `ax assay --when`, `--when-file` and `--when-complete`
+  fix names and package versions; `.assayxport/when` (written by
+  `ax when init`) is read on every run unless `--when-no-discovery`; `watch`,
+  `serve` and `diff` read it too.
+- gotreesitter v0.56.0 plus Haskell grammar fixes, from a fork
+  (`replace` in `go.mod`) until they are upstream.
+
 ## v0.26.0
 
 - `maven-repository` releases may span several groups: an `artifacts` entry is

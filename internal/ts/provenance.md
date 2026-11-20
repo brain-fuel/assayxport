@@ -6,7 +6,7 @@ Python tasks depend on the stable API in `ts.go`, never on the library directly.
 
 ## Library
 
-- **Chosen library:** `github.com/odvcencio/gotreesitter` v0.20.7 (the brief's *fallback*).
+- **Chosen library:** `github.com/odvcencio/gotreesitter` v0.56.0 (the brief's *fallback*; bumped from v0.20.7 for the Haskell grammar: v0.20.7 roots every headerless Haskell module in an `ERROR` node and its error trees break nesting. The Python grammar blob is byte-identical in both versions, sha256 below.)
 - **Runtime model:** pure-Go, **cgo-free** tree-sitter runtime. No WASM runtime, no
   C toolchain, no shared objects; the parser and grammars are plain Go.
 - **License:** see the module's `LICENSE`.
@@ -44,7 +44,7 @@ transitive dep were removed by `go mod tidy` after the switch.
 - Obtained at runtime via `grammars.PythonLanguage()`, which lazily decodes an
   embedded grammar blob shipped inside the library module.
 - **Embedded blob:** `grammars/grammar_blobs/python.bin` inside
-  `github.com/odvcencio/gotreesitter@v0.20.7`.
+  `github.com/odvcencio/gotreesitter@v0.56.0` (identical to v0.20.7's).
   - size: 60172 bytes
   - sha256: `cde4a67dc6af6e1232dbbd1eab8618478d1d73727020e8a8002542390a452d37`
   - (This is a record of the upstream module's embedded artifact for auditing; the
@@ -53,6 +53,41 @@ transitive dep were removed by `go mod tidy` after the switch.
   `tree-sitter/tree-sitter-python` grammar (the generated `parser.c` is credited in
   the library's `grammars/python_external_lex_states_gen.go`).
 - **tree-sitter language ABI version:** 15 (`RuntimeLanguageVersion`).
+
+## Haskell grammar
+
+- **Built-in, not vendored.** Obtained at runtime via `grammars.HaskellLanguage()`.
+- **Embedded blob:** `grammars/grammar_blobs/haskell.bin` inside
+  `github.com/odvcencio/gotreesitter@v0.56.0`.
+  - size: 290831 bytes
+  - sha256: `fcfc8794bca4442ebf5688d88e2397c78a22c8f0b585c4e1b868986cfa52dd09`
+- **Upstream source:** `tree-sitter/tree-sitter-haskell` @ `0975ef72fc3c47b530309ca93937d7d143523628`
+  (`grammars/languages.lock`); MIT.
+- **Known runtime defect (v0.56.0, latest at the time of writing):** after a class whose
+  method has a value type (`m :: a`) and two later declarations among `data`, `newtype` and
+  `type` (two synonyms, or a `data` and a synonym), a following class or instance with a
+  context (`class Eq a => C a`, `instance (Show a) => Show (Box a)`) is misparsed: an `ERROR`
+  node, and the earlier class's block runs to the end of the file. The Haskell extractor
+  drops every class member at or left of its class's column (impossible in valid layout),
+  so the declarations after the defect are missed rather than reported as methods.
+  v0.20.7 parses these files. Not yet reported to gotreesitter.
+- **Second known runtime defect (v0.56.0):** a qualified record pattern inside a cons
+  pattern in a `case` alternative,
+
+  ```haskell
+  module M where
+  f cs = case cs of
+    (P.C{ P.n = n }:_) -> Just n
+  ```
+
+  parses to a root whose only child is `declarations` from 3:25: the header and
+  everything before it are dropped, with no `ERROR` node. Seen in real code (pandoc,
+  ShellCheck). Whole-file error recovery can bury the header the same way. When the
+  parse has no header but the source has a line starting with `module `, the Haskell
+  extractor does not report the module, rather than read it as a headerless `Main`.
+  v0.20.7 parses this file. Not yet reported to gotreesitter.
+- **Grammar limit (both versions):** a typed-pattern parameter, `f (x :: T) = …`
+  (ScopedTypeVariables), is misparsed; that equation is missed.
 
 ## Java grammar
 

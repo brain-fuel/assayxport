@@ -597,6 +597,11 @@ type JavaScriptLanguage struct{}
 
 func (JavaScriptLanguage) isLanguage() {}
 
+//goplus:variant (Language) HaskellLanguage
+type HaskellLanguage struct{}
+
+func (HaskellLanguage) isLanguage() {}
+
 // LanguageCases selects one handler per Language variant for LanguageFold.
 type LanguageCases[R any] struct {
 	GoLanguage         func() R
@@ -604,6 +609,7 @@ type LanguageCases[R any] struct {
 	JavaLanguage       func() R
 	TypeScriptLanguage func() R
 	JavaScriptLanguage func() R
+	HaskellLanguage    func() R
 }
 
 // LanguageFold reduces Language by one-level case analysis.
@@ -619,6 +625,8 @@ func LanguageFold[R any](l Language, cs LanguageCases[R]) R {
 		return cs.TypeScriptLanguage()
 	case JavaScriptLanguage:
 		return cs.JavaScriptLanguage()
+	case HaskellLanguage:
+		return cs.HaskellLanguage()
 	default:
 		panic("goplus: impossible enum value in LanguageFold")
 	}
@@ -632,6 +640,7 @@ type LanguageEqOverrides struct {
 	JavaLanguage       func(x, y JavaLanguage) (eq, handled bool)
 	TypeScriptLanguage func(x, y TypeScriptLanguage) (eq, handled bool)
 	JavaScriptLanguage func(x, y JavaScriptLanguage) (eq, handled bool)
+	HaskellLanguage    func(x, y HaskellLanguage) (eq, handled bool)
 }
 
 // LanguageEqualWith reports structural equality of a and b under ov.
@@ -695,6 +704,18 @@ func LanguageEqualWith(a, b Language, ov LanguageEqOverrides) bool {
 		}
 		if ov.JavaScriptLanguage != nil {
 			if eq, handled := ov.JavaScriptLanguage(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case HaskellLanguage:
+		y, ok := any(b).(HaskellLanguage)
+		if !ok {
+			return false
+		}
+		if ov.HaskellLanguage != nil {
+			if eq, handled := ov.HaskellLanguage(x, y); handled {
 				return eq
 			}
 		}
@@ -772,6 +793,11 @@ type EnumConstantSymbol struct{}
 
 func (EnumConstantSymbol) isSymbolKind() {}
 
+//goplus:variant (SymbolKind) InstanceSymbol
+type InstanceSymbol struct{}
+
+func (InstanceSymbol) isSymbolKind() {}
+
 // SymbolKindCases selects one handler per SymbolKind variant for SymbolKindFold.
 type SymbolKindCases[R any] struct {
 	TypeSymbol         func() R
@@ -786,6 +812,7 @@ type SymbolKindCases[R any] struct {
 	PropertySymbol     func() R
 	ClassSymbol        func() R
 	EnumConstantSymbol func() R
+	InstanceSymbol     func() R
 }
 
 // SymbolKindFold reduces SymbolKind by one-level case analysis.
@@ -815,6 +842,8 @@ func SymbolKindFold[R any](s SymbolKind, cs SymbolKindCases[R]) R {
 		return cs.ClassSymbol()
 	case EnumConstantSymbol:
 		return cs.EnumConstantSymbol()
+	case InstanceSymbol:
+		return cs.InstanceSymbol()
 	default:
 		panic("goplus: impossible enum value in SymbolKindFold")
 	}
@@ -835,6 +864,7 @@ type SymbolKindEqOverrides struct {
 	PropertySymbol     func(x, y PropertySymbol) (eq, handled bool)
 	ClassSymbol        func(x, y ClassSymbol) (eq, handled bool)
 	EnumConstantSymbol func(x, y EnumConstantSymbol) (eq, handled bool)
+	InstanceSymbol     func(x, y InstanceSymbol) (eq, handled bool)
 }
 
 // SymbolKindEqualWith reports structural equality of a and b under ov.
@@ -982,6 +1012,18 @@ func SymbolKindEqualWith(a, b SymbolKind, ov SymbolKindEqOverrides) bool {
 		}
 		if ov.EnumConstantSymbol != nil {
 			if eq, handled := ov.EnumConstantSymbol(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case InstanceSymbol:
+		y, ok := any(b).(InstanceSymbol)
+		if !ok {
+			return false
+		}
+		if ov.InstanceSymbol != nil {
+			if eq, handled := ov.InstanceSymbol(x, y); handled {
 				return eq
 			}
 		}
@@ -1304,6 +1346,11 @@ type TSDoc struct{}
 
 func (TSDoc) isDocumentationFormat() {}
 
+//goplus:variant (DocumentationFormat) Haddock
+type Haddock struct{}
+
+func (Haddock) isDocumentationFormat() {}
+
 // DocumentationFormatCases selects one handler per DocumentationFormat variant for DocumentationFormatFold.
 type DocumentationFormatCases[R any] struct {
 	NoDocumentation func() R
@@ -1311,6 +1358,7 @@ type DocumentationFormatCases[R any] struct {
 	Docstring       func() R
 	JavaDoc         func() R
 	TSDoc           func() R
+	Haddock         func() R
 }
 
 // DocumentationFormatFold reduces DocumentationFormat by one-level case analysis.
@@ -1326,6 +1374,8 @@ func DocumentationFormatFold[R any](d DocumentationFormat, cs DocumentationForma
 		return cs.JavaDoc()
 	case TSDoc:
 		return cs.TSDoc()
+	case Haddock:
+		return cs.Haddock()
 	default:
 		panic("goplus: impossible enum value in DocumentationFormatFold")
 	}
@@ -1339,6 +1389,7 @@ type DocumentationFormatEqOverrides struct {
 	Docstring       func(x, y Docstring) (eq, handled bool)
 	JavaDoc         func(x, y JavaDoc) (eq, handled bool)
 	TSDoc           func(x, y TSDoc) (eq, handled bool)
+	Haddock         func(x, y Haddock) (eq, handled bool)
 }
 
 // DocumentationFormatEqualWith reports structural equality of a and b under ov.
@@ -1402,6 +1453,18 @@ func DocumentationFormatEqualWith(a, b DocumentationFormat, ov DocumentationForm
 		}
 		if ov.TSDoc != nil {
 			if eq, handled := ov.TSDoc(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case Haddock:
+		y, ok := any(b).(Haddock)
+		if !ok {
+			return false
+		}
+		if ov.Haddock != nil {
+			if eq, handled := ov.Haddock(x, y); handled {
 				return eq
 			}
 		}
@@ -2089,6 +2152,8 @@ func LanguageOf(value string) result.Result[Language, SemanticFailure] {
 		return result.Ok[Language, SemanticFailure]{Value: TypeScriptLanguage{}}
 	case "javascript":
 		return result.Ok[Language, SemanticFailure]{Value: JavaScriptLanguage{}}
+	case "haskell":
+		return result.Ok[Language, SemanticFailure]{Value: HaskellLanguage{}}
 	default:
 		return result.Err[Language, SemanticFailure]{Err: InvalidSemantic{Field: "language", Value: value}}
 	}
@@ -2120,6 +2185,8 @@ func SymbolKindOf(value string) result.Result[SymbolKind, SemanticFailure] {
 		return result.Ok[SymbolKind, SemanticFailure]{Value: ClassSymbol{}}
 	case "enum-constant":
 		return result.Ok[SymbolKind, SemanticFailure]{Value: EnumConstantSymbol{}}
+	case "instance":
+		return result.Ok[SymbolKind, SemanticFailure]{Value: InstanceSymbol{}}
 	default:
 		return result.Err[SymbolKind, SemanticFailure]{Err: InvalidSemantic{Field: "symbol kind", Value: value}}
 	}
@@ -2171,6 +2238,8 @@ func DocumentationFormatOf(value string) result.Result[DocumentationFormat, Sema
 		return result.Ok[DocumentationFormat, SemanticFailure]{Value: JavaDoc{}}
 	case "tsdoc":
 		return result.Ok[DocumentationFormat, SemanticFailure]{Value: TSDoc{}}
+	case "haddock":
+		return result.Ok[DocumentationFormat, SemanticFailure]{Value: Haddock{}}
 	default:
 		return result.Err[DocumentationFormat, SemanticFailure]{Err: InvalidSemantic{Field: "documentation format", Value: value}}
 	}

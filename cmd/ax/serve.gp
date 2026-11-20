@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"goforge.dev/assayxport/internal/explorer"
+	"goforge.dev/assayxport/internal/schema"
 )
 
 // watchInterval is how often the poller re-walks the tree, and settleDelay
@@ -41,7 +42,7 @@ const (
 // watchExts are the file extensions whose changes trigger a re-assay,
 // mirroring the extractors' inputs.
 var watchExts = map[string]bool{
-	".go": true, ".py": true, ".java": true,
+	".go": true, ".py": true, ".java": true, ".hs": true,
 	".ts": true, ".tsx": true, ".mts": true, ".cts": true,
 	".js": true, ".jsx": true, ".mjs": true, ".cjs": true,
 }
@@ -62,6 +63,10 @@ var skipDirs = map[string]bool{
 // with the same watched files, sizes, and mtimes produce the same digest.
 func digest(root string) uint64 {
 	h := fnv.New64a()
+	// The decisions file is a watched input: a change to it starts a pass (D5).
+	if info, err := os.Stat(decisionsFile(root)); err == nil {
+		fmt.Fprintf(h, "when|%d|%d\n", info.Size(), info.ModTime().UnixNano())
+	}
 	// filepath.WalkDir visits entries in lexical order, so the fold over
 	// (path, size, mtime) is deterministic without collecting and sorting.
 	_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -162,12 +167,31 @@ func (c *current) get() *snapshot {
 	return c.snap
 }
 
+// assayPass is one pass of `ax serve` (without the lazy shards) and of `ax
+// watch`: the decisions file is read again, so that one edited while they run
+// is read at the next pass (D5), and the tree is assayed in memory.
+func assayPass(path string, langs stringsFlag, quiet, noDiscovery bool) (schema.Index, map[string]schema.Shard, error) {
+	if err := refreshWhen(path, noDiscovery); err != nil {
+		return schema.Index{}, nil, err
+	}
+	return assayOnce(path, langs, quiet)
+}
+
+// assayPassToDir is `ax serve`'s lazy pass: assayPass, streamed into dir.
+func assayPassToDir(path string, langs stringsFlag, quiet, noDiscovery bool, dir string) (schema.Index, error) {
+	if err := refreshWhen(path, noDiscovery); err != nil {
+		return schema.Index{}, err
+	}
+	return assayToDir(path, langs, quiet, dir)
+}
+
 func runServeCmd(args []string) error {
 	fs2 := flag.NewFlagSet("ax serve", flag.ContinueOnError)
 	port := fs2.Int("port", 7979, "port to listen on")
 	noWatch := fs2.Bool("no-watch", false, "serve a single assay; do not re-assay on save")
 	noWasm := fs2.Bool("no-wasm", false, "serve the whole manifest inline instead of the lazy WASM explorer")
 	quiet := fs2.Bool("quiet", false, "suppress progress on stderr")
+	noDiscovery := fs2.Bool("when-no-discovery", false, "do not read <path>/.assayxport/when")
 	var langs stringsFlag
 	fs2.Var(&langs, "lang", "language to assay (repeatable; default: all)")
 	fs2.Usage = func() {
@@ -219,7 +243,7 @@ func runServeCmd(args []string) error {
 	// return is the generation dir (empty in --no-wasm) for delayed cleanup.
 	build := func() (*snapshot, string, error) {
 		if !lazy {
-			idx, shards, err := assayOnce(path, langs, *quiet)
+			idx, shards, err := assayPass(path, langs, *quiet, *noDiscovery)
 			if err != nil {
 				return nil, "", err
 			}
@@ -230,7 +254,7 @@ func runServeCmd(args []string) error {
 		// whole symbol graph is never held in RAM at once.
 		g := atomic.AddUint64(&gen, 1)
 		dir := filepath.Join(tmpRoot, fmt.Sprintf("gen-%d", g))
-		idx, err := assayToDir(path, langs, *quiet, dir)
+		idx, err := assayPassToDir(path, langs, *quiet, *noDiscovery, dir)
 		if err != nil {
 			return nil, "", err
 		}
@@ -555,6 +579,7 @@ func runWatchCmd(args []string) error {
 	out := fs2.String("out", "", "output directory (default: assay path)")
 	quiet := fs2.Bool("quiet", false, "suppress progress on stderr")
 	noHTML := fs2.Bool("no-html", false, "skip writing assayxport.html")
+	noDiscovery := fs2.Bool("when-no-discovery", false, "do not read <path>/.assayxport/when")
 	var langs stringsFlag
 	fs2.Var(&langs, "lang", "language to assay (repeatable; default: all)")
 	fs2.Usage = func() {
@@ -575,7 +600,7 @@ func runWatchCmd(args []string) error {
 
 	once := func() {
 		start := time.Now()
-		idx, shards, err := assayOnce(path, langs, *quiet)
+		idx, shards, err := assayPass(path, langs, *quiet, *noDiscovery)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "ax: assay failed (artifacts unchanged):", err)
 			return

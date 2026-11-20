@@ -1,0 +1,1549 @@
+unit assayxport.haskell
+-- ref:DR-0035 ref:DR-0040 ref:DR-0046 (LawSpec is the law surface; the Haskell extractor keeps the contract the Python one was calibrated to)
+
+import lawspec.host
+import assayxport.contract as c (Package, SourceFile, RawFile, Extension, ExtractFailure, wellFormed, failureNames, rawPath, revokeTarget, law "|matches its reference model|, law "|well-formed on any input|, law "|other languages' files are ignored|, law "|an unreadable file fails the extraction, and says which|)
+import assayxport.haskell.policy as hs (HsTree, HsModule, HsDecl, ValueModel, DataModel, ClassModel, InstModel, ModKind, DocStyle, ImportModel, Callee, SigKind, ExportPick, ScopeForm, CallSite, render, renderCrlf, expected, everything, hasEveryConstruct, sizeLabel, hm, fixtureCppSource, fixtureCppPackage, fixtureCpp2Source, fixtureCpp2Package)
+import assayxport.conditions as wn
+import assayxport.conditions.policy as wp (Env, BindingError, Filtered)
+import assayxport.haskell.extract as hx (HaskellParser)
+import assayxport.haskell.cpp as cpp
+
+-- S1.j: CONFORMANCE of ax's Haskell extractor to the policy in
+-- assayxport.haskell.policy, in the calibrated Python unit's shape (one
+-- conformance law with a table of literal trees and a mixed strategy, and
+-- the contract's generic laws). Written before the extractor (spec
+-- amendment: laws first): every law here is red until it exists.
+
+-- ---------------------------------------------------------------------------
+-- The port: ax's extract.Extractor for Haskell, observed through the CLI
+-- (`ax assay <root> --lang haskell --stdout`), like the Python unit.
+
+ability HaskellExtractor is
+  language :: Text
+  extract :: Text -> List Package fails with ExtractFailure
+  laws
+    law "|the language is haskell| is
+      id: "HSX-0"
+      definition : language = "haskell" end definition
+      references:
+        "|spec|: "spec.md, Architecture: Extractor (Language, Extract(root))"
+      end references
+    end law
+  end laws
+end ability
+
+procedure modelIn (root :: Text) (files :: List SourceFile) -> List Package uses FileSystem, HaskellExtractor fails with ExtractFailure is
+  c.writeSources root files; extract root
+end procedure
+
+-- `modelIn` under a root that exists even for an empty tree
+-- (lawspec.host's createDirectories, 0.32.0).
+procedure namedRootIn (root :: Text) (files :: List SourceFile) -> List Package uses FileSystem, HaskellExtractor fails with ExtractFailure is
+  createDirectories root; modelIn root files
+end procedure
+
+procedure rawIn (root :: Text) (tree :: List RawFile) -> List Package uses FileSystem, HaskellExtractor fails with ExtractFailure is
+  c.writeRaw root tree; extract root
+end procedure
+
+-- The contract's unreadable-input step: the victim is a .hs file at d/.
+procedure revokedIn (root :: Text) (tree :: List RawFile) (victim :: RawFile) (whole :: Bool) -> Either ExtractFailure (List Package) uses FileSystem, c.Workspace, HaskellExtractor is
+  c.writeRaw root tree;
+  c.writeFile (root ++ "/d/" ++ c.rawPath victim) (prelude.utf8 victim.content);
+  c.revoke (c.revokeTarget root "d" (c.rawPath victim) whole);
+  let r = prelude.attempt (extract root) in
+  c.restore (c.revokeTarget root "d" (c.rawPath victim) whole); r end let
+end procedure
+
+-- ---------------------------------------------------------------------------
+-- Conformance.
+
+law "|haskell: conforms to the policy| for dir :: TemporaryDirectory is
+  id: "HSX-1"
+  description :
+    "ax's Haskell extractor reports, for any modelled source tree, exactly
+    what the policy's reference `expected` says. The table pins one tree per
+    family of constructs; the harness draws the generated cases from the
+    designed strategy and the default generator together."
+  end description
+  definition : apply law "|matches its reference model| (modelIn (directoryPath dir)) render expected end definition
+  expect c.normalForm (modelIn (directoryPath dir) (render x)) == c.normalForm (expected x)
+  in table (x) :
+    -- an empty tree
+    row HsTree record{ modules = [] , noise = false , exotic = false}
+    -- one named module with nothing in it
+    row HsTree record{ modules = [HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [] , decls = [] , mainDef = false}] , noise = false , exotic = false}
+    -- values: arguments, signatures, a point-free function, a constant, an operator, docs
+    row HsTree record{ modules = [HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [] , decls = [DValue (ValueModel record{ operator = false , params = 2 , sig = SigFunc , doc = Present DocOne , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []}) , DValue (ValueModel record{ operator = false , params = 1 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []}) , DValue (ValueModel record{ operator = false , params = 0 , sig = SigFunc , doc = Present DocTwo , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []}) , DValue (ValueModel record{ operator = false , params = 0 , sig = SigValue , doc = Present DocNoSpace , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []}) , DValue (ValueModel record{ operator = false , params = 0 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []}) , DValue (ValueModel record{ operator = true , params = 0 , sig = SigFunc , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []}) , DValue (ValueModel record{ operator = false , params = 2 , sig = SigFunc , doc = Absent , shadow = false , clauses = true , sigAfter = true , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = [HLocal 1]})] , mainDef = false}] , noise = false , exotic = false}
+    -- every callee, with every import
+    row HsTree record{ modules = [HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [ImpExplicit , ImpQualifiedAs , ImpQualified , ImpOpen] , decls = [DValue (ValueModel record{ operator = false , params = 1 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = [HTop 0 , HTop 1 , HLocal 0 , HExplicit , HQualAs , HQualFull , HOpenName , HPrelude 0 , HPrelude 2 , HUnknown , HUnknownAlias , HLambdaApply]}) , DValue (ValueModel record{ operator = false , params = 0 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []}) , DData (DataModel record{ isNewtype = false , asRecord = false , cons = 0 , fields = 0 , doc = Absent , after = false , void = false , pairFields = false , afterBelow = false , sharedCon = false , fmtDoc = false , blockAfter = false , infixCons = false , infixHead = false})] , mainDef = false}] , noise = false , exotic = false}
+    -- every callee, with no imports
+    row HsTree record{ modules = [HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [] , decls = [DValue (ValueModel record{ operator = false , params = 1 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = [HTop 0 , HTop 1 , HLocal 0 , HExplicit , HQualAs , HQualFull , HOpenName , HPrelude 0 , HPrelude 2 , HUnknown , HUnknownAlias , HLambdaApply]}) , DValue (ValueModel record{ operator = false , params = 0 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []})] , mainDef = false}] , noise = false , exotic = false}
+    -- the Prelude hidden, a Prelude list, then implicit Prelude off
+    row HsTree record{ modules = [HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [ImpHidePrelude] , decls = [DValue (ValueModel record{ operator = false , params = 0 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = [HPrelude 0 , HPrelude 1]})] , mainDef = false} , HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [ImpPreludeOnly] , decls = [DValue (ValueModel record{ operator = false , params = 0 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = [HPrelude 0 , HPrelude 1]})] , mainDef = false} , HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = true , rebindable = false , imports = [] , decls = [DValue (ValueModel record{ operator = false , params = 0 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = [HPrelude 0 , HPrelude 3]})] , mainDef = false}] , noise = false , exotic = false}
+    -- a parameter that shadows a top-level name
+    row HsTree record{ modules = [HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [] , decls = [DValue (ValueModel record{ operator = false , params = 0 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []}) , DValue (ValueModel record{ operator = false , params = 1 , sig = SigNone , doc = Absent , shadow = true , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = [HTop 0 , HLocal 0]})] , mainDef = false}] , noise = false , exotic = false}
+    -- data, records with field docs, newtypes, a synonym
+    row HsTree record{ modules = [HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [] , decls = [DData (DataModel record{ isNewtype = false , asRecord = false , cons = 2 , fields = 2 , doc = Present DocOne , after = false , void = false , pairFields = false , afterBelow = false , sharedCon = false , fmtDoc = false , blockAfter = false , infixCons = false , infixHead = false}) , DData (DataModel record{ isNewtype = false , asRecord = true , cons = 0 , fields = 2 , doc = Absent , after = true , void = false , pairFields = false , afterBelow = false , sharedCon = false , fmtDoc = false , blockAfter = false , infixCons = false , infixHead = false}) , DData (DataModel record{ isNewtype = true , asRecord = false , cons = 0 , fields = 0 , doc = Absent , after = false , void = false , pairFields = false , afterBelow = false , sharedCon = false , fmtDoc = false , blockAfter = false , infixCons = false , infixHead = false}) , DData (DataModel record{ isNewtype = true , asRecord = true , cons = 0 , fields = 0 , doc = Absent , after = false , void = false , pairFields = false , afterBelow = false , sharedCon = false , fmtDoc = false , blockAfter = false , infixCons = false , infixHead = false}) , DData (DataModel record{ isNewtype = false , asRecord = false , cons = 0 , fields = 0 , doc = Absent , after = false , void = true , pairFields = false , afterBelow = false , sharedCon = false , fmtDoc = false , blockAfter = false , infixCons = false , infixHead = false}) , DSyn] , mainDef = false}] , noise = false , exotic = false}
+    -- classes and instances
+    row HsTree record{ modules = [HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [] , decls = [DClass (ClassModel record{ super = 1 , methods = 2 , valueMethod = true , pairMethods = false , methodDoc = false , opMethod = false , doc = Present DocOne}) , DClass (ClassModel record{ super = 0 , methods = 0 , valueMethod = false , pairMethods = false , methodDoc = false , opMethod = false , doc = Absent}) , DData (DataModel record{ isNewtype = false , asRecord = false , cons = 0 , fields = 0 , doc = Absent , after = false , void = false , pairFields = false , afterBelow = false , sharedCon = false , fmtDoc = false , blockAfter = false , infixCons = false , infixHead = false}) , DInst (InstModel record{ own = true , target = 0 , spaced = true , wrapped = true , method = true , doc = false}) , DInst (InstModel record{ own = false , target = 0 , spaced = false , wrapped = false , method = false , doc = false}) , DInst (InstModel record{ own = false , target = 5 , spaced = false , wrapped = false , method = false , doc = false})] , mainDef = false}] , noise = false , exotic = false}
+    -- export lists: values, T(..), T, T(K), C(..), C, an empty list
+    row HsTree record{ modules = [HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Present [EValue 0 , ETypeAll 0 , ETypeOnly 1 , ETypeSome 0 , EClassAll 0 , EClassOnly 1] , noPrelude = false , rebindable = false , imports = [] , decls = [DValue (ValueModel record{ operator = false , params = 1 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []}) , DValue (ValueModel record{ operator = false , params = 0 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []}) , DData (DataModel record{ isNewtype = false , asRecord = false , cons = 1 , fields = 1 , doc = Absent , after = false , void = false , pairFields = false , afterBelow = false , sharedCon = false , fmtDoc = false , blockAfter = false , infixCons = false , infixHead = false}) , DData (DataModel record{ isNewtype = false , asRecord = true , cons = 0 , fields = 1 , doc = Absent , after = false , void = false , pairFields = false , afterBelow = false , sharedCon = false , fmtDoc = false , blockAfter = false , infixCons = false , infixHead = false}) , DClass (ClassModel record{ super = 0 , methods = 1 , valueMethod = false , pairMethods = false , methodDoc = false , opMethod = false , doc = Absent}) , DClass (ClassModel record{ super = 0 , methods = 1 , valueMethod = false , pairMethods = false , methodDoc = false , opMethod = false , doc = Absent}) , DInst (InstModel record{ own = false , target = 0 , spaced = false , wrapped = false , method = false , doc = false})] , mainDef = false} , HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Present [] , noPrelude = false , rebindable = false , imports = [] , decls = [DValue (ValueModel record{ operator = false , params = 0 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []})] , mainDef = false}] , noise = false , exotic = false}
+    -- Main with a header, a module doc and an exported main; a dotted module
+    row HsTree record{ modules = [HsModule record{ kind = MainHeader , doc = true , blockDoc = false , docGap = false , exports = Present [EMain] , noPrelude = false , rebindable = false , imports = [] , decls = [DValue (ValueModel record{ operator = false , params = 0 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []})] , mainDef = true} , HsModule record{ kind = Dotted , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [] , decls = [DValue (ValueModel record{ operator = false , params = 1 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = [HTop 0]})] , mainDef = true}] , noise = false , exotic = false}
+    -- a headerless Main, and a named module with main (not an entrypoint)
+    row HsTree record{ modules = [HsModule record{ kind = Headerless , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [] , decls = [DValue (ValueModel record{ operator = false , params = 0 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []})] , mainDef = true} , HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [] , decls = [] , mainDef = true}] , noise = false , exotic = false}
+    -- noise: a dot-directory, a literate file and a boot file
+    row HsTree record{ modules = [HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [] , decls = [DValue (ValueModel record{ operator = false , params = 0 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []})] , mainDef = false}] , noise = true , exotic = false}
+    -- review 1: curried calls, a shared alias, hiding(...) and post-qualified imports
+    row HsTree record{ modules = [HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [ImpHidingTight , ImpQualifiedPost , ImpSharedAlias] , decls = [DValue (ValueModel record{ operator = false , params = 1 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = [HCurried , HShared , HInsert , HPostQualified , HPrelude 1]})] , mainDef = false}] , noise = false , exotic = false}
+    -- review 1: the Prelude: hiding over lines, an empty list, qualified with hiding, RebindableSyntax
+    row HsTree record{ modules = [HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [ImpHidingLines] , decls = [DValue (ValueModel record{ operator = false , params = 0 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = [HPrelude 0 , HPrelude 1]})] , mainDef = false} , HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [ImpPreludeEmpty] , decls = [DValue (ValueModel record{ operator = false , params = 0 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = [HPrelude 1 , HCurried]})] , mainDef = false} , HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [ImpPreludeQualified , ImpHidePrelude] , decls = [DValue (ValueModel record{ operator = false , params = 0 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = [HPrelude 0 , HPrelude 1]})] , mainDef = false} , HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = true , imports = [] , decls = [DValue (ValueModel record{ operator = false , params = 0 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = [HPrelude 1]})] , mainDef = false}] , noise = false , exotic = false}
+    -- review 1: constrained and forall signatures, infix definitions
+    row HsTree record{ modules = [HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [] , decls = [DValue (ValueModel record{ operator = false , params = 2 , sig = SigConstrained , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = [HTop 0]}) , DValue (ValueModel record{ operator = false , params = 0 , sig = SigForall , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []}) , DValue (ValueModel record{ operator = true , params = 0 , sig = SigFunc , doc = Absent , shadow = false , clauses = true , sigAfter = false , infixDef = true , scope = NoScope , site = SiteList , docAfter = false , calls = [HLocal 0]}) , DValue (ValueModel record{ operator = false , params = 2 , sig = SigFunc , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = true , scope = NoScope , site = SiteList , docAfter = false , calls = [HLocal 1]})] , mainDef = false}] , noise = false , exotic = false}
+    -- review 1: every scope form shadowing the first value
+    row HsTree record{ modules = [HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [] , decls = [DValue (ValueModel record{ operator = false , params = 0 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []}) , DValue (ValueModel record{ operator = false , params = 1 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = InWhere , site = SiteList , docAfter = false , calls = [HTop 0]}) , DValue (ValueModel record{ operator = false , params = 1 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = InLet , site = SiteList , docAfter = false , calls = [HTop 0]}) , DValue (ValueModel record{ operator = false , params = 1 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = InLambda , site = SiteList , docAfter = false , calls = [HTop 0]}) , DValue (ValueModel record{ operator = false , params = 1 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = InCase , site = SiteList , docAfter = false , calls = [HTop 0]}) , DValue (ValueModel record{ operator = false , params = 1 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = InDo , site = SiteList , docAfter = false , calls = [HTop 0]}) , DValue (ValueModel record{ operator = false , params = 1 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = InPattern , site = SiteList , docAfter = false , calls = [HTop 0]})] , mainDef = false}] , noise = false , exotic = false}
+    -- review 1: paired and below-documented fields, paired documented methods, superclass forms, field and method exports
+    row HsTree record{ modules = [HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Present [EField 0 , EMethod 0 , ETypeOnly 0] , noPrelude = false , rebindable = false , imports = [] , decls = [DData (DataModel record{ isNewtype = false , asRecord = true , cons = 0 , fields = 2 , doc = Absent , after = true , void = false , pairFields = true , afterBelow = false , sharedCon = false , fmtDoc = false , blockAfter = false , infixCons = false , infixHead = false}) , DData (DataModel record{ isNewtype = false , asRecord = true , cons = 0 , fields = 2 , doc = Absent , after = false , void = false , pairFields = false , afterBelow = true , sharedCon = false , fmtDoc = false , blockAfter = false , infixCons = false , infixHead = false}) , DClass (ClassModel record{ super = 2 , methods = 2 , valueMethod = false , pairMethods = true , methodDoc = true , opMethod = false , doc = Absent}) , DClass (ClassModel record{ super = 3 , methods = 1 , valueMethod = false , pairMethods = false , methodDoc = false , opMethod = false , doc = Absent})] , mainDef = false}] , noise = false , exotic = false}
+    -- review 1: a headerless module exports only main; the out-of-scope forms
+    row HsTree record{ modules = [HsModule record{ kind = Headerless , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [] , decls = [DValue (ValueModel record{ operator = false , params = 0 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []}) , DValue (ValueModel record{ operator = false , params = 1 , sig = SigNone , doc = Absent , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []})] , mainDef = true}] , noise = false , exotic = true}
+
+    -- review 6: a doc after a plain comment line, on a value, a signed function, data and a class; then the fixture modules
+    row HsTree record{ modules = [HsModule record{ kind = Named , doc = false , blockDoc = false , docGap = false , exports = Absent , noPrelude = false , rebindable = false , imports = [] , decls = [DValue (ValueModel record{ operator = false , params = 0 , sig = SigNone , doc = Present DocAfterComment , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []}) , DValue (ValueModel record{ operator = false , params = 1 , sig = SigFunc , doc = Present DocAfterComment , shadow = false , clauses = false , sigAfter = false , infixDef = false , scope = NoScope , site = SiteList , docAfter = false , calls = []}) , DData (DataModel record{ isNewtype = false , asRecord = false , cons = 1 , fields = 1 , doc = Present DocAfterComment , after = false , void = false , pairFields = false , afterBelow = false , sharedCon = false , fmtDoc = false , blockAfter = false , infixCons = false , infixHead = false}) , DClass (ClassModel record{ super = 0 , methods = 1 , valueMethod = false , pairMethods = false , methodDoc = false , opMethod = false , doc = Present DocAfterComment})] , mainDef = false}] , noise = false , exotic = true}
+  end table
+  references:
+    ref function hs.expected
+    ref function hs.render
+    "|spec|: "spec.md, What the extractor reports"
+  end references
+end law
+
+law "|haskell: well-formed on any input| for dir :: TemporaryDirectory is
+  id: "HSX-2"
+  definition : apply law "|well-formed on any input| (rawIn (directoryPath dir)) end definition
+  references:
+    "|contract|: "assayxport.contract, C-2"
+  end references
+end law
+
+law "|haskell: other files ignored| for a :: TemporaryDirectory, b :: TemporaryDirectory is
+  id: "HSX-3"
+  definition : apply law "|other languages' files are ignored| (rawIn (directoryPath a)) (rawIn (directoryPath b)) [c.HaskellFile] end definition
+  references:
+    "|contract|: "assayxport.contract, C-3"
+  end references
+end law
+
+law "|haskell: an unreadable file fails the extraction| for dir :: TemporaryDirectory is
+  id: "HSX-4"
+  definition : apply law "|an unreadable file fails the extraction, and says which| (revokedIn (directoryPath dir)) (directoryPath dir) c.HaskellFile end definition
+  example "|one unreadable module beside a readable one| :
+    tree = [RawFile record{ slot = 1 , extension = c.HaskellFile , content = "module M1 where\nf x = x\n"}]
+    slot = 2
+    content = "module M2 where\nx = 1\n"
+    whole = false
+    expect c.failureNames (revokedIn (directoryPath dir) tree (RawFile record{ slot = slot , extension = c.HaskellFile , content = content}) whole) (c.revokeTarget (directoryPath dir) "d" "m2.hs" whole) = true
+  end example
+  references:
+    "|contract|: "assayxport.contract, C-4 (matches Python, O17; maker question Q6)"
+  end references
+end law
+
+-- The walk skips dot-directories and build directories *below* the root
+-- it is given; the root itself is read whatever its name (a checkout at
+-- `~/src/dist`, or under `~/.cache`). Python's walk has the same guard.
+law "|haskell: a root named dist is read| for dir :: TemporaryDirectory is
+  id: "HSX-5"
+  definition : apply law "|matches its reference model| (namedRootIn (directoryPath dir ++ "/dist")) render expected end definition
+  references:
+    "|spec|: "spec.md, amendment 2026-11-07 (build directories under the root)"
+  end references
+end law
+
+law "|haskell: a root named like a dot-directory is read| for dir :: TemporaryDirectory is
+  id: "HSX-6"
+  definition : apply law "|matches its reference model| (namedRootIn (directoryPath dir ++ "/.hidden")) render expected end definition
+  references:
+    "|spec|: "spec.md, Discovery (dot-directories under the root)"
+  end references
+end law
+
+-- A CRLF checkout reads as the LF one. Only a law on the binary sees the
+-- native layer's CRLF step: without it, its mutant survived (2026-11-11).
+law "|haskell: Windows line endings read as Unix ones| for dir :: TemporaryDirectory is
+  id: "HSX-7"
+  definition : apply law "|matches its reference model| (modelIn (directoryPath dir)) renderCrlf expected end definition
+  references:
+    "|spec|: "spec.md, amendment (review 4, S3: CRLF)"
+  end references
+end law
+
+-- A module whose header the grammar loses is not reported at all: read as
+-- headerless it would be `Main`, exporting only `main`, every symbol
+-- mislabelled (corpus check C1; F90: this source parses to a root whose
+-- only child starts at line 3, with no ERROR node).
+law "|haskell: a module whose header the parse loses is not reported| for dir :: TemporaryDirectory is
+  id: "HSX-8"
+  definition :
+    prelude.isEmpty (modelIn (directoryPath dir) [SourceFile record{ path = "M.hs" , content = "}}}\nmodule M where\nf = 1\n"}])
+  end definition
+  references:
+    "|spec|: "spec.md, amendment 2026-11-11 (owner: a lost header is missed, never mislabelled)"
+  end references
+end law
+
+-- ---------------------------------------------------------------------------
+-- `--when` (next-cycle-2/design.md, section 6), observed through the CLI:
+--   ax assay <root> --lang haskell --stdout [--when LINE]... [--when-file F]... [--when-complete]
+-- The names are read from every `--when-file`, in the order given, and
+-- then from every `--when`, in the order given: a flag replaces what a
+-- file said, wherever it stands on the command line. The manifest is
+-- always filtered, with no flag by the empty environment. Each warning is
+-- one line on stderr, `ax: warning: ` and the text of `wp.warningsOf`.
+-- A line that cannot be read is a usage error: nothing on stdout, exit
+-- status 2, and `ax: ` with `wp.bindingErrorText` on stderr; the origin is
+-- the file's path as given, or `--when` with the flag's number from 1.
+
+--
+-- The decisions file (next-cycle-3/design.md), observed through the CLI:
+--   ax when init <root> --lang haskell
+--   ax assay <root> --lang haskell --stdout [--when-no-discovery] ...
+-- `<root>/.assayxport/when`, when it exists, is read as the first
+-- `--when-file`, before those given: so the order of reading is the
+-- discovered file, every `--when-file`, every `--when`, and a later line
+-- replaces an earlier one. `--when-no-discovery` leaves the file unread.
+-- After the warnings, stderr carries the lines to paste, as they are:
+-- `wn.decisionLines` for the names read and the names the files list.
+-- `ax assay` never writes the file. `ax when init` writes it only when it
+-- does not exist; when it exists, init prints on stdout the lines to add
+-- and leaves it as it is.
+--
+-- Next cycle 6 (next-cycle-6/design.md, sections 4 to 6; review 8, B2, S1,
+-- S2, N3, N4):
+--   * The decisions file is looked for only when <root> names a directory.
+--     A root that is a file (a JAR, a source file), or that does not exist,
+--     has no decisions file: the run is the run with `--when-no-discovery`.
+--     A path that cannot hold the file (`<root>/.assayxport` is a file)
+--     counts as absent too. A file that is there and cannot be read (it is
+--     a directory, or holds a bad line) is a usage error, as before.
+--   * `ax watch`, `ax serve` and `ax diff` read the decisions file as
+--     `ax assay` does: of their root, and for `diff` of each source that
+--     is a directory; each takes `--when-no-discovery`. None takes
+--     `--when`.
+--   * `ax when init` prints the warnings that are not about a missing
+--     name (`wp.initWarnings`), and where it finds no name its last line is
+--     `wp.initNothingText`. On a root that is not a directory it is a
+--     usage error.
+--   * `--quiet` silences every `ax: warning: ` line and the lines to
+--     paste; it changes neither the manifest nor the exit status, and a
+--     usage error is still printed.
+
+type WhenRun is a record{
+  packages :: List Package
+  warnings :: List Text
+  paste :: List Text}
+end type
+
+type InitRun is a record{
+  status :: Integer
+  out :: List Text
+  notes :: List Text}
+end type
+
+-- What a run that may fail left (next cycle 4; review 7, S3): the exit
+-- status, stdout as it is, and the stderr lines that start `ax: `, without
+-- that start, in order.
+type ExitRun is a record{
+  status :: Integer
+  out :: Text
+  errors :: List Text}
+end type
+
+ability HaskellWhen is
+  -- `ax assay <root> --lang haskell --stdout <args>`: the packages
+  -- printed; the stderr lines that start `ax: warning: `, without that
+  -- start, in order; and `paste`, the stderr lines that do not start
+  -- `ax: `, in order, as they are (an empty line is a line). A non-zero
+  -- exit fails with ax's message.
+  assayWith :: Text -> List Text -> WhenRun fails with ExtractFailure
+  -- `ax when init <root> --lang haskell`: the exit status; the lines of
+  -- stdout, as they are; and the stderr lines that start `ax: `, without
+  -- that start. It never fails: a non-zero exit is a status.
+  whenInit :: Text -> InitRun
+  -- The assay command observed whole (next cycle 4; review 7, S3): it
+  -- never fails; a non-zero exit is a status.
+  assayExit :: Text -> List Text -> ExitRun
+  -- The assay that writes its files (next cycle 5): `ax assay <root>
+  -- --lang haskell --out <out> <args>`, with no `--stdout`. The handler
+  -- first deletes a manifest an earlier run left in <out>
+  -- (`assayxport.json`, and the `.json` files under `.assayxport/`), so
+  -- that what it reads is what this run wrote. The packages are those of
+  -- the files written: the index `<out>/assayxport.json` and each shard it
+  -- names, put together as `--stdout` prints them. `warnings` and `paste`
+  -- are as for `assayWith` (ax's line `ax: wrote ...` is neither). A
+  -- non-zero exit fails with ax's message.
+  assayInto :: Text -> Text -> List Text -> WhenRun fails with ExtractFailure
+  -- `ax diff <a> <b> --lang haskell --stdout --quiet <args>` (next cycle
+  -- 6): the exit status, stdout as it is, and the stderr lines that start
+  -- `ax: `, without that start. It never fails: a non-zero exit is a
+  -- status.
+  diffExit :: Text -> Text -> List Text -> ExitRun
+  -- The first pass of `ax watch <root> --lang haskell --out <out>
+  -- --no-html <args>` (next cycle 6). The handler deletes an earlier
+  -- manifest in <out> as `assayInto` does, starts the command, waits until
+  -- its first pass has ended (the manifest is written and the command says
+  -- it is watching, or it says the assay failed), and stops it. The
+  -- result is as `assayInto`'s; a first pass that fails, fails with ax's
+  -- message.
+  watchInto :: Text -> Text -> List Text -> WhenRun fails with ExtractFailure
+end ability
+
+procedure cppRun (root :: Text) (args :: List Text) -> WhenRun uses FileSystem, HaskellWhen fails with ExtractFailure is
+  c.writeSources root [SourceFile record{ path = "Cpp.hs" , content = fixtureCppSource unitValue}]; assayWith root args
+end procedure
+
+procedure cppRunWithFile (root :: Text) (fileLines :: List Text) (args :: List Text) -> WhenRun uses FileSystem, HaskellWhen fails with ExtractFailure is
+  c.writeFile (root ++ ".when") (prelude.utf8 (unlines fileLines));
+  cppRun root (["--when-file", root ++ ".when"] ++ args)
+end procedure
+
+function unlines (ts :: List Text) -> Text is
+  first matching case of ts : when Nil then "" when Cons t rest then t ++ "\n" ++ unlines rest end case
+end function
+
+function whenFlags (ts :: List Text) -> List Text is
+  first matching case of ts : when Nil then [] when Cons t rest then ["--when", t] ++ whenFlags rest end case
+end function
+
+-- Lines about the fixture's names; a seed takes some of them, in order.
+function linePool (u :: Unit) -> List Text is
+  ["EXPORT_K=1", "EXPORT_K=0", "package base=4.18.1", "package base=4.7", "WITH_Q", "undef WITH_Q", "OLD_Q=1", "undef OLD_Q", "LEGACY=0", "LEGACY=1",
+   "ARG=0", "ARG=0x1", "NO_T", "undef NO_T", "WIDE=0", "WIDE=-1", "__GLASGOW_HASKELL__=908", "__GLASGOW_HASKELL__=810", "FAST=1", "undef FAST", "OTHER=3"]
+end function
+
+function someOf (seed :: Integer) (ts :: List Text) (k :: Integer) -> List Text is
+  first matching case of ts :
+    when Nil then []
+    when Cons t rest then (if wp.pick seed k 3 = 0 then [t] else [] end if) ++ someOf seed rest (k + 1)
+  end case
+end function
+
+function drawnLines (seed :: Integer) -> List Text is someOf seed (linePool unitValue) 0 ++ someOf (wp.mix seed 1) (linePool unitValue) 0 end function
+
+-- The pure answer: the fixture's expected manifest, filtered by the
+-- checked definitions (held by the WHEN laws).
+-- `fileLines` are the lines of the decisions files read, in the order of
+-- reading; `flagLines` the `--when` values. The names the files list as
+-- undecided are not asked for again in the lines to paste.
+function pureRunWith (fileLines :: List Text) (flagLines :: List Text) (full :: Bool) -> WhenRun is
+  first matching case of wn.readBindings (fileLines ++ flagLines) :
+    when Left e then WhenRun record{ packages = [] , warnings = ["unreadable line"] , paste = []}
+    when Right env then
+      (let given = (if full then wp.completed env else env end if) in
+       let f = wn.applyWhen given [fixtureCppPackage unitValue] in
+        WhenRun record{ packages = f.packages , warnings = wp.warningsWith f (wn.listedNames fileLines) ,
+                        paste = wn.decisionLines given (wn.listedNames fileLines) [fixtureCppPackage unitValue]} end let end let)
+  end case
+end function
+
+function pureRun (lines :: List Text) (full :: Bool) -> WhenRun is pureRunWith [] lines full end function
+
+function sameRun (got :: WhenRun) (want :: WhenRun) -> Bool is
+  c.normalForm got.packages = c.normalForm want.packages && got.warnings = want.warnings && got.paste = want.paste
+end function
+
+law "|haskell: --when filters as the checked definitions say, and warns of exactly the missing names| for dir :: TemporaryDirectory is
+  id: "HSX-9"
+  description :
+    "For any lines about the fixture's names, given as `--when` flags, with
+    or without `--when-complete`: ax prints the fixture's manifest filtered
+    by those names, and its warnings are the filter's: one line naming
+    exactly the names still missing (none when nothing is missing, so none
+    of that kind under `--when-complete`), and one line per condition that
+    cannot be evaluated. Since next cycle 3 the comparison (`sameRun`)
+    also holds the two lines that follow the missing names, and the lines
+    to paste: a block for every missing name, no decisions file being
+    read here."
+  end description
+  definition :
+    for all (seed :: Integer) (full :: Bool) =>
+      sameRun (cppRun (directoryPath dir) (whenFlags (drawnLines seed) ++ (if full then ["--when-complete"] else [] end if))) (pureRun (drawnLines seed) full)
+    end for all
+  end definition
+end law
+
+law "|haskell: a when-file and the same lines as flags are equivalent| for a :: TemporaryDirectory, b :: TemporaryDirectory is
+  id: "HSX-10"
+  description :
+    "The file's lines, with remarks and blank lines among them, give what
+    the same lines give as `--when` flags. Flags are read after files: a
+    flag before the `--when-file` on the command line still replaces the
+    file's line."
+  end description
+  definition :
+    for all (seed :: Integer) (full :: Bool) =>
+      (let ls = drawnLines seed in let tail_ = (if full then ["--when-complete"] else [] end if) in
+        cppRunWithFile (directoryPath a) (["# names", ""] ++ ls ++ ["  # end"]) tail_ = cppRun (directoryPath b) (whenFlags ls ++ tail_)
+          && sameRun (cppRun (directoryPath b) (["--when", "ARG=0", "--when-file", directoryPath a ++ ".when"] ++ tail_)) (pureRun (ls ++ ["ARG=0"]) full)
+      end let end let)
+    end for all
+  end definition
+end law
+
+law "|haskell: with no --when the warning lists every name the module depends on| for dir :: TemporaryDirectory is
+  id: "HSX-11"
+  definition :
+    cppRun (directoryPath dir) []
+      = WhenRun record{ packages = (cppRun (directoryPath dir) []).packages ,
+                        warnings = ["when: no value for ARG, EXPORT_K, FAST, LEGACY, MIN_VERSION_base, NO_T, OLD_Q, WIDE, WITH_Q, __GLASGOW_HASKELL__" ,
+                                    "when: the call graph is incomplete until these names are decided" ,
+                                    "when: not yet in a decisions file: ARG, EXPORT_K, FAST, LEGACY, MIN_VERSION_base, NO_T, OLD_Q, WIDE, WITH_Q, __GLASGOW_HASKELL__; lines to paste into .assayxport/when follow"] ,
+                        paste = cppBlocks unitValue}
+    && sameRun (cppRun (directoryPath dir) []) (pureRun [] false)
+    && c.normalForm (cppRun (directoryPath dir) []).packages = c.normalForm [fixtureCppPackage unitValue]
+    && (cppRun (directoryPath dir) ["--when-complete"]).warnings
+         = ["when: cannot evaluate: !(MIN_VERSION_base(4,8,0))", "when: cannot evaluate: MIN_VERSION_base(4,8,0)"]
+    && (cppRun (directoryPath dir) ["--when-complete"]).paste = []
+    && (cppRun (directoryPath dir) ["--when-complete", "--when", "package base=4.18"]).warnings = []
+  end definition
+  description :
+    "No flag: nothing of the fixture is decided, every fact keeps its
+    condition, and the warning names the ten names. `--when-complete`
+    alone: no name is missing; the two conditions that call a macro of a
+    package not given cannot be evaluated, as in C, and are named. With the
+    package given too there is no warning at all. Changed in next cycle 3:
+    after the ten names a line says plainly that the call graph is
+    incomplete until they are decided, a line says that lines to paste
+    follow, and stderr then carries the ten blocks of the starter file;
+    under `--when-complete` nothing is missing, so nothing is to paste."
+  end description
+end law
+
+procedure whenFailure (root :: Text) (args :: List Text) -> Text uses FileSystem, HaskellWhen is
+  first matching case of prelude.attempt (cppRun root args) :
+    when Left (ExtractionFailed f) then f.message
+    when Right r then "no failure"
+  end case
+end procedure
+
+procedure cppExit (root :: Text) (args :: List Text) -> ExitRun uses FileSystem, HaskellWhen is
+  c.writeSources root [SourceFile record{ path = "Cpp.hs" , content = fixtureCppSource unitValue}]; assayExit root args
+end procedure
+
+function usageError (text :: Text) -> ExitRun is ExitRun record{ status = 2 , out = "" , errors = [text]} end function
+
+function startsEach (prefix :: Text) (ts :: List Text) -> Bool is
+  first matching case of ts : when Nil then true when Cons t rest then prelude.startsWith t prefix && startsEach prefix rest end case
+end function
+
+law "|haskell: a --when line that cannot be read is a usage error that names it: status 2, and nothing on stdout| for dir :: TemporaryDirectory is
+  id: "HSX-12"
+  description :
+    "W6, pinned whole (review 7, S3: the law took any failure whose message
+    held the text; a build that exited 1, or printed a manifest first,
+    passed). The exit status is 2; stdout is empty, so no manifest, whole
+    or partial, is printed; stderr is the one line. For a flag's value,
+    for a file's line (the first bad one, by its number), and for a file
+    that cannot be opened, whose line starts with the file's path. A good
+    run of the same tree exits 0 and prints a manifest. Next cycle 6
+    (review 8, N5): a carriage return inside the line named is written as
+    the two characters `\\r`, not sent to the terminal."
+  end description
+  definition :
+    cppExit (directoryPath dir) ["--when", "A=1", "--when", "B = 2"] = usageError "when: --when:2: cannot read \"B = 2\""
+    && (c.writeFile (directoryPath dir ++ ".bad") (prelude.utf8 "# ok\nA=1\npackage base\nB = 2\n");
+        cppExit (directoryPath dir) ["--when-file", directoryPath dir ++ ".bad"])
+         = usageError (wp.bindingErrorText (directoryPath dir ++ ".bad") (BindingError record{ line = 3 , text = "package base"}))
+    && cppExit (directoryPath dir) ["--when-complete", "--when", "defined=1"] = usageError "when: --when:1: cannot read \"defined=1\""
+    && (c.writeFile (directoryPath dir ++ ".cr") (prelude.utf8 "A=1\rB=0\n");
+        cppExit (directoryPath dir) ["--when-file", directoryPath dir ++ ".cr"])
+         = usageError ("when: " ++ directoryPath dir ++ ".cr:1: cannot read \"A=1\\rB=0\"")
+    && (cppExit (directoryPath dir) ["--when-file", directoryPath dir ++ ".absent"]).status = 2
+    && (cppExit (directoryPath dir) ["--when-file", directoryPath dir ++ ".absent"]).out = ""
+    && prelude.length (cppExit (directoryPath dir) ["--when-file", directoryPath dir ++ ".absent"]).errors = 1
+    && startsEach ("when: cannot read " ++ directoryPath dir ++ ".absent: ") (cppExit (directoryPath dir) ["--when-file", directoryPath dir ++ ".absent"]).errors
+    && (cppExit (directoryPath dir) ["--when", "ARG=1"]).status = 0
+    && prelude.length (cppExit (directoryPath dir) ["--when", "ARG=1"]).out > 0
+    && wp.bindingErrorText "--when" (BindingError record{ line = 2 , text = "B = 2"}) = "when: --when:2: cannot read \"B = 2\""
+  end definition
+end law
+
+procedure cppRunWithText (root :: Text) (content :: Text) (args :: List Text) -> WhenRun uses FileSystem, HaskellWhen fails with ExtractFailure is
+  c.writeFile (root ++ ".when") (prelude.utf8 content);
+  cppRun root (["--when-file", root ++ ".when"] ++ args)
+end procedure
+
+function joinedWith (sep :: Text) (ts :: List Text) -> Text is
+  first matching case of ts : when Nil then "" when Cons t rest then t ++ sep ++ joinedWith sep rest end case
+end function
+
+law "|haskell: a when-file with Windows line endings reads as with Unix ones| for a :: TemporaryDirectory, b :: TemporaryDirectory is
+  id: "HSX-30"
+  description :
+    "Review 7, S3 and N3: the step that reads a when-file's lines had no
+    law. A file whose lines end with CR LF gives the run of the same lines
+    ended with LF; so does one whose last line ends with a lone CR and no
+    LF, and one with no line end at all after its last line. A bad line in
+    a CRLF file is named without its carriage return."
+  end description
+  definition :
+    for all (seed :: Integer) (full :: Bool) =>
+      (let ls = ["# names", ""] ++ drawnLines seed ++ ["ARG=0"] in let tail_ = (if full then ["--when-complete"] else [] end if) in
+        cppRunWithText (directoryPath a) (joinedWith "\r\n" ls) tail_ = cppRunWithText (directoryPath b) (joinedWith "\n" ls) tail_
+          && cppRunWithText (directoryPath a) (joinedWith "\r\n" ls ++ "WIDE=1\r") tail_ = cppRunWithText (directoryPath b) (joinedWith "\n" ls ++ "WIDE=1\n") tail_
+          && cppRunWithText (directoryPath a) (joinedWith "\n" ls ++ "WIDE=1") tail_ = cppRunWithText (directoryPath b) (joinedWith "\n" ls ++ "WIDE=1\n") tail_
+          && (c.writeFile (directoryPath a ++ ".bad") (prelude.utf8 "A=1\r\nB = 2\r\nC=\r\n");
+              cppExit (directoryPath a) ["--when-file", directoryPath a ++ ".bad"])
+               = usageError (wp.bindingErrorText (directoryPath a ++ ".bad") (BindingError record{ line = 2 , text = "B = 2"}))
+      end let end let)
+    end for all
+  end definition
+end law
+
+-- ---------------------------------------------------------------------------
+-- The second CPP fixture on the binary (next-cycle-4/design.md; review 7,
+-- B1, S1, S2).
+
+procedure cpp2Run (root :: Text) (args :: List Text) -> WhenRun uses FileSystem, HaskellWhen fails with ExtractFailure is
+  c.writeSources root [SourceFile record{ path = "Cpp2.hs" , content = fixtureCpp2Source unitValue}]; assayWith root args
+end procedure
+
+function linePool2 (u :: Unit) -> List Text is
+  ["A=1", "A=0", "B", "undef B", "package th=2.16", "package th=2.15.1", "undef MIN_VERSION_th", "package text=2.0", "undef MIN_VERSION_text",
+   "undef VERSION_text", "VERSION_text=1", "OTHER=3"]
+end function
+
+function drawnLines2 (seed :: Integer) -> List Text is someOf seed (linePool2 unitValue) 0 ++ someOf (wp.mix seed 1) (linePool2 unitValue) 0 end function
+
+function pureRun2 (lines :: List Text) (full :: Bool) -> WhenRun is
+  first matching case of wn.readBindings lines :
+    when Left e then WhenRun record{ packages = [] , warnings = ["unreadable line"] , paste = []}
+    when Right env then
+      (let given = (if full then wp.completed env else env end if) in
+       let f = wn.applyWhen given [fixtureCpp2Package unitValue] in
+        WhenRun record{ packages = f.packages , warnings = wp.warningsOf f , paste = wn.decisionLines given [] [fixtureCpp2Package unitValue]} end let end let)
+  end case
+end function
+
+law "|haskell: --when on facts that depend on several groups, a package said absent, and VERSION_p| for dir :: TemporaryDirectory is
+  id: "HSX-31"
+  description :
+    "As HSX-9, on the second fixture: for any lines about its names, with
+    or without `--when-complete`, ax prints the fixture's manifest filtered
+    by the checked definitions and warns as they say. With no flag the
+    manifest is the fixture's table: each form of `f` and `lift1` carries
+    its edges under the import's condition too, `lift1` is never
+    unexported, and no term is written twice. `--when-complete` alone
+    decides everything, and nothing cannot be evaluated: the nested
+    version test is not read where its group is skipped (review 7, S1)."
+  end description
+  definition :
+    for all (seed :: Integer) (full :: Bool) =>
+      sameRun (cpp2Run (directoryPath dir) (whenFlags (drawnLines2 seed) ++ (if full then ["--when-complete"] else [] end if))) (pureRun2 (drawnLines2 seed) full)
+        && c.normalForm (cpp2Run (directoryPath dir) []).packages = c.normalForm [fixtureCpp2Package unitValue]
+        && prelude.take 1 (cpp2Run (directoryPath dir) []).warnings = ["when: no value for A, B, MIN_VERSION_th, VERSION_text"]
+        && (cpp2Run (directoryPath dir) ["--when-complete"]).warnings = []
+    end for all
+  end definition
+end law
+
+-- Review 7's repro (a), `tmpdir/review7/t3/M.hs`, and the build it has
+-- with A and B both 0.
+function reproSource (u :: Unit) -> Text is
+  "{-# LANGUAGE CPP #-}\nmodule M (f) where\n#if A\nimport X (foo)\n#else\nimport Y (foo)\n#endif\n\nf :: Int\nf = foo 1\n#if B\n  + 1\n#else\n  + 2\n#endif\n"
+end function
+
+function reproBuild (u :: Unit) -> Text is
+  "{-# LANGUAGE CPP #-}\nmodule M (f) where\n\n\n\nimport Y (foo)\n\n\nf :: Int\nf = foo 1\n\n\n\n  + 2\n\n"
+end function
+
+law "|haskell: review 7's repro: with both names given the binary prints the build's call, not the other import's| for dir :: TemporaryDirectory is
+  id: "HSX-32"
+  description :
+    "`ax assay t3 --lang haskell --stdout --when A=0 --when B=0` printed
+    `f` with an unconditional edge to `X.foo`; that build imports `Y`. The
+    run is the extraction of the build's text, and warns of nothing."
+  end description
+  definition :
+    (c.writeSources (directoryPath dir) [SourceFile record{ path = "M.hs" , content = reproSource unitValue}];
+     assayWith (directoryPath dir) ["--when", "A=0", "--when", "B=0"])
+      = (c.writeSources (directoryPath dir) [SourceFile record{ path = "M.hs" , content = reproBuild unitValue}];
+         WhenRun record{ packages = extract (directoryPath dir) , warnings = [] , paste = []})
+  end definition
+end law
+
+-- The files of a tree that open no conditional group: rule C1's openers
+-- (`#`, blanks or tabs, then `if`, `ifdef` or `ifndef` as a whole word)
+-- start in column 1. Of the fixture modules a tree with the out-of-scope
+-- forms carries, this leaves out `Exotic` and keeps the other fifteen
+-- (HSX-13a; since next cycle 5 `Cpp` and `Cpp2` are not among them). Next
+-- cycle 4 (review 7, N5): `# if` is an opener, and `#iffy` is none.
+function opensGroup (line :: Text) -> Bool is line matches regex "#[ \t]*(if|ifdef|ifndef)([^A-Za-z0-9_].*)?" end function
+
+function linesFrom (t :: Text) (i :: Integer) (n :: Integer) (start :: Integer) -> List Text is
+  if i >= n then [prelude.take (i - start) (prelude.drop start t)]
+  else (if prelude.take 1 (prelude.drop i t) = "\n" then [prelude.take (i - start) (prelude.drop start t)] ++ linesFrom t (i + 1) n (i + 1)
+        else linesFrom t (i + 1) n start end if) end if
+end function
+
+function noConditions (files :: List SourceFile) -> List SourceFile is
+  first matching case of files :
+    when Nil then []
+    when Cons f rest then
+      (if prelude.any opensGroup (linesFrom f.content 0 (prelude.length f.content) 0) then [] else [f] end if) ++ noConditions rest
+  end case
+end function
+
+function pathsOf (files :: List SourceFile) -> List Text is
+  first matching case of files : when Nil then [] when Cons f rest then [f.path] ++ pathsOf rest end case
+end function
+
+law "|haskell: --when leaves a tree with no conditions as it is| for dir :: TemporaryDirectory is
+  id: "HSX-13"
+  description :
+    "A tree none of whose files opens a conditional group: with names
+    given, a package version among them, with or without
+    `--when-complete`, ax prints what it prints with no flag, and warns of
+    nothing. The files are the tree's own, the fixture modules included,
+    less those that have a conditional (2026-11-15: the law wrote
+    `render x` whole, so a tree with the fixtures carried `Cpp.hs`, whose
+    conditions the flags decide)."
+  end description
+  definition :
+    for all (x :: HsTree) (full :: Bool) =>
+      (c.writeSources (directoryPath dir) (noConditions (render x));
+       assayWith (directoryPath dir) (["--when", "A=1", "--when", "package base=4.18"] ++ (if full then ["--when-complete"] else [] end if)))
+        = WhenRun record{ packages = extract (directoryPath dir) , warnings = [] , paste = []}
+    end for all
+  end definition
+end law
+
+law "|haskell: the files with no conditions are all but those that open a conditional group| is
+  id: "HSX-13a"
+  description :
+    "HSX-13's domain, pinned so that it cannot go empty unseen: of the
+    sixteen fixture modules exactly `Exotic` is left
+    out; a `#` after blanks, `#define` and a stray `#endif` open nothing;
+    an opener on the first line counts. Next cycle 4 (review 7, N5):
+    `# if` and `#\tifdef` open a group; `#iffy` and `#ifdefined` do not.
+    Next cycle 5: four more modules without a conditional (`WildD`,
+    `Doc3`, `NextOp2`, `Bind`); `Cpp` and `Cpp2` are no longer among the
+    fixture modules of a tree (HSE-21)."
+  end description
+  definition :
+    pathsOf (noConditions (hs.fixtureSources unitValue))
+      = ["PrelA.hs", "PrelB.hs", "PrelC.hs", "NextOp.hs", "SixExp.hs", "SixDoc.hs", "Doc2.hs", "Comp.hs", "WildA.hs", "WildB.hs", "WildC.hs",
+         "WildD.hs", "Doc3.hs", "NextOp2.hs", "Bind.hs"]
+    && pathsOf (noConditions [SourceFile record{ path = "A.hs" , content = "module A where\n#if X\na = 1\n#endif\n"} ,
+                              SourceFile record{ path = "B.hs" , content = "module B where\n  #if X\nb = (#x)\n#define Y 1\n#endif\n"} ,
+                              SourceFile record{ path = "C.hs" , content = "#ifdef X\nc = 1\n#endif\n"} ,
+                              SourceFile record{ path = "D.hs" , content = "module D where\n#ifndef X\nd = 1\n#endif\n"} ,
+                              SourceFile record{ path = "E.hs" , content = "module E where\n# if X\ne = 1\n# endif\n"} ,
+                              SourceFile record{ path = "F.hs" , content = "module F where\n#\tifdef X\nf = 1\n#endif"} ,
+                              SourceFile record{ path = "G.hs" , content = "module G where\n#iffy\n#ifdefined\n#if_x\ng = (#if)\n"} ,
+                              SourceFile record{ path = "H.hs" , content = "module H where\n#if\nh = 1\n#endif\n"} ,
+                              SourceFile record{ path = "I.hs" , content = "#if(X)\nmodule I where\n#endif\n"}])
+         = ["B.hs", "G.hs"]
+  end definition
+end law
+
+law "|haskell: a condition that needs no name is decided with no flag| for dir :: TemporaryDirectory is
+  id: "HSX-14"
+  description :
+    "`#if 0` and `#if 1` need no name: with no flag the false branch is
+    gone, the true one unconditional, and nothing is warned."
+  end description
+  definition :
+    (c.writeSources (directoryPath dir) [SourceFile record{ path = "Z.hs" , content = "module Z where\n#if 0\na = 1\n#else\nb = 2\n#endif\n#if 1 + 1 == 2\nc = 3\n#endif\n"}];
+     assayWith (directoryPath dir) [])
+      = (c.writeSources (directoryPath dir) [SourceFile record{ path = "Z.hs" , content = "module Z where\n\n\n\nb = 2\n\n\nc = 3\n\n"}];
+         WhenRun record{ packages = extract (directoryPath dir) , warnings = [] , paste = []})
+  end definition
+end law
+
+-- ---------------------------------------------------------------------------
+-- The decisions file (next-cycle-3/design.md): `ax when init`, the
+-- discovered `.assayxport/when`, and the lines to paste.
+
+function decisionsFile (root :: Text) -> Text is root ++ "/" ++ wp.decisionsPath unitValue end function
+
+procedure cppTree (root :: Text) -> Unit uses FileSystem is
+  c.writeSources root [SourceFile record{ path = "Cpp.hs" , content = fixtureCppSource unitValue}]
+end procedure
+
+procedure writeDecisions (root :: Text) (lines :: List Text) -> Unit uses FileSystem is
+  c.writeFile (decisionsFile root) (prelude.utf8 (unlines lines))
+end procedure
+
+-- The fixture's tree with a decisions file, assayed.
+procedure decidedRun (root :: Text) (fileLines :: List Text) (args :: List Text) -> WhenRun uses FileSystem, HaskellWhen fails with ExtractFailure is
+  cppTree root; writeDecisions root fileLines; assayWith root args
+end procedure
+
+-- The same, and `ax when init` on it.
+procedure decidedInit (root :: Text) (fileLines :: List Text) -> InitRun uses FileSystem, HaskellWhen is
+  cppTree root; writeDecisions root fileLines; whenInit root
+end procedure
+
+-- The decisions file's bytes after an assay, whatever the assay did.
+procedure fileAfterAssay (root :: Text) (args :: List Text) -> Maybe Bytes uses FileSystem, HaskellWhen is
+  let r = prelude.attempt (assayWith root args) in readBytes (decisionsFile root) end let
+end procedure
+
+function fileBytes (lines :: List Text) -> Maybe Bytes is Present (prelude.utf8 (unlines lines)) end function
+
+-- Undecided lines a drawn decisions file may hold, beside its decisions.
+function undecidedPool (u :: Unit) -> List Text is
+  ["# ARG=", "# WIDE=", "# package base=", "# FAST=", "# OTHER=", "# EXPORT_K=", "# __GLASGOW_HASKELL__="]
+end function
+
+function fileLinesOf (seed :: Integer) -> List Text is
+  ["# decisions", ""] ++ drawnLines seed ++ someOf (wp.mix seed 2) (undecidedPool unitValue) 0
+end function
+
+-- A file's decisions: its lines that are neither empty nor remarks.
+function decisionsOf (lines :: List Text) -> List Text is
+  first matching case of lines :
+    when Nil then []
+    when Cons l rest then (if prelude.length l = 0 || (l starts with "#") then [] else [l] end if) ++ decisionsOf rest
+  end case
+end function
+
+function readOr (lines :: List Text) -> Env is
+  first matching case of wn.readBindings lines : when Left e then wp.emptyEnv unitValue when Right env then env end case
+end function
+
+-- The ten blocks of the fixture, to the letter: what `ax when init` writes
+-- under the header, and what `ax assay` prints to paste when no decisions
+-- file is read. The uses are sorted by line, then by the condition's
+-- text. A place is the symbol's own line in Cpp.hs (`f` at 23,
+-- `g` at 25, `k` at 27, `h` at 29, `T` and `T1` at 35, `T2` at 37, the
+-- synonym at 40, `p` at 45 and 47), never the directive's.
+function cppBlocks (u :: Unit) -> List Text is
+  ["",
+   "# ARG is not decided. Facts that depend on it:",
+   "#   Cpp.hs:29: !(ARG)",
+   "#   Cpp.hs:29: ARG",
+   "# ARG=",
+   "",
+   "# EXPORT_K is not decided. Facts that depend on it:",
+   "#   Cpp.hs:27: !(EXPORT_K)",
+   "#   Cpp.hs:27: EXPORT_K",
+   "# EXPORT_K=",
+   "",
+   "# FAST is not decided. Facts that depend on it:",
+   "#   Cpp.hs:45: (__GLASGOW_HASKELL__ >= 908   && defined(FAST))",
+   "#   Cpp.hs:47: !(__GLASGOW_HASKELL__ >= 908   && defined(FAST))",
+   "# FAST=",
+   "",
+   "# LEGACY is not decided. Facts that depend on it:",
+   "#   Cpp.hs:25: !(defined(WITH_Q)) && !(defined(OLD_Q) && !LEGACY)",
+   "#   Cpp.hs:25: !(defined(WITH_Q)) && (defined(OLD_Q) && !LEGACY)",
+   "# LEGACY=",
+   "",
+   "# MIN_VERSION_base is not decided. Facts that depend on it:",
+   "#   Cpp.hs:23: !(MIN_VERSION_base(4,8,0))",
+   "#   Cpp.hs:23: MIN_VERSION_base(4,8,0)",
+   "# package base=",
+   "",
+   "# NO_T is not decided. Facts that depend on it:",
+   "#   Cpp.hs:35: !(defined(NO_T))",
+   "#   Cpp.hs:35: !(defined(NO_T)) && !(WIDE)",
+   "#   Cpp.hs:35: !(defined(NO_T)) && WIDE",
+   "#   Cpp.hs:37: !(defined(NO_T)) && WIDE",
+   "#   Cpp.hs:40: defined(NO_T)",
+   "# NO_T=",
+   "",
+   "# OLD_Q is not decided. Facts that depend on it:",
+   "#   Cpp.hs:25: !(defined(WITH_Q)) && !(defined(OLD_Q) && !LEGACY)",
+   "#   Cpp.hs:25: !(defined(WITH_Q)) && (defined(OLD_Q) && !LEGACY)",
+   "# OLD_Q=",
+   "",
+   "# WIDE is not decided. Facts that depend on it:",
+   "#   Cpp.hs:35: !(defined(NO_T)) && !(WIDE)",
+   "#   Cpp.hs:35: !(defined(NO_T)) && WIDE",
+   "#   Cpp.hs:37: !(defined(NO_T)) && WIDE",
+   "# WIDE=",
+   "",
+   "# WITH_Q is not decided. Facts that depend on it:",
+   "#   Cpp.hs:25: !(defined(WITH_Q)) && !(defined(OLD_Q) && !LEGACY)",
+   "#   Cpp.hs:25: !(defined(WITH_Q)) && (defined(OLD_Q) && !LEGACY)",
+   "#   Cpp.hs:25: defined(WITH_Q)",
+   "# WITH_Q=",
+   "",
+   "# __GLASGOW_HASKELL__ is not decided. Facts that depend on it:",
+   "#   Cpp.hs:45: (__GLASGOW_HASKELL__ >= 908   && defined(FAST))",
+   "#   Cpp.hs:47: !(__GLASGOW_HASKELL__ >= 908   && defined(FAST))",
+   "# __GLASGOW_HASKELL__="]
+end function
+
+function cppDecisionsFile (u :: Unit) -> List Text is wp.decisionsHeader unitValue ++ cppBlocks unitValue end function
+
+law "|haskell: ax when init writes the starter decisions file, to the letter| for dir :: TemporaryDirectory is
+  id: "HSX-15"
+  description :
+    "On the fixture's tree, with no decisions file: `ax when init` exits
+    with status 0, prints nothing on stdout, says on stderr what it wrote,
+    and `<root>/.assayxport/when` holds exactly the header and the ten
+    blocks, each line ended by a newline. The blocks are those the checked
+    definition gives for the fixture's expected manifest: extraction ran
+    once, and the file is read off its manifest."
+  end description
+  definition :
+    (cppTree (directoryPath dir); whenInit (directoryPath dir))
+      = InitRun record{ status = 0 , out = [] , notes = ["when: wrote " ++ decisionsFile (directoryPath dir) ++ ": 10 undecided"]}
+    && readBytes (decisionsFile (directoryPath dir)) = fileBytes (cppDecisionsFile unitValue)
+    && cppBlocks unitValue = wn.decisionLines (wp.emptyEnv unitValue) [] [fixtureCppPackage unitValue]
+  end definition
+end law
+
+law "|haskell: ax when init never overwrites a decisions file| for dir :: TemporaryDirectory is
+  id: "HSX-16"
+  description :
+    "Idempotence. A second `ax when init` leaves the file it wrote byte
+    for byte, prints nothing and says that nothing is to add: every name
+    is listed. On a file the user has edited (one name decided, one
+    undefined, one still listed, the rest deleted) init leaves the file
+    as it is, prints on stdout the blocks of the seven names the file
+    neither decides nor lists, and a third run prints the same again."
+  end description
+  definition :
+    (cppTree (directoryPath dir);
+     let first_ = whenInit (directoryPath dir) in (if first_.status = 0 then whenInit (directoryPath dir) else first_ end if) end let)
+      = InitRun record{ status = 0 , out = [] , notes = ["when: " ++ decisionsFile (directoryPath dir) ++ " lists every name: nothing to add"]}
+    && readBytes (decisionsFile (directoryPath dir)) = fileBytes (cppDecisionsFile unitValue)
+    && decidedInit (directoryPath dir) ["ARG=1", "# WIDE=", "undef NO_T"]
+      = InitRun record{ status = 0 , out = (pureRunWith ["ARG=1", "# WIDE=", "undef NO_T"] [] false).paste ,
+                        notes = ["when: " ++ decisionsFile (directoryPath dir) ++ " is not changed: 7 to add, printed"]}
+    && readBytes (decisionsFile (directoryPath dir)) = fileBytes ["ARG=1", "# WIDE=", "undef NO_T"]
+    && (whenInit (directoryPath dir)).out = (pureRunWith ["ARG=1", "# WIDE=", "undef NO_T"] [] false).paste
+    && readBytes (decisionsFile (directoryPath dir)) = fileBytes ["ARG=1", "# WIDE=", "undef NO_T"]
+    && wn.listedNames (pureRunWith ["ARG=1", "# WIDE=", "undef NO_T"] [] false).paste
+         = ["EXPORT_K", "FAST", "LEGACY", "MIN_VERSION_base", "OLD_Q", "WITH_Q", "__GLASGOW_HASKELL__"]
+  end definition
+end law
+
+law "|haskell: the lines to paste are exactly what ax when init would add| for dir :: TemporaryDirectory is
+  id: "HSX-17"
+  description :
+    "For any decisions file about the fixture's names (decisions, remarks
+    and undecided lines): the lines `ax assay` prints to paste are, line
+    for line, what `ax when init` prints for the same tree and file, and
+    both are the checked definition's blocks for the names that are
+    missing and not listed. The warnings are the filter's, with the names
+    not yet listed."
+  end description
+  definition :
+    for all (seed :: Integer) =>
+      (decidedRun (directoryPath dir) (fileLinesOf seed) []).paste = (whenInit (directoryPath dir)).out
+        && sameRun (assayWith (directoryPath dir) []) (pureRunWith (fileLinesOf seed) [] false)
+    end for all
+  end definition
+end law
+
+law "|haskell: ax assay never changes or creates the decisions file| for a :: TemporaryDirectory, b :: TemporaryDirectory is
+  id: "HSX-18"
+  description :
+    "For any decisions file, any flags, with or without `--when-complete`:
+    after the assay the file holds the bytes it held. A file with a line
+    that cannot be read is left as it is too (the assay is a usage
+    error). And where there is no file, an assay with names missing makes
+    none."
+  end description
+  definition :
+    for all (seed :: Integer) (full :: Bool) =>
+      (cppTree (directoryPath a); writeDecisions (directoryPath a) (fileLinesOf seed);
+       fileAfterAssay (directoryPath a) (whenFlags (drawnLines (seed + 1)) ++ (if full then ["--when-complete"] else [] end if)))
+        = fileBytes (fileLinesOf seed)
+      && (writeDecisions (directoryPath a) ["A=1", "B = 2"]; fileAfterAssay (directoryPath a) []) = fileBytes ["A=1", "B = 2"]
+      && (cppTree (directoryPath b); fileAfterAssay (directoryPath b) (if full then ["--when-complete"] else [] end if)) = Absent
+    end for all
+  end definition
+end law
+
+law "|haskell: the discovered decisions file is read as a when-file| for a :: TemporaryDirectory, b :: TemporaryDirectory is
+  id: "HSX-19"
+  description :
+    "A tree with `.assayxport/when` and no flag gives what the same tree
+    without it gives when the same lines are passed with `--when-file`:
+    packages, warnings and lines to paste. With `--when-no-discovery` the
+    file is not read: the run is that of the tree without it."
+  end description
+  definition :
+    for all (seed :: Integer) (full :: Bool) =>
+      (let tail_ = (if full then ["--when-complete"] else [] end if) in
+        decidedRun (directoryPath a) (fileLinesOf seed) tail_ = cppRunWithFile (directoryPath b) (fileLinesOf seed) tail_
+          && sameRun (assayWith (directoryPath a) tail_) (pureRunWith (fileLinesOf seed) [] full)
+          && assayWith (directoryPath a) (["--when-no-discovery"] ++ tail_) = cppRun (directoryPath b) tail_
+      end let)
+    end for all
+  end definition
+end law
+
+law "|haskell: the discovered file is read first, then each when-file, then each --when| for dir :: TemporaryDirectory is
+  id: "HSX-20"
+  description :
+    "Precedence, per name: a line of a `--when-file` replaces the
+    discovered file's, and a `--when` value replaces both, wherever the
+    flags stand on the command line (O33, with the discovered file put
+    before the files given). The names either file lists as undecided are
+    not asked for again. The literal row: the discovered file says ARG=1,
+    WIDE=1 and NO_T; the when-file says ARG=0 and undef NO_T; the flag
+    says WIDE=0: the run is that of ARG=0, NO_T undefined, WIDE=0, which
+    is not the discovered file's own."
+  end description
+  definition :
+    for all (s1 :: Integer) (s2 :: Integer) (s3 :: Integer) (full :: Bool) =>
+      sameRun (c.writeFile (directoryPath dir ++ ".when") (prelude.utf8 (unlines (fileLinesOf s2)));
+               decidedRun (directoryPath dir) (fileLinesOf s1)
+                 (whenFlags (drawnLines s3) ++ ["--when-file", directoryPath dir ++ ".when"] ++ (if full then ["--when-complete"] else [] end if)))
+              (pureRunWith (fileLinesOf s1 ++ fileLinesOf s2) (drawnLines s3) full)
+      && sameRun (c.writeFile (directoryPath dir ++ ".when") (prelude.utf8 (unlines ["ARG=0", "undef NO_T"]));
+                  decidedRun (directoryPath dir) ["ARG=1", "WIDE=1", "NO_T"] ["--when", "WIDE=0", "--when-file", directoryPath dir ++ ".when"])
+                 (pureRun ["ARG=0", "undef NO_T", "WIDE=0"] false)
+      && c.normalForm (pureRun ["ARG=0", "undef NO_T", "WIDE=0"] false).packages != c.normalForm (pureRun ["ARG=1", "WIDE=1", "NO_T"] false).packages
+      && c.normalForm (pureRun ["ARG=0", "undef NO_T", "WIDE=0"] false).packages != c.normalForm (pureRun ["ARG=0", "undef NO_T", "WIDE=1"] false).packages
+    end for all
+  end definition
+end law
+
+law "|haskell: init, then every line filled, then assay: no warning, and the same as --when with those values| for a :: TemporaryDirectory, b :: TemporaryDirectory is
+  id: "HSX-21"
+  description :
+    "The round trip on the fixture. `ax when init` writes the starter
+    file; every undecided line is replaced by a decision the seed picks
+    (a value, 0, `undef`, the bare name; a version for the package); the
+    assay then reads the file, warns of nothing and prints nothing to
+    paste, and its run is the run of a tree with no decisions file given
+    the same decisions as `--when` values. (The filled lines are made
+    from the checked definition's file, which the first two conjuncts
+    hold equal, byte for byte, to the file init wrote: a LawSpec law
+    cannot turn bytes back into text.)"
+  end description
+  definition :
+    for all (seed :: Integer) =>
+      (let done = wp.filled seed (cppDecisionsFile unitValue) 0 in
+        (cppTree (directoryPath a); whenInit (directoryPath a)).status = 0
+          && readBytes (decisionsFile (directoryPath a)) = fileBytes (cppDecisionsFile unitValue)
+          && decidedRun (directoryPath a) done [] = cppRun (directoryPath b) (whenFlags (decisionsOf done))
+          && (assayWith (directoryPath a) []).warnings = []
+          && (assayWith (directoryPath a) []).paste = []
+          && prelude.length (decisionsOf done) = 10
+      end let)
+    end for all
+  end definition
+end law
+
+law "|haskell: a discovered decisions file that cannot be read is a usage error that names it| for dir :: TemporaryDirectory is
+  id: "HSX-22"
+  description :
+    "As HSX-12 for a `--when-file`: the origin is the discovered file's
+    path, the root as given and `/.assayxport/when`. `ax when init` on
+    such a file exits with status 2 and the same message, prints nothing
+    and leaves the file. `--when-no-discovery` does not read the file, so
+    the assay runs. Changed in next cycle 6 (review 8, N3): the assay is
+    held whole, as HSX-12 holds a flag's: status 2, nothing on stdout, the
+    one line; the law took any failure whose message held the text, so a
+    build that exited 1, or printed a manifest first, passed. So is a
+    decisions path that is there and is a directory."
+  end description
+  definition :
+    (cppTree (directoryPath dir); writeDecisions (directoryPath dir) ["# ok", "A=1", "B = 2"]; assayExit (directoryPath dir) [])
+      = usageError (wp.bindingErrorText (decisionsFile (directoryPath dir)) (BindingError record{ line = 3 , text = "B = 2"}))
+    && assayExit (directoryPath dir) ["--when-complete", "--when", "A=2"]
+      = usageError (wp.bindingErrorText (decisionsFile (directoryPath dir)) (BindingError record{ line = 3 , text = "B = 2"}))
+    && whenInit (directoryPath dir)
+      = InitRun record{ status = 2 , out = [] ,
+                        notes = [wp.bindingErrorText (decisionsFile (directoryPath dir)) (BindingError record{ line = 3 , text = "B = 2"})]}
+    && readBytes (decisionsFile (directoryPath dir)) = fileBytes ["# ok", "A=1", "B = 2"]
+    && sameRun (cppRun (directoryPath dir) ["--when-no-discovery"]) (pureRun [] false)
+  end definition
+end law
+
+law "|haskell: ax when init writes nothing where there is no name to decide| for a :: TemporaryDirectory, b :: TemporaryDirectory is
+  id: "HSX-23"
+  description :
+    "A tree with no conditional, and a tree whose only condition needs no
+    name (`#if 0`): status 0, nothing on stdout, a line that says so, and
+    no file."
+  end description
+  definition :
+    (c.writeSources (directoryPath a) [SourceFile record{ path = "Z.hs" , content = "module Z where\nb = 2\n"}]; whenInit (directoryPath a))
+      = InitRun record{ status = 0 , out = [] , notes = ["when: no name to decide under " ++ directoryPath a ++ ": nothing written"]}
+    && readBytes (decisionsFile (directoryPath a)) = Absent
+    && (c.writeSources (directoryPath b) [SourceFile record{ path = "Z.hs" , content = "module Z where\n#if 0\na = 1\n#else\nb = 2\n#endif\n"}]; whenInit (directoryPath b))
+      = InitRun record{ status = 0 , out = [] , notes = ["when: no name to decide under " ++ directoryPath b ++ ": nothing written"]}
+    && readBytes (decisionsFile (directoryPath b)) = Absent
+  end definition
+end law
+
+-- ---------------------------------------------------------------------------
+-- The assay that writes its files, and a decisions file with Windows line
+-- ends (next-cycle-5/design.md, sections 3 and 5; the mutation pass of
+-- cycle 2). Every law above runs `ax assay` with `--stdout`. Without it
+-- ax writes the manifest under `--out` (by default under the root): with
+-- `--no-html` package by package as each is extracted, otherwise whole,
+-- with the explorer page. Both ways read the same `--when` settings and
+-- must print the same warnings.
+
+procedure cpp2Into (root :: Text) (out :: Text) (args :: List Text) -> WhenRun uses FileSystem, HaskellWhen fails with ExtractFailure is
+  c.writeSources root [SourceFile record{ path = "Cpp2.hs" , content = fixtureCpp2Source unitValue}]; assayInto root out args
+end procedure
+
+law "|haskell: an assay that writes its files filters and warns as --stdout does| for a :: TemporaryDirectory, b :: TemporaryDirectory is
+  id: "HSX-33"
+  description :
+    "For any lines about the second fixture's names, given as `--when`
+    flags, with or without `--when-complete`, with `--no-html` or without
+    it: the manifest ax writes under `--out` holds the packages that
+    `--stdout` prints for the same flags, the warnings are the same lines
+    and so are the lines to paste; and all three are the checked
+    definitions' (as HSX-31 holds of `--stdout`). The mutation pass of
+    cycle 2 found that no law ran this path: the file-writing run could
+    ignore every `--when`, or warn of nothing, unseen."
+  end description
+  definition :
+    for all (seed :: Integer) (full :: Bool) (html :: Bool) =>
+      (let args = whenFlags (drawnLines2 seed) ++ (if full then ["--when-complete"] else [] end if) in
+       let files = (if html then [] else ["--no-html"] end if) in
+        cpp2Into (directoryPath a) (directoryPath a ++ ".out") (files ++ args) = cpp2Run (directoryPath b) args
+          && sameRun (cpp2Into (directoryPath a) (directoryPath a ++ ".out") (files ++ args)) (pureRun2 (drawnLines2 seed) full)
+      end let end let)
+    end for all
+  end definition
+  references:
+    "|mutation|: "mutation-cycle2.md, law holes: assayToDir (cdd0cc43fa6e5baf, 844296e328dc2ce3)"
+  end references
+end law
+
+-- The mutation report's module, and its build with FLAG1 not defined.
+function flagSource (u :: Unit) -> Text is "{-# LANGUAGE CPP #-}\nmodule M where\n#ifdef FLAG1\nfoo = 1\n#endif\nbar = 2\n" end function
+
+function flagBuild (u :: Unit) -> Text is "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\nbar = 2\n" end function
+
+function flagWarnings (u :: Unit) -> List Text is
+  ["when: no value for FLAG1",
+   "when: the call graph is incomplete until these names are decided",
+   "when: not yet in a decisions file: FLAG1; lines to paste into .assayxport/when follow"]
+end function
+
+procedure flagTree (root :: Text) -> Unit uses FileSystem is
+  c.writeSources root [SourceFile record{ path = "M.hs" , content = flagSource unitValue}]
+end procedure
+
+law "|haskell: the files written hold the build the names give; a missing name is warned of; the decisions file is read and left as it is| for dir :: TemporaryDirectory, out :: TemporaryDirectory is
+  id: "HSX-34"
+  description :
+    "The mutation report's two runs, to the letter, on a module whose `foo`
+    stands under `#ifdef FLAG1`. `--when 'undef FLAG1' --out OUT
+    --no-html`: the files written hold the build without `foo`, and
+    nothing is warned. `--when FLAG2=1`, with `--no-html` and without:
+    FLAG1 is still missing, the three warning lines say so, and the run
+    is the `--stdout` run. Last, written into the root itself (where ax
+    writes when no `--out` is given), with a `.assayxport/when` that says
+    `undef FLAG1`: the decisions file is read (the build without `foo`,
+    no warning), with `--no-html` and without; and after ax has written
+    its shards beside it the file holds the bytes it held (HSX-18 holds
+    that of `--stdout` only, which writes nothing)."
+  end description
+  definition :
+    (flagTree (directoryPath dir); assayInto (directoryPath dir) (directoryPath out) ["--no-html", "--when", "undef FLAG1"])
+      = (c.writeSources (directoryPath dir) [SourceFile record{ path = "M.hs" , content = flagBuild unitValue}];
+         WhenRun record{ packages = extract (directoryPath dir) , warnings = [] , paste = []})
+    && (flagTree (directoryPath dir); assayInto (directoryPath dir) (directoryPath out) ["--no-html", "--when", "FLAG2=1"]).warnings = flagWarnings unitValue
+    && assayInto (directoryPath dir) (directoryPath out) ["--no-html", "--when", "FLAG2=1"] = assayWith (directoryPath dir) ["--when", "FLAG2=1"]
+    && assayInto (directoryPath dir) (directoryPath out) ["--when", "FLAG2=1"] = assayWith (directoryPath dir) ["--when", "FLAG2=1"]
+    && (assayInto (directoryPath dir) (directoryPath out) ["--when", "FLAG2=1"]).warnings = flagWarnings unitValue
+    && (c.writeFile (decisionsFile (directoryPath dir)) (prelude.utf8 "undef FLAG1\n");
+        assayInto (directoryPath dir) (directoryPath dir) ["--no-html"])
+         = (c.writeSources (directoryPath dir) [SourceFile record{ path = "M.hs" , content = flagBuild unitValue}];
+            WhenRun record{ packages = extract (directoryPath dir) , warnings = [] , paste = []})
+    && readBytes (decisionsFile (directoryPath dir)) = Present (prelude.utf8 "undef FLAG1\n")
+    && (flagTree (directoryPath dir); assayInto (directoryPath dir) (directoryPath dir) [])
+         = (c.writeSources (directoryPath dir) [SourceFile record{ path = "M.hs" , content = flagBuild unitValue}];
+            WhenRun record{ packages = extract (directoryPath dir) , warnings = [] , paste = []})
+    && readBytes (decisionsFile (directoryPath dir)) = Present (prelude.utf8 "undef FLAG1\n")
+  end definition
+  references:
+    "|mutation|: "mutation-cycle2.md, law holes: assayToDir (cdd0cc43fa6e5baf, 844296e328dc2ce3)"
+  end references
+end law
+
+-- Undecided lines a decisions file about the second fixture may hold.
+function undecidedPool2 (u :: Unit) -> List Text is ["# A=", "# B=", "# package th=", "# VERSION_text=", "# OTHER="] end function
+
+function fileLinesOf2 (seed :: Integer) -> List Text is
+  ["# decisions", ""] ++ drawnLines2 seed ++ someOf (wp.mix seed 2) (undecidedPool2 unitValue) 0
+end function
+
+-- `pureRun2` for lines read from decisions files: the names the files
+-- list as undecided are not asked for again.
+function pureRun2With (fileLines :: List Text) (full :: Bool) -> WhenRun is
+  first matching case of wn.readBindings fileLines :
+    when Left e then WhenRun record{ packages = [] , warnings = ["unreadable line"] , paste = []}
+    when Right env then
+      (let given = (if full then wp.completed env else env end if) in
+       let f = wn.applyWhen given [fixtureCpp2Package unitValue] in
+        WhenRun record{ packages = f.packages , warnings = wp.warningsWith f (wn.listedNames fileLines) ,
+                        paste = wn.decisionLines given (wn.listedNames fileLines) [fixtureCpp2Package unitValue]} end let end let)
+  end case
+end function
+
+procedure cpp2RunWithText (root :: Text) (content :: Text) (args :: List Text) -> WhenRun uses FileSystem, HaskellWhen fails with ExtractFailure is
+  c.writeFile (root ++ ".when") (prelude.utf8 content);
+  cpp2Run root (["--when-file", root ++ ".when"] ++ args)
+end procedure
+
+-- The second fixture's tree with a decisions file of the given bytes, assayed.
+procedure cpp2Decided (root :: Text) (content :: Text) (args :: List Text) -> WhenRun uses FileSystem, HaskellWhen fails with ExtractFailure is
+  c.writeSources root [SourceFile record{ path = "Cpp2.hs" , content = fixtureCpp2Source unitValue}];
+  c.writeFile (decisionsFile root) (prelude.utf8 content); assayWith root args
+end procedure
+
+law "|haskell: a decisions file with Windows line endings decides and lists as with Unix ones| for a :: TemporaryDirectory, b :: TemporaryDirectory, d :: TemporaryDirectory is
+  id: "HSX-35"
+  description :
+    "HSX-30 holds a when-file's decisions under CR LF. It does not hold
+    the lines that list a name as undecided (`# NAME=`, `# package P=`),
+    nor the discovered file, nor `ax when init`: a reader that kept the
+    carriage return on such a line would decide as before and still ask
+    again for every name the file lists. For any decisions file about the
+    second fixture's names, decisions and undecided lines: given with
+    `--when-file` and ended with CR LF it gives the run of the same lines
+    ended with LF, which is the checked definitions' run for those lines;
+    so does a file whose last line, an undecided one, ends with a lone CR
+    or with no line end at all. The same bytes as the discovered
+    `.assayxport/when` give that run too; `ax when init` then prints
+    exactly the lines still to paste, and leaves the file's bytes, its
+    carriage returns included, as they are."
+  end description
+  definition :
+    for all (seed :: Integer) (full :: Bool) =>
+      (let ls = fileLinesOf2 seed in let tail_ = (if full then ["--when-complete"] else [] end if) in
+        cpp2RunWithText (directoryPath a) (joinedWith "\r\n" ls) tail_ = cpp2RunWithText (directoryPath b) (joinedWith "\n" ls) tail_
+          && sameRun (cpp2RunWithText (directoryPath a) (joinedWith "\r\n" ls) tail_) (pureRun2With ls full)
+          && sameRun (cpp2RunWithText (directoryPath a) (joinedWith "\r\n" ls ++ "# B=\r") tail_) (pureRun2With (ls ++ ["# B="]) full)
+          && sameRun (cpp2RunWithText (directoryPath a) (joinedWith "\n" ls ++ "# B=") tail_) (pureRun2With (ls ++ ["# B="]) full)
+          && sameRun (cpp2Decided (directoryPath d) (joinedWith "\r\n" ls) tail_) (pureRun2With ls full)
+          && (whenInit (directoryPath d)).out = (pureRun2With ls false).paste
+          && readBytes (decisionsFile (directoryPath d)) = Present (prelude.utf8 (joinedWith "\r\n" ls))
+      end let end let)
+    end for all
+  end definition
+  references:
+    "|mutation|: "mutation-cycle2.md, deferred: readWhen (3fe7d0550ed66a2c, e1e24d9230b24c13); next-cycle-4/design.md, section 10 (no law holds a CRLF discovered file)"
+  end references
+end law
+
+-- ---------------------------------------------------------------------------
+-- Next cycle 6 (next-cycle-6/design.md; review 8).
+
+procedure sourceRun (root :: Text) (source :: Text) (args :: List Text) -> WhenRun uses FileSystem, HaskellWhen fails with ExtractFailure is
+  c.writeSources root [SourceFile record{ path = "M.hs" , content = source}]; assayWith root args
+end procedure
+
+-- What a tree that holds only this text gives, with nothing to warn of.
+procedure builtRun (root :: Text) (text :: Text) -> WhenRun uses FileSystem, HaskellExtractor fails with ExtractFailure is
+  c.writeSources root [SourceFile record{ path = "M.hs" , content = text}];
+  WhenRun record{ packages = extract root , warnings = [] , paste = []}
+end procedure
+
+function builtText (lines :: List Text) (rs :: List cpp.Row) -> Text is cpp.buildText (wp.completed (readOr lines)) rs end function
+
+law "|haskell: review 8's repros: the binary prints the build, for a term guarded later by a term written after it| for dir :: TemporaryDirectory is
+  id: "HSX-36"
+  description :
+    "Review 8, B1, on the binary. (a) With P=0, Q=1 and B defined, under
+    `--when-complete`, ax printed `f` at lines 9 to 10 with no call, as
+    certain; the build has `f = 1 + bar 2`: lines 9 to 13 and the call
+    of `Z.bar`. (b) With the same names `b` was dropped; the build keeps
+    it. (c) With P=0, Q=0 and B=1 `b` was in no build. Each run is the
+    extraction of the text the preprocessor leaves, with nothing warned,
+    with `--when-complete` and without it (every name is given). The
+    three texts are written out, so that the law does not rest on the
+    reference alone."
+  end description
+  definition :
+    sameRun (sourceRun (directoryPath dir) (cpp.sourceOf (cpp.reproTail unitValue)) ["--when", "P=0", "--when", "Q=1", "--when", "B", "--when-complete"])
+            (builtRun (directoryPath dir) (builtText ["P=0", "Q=1", "B"] (cpp.reproTail unitValue)))
+    && sameRun (sourceRun (directoryPath dir) (cpp.sourceOf (cpp.reproTail unitValue)) ["--when", "P=0", "--when", "Q=1", "--when", "B"])
+               (builtRun (directoryPath dir) (builtText ["P=0", "Q=1", "B"] (cpp.reproTail unitValue)))
+    && builtText ["P=0", "Q=1", "B"] (cpp.reproTail unitValue)
+      = "{-# LANGUAGE CPP #-}\nmodule M where\nimport Z (bar)\n\n\n\n\n\nf :: Int\nf = 1\n\n\n  + bar 2\n\n\n\n\n"
+    && sameRun (sourceRun (directoryPath dir) (cpp.sourceOf (cpp.reproLost unitValue)) ["--when", "P=0", "--when", "Q=1", "--when", "B", "--when-complete"])
+               (builtRun (directoryPath dir) (builtText ["P=0", "Q=1", "B"] (cpp.reproLost unitValue)))
+    && builtText ["P=0", "Q=1", "B"] (cpp.reproLost unitValue) = "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\n\n\nb = 2\n\n\nc = 3\n"
+    && sameRun (sourceRun (directoryPath dir) (cpp.sourceOf (cpp.reproElif unitValue)) ["--when", "P=0", "--when", "Q=0", "--when", "B=1", "--when-complete"])
+               (builtRun (directoryPath dir) (builtText ["P=0", "Q=0", "B=1"] (cpp.reproElif unitValue)))
+    && builtText ["P=0", "Q=0", "B=1"] (cpp.reproElif unitValue) = "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\n\n\nb = 2\n\nc = 3\n"
+  end definition
+end law
+
+-- The `--when` values that give the pool's environment number i
+-- (`cpp.poolEnvAt`): each of P, Q and R undefined, 0, 1 or 2.
+function poolFlag (n :: Text) (c0 :: Integer) -> List Text is
+  ["--when", (if c0 = 0 then "undef " ++ n else n ++ "=" ++ prelude.textOf (c0 - 1) end if)]
+end function
+
+function poolFlags (i :: Integer) -> List Text is
+  poolFlag "P" (prelude.rem i 4) ++ poolFlag "Q" (prelude.rem (prelude.quot i 4) 4) ++ poolFlag "R" (prelude.rem (prelude.quot i 16) 4)
+end function
+
+law "|haskell: on free nesting the binary, given every name, prints the build| for dir :: TemporaryDirectory is
+  id: "HSX-42"
+  description :
+    "The reviewer's differential (ax on the source with every name given,
+    against ax on what the preprocessor leaves), as a law on the binary.
+    For any module of the third model (groups nested freely over three
+    shared names: HSC-12) and any of the 64 environments, given as
+    `--when` values: the run is the extraction of the text that
+    environment keeps (the same symbols and edges; the order of a
+    manifest's symbols is not held, as in HSX-31), and nothing is warned
+    of or to paste. The text is the reference's; the real `cpp` is run against the same binary by
+    next-cycle-6/tools/cppdiff.py, on the corpus and on drawn modules."
+  end description
+  definition :
+    for all (seed :: Integer) (se :: Integer) =>
+      (let i = wp.pick se 0 64 in
+        sameRun (sourceRun (directoryPath dir) (cpp.sourceOf (cpp.weave seed)) (poolFlags i ++ ["--when-complete"]))
+                (builtRun (directoryPath dir) (cpp.buildText (cpp.poolEnvAt i) (cpp.weave seed))) end let)
+    end for all
+  end definition
+end law
+
+law "|haskell: a root that is not a directory has no decisions file| for dir :: TemporaryDirectory is
+  id: "HSX-37"
+  description :
+    "Review 8, B2. `ax assay x.jar` and `ax assay foo.hs` failed with
+    status 2 and `when: cannot read x.jar/.assayxport/when: ... not a
+    directory`: the decisions file was looked for under a root that is a
+    file. The decisions file is looked for only under a directory. For a
+    root that is a file, and for a root that does not exist, the run is,
+    status, stdout and every error line, the run with
+    `--when-no-discovery`, and no line of it starts with `when:`. In a
+    directory whose `.assayxport` is a file, the decisions file cannot
+    exist and counts as absent: the run is that of the tree without it.
+    A decisions path that is there and is a directory is still a usage
+    error that names it. `ax when init` on a root that is a file is a
+    usage error: status 2, nothing printed, nothing written. (That a JAR
+    is assayed with no flag is held by ax's own test of the command: a
+    law cannot write a JAR's bytes.)"
+  end description
+  definition :
+    (c.writeFile (directoryPath dir ++ "/M.hs") (prelude.utf8 "module M where\nf = 1\n"); assayExit (directoryPath dir ++ "/M.hs") [])
+      = assayExit (directoryPath dir ++ "/M.hs") ["--when-no-discovery"]
+    && !(prelude.any startsWhen (assayExit (directoryPath dir ++ "/M.hs") []).errors)
+    && (assayExit (directoryPath dir ++ "/M.hs") []).status != 2
+    && assayExit (directoryPath dir ++ "/absent") [] = assayExit (directoryPath dir ++ "/absent") ["--when-no-discovery"]
+    && !(prelude.any startsWhen (assayExit (directoryPath dir ++ "/absent") []).errors)
+    && whenInit (directoryPath dir ++ "/M.hs")
+      = InitRun record{ status = 2 , out = [] , notes = ["when: init needs a directory: " ++ directoryPath dir ++ "/M.hs"]}
+    && (c.writeFile (directoryPath dir ++ "/t/.assayxport") (prelude.utf8 "x");
+        c.writeSources (directoryPath dir ++ "/t") [SourceFile record{ path = "M.hs" , content = flagSource unitValue}];
+        assayExit (directoryPath dir ++ "/t") [])
+      = assayExit (directoryPath dir ++ "/t") ["--when-no-discovery"]
+    && (assayExit (directoryPath dir ++ "/t") []).status = 0
+    && (c.writeFile (directoryPath dir ++ "/u/.assayxport/when/x") (prelude.utf8 "x");
+        c.writeSources (directoryPath dir ++ "/u") [SourceFile record{ path = "M.hs" , content = flagSource unitValue}];
+        (assayExit (directoryPath dir ++ "/u") []).status) = 2
+    && (assayExit (directoryPath dir ++ "/u") []).out = ""
+    && prelude.length (assayExit (directoryPath dir ++ "/u") []).errors = 1
+    && startsEach ("when: cannot read " ++ decisionsFile (directoryPath dir ++ "/u") ++ ": ") (assayExit (directoryPath dir ++ "/u") []).errors
+  end definition
+end law
+
+function startsWhen (t :: Text) -> Bool is prelude.startsWith t "when:" end function
+
+procedure flagDecided (root :: Text) (lines :: List Text) -> Unit uses FileSystem is
+  flagTree root; writeDecisions root lines
+end procedure
+
+procedure flagBuilt (root :: Text) -> Unit uses FileSystem is
+  c.writeSources root [SourceFile record{ path = "M.hs" , content = flagBuild unitValue}]
+end procedure
+
+law "|haskell: ax diff reads each source's decisions file| for a :: TemporaryDirectory, b :: TemporaryDirectory is
+  id: "HSX-38"
+  description :
+    "Review 8, S1. A source that is a directory is compared as `ax
+    assay` prints it: with its `.assayxport/when` read. Source a is the
+    module whose `foo` stands under `#ifdef FLAG1`, with a decisions file
+    that says `undef FLAG1`; source b is that build's text. They do not
+    differ (`--mode drift --exit-code`: status 0). With
+    `--when-no-discovery` a still has `foo` under its condition, and they
+    differ (status 1). A decisions file with a line that cannot be read
+    is a usage error that names the file: status 2, nothing on stdout."
+  end description
+  definition :
+    (flagDecided (directoryPath a) ["undef FLAG1"]; flagBuilt (directoryPath b);
+     (diffExit (directoryPath a) (directoryPath b) ["--mode", "drift", "--exit-code"]).status) = 0
+    && (diffExit (directoryPath b) (directoryPath a) ["--mode", "drift", "--exit-code"]).status = 0
+    && (diffExit (directoryPath a) (directoryPath b) ["--mode", "drift", "--exit-code", "--when-no-discovery"]).status = 1
+    && (writeDecisions (directoryPath a) ["B = 2"]; (diffExit (directoryPath a) (directoryPath b) ["--mode", "drift", "--exit-code"]).status) = 2
+    && (diffExit (directoryPath a) (directoryPath b) ["--mode", "drift", "--exit-code"]).out = ""
+    && prelude.length (diffExit (directoryPath a) (directoryPath b) ["--mode", "drift", "--exit-code"]).errors = 1
+    && prelude.all (holdsText (wp.bindingErrorText (decisionsFile (directoryPath a)) (BindingError record{ line = 1 , text = "B = 2"})))
+         (diffExit (directoryPath a) (directoryPath b) ["--mode", "drift", "--exit-code"]).errors
+    && (diffExit (directoryPath a) (directoryPath b) ["--mode", "drift", "--exit-code", "--when-no-discovery"]).status = 1
+  end definition
+end law
+
+function holdsText (part :: Text) (t :: Text) -> Bool is t contains part end function
+
+law "|haskell: ax watch reads the decisions file as ax assay does| for dir :: TemporaryDirectory, out :: TemporaryDirectory is
+  id: "HSX-39"
+  description :
+    "Review 8, S1. `ax assay d` wrote the build the decisions file gives
+    and `ax watch d` wrote every form under its condition, and told the
+    user to paste lines for names the file already decides: two manifests
+    for one root. The first pass of `ax watch` is the run of `ax assay`
+    that writes its files: with the decisions file read (the build
+    without `foo`, nothing warned, nothing to paste), and with
+    `--when-no-discovery` (`foo` under its condition, the three warning
+    lines, the lines to paste). `ax serve` runs the same extraction; it
+    is held by ax's own tests, as a law cannot stop a server."
+  end description
+  definition :
+    (flagDecided (directoryPath dir) ["undef FLAG1"]; watchInto (directoryPath dir) (directoryPath out) [])
+      = assayInto (directoryPath dir) (directoryPath out) ["--no-html"]
+    && watchInto (directoryPath dir) (directoryPath out) ["--when-no-discovery"]
+      = assayInto (directoryPath dir) (directoryPath out) ["--no-html", "--when-no-discovery"]
+    && (watchInto (directoryPath dir) (directoryPath out) ["--when-no-discovery"]).warnings = flagWarnings unitValue
+    && watchInto (directoryPath dir) (directoryPath out) []
+      = (flagBuilt (directoryPath dir); WhenRun record{ packages = extract (directoryPath dir) , warnings = [] , paste = []})
+  end definition
+end law
+
+function capLine (path :: Text) -> Text is "when: " ++ path ++ ": more than 256 builds: one is read, and its facts are not decided" end function
+
+-- A module of nine groups on nine names: 512 builds, more than are read.
+function wideFile9 (u :: Unit) -> SourceFile is SourceFile record{ path = "W.hs" , content = cpp.sourceOf (cpp.wideRows 9)} end function
+
+law "|haskell: ax when init names a file that is not read in every build, and does not say there is no name| for a :: TemporaryDirectory, b :: TemporaryDirectory, d :: TemporaryDirectory is
+  id: "HSX-40"
+  description :
+    "Review 8, S2. On a tree whose one module has 512 builds init said
+    `no name to decide` and nothing else: every fact of the file is
+    undecided and the file tests nine names. Init prints the warnings of
+    the extraction that are not about a missing name, each after `ax:
+    warning: ` and before its own last line: here the line that names the
+    file. Its last line then says that no name was FOUND, and that the
+    names the file tests are not known; status 0, nothing on stdout, no
+    file written. Beside the fixture, init writes the starter file for the
+    fixture's ten names (the file not read adds none) and still names the
+    file not read; so does a second run, which finds every name listed.
+    And a condition that cannot be evaluated is named by init as by the
+    assay."
+  end description
+  definition :
+    (c.writeSources (directoryPath a) [wideFile9 unitValue]; whenInit (directoryPath a))
+      = InitRun record{ status = 0 , out = [] ,
+                        notes = ["warning: " ++ capLine "W.hs",
+                                 "when: no name found under " ++ directoryPath a ++ ": nothing written; the files named above are not read in every build, and the names they test are not known"]}
+    && readBytes (decisionsFile (directoryPath a)) = Absent
+    && (cppTree (directoryPath b); c.writeSources (directoryPath b) [wideFile9 unitValue]; whenInit (directoryPath b))
+      = InitRun record{ status = 0 , out = [] ,
+                        notes = ["warning: " ++ capLine "W.hs", "when: wrote " ++ decisionsFile (directoryPath b) ++ ": 10 undecided"]}
+    && readBytes (decisionsFile (directoryPath b)) = fileBytes (cppDecisionsFile unitValue)
+    && whenInit (directoryPath b)
+      = InitRun record{ status = 0 , out = [] ,
+                        notes = ["warning: " ++ capLine "W.hs", "when: " ++ decisionsFile (directoryPath b) ++ " lists every name: nothing to add"]}
+    && (c.writeSources (directoryPath d) [SourceFile record{ path = "Z.hs" , content = "module Z where\n#if 1 +\na = 1\n#endif\nb = 2\n"}];
+        whenInit (directoryPath d))
+      = InitRun record{ status = 0 , out = [] ,
+                        notes = ["warning: when: cannot evaluate: (1 +)", "when: no name to decide under " ++ directoryPath d ++ ": nothing written"]}
+    && (assayWith (directoryPath a) []).warnings = [capLine "W.hs"]
+  end definition
+end law
+
+law "|haskell: --quiet silences the warnings and the lines to paste, and nothing else| for dir :: TemporaryDirectory, wide :: TemporaryDirectory is
+  id: "HSX-41"
+  description :
+    "Review 8, N4 (review 7's N4 left it to a cycle that never took it).
+    `--quiet` is `suppress progress on stderr`, and it silences every
+    `ax: warning: ` line of the `--when` machinery with it: the missing
+    names, the line that says the call graph is incomplete, the lines to
+    paste, and the line of a file not read in every build. It changes
+    nothing else: the manifest printed is the same bytes, the status is
+    0, and a line that cannot be read is still a usage error with its
+    one line. The README says so: a script that passes `--quiet` gets no
+    word that the manifest is incomplete, and must look for `when` fields
+    in it."
+  end description
+  definition :
+    cppRun (directoryPath dir) ["--quiet"] = WhenRun record{ packages = (cppRun (directoryPath dir) []).packages , warnings = [] , paste = []}
+    && prelude.length (cppRun (directoryPath dir) []).warnings = 3
+    && prelude.length (cppRun (directoryPath dir) []).paste > 0
+    && cppExit (directoryPath dir) ["--quiet"] = ExitRun record{ status = 0 , out = (cppExit (directoryPath dir) []).out , errors = []}
+    && cppExit (directoryPath dir) ["--quiet", "--when", "B = 2"] = usageError "when: --when:1: cannot read \"B = 2\""
+    && (c.writeSources (directoryPath wide) [wideFile9 unitValue]; assayWith (directoryPath wide) ["--quiet"]).warnings = []
+    && (assayWith (directoryPath wide) []).warnings = [capLine "W.hs"]
+  end definition
+end law
+
+-- Parser gaps: see the extract unit's laws of the same names, and
+-- next-cycle-2/design.md, section 12.
+
+law "|haskell: parser gap, the extended grammar: conforms on the fixtures| for dir :: TemporaryDirectory is
+  id: "HSX-GAP-GEXT"
+  definition : c.normalForm (modelIn (directoryPath dir) (hs.fixtureGapGrammarExtSources unitValue)) = c.normalForm (hs.fixtureGapGrammarExtPackages unitValue) end definition
+end law
+
+law "|haskell: parser gap, type syntax in terms, and the arrow as an operator: conforms on the fixtures| for dir :: TemporaryDirectory is
+  id: "HSX-GAP-G4G16"
+  definition : c.normalForm (modelIn (directoryPath dir) (hs.fixtureGapTypeSyntaxSources unitValue)) = c.normalForm (hs.fixtureGapTypeSyntaxPackages unitValue) end definition
+end law
+
+law "|haskell: parser gap, namespace wildcards: conforms on the fixtures| for dir :: TemporaryDirectory is
+  id: "HSX-GAP-NSW"
+  definition : c.normalForm (modelIn (directoryPath dir) (hs.fixtureGapNamespaceWildcardsSources unitValue)) = c.normalForm (hs.fixtureGapNamespaceWildcardsPackages unitValue) end definition
+end law
+
+law "|haskell: parser gap, the Go runtime merge cap: conforms on the fixtures| for dir :: TemporaryDirectory is
+  id: "HSX-GAP-RUNTIME"
+  definition : c.normalForm (modelIn (directoryPath dir) (hs.fixtureGapRuntimeMergeCapSources unitValue)) = c.normalForm (hs.fixtureGapRuntimeMergeCapPackages unitValue) end definition
+end law
+
+law "|haskell: parser gap, the Go runtime merge cap and the char literal: conforms on the fixtures| for dir :: TemporaryDirectory is
+  id: "HSX-GAP-RUNTIMEG14"
+  definition : c.normalForm (modelIn (directoryPath dir) (hs.fixtureGapRuntimeAndCharLiteralSources unitValue)) = c.normalForm (hs.fixtureGapRuntimeAndCharLiteralPackages unitValue) end definition
+end law
+
+harness assayxport.haskell.testing for assayxport.haskell is
+-- Every law here calls the native extractor (tagged native and haskell, so
+-- a Python run can leave them out), in a seeded random order, each stopped
+-- by name past 5 minutes (fourteen fixture modules per tree, 2026-11-13).
+--
+-- NOT `parallel` (next cycle 6, decision O97; it was parallel until the
+-- round of 2026-11-17). Every property here starts the ax binary, 100 to
+-- 700 times. With `parallel` all nineteen properties ran at once, a
+-- timeout counted a law's own time plus its wait for the others, and on a
+-- machine with nothing else running twelve properties passed their
+-- limits that take 1 to 233 seconds each alone. One law at a time, a
+-- timeout measures the law. The whole unit then takes the sum of its
+-- laws: 26 minutes (measured with `go test -parallel 1`, which runs the
+-- same tests one at a time: all pass, 2026-11-17), against the round's 90.
+tags native, haskell
+order random
+timeout 5 min
+
+strategy complete :: HsTree is
+  bind r :: Int8 from (one of 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29) in
+  bind extra :: HsModule from any in
+  bind more :: List HsDecl from any in
+  one of everything r extra more
+  end bind end bind end bind
+end strategy
+
+-- As for Python: half the cases from `complete` (every construct), half
+-- from the default generator; at 100 cases the expected share is 50%
+-- (standard deviation 5), so the floor of 35% is three deviations below.
+strategy inputs :: HsTree is frequency 1 complete, 1 any end strategy
+
+for law "|haskell: conforms to the policy|
+use inputs for x
+cover 35% "every construct present" when hasEveryConstruct x
+label sizeLabel x
+end for law
+
+for law "|haskell: a root named dist is read|
+use complete for x
+end for law
+
+for law "|haskell: a root named like a dot-directory is read|
+use complete for x
+end for law
+
+for law "|haskell: Windows line endings read as Unix ones|
+use complete for x
+end for law
+
+for law "|haskell: --when leaves a tree with no conditions as it is|
+use inputs for x
+end for law
+
+-- Timeouts by the number of times a case runs the binary on `Cpp.hs`
+-- (144 builds; 0.45 s a run alone, 2026-11-17; next-cycle-5/design.md,
+-- section 7): 100 cases of N runs take 45 N seconds alone. One run a case
+-- stays at the 5 minutes. Since next cycle 6 the laws run one at a time,
+-- and each limit below is at least three times the law's own time
+-- (the slowest, seven runs a case, took 233 s against its 25 minutes).
+for law "|haskell: a when-file and the same lines as flags are equivalent|
+timeout 10 min
+end for law
+
+for law "|haskell: ax assay never changes or creates the decisions file|
+timeout 10 min
+end for law
+
+for law "|haskell: the discovered decisions file is read as a when-file|
+timeout 15 min
+end for law
+
+for law "|haskell: the discovered file is read first, then each when-file, then each --when|
+timeout 10 min
+end for law
+
+for law "|haskell: init, then every line filled, then assay: no warning, and the same as --when with those values|
+timeout 10 min
+end for law
+
+-- Each case extracts `Cpp.hs` on the binary seven times.
+for law "|haskell: a when-file with Windows line endings reads as with Unix ones|
+timeout 25 min
+end for law
+
+-- Next cycle 5. Each case of the second runs `Cpp2.hs` (24 builds) on the
+-- binary six times.
+for law "|haskell: a decisions file with Windows line endings decides and lists as with Unix ones|
+timeout 10 min
+cover 25% "a listed name" when prelude.length (wn.listedNames (fileLinesOf2 seed)) > 0
+end for law
+
+-- Next cycle 5 (the green round of cycles 3+4: 43% and 9% against the
+-- floors below). Over seeds drawn evenly the two classes hold 62% and 23%
+-- of the cases (4,000 seeds, 2026-11-17); the default generator of an
+-- Integer draws its edges and small values again and again, and reached
+-- less. Half the cases now come from 48 seeds whose file has both lines
+-- to paste and a listed name that is missing (the first 48 from 0 up),
+-- half from the default generator: about 70% and 55% are expected, and
+-- the floors stand.
+strategy pasting :: Integer is
+  bind k :: Integer from (one of 2, 7, 8, 15, 25, 31, 33, 48, 54, 61, 71, 72, 79, 90, 95, 113, 116, 118, 123, 126, 136, 144, 147, 149, 154, 159, 164, 169, 172, 177, 182, 190, 195, 200, 205, 208, 213, 229, 231, 236, 252, 259, 265, 268, 270, 282, 285, 288) in
+  one of k
+  end bind
+end strategy
+
+strategy fileSeeds :: Integer is frequency 1 pasting, 1 any end strategy
+
+for law "|haskell: the lines to paste are exactly what ax when init would add|
+timeout 10 min
+use fileSeeds for seed
+cover 50% "lines to paste" when prelude.length (pureRunWith (fileLinesOf seed) [] false).paste > 0
+cover 10% "a listed name is missing" when prelude.length (wp.unlisted (wn.applyWhen (readOr (fileLinesOf seed)) [fixtureCppPackage unitValue]).missing (wn.listedNames (fileLinesOf seed))) < prelude.length (wn.applyWhen (readOr (fileLinesOf seed)) [fixtureCppPackage unitValue]).missing
+end for law
+
+for law "|haskell: parser gap, the extended grammar: conforms on the fixtures|
+tags parsergap, GEXT
+end for law
+
+for law "|haskell: parser gap, type syntax in terms, and the arrow as an operator: conforms on the fixtures|
+tags parsergap, G4G16
+end for law
+
+for law "|haskell: parser gap, namespace wildcards: conforms on the fixtures|
+tags parsergap, NSW
+end for law
+
+for law "|haskell: parser gap, the Go runtime merge cap: conforms on the fixtures|
+tags parsergap, RUNTIME
+end for law
+
+for law "|haskell: parser gap, the Go runtime merge cap and the char literal: conforms on the fixtures|
+tags parsergap, RUNTIMEG14
+end for law
+
+end harness
+
+end unit

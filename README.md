@@ -8,7 +8,7 @@
 > reparsing everything.
 
 Part of the [goforge](https://goforge.dev) suite. Supports Go (native
-`go/packages`), Python, Java, TypeScript, and JavaScript source, plus compiled
+`go/packages`), Python, Java, TypeScript, JavaScript, and Haskell source, plus compiled
 JVM artifacts. One scan produces a deterministic manifest through the same
 schema and explorer regardless of how declarations were acquired.
 
@@ -89,16 +89,84 @@ calls, or source-derived complexity are required.
 ### Languages
 
 By default `scan` runs every registered source extractor (Go, Python, Java,
-TypeScript/JavaScript) and merges the results into one manifest whose
+TypeScript/JavaScript, Haskell) and merges the results into one manifest whose
 `languages` field lists what was found. Use
 `--lang` to restrict the run; it is repeatable, so `--lang python --lang go`
 runs only those two. An unregistered language name is an error that lists the
 available ones.
 
-Go extraction is fully semantic via `go/packages`. Python and Java extraction is
+Go extraction is fully semantic via `go/packages`. Python, Java and Haskell extraction is
 syntactic (tree-sitter): names, kinds, visibility, signatures as written, doc
 comments, decorators/annotations, and entrypoints are reliable; imported-name
 resolution and inferred types are not.
+
+### Haskell and CPP conditions
+
+Haskell sources with `#if`/`#ifdef` are read in every build: each combination
+of the conditions a file tests is one build (at most 256 per file; a file with
+more is read in its first build and its facts carry the condition `"unread"`).
+A symbol or call that exists only in some builds carries its condition in
+`when`, in the grammar below.
+
+```
+when      = '"unread"' | cube { " || " cube }
+cube      = literal { " && " literal }
+literal   = simple | "(" directive ")" | "!(" directive ")"
+simple    = NAME | NAME "(" text with no parenthesis ")" | DIGITS
+directive = the expression of one #if or #elif, as written, its parentheses paired
+          | "defined(" NAME ")"                      for #ifdef and #ifndef
+          | '"unreadable #if at line ' N '"'          a directive whose parentheses do not pair
+```
+
+- A literal is one directive of the source. `(...)` marks one directive's whole
+  expression. A directive that is a bare name, one macro call or a number stands
+  without them. `!(...)` is the directive failing.
+- A cube is a path of nested directives, read from the left as the preprocessor
+  meets them. A literal that fails ends the cube; the literals after it are not
+  read, and may be expressions that cannot be evaluated in that build.
+- The cubes are alternatives; no two hold in one build. The fact exists in the
+  builds where a cube holds. No field: every build.
+- To read a condition back, cut at each ` || ` outside all parentheses, then each
+  part at each ` && ` outside all parentheses, every `(` and `)` counted.
+- It is not one C expression. `defined(MIN_VERSION_p) && MIN_VERSION_p(2,16,0)`
+  is two nested directives and is false, with no error, where the package is
+  absent. Given to `cpp` after one `#if` it is "missing binary operator before
+  token". To ask a preprocessor, write a cube as nested `#if` lines, one literal
+  each.
+- Two C strings are never decided. `"unread"`: the file has more builds than ax
+  reads; one was read; no names decide the fact. `("unreadable #if at line N")`:
+  that directive cannot be read as an expression. Neither is valid in an `#if`,
+  so neither can be taken for a value.
+
+To read the manifest for one build, decide the names the conditions test:
+
+```
+ax assay . --when A=1 --when B --when "undef C" --when "package base=4.18.2"
+ax assay . --when-file decisions.txt     # the same lines, one per line
+ax assay . --when-complete               # a name not given is undefined, as the C preprocessor has it
+```
+
+A line is `NAME=<integer>`, `NAME`, `undef NAME`, `package P=X.Y.Z` (defines
+`MIN_VERSION_p` and `VERSION_p`) or `undef MIN_VERSION_p` (the package is not a
+dependency); `#` starts a remark. Carriage returns around a line are ignored.
+A line that cannot be read is a usage error (exit status 2, nothing on stdout).
+
+Names left undecided keep their condition and are reported on stderr, with the
+lines to paste into a decisions file. `ax when init [path]` writes a starter
+`<path>/.assayxport/when` listing every name the tree needs (it never overwrites
+an existing file: it prints the blocks for new names, to append with `>>`).
+`ax assay` reads `<path>/.assayxport/when` on every run, then `--when-file`
+files, then `--when` values (a later line replaces an earlier one);
+`--when-no-discovery` leaves that file unread. The decisions file is read only
+when the path is a directory. `ax watch`, `ax serve` and `ax diff` read it as
+`ax assay` does (`diff`: each source's own), and take `--when-no-discovery`; they
+take no `--when`. `ax when init` lists every name of the files it could read in
+every build. A file with more than 256 builds is named in a warning and adds no
+name: nothing decides its facts. `--quiet` silences the `when:` warnings and the
+lines to paste with the progress lines. The manifest and the exit status are the
+same, and a line that cannot be read is still an error. A script that passes
+`--quiet` gets no word that the manifest is incomplete: look for `when` fields in
+it.
 
 ### Node / JavaScript / TypeScript
 

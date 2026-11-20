@@ -3,6 +3,7 @@
 // plus a self-contained interactive explorer (assayxport.html).
 //
 //	ax assay .              write manifest + explorer at the project root
+//	ax when init .          write a starter .assayxport/when for CPP names
 //	ax verify trace.json     verify stable artifact and ADR trace closure
 //	ax serve .              assay, serve the explorer, re-assay on save
 //	ax watch .              re-assay on save, writing files each time
@@ -13,18 +14,22 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"math"
 	"os"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
+	"syscall"
 	"time"
 
 	"goforge.dev/assayxport/internal/artifact/maven"
 	"goforge.dev/assayxport/internal/doccheck"
 	"goforge.dev/assayxport/internal/emit"
 	"goforge.dev/assayxport/internal/explorer"
+	"goforge.dev/assayxport/internal/extract"
 	"goforge.dev/assayxport/internal/extract/golang"
+	"goforge.dev/assayxport/internal/extract/haskell"
 	"goforge.dev/assayxport/internal/extract/jvm"
 	"goforge.dev/assayxport/internal/extract/registry"
 	"goforge.dev/assayxport/internal/publication"
@@ -80,6 +85,8 @@ func usage() {
 
 commands:
   assay   write assayxport.json, .assayxport/ shards, and assayxport.html
+  when    ax when init [path]: list the CPP names a Haskell tree needs decided,
+          in <path>/.assayxport/when (never overwritten; new names are printed)
   diff    compare two sources: exact drift or ranked correspondence
   publish validate release inputs, prepare, and publish Maven artifacts
   verify  validate an assayxport.trace/v3 artifact graph and release closure
@@ -100,6 +107,8 @@ func run(args []string) error {
 	switch cmd {
 	case "assay":
 		return runAssayCmd(rest)
+	case "when":
+		return runWhenCmd(rest)
 	case "diff":
 		return runDiffCmd(rest)
 	case "verify":
@@ -189,6 +198,218 @@ func splitPath(args []string) (string, []string) {
 	return path, args
 }
 
+// whenCfg is what `ax assay` was given for --when, --when-file and
+// --when-complete; the Haskell extractor filters its manifest by it.
+var whenCfg haskell.When
+
+// configureWhen hands the --when settings to the Haskell extractor.
+func configureWhen(exts []extract.Extractor) {
+	for _, e := range exts {
+		if he, ok := e.(*haskell.Extractor); ok {
+			he.SetWhen(whenCfg)
+		}
+	}
+}
+
+// whenWarnings prints what the Haskell extraction left undecided, one
+// `ax: warning:` line each.
+func whenWarnings(exts []extract.Extractor, quiet bool) {
+	if quiet {
+		return
+	}
+	for _, e := range exts {
+		if he, ok := e.(*haskell.Extractor); ok {
+			for _, w := range he.Warnings() {
+				fmt.Fprintln(os.Stderr, "ax: warning:", w)
+			}
+			// The lines to paste into a decisions file follow, as they are.
+			for _, l := range he.Paste() {
+				fmt.Fprintln(os.Stderr, l)
+			}
+		}
+	}
+}
+
+// decisionsFile is where a root's decisions file is.
+func decisionsFile(root string) string { return root + "/.assayxport/when" }
+
+// whenFileLines reads one decisions file as its lines. Line ends are cut at
+// "\n" only: the checked reader drops carriage returns around a line.
+func whenFileLines(f string) ([]string, error) {
+	data, err := os.ReadFile(f)
+	if err != nil {
+		return nil, &exitCodeError{code: 2, msg: fmt.Sprintf("when: cannot read %s: %v", f, err)}
+	}
+	if len(data) == 0 {
+		return nil, nil
+	}
+	fl := strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
+	if err := haskell.CheckWhen(f, fl); err != nil {
+		return nil, &exitCodeError{code: 2, msg: err.Error()}
+	}
+	return fl, nil
+}
+
+// discoveredLines reads <root>/.assayxport/when when it exists (P1, D1 to
+// D3). The decisions file is looked for only when root names a directory (a
+// symbolic link to one is one): a JAR, a source file, a coordinate or a path
+// that does not exist has none. Absent is: the path does not exist, or a
+// part of it is not a directory. Present and unreadable is a usage error.
+func discoveredLines(root string) ([]string, error) {
+	if fi, err := os.Stat(root); err != nil || !fi.IsDir() {
+		return nil, nil
+	}
+	f := decisionsFile(root)
+	if _, err := os.Stat(f); errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) {
+		return nil, nil
+	}
+	return whenFileLines(f)
+}
+
+// refreshWhen is what `ax watch`, `ax serve` and `ax diff` do at each pass
+// (D5, D6): the decisions file of root is read again (unless noDiscovery) and
+// is all they are given; they take no --when, --when-file or --when-complete.
+func refreshWhen(root string, noDiscovery bool) error {
+	whenCfg = haskell.When{}
+	if noDiscovery {
+		return nil
+	}
+	d, err := discoveredLines(root)
+	if err != nil {
+		return err
+	}
+	whenCfg = haskell.When{FileLines: d}
+	return nil
+}
+
+// readWhen reads the discovered decisions file of root (unless noDiscovery),
+// the --when-file files and the --when values into whenCfg: the discovered
+// file, every file in order, then every flag in order, so that a later line
+// replaces an earlier one. A line that cannot be read is a usage error (exit
+// status 2), before any extraction.
+func readWhen(root string, noDiscovery bool, files, flags []string, complete bool) error {
+	lines := []string{}
+	if !noDiscovery {
+		d, err := discoveredLines(root)
+		if err != nil {
+			return err
+		}
+		lines = append(lines, d...)
+	}
+	for _, f := range files {
+		fl, err := whenFileLines(f)
+		if err != nil {
+			return err
+		}
+		lines = append(lines, fl...)
+	}
+	if err := haskell.CheckWhen("--when", flags); err != nil {
+		return &exitCodeError{code: 2, msg: err.Error()}
+	}
+	whenCfg = haskell.When{FileLines: lines, FlagLines: append([]string{}, flags...), Complete: complete}
+	return nil
+}
+
+// runWhenCmd is `ax when init [path] [--lang L]...`: it extracts as assay
+// does and writes no manifest. With no decisions file it writes the starter
+// file; with one it never writes, and prints the blocks for the names the
+// file neither decides nor lists, to be appended.
+func runWhenCmd(args []string) error {
+	if len(args) == 0 || args[0] != "init" {
+		if len(args) > 0 && (args[0] == "-h" || args[0] == "--help") {
+			fmt.Fprintln(os.Stderr, "usage: ax when init [path] [--lang L]...")
+			return nil
+		}
+		return &exitCodeError{code: 2, msg: `when: expected "ax when init [path] [--lang L]..."`}
+	}
+	fs := flag.NewFlagSet("ax when init", flag.ContinueOnError)
+	var langs stringsFlag
+	fs.Var(&langs, "lang", "language to read (repeatable; default: all)")
+	fs.Usage = func() {
+		fmt.Fprintln(os.Stderr, "usage: ax when init [path] [--lang L]...")
+		fs.PrintDefaults()
+	}
+	path, rest := splitPath(args[1:])
+	if err := fs.Parse(rest); err != nil {
+		return err
+	}
+	if fs.NArg() > 0 {
+		path = fs.Arg(0)
+	}
+	if fi, err := os.Stat(path); err != nil || !fi.IsDir() {
+		return &exitCodeError{code: 2, msg: fmt.Sprintf("when: init needs a directory: %s", path)}
+	}
+	file := decisionsFile(path)
+	lines, err := discoveredLines(path)
+	if err != nil {
+		return err
+	}
+	_, statErr := os.Stat(file)
+	exists := statErr == nil
+	whenCfg = haskell.When{FileLines: lines}
+	exts, err := registry.Select(langs)
+	if err != nil {
+		return err
+	}
+	configureWhen(exts)
+	if _, _, _, err := registry.Run(exts, path); err != nil {
+		return err
+	}
+	var paste []string
+	var nothing string
+	for _, e := range exts {
+		if he, ok := e.(*haskell.Extractor); ok {
+			// The filter's warnings that are not about a missing name (I6).
+			for _, w := range he.InitWarnings() {
+				fmt.Fprintln(os.Stderr, "ax: warning:", w)
+			}
+			paste = append(paste, he.Paste()...)
+			nothing = he.InitNothingText(path)
+		}
+	}
+	n := len(haskell.Listed(paste))
+	if exists {
+		if n == 0 {
+			fmt.Fprintf(os.Stderr, "ax: when: %s lists every name: nothing to add\n", file)
+			return nil
+		}
+		for _, l := range paste {
+			fmt.Println(l)
+		}
+		fmt.Fprintf(os.Stderr, "ax: when: %s is not changed: %d to add, printed\n", file, n)
+		return nil
+	}
+	if n == 0 {
+		if nothing == "" {
+			nothing = fmt.Sprintf("when: no name to decide under %s: nothing written", path)
+		}
+		fmt.Fprintln(os.Stderr, "ax: "+nothing)
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+		return err
+	}
+	// Exclusive create: an existing file is never overwritten.
+	f, err := os.OpenFile(file, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return err
+	}
+	var sb strings.Builder
+	for _, l := range append(haskell.Header(), paste...) {
+		sb.WriteString(l)
+		sb.WriteString("\n")
+	}
+	if _, err := f.WriteString(sb.String()); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "ax: when: wrote %s: %d undecided\n", file, n)
+	return nil
+}
+
 // assayOnce runs every selected extractor over path and returns the
 // manifest. It is the single extraction entry point shared by assay,
 // serve, and watch, so all three produce identical output for equal
@@ -198,10 +419,12 @@ func assayOnce(path string, langs stringsFlag, quiet bool) (schema.Index, map[st
 	if err != nil {
 		return schema.Index{}, nil, err
 	}
+	configureWhen(exts)
 	pkgs, languages, warnings, err := registry.Run(exts, path)
 	if err != nil {
 		return schema.Index{}, nil, err
 	}
+	whenWarnings(exts, quiet)
 	// A tolerated per-language failure (some other language still produced
 	// output) is surfaced on stderr so a partial manifest is never silently
 	// mistaken for a complete one.
@@ -249,6 +472,7 @@ func assayToDir(path string, langs stringsFlag, quiet bool, dir string) (schema.
 	if err != nil {
 		return schema.Index{}, err
 	}
+	configureWhen(exts)
 	w, err := emit.NewWriter(dir)
 	if err != nil {
 		return schema.Index{}, err
@@ -257,6 +481,7 @@ func assayToDir(path string, langs stringsFlag, quiet bool, dir string) (schema.
 	if err != nil {
 		return schema.Index{}, err
 	}
+	whenWarnings(exts, quiet)
 	if !quiet {
 		for _, wn := range warnings {
 			fmt.Fprintln(os.Stderr, "ax: warning:", wn)
@@ -306,6 +531,11 @@ func runAssayCmd(args []string) error {
 	documentation := fs.String("documentation", "off", "documentation policy: off, resolve, or require")
 	var langs stringsFlag
 	fs.Var(&langs, "lang", "language to assay (repeatable; default: all)")
+	var whenFlags, whenFiles stringsFlag
+	fs.Var(&whenFlags, "when", "name a CPP condition decides on (NAME=V, NAME, undef NAME, package P=X.Y.Z; repeatable)")
+	fs.Var(&whenFiles, "when-file", "read --when lines from a file (repeatable)")
+	whenComplete := fs.Bool("when-complete", false, "a name not given is undefined, as the C preprocessor has it")
+	noDiscovery := fs.Bool("when-no-discovery", false, "do not read <path>/.assayxport/when")
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "usage: ax assay [path] [flags]")
 		fs.PrintDefaults()
@@ -320,6 +550,9 @@ func runAssayCmd(args []string) error {
 	}
 	if *documentation != "off" && *documentation != "resolve" && *documentation != "require" {
 		return fmt.Errorf("invalid --documentation mode %q: want off, resolve, or require", *documentation)
+	}
+	if err := readWhen(path, *noDiscovery, whenFiles, whenFlags, *whenComplete); err != nil {
+		return err
 	}
 	artifactPath, artifactName, isArtifact, err := resolveArtifactInput(context.Background(), path, artifactOptions{
 		repository: *mavenRepo, cache: *mavenCache, username: *mavenUser,

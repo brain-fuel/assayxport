@@ -1,0 +1,9 @@
+{
+  :manifest-version 1
+  :package {
+    :name "assayxport.contract"
+    :version "0.3.0"
+  }
+  :language-profile "1.0-rc.2"
+  :sources ["laws"]
+}
