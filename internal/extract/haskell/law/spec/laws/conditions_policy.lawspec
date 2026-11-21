@@ -43,9 +43,17 @@ end type
 
 -- What an expression comes to.
 --   Known v   every build that agrees with the environment gives v.
---   Bad       every such build is an error in the preprocessor (a syntax
---             error, a division by zero that is evaluated, a form this
---             evaluator does not read).
+--   Bad       no answer. Either every such build is an error in the
+--             preprocessor (a syntax error, a division by zero that is
+--             evaluated, a call of a macro the build does not define), or
+--             the expression holds a form this evaluator does not read,
+--             which the preprocessor may well evaluate (next cycle 7;
+--             review 9, N2): a character constant other than one plain
+--             ASCII character or one of the escapes \n \t \r \0 \\ \' \";
+--             a literal past 2^64 - 1; a call of a macro that is not one
+--             of the two version macros. Bad is never a value: a fact
+--             whose condition is Bad is kept, undecided, and named in a
+--             warning.
 --   Unknown   neither. `missing` lists, sorted and without repeats, the
 --             names whose value would be needed. `risky` says that some
 --             build may be an error (a divisor that is not known), so the
@@ -64,15 +72,21 @@ type BinOp is one of
   | BMul | BDiv | BRem | BAdd | BSub | BShl | BShr
   | BLt | BLe | BGt | BGe | BEq | BNe
   | BAnd | BXor | BOr | BLand | BLor
+  | BComma
 end type
 
--- `Lit n` is an integer literal; it is an expression only for
--- 0 <= n <= 2^63 - 1 (a larger literal is unsigned in C, which this
--- evaluator does not read: Bad). `MinVersion` is Cabal's
+-- `Lit n` is an integer literal with no `u` suffix, 0 <= n <= 2^64 - 1.
+-- Up to 2^63 - 1 it is its value. Above, the preprocessor as GHC runs it
+-- (`cpp -traditional`) keeps it signed, with a warning, and it wraps:
+-- 18446744073709551615 is -1 (the standard mode makes it unsigned; ax
+-- follows the mode Haskell sources are read in). `ULit n` is a literal
+-- with a `u` or `U` suffix, 0 <= n <= 2^64 - 1: an unsigned value (next
+-- cycle 7; review 9, N2; `unsignedOf`, below). `MinVersion` is Cabal's
 -- MIN_VERSION_pkg(major1, major2, minor); `MinGhc` is GHC's
 -- MIN_VERSION_GLASGOW_HASKELL(major1, major2, patch1, patch2).
 type CExpr is one of
   | Lit of type Integer
+  | ULit of type Integer
   | Name of type Text
   | IsDefined of type Text
   | Un of type record{ op :: UnOp , arg :: CExpr}
@@ -93,6 +107,7 @@ function wrap (x :: Integer) -> Integer is fromInt64 (toInt64 x) end function
 function pow2 (n :: Integer) -> Integer is if n <= 0 then 1 else 2 * pow2 (n - 1) end if end function
 
 function maxLit (u :: Unit) -> Integer is 9223372036854775807 end function
+function maxULit (u :: Unit) -> Integer is 18446744073709551615 end function
 
 -- The low 64 bits of a value, as a number from 0.
 function unsigned64 (a :: Integer) -> Integer is if a < 0 then a + 18446744073709551616 else a end if end function
@@ -126,21 +141,51 @@ end function
 
 function truth (b :: Bool) -> Integer is if b then 1 else 0 end if end function
 
+-- Unsigned values (next cycle 7; review 9, N2). A value is kept as the 64
+-- bits it has, read as a signed number; whether an operand is unsigned is
+-- a property of the expression (`unsignedOf`), as in C, where it is the
+-- operand's type. `lu` and `ru` say so of the left and the right operand.
+-- With either unsigned, `/`, `%` and the four comparisons work on the
+-- values from 0 (C's usual arithmetic conversions; GCC, The C
+-- Preprocessor, 4.2.2 If: "calculations are done in the widest integer
+-- type known to the compiler"; libcpp's num_binary_op and
+-- num_inequality_op). `+`, `-`, `*`, the bitwise operators, `==` and `!=`
+-- give the same bits either way. A shift takes its kind from its left
+-- operand alone: `>>` of an unsigned value fills with zeros. An unsigned
+-- shift count is never negative.
+
+-- floor (a / 2^n) for a from 0: zero from 64 bits on.
+function halvedU (a :: Integer) (n :: Integer) -> Integer is
+  if n <= 0 then a else halvedU (prelude.quot a 2) (n - 1) end if
+end function
+
+function shiftRightU (a :: Integer) (n :: Integer) -> Integer is
+  if n >= 64 then 0 else wrap (halvedU (unsigned64 a) n) end if
+end function
+
+function shiftRightAs (lu :: Bool) (a :: Integer) (n :: Integer) -> Integer is
+  if lu then shiftRightU a n else shiftRight a n end if
+end function
+
 -- A strict operator on two known values. A negative shift count shifts the
 -- other way (GCC).
-function compute (op :: BinOp) (a :: Integer) (b :: Integer) -> Outcome is
-  first matching case of op :
+function compute (op :: BinOp) (a :: Integer) (b :: Integer) -> Outcome is computeAs false false op a b end function
+
+function computeAs (lu :: Bool) (ru :: Bool) (op :: BinOp) (a :: Integer) (b :: Integer) -> Outcome is
+  let uns = lu || ru in let ua = unsigned64 a in let ub = unsigned64 b in let n = (if ru then ub else b end if) in
+  (first matching case of op :
+    when BComma then Known b
     when BMul then Known (wrap (a * b))
-    when BDiv then (if b = 0 then Bad else Known (wrap (prelude.quot a b)) end if)
-    when BRem then (if b = 0 then Bad else Known (wrap (prelude.rem a b)) end if)
+    when BDiv then (if uns then (if ub = 0 then Bad else Known (wrap (prelude.quot ua ub)) end if) else (if b = 0 then Bad else Known (wrap (prelude.quot a b)) end if) end if)
+    when BRem then (if uns then (if ub = 0 then Bad else Known (wrap (prelude.rem ua ub)) end if) else (if b = 0 then Bad else Known (wrap (prelude.rem a b)) end if) end if)
     when BAdd then Known (wrap (a + b))
     when BSub then Known (wrap (a - b))
-    when BShl then Known (if b >= 0 then shiftLeft a b else shiftRight a (0 - b) end if)
-    when BShr then Known (if b >= 0 then shiftRight a b else shiftLeft a (0 - b) end if)
-    when BLt then Known (truth (a < b))
-    when BLe then Known (truth (a <= b))
-    when BGt then Known (truth (a > b))
-    when BGe then Known (truth (a >= b))
+    when BShl then Known (if n >= 0 then shiftLeft a n else shiftRightAs lu a (0 - n) end if)
+    when BShr then Known (if n >= 0 then shiftRightAs lu a n else shiftLeft a (0 - n) end if)
+    when BLt then Known (truth (if uns then ua < ub else a < b end if))
+    when BLe then Known (truth (if uns then ua <= ub else a <= b end if))
+    when BGt then Known (truth (if uns then ua > ub else a > b end if))
+    when BGe then Known (truth (if uns then ua >= ub else a >= b end if))
     when BEq then Known (truth (a = b))
     when BNe then Known (truth (a != b))
     when BAnd then Known (bitwise 0 a b)
@@ -148,7 +193,8 @@ function compute (op :: BinOp) (a :: Integer) (b :: Integer) -> Outcome is
     when BXor then Known (bitwise 2 a b)
     when BLand then Known (truth (a != 0 && b != 0))
     when BLor then Known (truth (a != 0 || b != 0))
-  end case
+  end case)
+  end let end let end let end let
 end function
 
 -- ---------------------------------------------------------------------------
@@ -194,14 +240,35 @@ end function
 
 function isDivision (op :: BinOp) -> Bool is op = BDiv || op = BRem end function
 
-function binary (op :: BinOp) (l :: Outcome) (r :: Outcome) -> Outcome is
+function binary (op :: BinOp) (l :: Outcome) (r :: Outcome) -> Outcome is binaryAs false false op l r end function
+
+-- The comma (next cycle 7; review 9, N2): both sides are evaluated, and
+-- the value is the right side's (GCC evaluates it in `#if`, and warns
+-- only with -pedantic). With the left side unknown the right side's value
+-- stands only when the left side cannot be an error.
+function comma (l :: Outcome) (r :: Outcome) -> Outcome is
+  if isBad l || isBad r then Bad
+  else (first matching case of l :
+    when Known a then r
+    when Unknown u then
+      (first matching case of r :
+        when Known b then (if u.risky then l else r end if)
+        when Unknown v then unknown (u.missing ++ v.missing) (u.risky || v.risky)
+        when Bad then Bad
+      end case)
+    when Bad then Bad
+  end case) end if
+end function
+
+function binaryAs (lu :: Bool) (ru :: Bool) (op :: BinOp) (l :: Outcome) (r :: Outcome) -> Outcome is
   if op = BLand then logical true l r
   else (if op = BLor then logical false l r
+  else (if op = BComma then comma l r
   else (if isBad l || isBad r then Bad
   else (first matching case of l :
     when Known a then
       (first matching case of r :
-        when Known b then compute op a b
+        when Known b then computeAs lu ru op a b
         when Unknown v then unknown v.missing (v.risky || isDivision op)
         when Bad then Bad
       end case)
@@ -212,7 +279,7 @@ function binary (op :: BinOp) (l :: Outcome) (r :: Outcome) -> Outcome is
         when Bad then Bad
       end case)
     when Bad then Bad
-  end case) end if) end if) end if
+  end case) end if) end if) end if) end if
 end function
 
 function unary (op :: UnOp) (o :: Outcome) -> Outcome is
@@ -368,9 +435,37 @@ end function
 -- All of this is about ONE directive's expression. A fact's condition is a
 -- path of directives, and the preprocessor never evaluates a directive in
 -- a group it skips: see `refCondition`.
+-- An expression is unsigned (next cycle 7; review 9, N2): C's type of it,
+-- which does not depend on any value. A literal with a `u` suffix is; a
+-- name, `defined` and a version macro are not (an identifier is 0, and a
+-- name's value is given as a signed number); `!`, `&&`, the logical or and
+-- a comparison give a signed 0 or 1; the other unary operators keep their
+-- operand's kind; a shift has its left operand's; the comma its right
+-- operand's; a conditional is unsigned when either branch is, the branch
+-- not taken included (`(0 ? 1u : -1) < 0` is false); every other binary
+-- operator when either operand is.
+function unsignedOf (e :: CExpr) -> Bool is
+  first matching case of e :
+    when Lit n then false
+    when ULit n then true
+    when Name n then false
+    when IsDefined n then false
+    when Un u then u.op != UNot && unsignedOf u.arg
+    when Bin b then
+      (if b.op = BLand || b.op = BLor || b.op = BLt || b.op = BLe || b.op = BGt || b.op = BGe || b.op = BEq || b.op = BNe then false
+       else (if b.op = BShl || b.op = BShr then unsignedOf b.left
+       else (if b.op = BComma then unsignedOf b.right
+       else unsignedOf b.left || unsignedOf b.right end if) end if) end if)
+    when Cond k then unsignedOf k.yes || unsignedOf k.no
+    when MinVersion m then false
+    when MinGhc m then false
+  end case
+end function
+
 function broken (env :: Env) (e :: CExpr) -> Bool is
   first matching case of e :
     when Lit n then false
+    when ULit n then false
     when Name n then isVersionName n && packageState env (prelude.drop 8 n) = 1
     when IsDefined n then false
     when Un u then broken env u.arg
@@ -389,11 +484,12 @@ end function
 
 function evalIn (env :: Env) (e :: CExpr) -> Outcome is
   first matching case of e :
-    when Lit n then (if n < 0 || n > maxLit unitValue then Bad else Known n end if)
+    when Lit n then (if n < 0 || n > maxULit unitValue then Bad else Known (wrap n) end if)
+    when ULit n then (if n < 0 || n > maxULit unitValue then Bad else Known (wrap n) end if)
     when Name n then valueOf env n
     when IsDefined n then definedOf env n
     when Un u then unary u.op (evalIn env u.arg)
-    when Bin b then binary b.op (evalIn env b.left) (evalIn env b.right)
+    when Bin b then binaryAs (unsignedOf b.left) (unsignedOf b.right) b.op (evalIn env b.left) (evalIn env b.right)
     when Cond k then conditional (evalIn env k.test) (evalIn env k.yes) (evalIn env k.no)
     when MinVersion m then
       (let a = evalIn env m.major1 in let b = evalIn env m.major2 in let mn = evalIn env m.minor in
@@ -508,6 +604,14 @@ function unreadText (u :: Unit) -> Text is "\"unread\"" end function
 -- this C string, with its line: it cannot be evaluated, in C or here.
 function unreadableTerm (line :: Integer) -> Text is "\"unreadable #if at line " ++ prelude.textOf line ++ "\"" end function
 
+-- Next cycle 7 (next-cycle-7/design.md, section 4, rule C8; review 9, B2).
+-- A directive that reads a name the file itself has defined or undefined,
+-- and that the file's definitions alone do not decide, is no question for
+-- the environment: the environment's value of the name is not the one the
+-- preprocessor reads there. It is written as this C string, with its
+-- line, and is never decided.
+function fileDefinedTerm (line :: Integer) -> Text is "\"#if at line " ++ prelude.textOf line ++ " reads a name the file defines\"" end function
+
 function depthAfter (t :: Text) (i :: Integer) (n :: Integer) (d :: Integer) -> Integer is
   if i >= n || d < 0 then d
   else (let ch = prelude.take 1 (prelude.drop i t) in
@@ -577,12 +681,17 @@ function binText (op :: BinOp) -> Text is
     when BShl then "<<" when BShr then ">>" when BLt then "<" when BLe then "<=" when BGt then ">" when BGe then ">="
     when BEq then "==" when BNe then "!=" when BAnd then "&" when BXor then "^"
     when BOr then prelude.drop 1 " |" when BLand then "&&" when BLor then prelude.drop 1 " ||"
+    when BComma then ","
   end case
 end function
 
--- C's precedence: a higher level binds tighter.
+-- C's precedence: a higher level binds tighter. The comma is the loosest
+-- (0): it stands bare only at the top, in parentheses, and between `?`
+-- and `:`; a macro's argument and a conditional's last branch are written
+-- at level 1, so a comma there is put in parentheses.
 function level (op :: BinOp) -> Integer is
   first matching case of op :
+    when BComma then 0
     when BLor then 2 when BLand then 3 when BOr then 4 when BXor then 5 when BAnd then 6
     when BEq then 7 when BNe then 7 when BLt then 8 when BLe then 8 when BGt then 8 when BGe then 8
     when BShl then 9 when BShr then 9 when BAdd then 10 when BSub then 10
@@ -614,6 +723,7 @@ end function
 function showAt (st :: Style) (p :: Integer) (e :: CExpr) -> Text is
   first matching case of e :
     when Lit n then showLit st n
+    when ULit n then showLit st n ++ (if st.space = 2 then "u" else "U" end if)
     when Name n then n
     when IsDefined n then
       (if st.definedForm = 1 then "defined " ++ n else (if st.definedForm = 2 then "defined ( " ++ n ++ " )" else "defined(" ++ n ++ ")" end if) end if)
@@ -627,9 +737,9 @@ function showAt (st :: Style) (p :: Integer) (e :: CExpr) -> Text is
     when Cond k then
       parenIf (p > 1 || st.wrapAll) (showAt st 2 k.test ++ gap st ++ "?" ++ gap st ++ showAt st 0 k.yes ++ gap st ++ ":" ++ gap st ++ showAt st 1 k.no)
     when MinVersion m then
-      "MIN_VERSION_" ++ m.pkg ++ "(" ++ showAt st 0 m.major1 ++ "," ++ gap st ++ showAt st 0 m.major2 ++ "," ++ gap st ++ showAt st 0 m.minor ++ ")"
+      "MIN_VERSION_" ++ m.pkg ++ "(" ++ showAt st 1 m.major1 ++ "," ++ gap st ++ showAt st 1 m.major2 ++ "," ++ gap st ++ showAt st 1 m.minor ++ ")"
     when MinGhc m then
-      "MIN_VERSION_GLASGOW_HASKELL(" ++ showAt st 0 m.major1 ++ "," ++ showAt st 0 m.major2 ++ "," ++ gap st ++ showAt st 0 m.patch1 ++ "," ++ showAt st 0 m.patch2 ++ ")"
+      "MIN_VERSION_GLASGOW_HASKELL(" ++ showAt st 1 m.major1 ++ "," ++ showAt st 1 m.major2 ++ "," ++ gap st ++ showAt st 1 m.patch1 ++ "," ++ showAt st 1 m.patch2 ++ ")"
   end case
 end function
 
@@ -665,7 +775,16 @@ function litPool (i :: Integer) -> Integer is
     when 0 then 0 when 1 then 1 when 2 then 2 when 3 then 3 when 4 then 4 when 5 then 8 when 6 then 9
     when 7 then 63 when 8 then 64 when 9 then 65 when 10 then 100 when 11 then 908 when 12 then 910
     when 13 then 9223372036854775807 when 14 then 4611686018427387904
+    when 16 then 18446744073709551615 when 17 then 9223372036854775808
     otherwise 7
+  end case
+end function
+
+-- Literals with a `u` suffix (next cycle 7).
+function ulitPool (i :: Integer) -> Integer is
+  first matching case of i :
+    when 0 then 0 when 1 then 1 when 2 then 18446744073709551615 when 3 then 9223372036854775808
+    otherwise 3
   end case
 end function
 
@@ -678,13 +797,14 @@ function binOpOf (i :: Integer) -> BinOp is
     when 0 then BMul when 1 then BDiv when 2 then BRem when 3 then BAdd when 4 then BSub when 5 then BShl when 6 then BShr
     when 7 then BLt when 8 then BLe when 9 then BGt when 10 then BGe when 11 then BEq when 12 then BNe
     when 13 then BAnd when 14 then BXor when 15 then BOr when 16 then BLand
-    otherwise BLor
+    when 17 then BLor
+    otherwise BComma
   end case
 end function
 
 function leafOf (seed :: Integer) -> CExpr is
   let k = pick seed 1 4 in
-    (if k = 0 then Lit (litPool (pick seed 2 16))
+    (if k = 0 then (if pick seed 16 5 = 0 then ULit (ulitPool (pick seed 2 5)) else Lit (litPool (pick seed 2 18)) end if)
      else (if k = 1 then Name (chosen (pick seed 3 (if pick seed 15 8 = 0 then 11 else 8 end if)) (valuePool unitValue) "A")
      else (if k = 2 then IsDefined (chosen (pick seed 3 11) (valuePool unitValue) "A")
      else Lit (pick seed 4 4) end if) end if) end if)
@@ -704,7 +824,7 @@ function nodeOf (seed :: Integer) (l :: CExpr) (r :: CExpr) (third :: CExpr) -> 
      else (if k = 6 then Bin record{ op = BLand , left = l , right = r}
      else (if k = 7 then Bin record{ op = BLor , left = l , right = r}
      else (if k = 8 then Bin record{ op = binOpOf (7 + pick seed 6 6) , left = l , right = r}
-     else Bin record{ op = binOpOf (pick seed 6 18) , left = l , right = r} end if) end if) end if) end if) end if) end if) end if) end if) end if)
+     else Bin record{ op = binOpOf (pick seed 6 19) , left = l , right = r} end if) end if) end if) end if) end if) end if) end if) end if) end if)
   end let
 end function
 
@@ -835,6 +955,69 @@ law "|the missing names are names of the expression that have no value| is
   end definition
 end law
 
+-- Next cycle 7 (review 9, N2).
+function minusOne (u :: Unit) -> CExpr is Un record{ op = UMinus , arg = Lit 1} end function
+
+function op2 (op :: BinOp) (l :: CExpr) (r :: CExpr) -> CExpr is Bin record{ op = op , left = l , right = r} end function
+
+law "|unsigned values, a literal past 63 bits, and the comma are answered as GHC's preprocessor answers them| is
+  id: "WHP-15"
+  description :
+    "Review 9, N2: forms the evaluator refused and the preprocessor
+    evaluates. A literal with a `u` suffix is unsigned, and so is an
+    operation with an unsigned operand: `-1 < 0u` is false, `-1 / 2u` is
+    2^63 - 1, `-1u >> 1` fills with a zero, and `-1 >> 1u` does not (a
+    shift has its left operand's kind). A conditional is unsigned when
+    either branch is, the one not taken included. An unsigned shift
+    count is never negative. A literal with no suffix past 2^63 - 1 is
+    kept signed and wraps, as `cpp -traditional` has it (the mode GHC
+    reads Haskell sources in; the standard mode makes it unsigned, and
+    the two answer `18446744073709551615 > 0` differently). The comma
+    evaluates both sides and has the right side's value and kind; an
+    error on the left is an error. Every row was run through `cpp -undef
+    -traditional -nostdinc` (GCC 15.2) as `#if <text>`, by
+    next-cycle-7/tools/exprs.py, before this was written."
+  end description
+  definition :
+    refEval (emptyEnv unitValue) (op2 BLt (minusOne unitValue) (ULit 0)) = Known 0
+    && refEval (emptyEnv unitValue) (op2 BLt (minusOne unitValue) (Lit 0)) = Known 1
+    && refEval (emptyEnv unitValue) (op2 BLt (Cond record{ test = Lit 0 , yes = ULit 1 , no = minusOne unitValue}) (Lit 0)) = Known 0
+    && refEval (emptyEnv unitValue) (op2 BLt (Cond record{ test = Lit 1 , yes = minusOne unitValue , no = ULit 0}) (Lit 0)) = Known 0
+    && refEval (emptyEnv unitValue) (op2 BDiv (minusOne unitValue) (ULit 2)) = Known 9223372036854775807
+    && refEval (emptyEnv unitValue) (op2 BDiv (minusOne unitValue) (Lit 2)) = Known 0
+    && refEval (emptyEnv unitValue) (op2 BRem (Un record{ op = UMinus , arg = Lit 7}) (ULit 3)) = Known 0
+    && refEval (emptyEnv unitValue) (op2 BShr (Un record{ op = UMinus , arg = ULit 1}) (Lit 1)) = Known 9223372036854775807
+    && refEval (emptyEnv unitValue) (op2 BShr (minusOne unitValue) (ULit 1)) = Known (0 - 1)
+    && refEval (emptyEnv unitValue) (op2 BShl (Lit 1) (ULit 64)) = Known 0
+    && refEval (emptyEnv unitValue) (op2 BShl (Lit 1) (Un record{ op = UMinus , arg = ULit 1})) = Known 0
+    && refEval (emptyEnv unitValue) (op2 BShr (Lit 4) (Un record{ op = UMinus , arg = ULit 1})) = Known 0
+    && refEval (emptyEnv unitValue) (op2 BGt (op2 BSub (Lit 1) (ULit 2)) (Lit 0)) = Known 1
+    && refEval (emptyEnv unitValue) (op2 BLt (op2 BSub (Un record{ op = UNot , arg = ULit 1}) (Lit 1)) (Lit 0)) = Known 1
+    && refEval (emptyEnv unitValue) (op2 BEq (Un record{ op = UCompl , arg = ULit 0}) (ULit 18446744073709551615)) = Known 1
+    && refEval (emptyEnv unitValue) (ULit 18446744073709551615) = Known (0 - 1)
+    && refEval (emptyEnv unitValue) (ULit 18446744073709551616) = Bad
+    && refEval (emptyEnv unitValue) (Lit 18446744073709551615) = Known (0 - 1)
+    && refEval (emptyEnv unitValue) (op2 BGt (Lit 18446744073709551615) (Lit 0)) = Known 0
+    && refEval (emptyEnv unitValue) (Lit 9223372036854775808) = Known (0 - 9223372036854775808)
+    && refEval (emptyEnv unitValue) (Lit 18446744073709551616) = Bad
+    && refEval (emptyEnv unitValue) (op2 BComma (Lit 1) (Lit 2)) = Known 2
+    && refEval (emptyEnv unitValue) (op2 BComma (Lit 1) (Lit 0)) = Known 0
+    && refEval (emptyEnv unitValue) (op2 BComma (op2 BDiv (Lit 1) (Lit 0)) (Lit 1)) = Bad
+    && refEval (emptyEnv unitValue) (op2 BLt (op2 BComma (ULit 0) (minusOne unitValue)) (Lit 0)) = Known 1
+    && refEval (emptyEnv unitValue) (op2 BLt (op2 BComma (minusOne unitValue) (ULit 0)) (Lit 1)) = Known 1
+    && refEval (emptyEnv unitValue) (op2 BComma (Name "A") (Lit 3)) = Known 3
+    && refEval (emptyEnv unitValue) (op2 BComma (op2 BDiv (Lit 1) (Name "A")) (Lit 3)) = unknown ["A"] true
+    && refEval (emptyEnv unitValue) (op2 BComma (Lit 3) (Name "A")) = unknown ["A"] false
+    && unsignedOf (op2 BAdd (Lit 1) (ULit 1)) && !(unsignedOf (op2 BLt (Lit 1) (ULit 1))) && !(unsignedOf (op2 BShl (Lit 1) (ULit 1)))
+    && unsignedOf (op2 BShr (ULit 1) (Lit 1)) && !(unsignedOf (Un record{ op = UNot , arg = ULit 1})) && unsignedOf (Un record{ op = UCompl , arg = ULit 1})
+    && showExpr (plainStyle unitValue) (op2 BComma (Lit 1) (ULit 2)) = "1 , 2U"
+    && showExpr (plainStyle unitValue) (op2 BAdd (op2 BComma (Lit 1) (Lit 2)) (Lit 3)) = "(1 , 2) + 3"
+    && showExpr (plainStyle unitValue) (Cond record{ test = Lit 1 , yes = op2 BComma (Lit 2) (Lit 0) , no = op2 BComma (Lit 3) (Lit 4)}) = "1 ? 2 , 0 : (3 , 4)"
+    && showExpr (plainStyle unitValue) (MinVersion record{ pkg = "base" , major1 = op2 BComma (Lit 1) (Lit 4) , major2 = Lit 8 , minor = Lit 0})
+         = "MIN_VERSION_base((1 , 4), 8, 0)"
+  end definition
+end law
+
 function inList (xs :: List Text) (n :: Text) -> Bool is xs contains n end function
 
 -- A name still missing was missing before; GHC's patch levels may be asked
@@ -961,6 +1144,7 @@ law "|a condition's text: literals, cubes, every build and no build| is
     && simple "MIN_VERSION_base(4,8,0)" && simple "defined(X)" && simple "x_1" && simple "0" && !(simple "defined X") && !(simple "f(g(1))") && !(simple "!X") && !(simple "A B")
     && paired "" && paired "(A) && (B || f(1))" && !(paired "A) || (B") && !(paired "(A") && !(paired "A)")
     && unreadableTerm 3 = "\"unreadable #if at line 3\""
+    && fileDefinedTerm 14 = "\"#if at line 14 reads a name the file defines\""
     && unreadText unitValue = "\"unread\""
     && refCondition (emptyEnv unitValue) [] = Known 0
     && refCondition (emptyEnv unitValue) [[]] = Known 1
@@ -1141,7 +1325,7 @@ end type
 -- decisions files read in this run already list as undecided (`# NAME=`).
 --   when: no value for A, B              the missing names, as before
 --   when: the call graph is incomplete until these names are decided
---   when: not yet in a decisions file: B; lines to paste into .assayxport/when follow
+--   when: not yet in a decisions file: B; lines to paste into assayxport.when follow
 --                                        only when some missing name is not listed
 --   when: cannot evaluate: <condition>   as before
 -- The lines to paste (`expectedDecisionLines`) follow the warnings on
@@ -1154,7 +1338,7 @@ function warningsWith (f :: Filtered) (listed :: List Text) -> List Text is
   (if prelude.length f.missing = 0 then []
    else ["when: no value for " ++ prelude.join ", " f.missing , "when: the call graph is incomplete until these names are decided"]
           ++ (if prelude.length (unlisted f.missing listed) = 0 then []
-              else ["when: not yet in a decisions file: " ++ prelude.join ", " (unlisted f.missing listed) ++ "; lines to paste into .assayxport/when follow"] end if)
+              else ["when: not yet in a decisions file: " ++ prelude.join ", " (unlisted f.missing listed) ++ "; lines to paste into " ++ decisionsPath unitValue ++ " follow"] end if)
    end if) ++ unreadableLines f.unreadable ++ unreadLines (sorted (unreadPaths f.packages))
 end function
 
@@ -1360,10 +1544,16 @@ function factModelOf (seed :: Integer) -> FactModel is FactModel record{ seed = 
 -- syntax (W2), so a file of blocks decides nothing until a line is
 -- replaced.
 
-function decisionsPath (u :: Unit) -> Text is ".assayxport/when" end function
+-- Next cycle 7 (next-cycle-7/design.md, section 3; review 9, B1): the file
+-- stands in the root, beside `assayxport.json`, and not under
+-- `.assayxport/`. Every path under `.assayxport/` is a shard's, made from a
+-- source path: a source directory `when/` made `.assayxport/when` a
+-- directory, and the next run failed on it. Nothing ax writes in the root
+-- is named after a source path.
+function decisionsPath (u :: Unit) -> Text is "assayxport.when" end function
 
 function decisionsHeader (u :: Unit) -> List Text is
-  ["# ax decisions file (.assayxport/when): one decision per line." ,
+  ["# ax decisions file (" ++ decisionsPath unitValue ++ "): one decision per line." ,
    "# ax reads it on every assay of this root; --when-file and --when replace its values." ,
    "# Decide a name by replacing its \"# NAME=\" line with one of" ,
    "#   NAME=<integer>    NAME    undef NAME    package P=X.Y.Z" ,
@@ -1498,7 +1688,7 @@ law "|the warning names the missing names, says the call graph is incomplete, an
     warningsOf (Filtered record{ packages = [] , missing = ["A", "MIN_VERSION_base", "__GLASGOW_HASKELL__"] , unreadable = ["1 +", "FOO(1)"]})
       = ["when: no value for A, MIN_VERSION_base, __GLASGOW_HASKELL__",
          "when: the call graph is incomplete until these names are decided",
-         "when: not yet in a decisions file: A, MIN_VERSION_base, __GLASGOW_HASKELL__; lines to paste into .assayxport/when follow",
+         "when: not yet in a decisions file: A, MIN_VERSION_base, __GLASGOW_HASKELL__; lines to paste into assayxport.when follow",
          "when: cannot evaluate: 1 +", "when: cannot evaluate: FOO(1)"]
     && warningsOf (Filtered record{ packages = [] , missing = [] , unreadable = []}) = []
     && warningsOf (Filtered record{ packages = [] , missing = [] , unreadable = ["1 +"]}) = ["when: cannot evaluate: 1 +"]
@@ -1566,7 +1756,7 @@ law "|a listed name is still missing, and is not asked for again| is
   definition :
     warningsWith (Filtered record{ packages = [] , missing = ["A", "B", "C"] , unreadable = []}) ["B", "Z"]
       = ["when: no value for A, B, C", "when: the call graph is incomplete until these names are decided",
-         "when: not yet in a decisions file: A, C; lines to paste into .assayxport/when follow"]
+         "when: not yet in a decisions file: A, C; lines to paste into assayxport.when follow"]
     && warningsWith (Filtered record{ packages = [] , missing = ["A", "B"] , unreadable = ["1 +"]}) ["B", "A"]
       = ["when: no value for A, B", "when: the call graph is incomplete until these names are decided", "when: cannot evaluate: 1 +"]
     && warningsWith (Filtered record{ packages = [] , missing = [] , unreadable = []}) ["A"] = []
@@ -1584,7 +1774,7 @@ law "|the decisions header and a block are written as the rules say| is
   end description
   definition :
     decisionsHeader unitValue
-      = ["# ax decisions file (.assayxport/when): one decision per line.",
+      = ["# ax decisions file (assayxport.when): one decision per line.",
          "# ax reads it on every assay of this root; --when-file and --when replace its values.",
          "# Decide a name by replacing its \"# NAME=\" line with one of",
          "#   NAME=<integer>    NAME    undef NAME    package P=X.Y.Z",
@@ -1596,7 +1786,7 @@ law "|the decisions header and a block are written as the rules say| is
     && blockOf "MIN_VERSION_unordered_containers" [] = ["", "# MIN_VERSION_unordered_containers is not decided. Facts that depend on it:", "# package unordered-containers="]
     && undecidedLine "MIN_VERSION_base" = "# package base="
     && undecidedLine "__GLASGOW_HASKELL__" = "# __GLASGOW_HASKELL__="
-    && decisionsPath unitValue = ".assayxport/when"
+    && decisionsPath unitValue = "assayxport.when"
   end definition
 end law
 

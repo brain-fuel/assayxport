@@ -13,9 +13,11 @@
 - Haskell CPP: `#if`/`#ifdef` sources are read in every build, and each fact
   carries a `when` condition naming the builds that see it (`"unread"` past a
   cap of 256 builds). `ax assay --when`, `--when-file` and `--when-complete`
-  fix names and package versions; `.assayxport/when` (written by
-  `ax when init`) is read on every run unless `--when-no-discovery`; `watch`,
-  `serve` and `diff` read it too.
+  fix names and package versions; `assayxport.when` in the directory assayed
+  (written by `ax when init`; a directory of that name is not read) is read on
+  every run unless `--when-no-discovery`; `watch`, `serve` (its first pass too)
+  and `diff` read it too. A name the file itself `#define`s or `#undef`s is the
+  file's from that line on, and `#elifdef`/`#elifndef` are read.
 - gotreesitter v0.56.0 plus Haskell grammar fixes, from a fork
   (`replace` in `go.mod`) until they are upstream.
 

@@ -6,7 +6,7 @@
 // plus a self-contained interactive explorer (assayxport.html).
 //
 //	ax assay .              write manifest + explorer at the project root
-//	ax when init .          write a starter .assayxport/when for CPP names
+//	ax when init .          write a starter assayxport.when for CPP names
 //	ax verify trace.json     verify stable artifact and ADR trace closure
 //	ax serve .              assay, serve the explorer, re-assay on save
 //	ax watch .              re-assay on save, writing files each time
@@ -89,7 +89,7 @@ func usage() {
 commands:
   assay   write assayxport.json, .assayxport/ shards, and assayxport.html
   when    ax when init [path]: list the CPP names a Haskell tree needs decided,
-          in <path>/.assayxport/when (never overwritten; new names are printed)
+          in <path>/assayxport.when (never overwritten; new names are printed)
   diff    compare two sources: exact drift or ranked correspondence
   publish validate release inputs, prepare, and publish Maven artifacts
   verify  validate an assayxport.trace/v3 artifact graph and release closure
@@ -279,7 +279,7 @@ func whenWarnings(exts []extract.Extractor, quiet bool) {
 }
 
 // decisionsFile is where a root's decisions file is.
-func decisionsFile(root string) string { return root + "/.assayxport/when" }
+func decisionsFile(root string) string { return root + "/assayxport.when" }
 
 // whenFileLines reads one decisions file as its lines. Line ends are cut at
 // "\n" only: the checked reader drops carriage returns around a line.
@@ -298,8 +298,8 @@ func whenFileLines(f string) ([]string, error) {
 	return fl, nil
 }
 
-// discoveredLines reads <root>/.assayxport/when when it exists (P1, D1 to
-// D3). The decisions file is looked for only when root names a directory (a
+// discoveredLines reads <root>/assayxport.when when it exists (P1, D1 to
+// D3, next cycle 7). The decisions file is looked for only when root names a directory (a
 // symbolic link to one is one): a JAR, a source file, a coordinate or a path
 // that does not exist has none. Absent is: the path does not exist, or a
 // part of it is not a directory. Present and unreadable is a usage error.
@@ -308,7 +308,9 @@ func discoveredLines(root string) ([]string, error) {
 		return nil, nil
 	}
 	f := decisionsFile(root)
-	if _, err := os.Stat(f); errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) {
+	// A directory at the decisions path is the user's own (a source directory
+	// of that name), not a decisions file (D2, D8).
+	if fi, err := os.Stat(f); errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) || (err == nil && fi.IsDir()) {
 		return nil, nil
 	}
 	return whenFileLines(f)
@@ -388,6 +390,9 @@ func runWhenCmd(args []string) error {
 		return &exitCodeError{code: 2, msg: fmt.Sprintf("when: init needs a directory: %s", path)}
 	}
 	file := decisionsFile(path)
+	if fi, err := os.Stat(file); err == nil && fi.IsDir() {
+		return &exitCodeError{code: 2, msg: fmt.Sprintf("when: cannot write %s: it is a directory", file)}
+	}
 	lines, err := discoveredLines(path)
 	if err != nil {
 		return err
@@ -583,7 +588,7 @@ func runAssayCmd(args []string) error {
 	fs.Var(&whenFlags, "when", "name a CPP condition decides on (NAME=V, NAME, undef NAME, package P=X.Y.Z; repeatable)")
 	fs.Var(&whenFiles, "when-file", "read --when lines from a file (repeatable)")
 	whenComplete := fs.Bool("when-complete", false, "a name not given is undefined, as the C preprocessor has it")
-	noDiscovery := fs.Bool("when-no-discovery", false, "do not read <path>/.assayxport/when")
+	noDiscovery := fs.Bool("when-no-discovery", false, "do not read <path>/assayxport.when")
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "usage: ax assay [path] [flags]")
 		fs.PrintDefaults()

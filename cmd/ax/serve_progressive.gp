@@ -142,12 +142,18 @@ func (li *liveIndex) snapshotState() (index []byte, readyPaths []string, err err
 // the current state. The client discovers progress by polling /api/status (cheap)
 // and re-fetches /api/index only when the ready count climbs -- no server push, so
 // a missed signal self-heals on the next poll.
-func runProgressive(path string, langs stringsFlag, quiet bool, dir string, cur *current, fr *focusRegistry) error {
+func runProgressive(path string, langs stringsFlag, quiet, noDiscovery bool, dir string, cur *current, fr *focusRegistry) error {
 	capAssayMemory()
+	// The decisions file is read at this first pass as at every later one (D5),
+	// and what the extraction left undecided is said as `ax assay` says it.
+	if err := refreshWhen(path, noDiscovery); err != nil {
+		return err
+	}
 	exts, err := registry.Select(langs)
 	if err != nil {
 		return err
 	}
+	configureWhen(exts)
 	skeleton, skelLangs, err := registry.Skeleton(exts, path)
 	if err != nil {
 		return err
@@ -203,6 +209,11 @@ func runProgressive(path string, langs stringsFlag, quiet bool, dir string, cur 
 			li.setModule(ge.Module())
 			break
 		}
+	}
+	// Said before the pass is marked done: a client that waits for the end
+	// has them by then.
+	if runErr == nil {
+		whenWarnings(exts, quiet)
 	}
 	li.finish()
 	if runErr != nil {

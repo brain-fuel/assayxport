@@ -571,7 +571,7 @@ type Observed struct {
 	Symbols  *LawSpecBigInt
 }
 
-// Tok is assayxport.conditions::type::Tok — laws/conditions.lawspec:35.
+// Tok is assayxport.conditions::type::Tok — laws/conditions.lawspec:39.
 type Tok interface {
 	lawSpecTok()
 }
@@ -581,6 +581,12 @@ type TokTNum struct {
 }
 
 func (TokTNum) lawSpecTok() {}
+
+type TokTUNum struct {
+	Value *LawSpecBigInt
+}
+
+func (TokTUNum) lawSpecTok() {}
 
 type TokTId struct {
 	Value string
@@ -598,25 +604,25 @@ type TokTUnread struct{}
 
 func (TokTUnread) lawSpecTok() {}
 
-// Parsed is assayxport.conditions::type::Parsed — laws/conditions.lawspec:37.
+// Parsed is assayxport.conditions::type::Parsed — laws/conditions.lawspec:41.
 type Parsed struct {
 	Expr CExpr
 	Rest []Tok
 }
 
-// Note is assayxport.conditions::type::Note — laws/conditions.lawspec:463.
+// Note is assayxport.conditions::type::Note — laws/conditions.lawspec:504.
 type Note struct {
 	Cond string
 	Out  Outcome
 }
 
-// AssayxportConditionsTally is assayxport.conditions::type::Tally — laws/conditions.lawspec:501.
+// AssayxportConditionsTally is assayxport.conditions::type::Tally — laws/conditions.lawspec:542.
 type AssayxportConditionsTally struct {
 	Edge  CallEdge
 	Count *LawSpecBigInt
 }
 
-// UseNote is assayxport.conditions::type::UseNote — laws/conditions.lawspec:686.
+// UseNote is assayxport.conditions::type::UseNote — laws/conditions.lawspec:727.
 type UseNote struct {
 	Place UsePlace
 	Needs []string
@@ -644,13 +650,13 @@ type Env struct {
 	Complete bool
 }
 
-// OpenInfo is assayxport.conditions.policy::type::OpenInfo — laws/conditions_policy.lawspec:54.
+// OpenInfo is assayxport.conditions.policy::type::OpenInfo — laws/conditions_policy.lawspec:62.
 type OpenInfo struct {
 	Missing []string
 	Risky   bool
 }
 
-// Outcome is assayxport.conditions.policy::type::Outcome — laws/conditions_policy.lawspec:59.
+// Outcome is assayxport.conditions.policy::type::Outcome — laws/conditions_policy.lawspec:67.
 type Outcome interface {
 	lawSpecOutcome()
 }
@@ -671,7 +677,7 @@ type OutcomeBad struct{}
 
 func (OutcomeBad) lawSpecOutcome() {}
 
-// UnOp is assayxport.conditions.policy::type::UnOp — laws/conditions_policy.lawspec:61.
+// UnOp is assayxport.conditions.policy::type::UnOp — laws/conditions_policy.lawspec:69.
 type UnOp interface {
 	lawSpecUnOp()
 }
@@ -692,7 +698,7 @@ type UnOpUCompl struct{}
 
 func (UnOpUCompl) lawSpecUnOp() {}
 
-// BinOp is assayxport.conditions.policy::type::BinOp — laws/conditions_policy.lawspec:63.
+// BinOp is assayxport.conditions.policy::type::BinOp — laws/conditions_policy.lawspec:71.
 type BinOp interface {
 	lawSpecBinOp()
 }
@@ -769,7 +775,11 @@ type BinOpBLor struct{}
 
 func (BinOpBLor) lawSpecBinOp() {}
 
-// CExpr is assayxport.conditions.policy::type::CExpr — laws/conditions_policy.lawspec:74.
+type BinOpBComma struct{}
+
+func (BinOpBComma) lawSpecBinOp() {}
+
+// CExpr is assayxport.conditions.policy::type::CExpr — laws/conditions_policy.lawspec:87.
 type CExpr interface {
 	lawSpecCExpr()
 }
@@ -779,6 +789,12 @@ type CExprLit struct {
 }
 
 func (CExprLit) lawSpecCExpr() {}
+
+type CExprULit struct {
+	Value *LawSpecBigInt
+}
+
+func (CExprULit) lawSpecCExpr() {}
 
 type CExprName struct {
 	Value string
@@ -822,14 +838,14 @@ type CExprMinGhc struct {
 
 func (CExprMinGhc) lawSpecCExpr() {}
 
-// Literal is assayxport.conditions.policy::type::Literal — laws/conditions_policy.lawspec:439.
+// Literal is assayxport.conditions.policy::type::Literal — laws/conditions_policy.lawspec:535.
 type Literal struct {
 	Negated bool
 	Text    string
 	Expr    CExpr
 }
 
-// Verdict is assayxport.conditions.policy::type::Verdict — laws/conditions_policy.lawspec:523.
+// Verdict is assayxport.conditions.policy::type::Verdict — laws/conditions_policy.lawspec:627.
 type Verdict interface {
 	lawSpecVerdict()
 }
@@ -848,7 +864,7 @@ type VerdictUndecided struct {
 
 func (VerdictUndecided) lawSpecVerdict() {}
 
-// Style is assayxport.conditions.policy::type::Style — laws/conditions_policy.lawspec:541.
+// Style is assayxport.conditions.policy::type::Style — laws/conditions_policy.lawspec:645.
 type Style struct {
 	Space       *LawSpecBigInt
 	WrapAll     bool
@@ -857,7 +873,7 @@ type Style struct {
 	Comment     bool
 }
 
-// BindingLine is assayxport.conditions.policy::type::BindingLine — laws/conditions_policy.lawspec:1014.
+// BindingLine is assayxport.conditions.policy::type::BindingLine — laws/conditions_policy.lawspec:1198.
 type BindingLine interface {
 	lawSpecBindingLine()
 }
@@ -902,66 +918,66 @@ type BindingLineBlank struct{}
 
 func (BindingLineBlank) lawSpecBindingLine() {}
 
-// BindingError is assayxport.conditions.policy::type::BindingError — laws/conditions_policy.lawspec:1024.
+// BindingError is assayxport.conditions.policy::type::BindingError — laws/conditions_policy.lawspec:1208.
 type BindingError struct {
 	Line *LawSpecBigInt
 	Text string
 }
 
-// Filtered is assayxport.conditions.policy::type::Filtered — laws/conditions_policy.lawspec:1133.
+// Filtered is assayxport.conditions.policy::type::Filtered — laws/conditions_policy.lawspec:1317.
 type Filtered struct {
 	Packages   []Package
 	Missing    []string
 	Unreadable []string
 }
 
-// AssayxportConditionsPolicyTally is assayxport.conditions.policy::type::Tally — laws/conditions_policy.lawspec:1194.
+// AssayxportConditionsPolicyTally is assayxport.conditions.policy::type::Tally — laws/conditions_policy.lawspec:1378.
 type AssayxportConditionsPolicyTally struct {
 	Edge  CallEdge
 	Count *LawSpecBigInt
 }
 
-// FactModel is assayxport.conditions.policy::type::FactModel — laws/conditions_policy.lawspec:1222.
+// FactModel is assayxport.conditions.policy::type::FactModel — laws/conditions_policy.lawspec:1406.
 type FactModel struct {
 	Seed  *LawSpecBigInt
 	Style Style
 }
 
-// UsePlace is assayxport.conditions.policy::type::UsePlace — laws/conditions_policy.lawspec:1388.
+// UsePlace is assayxport.conditions.policy::type::UsePlace — laws/conditions_policy.lawspec:1578.
 type UsePlace struct {
 	File string
 	Line *LawSpecBigInt
 	Cond string
 }
 
-// WhenRun is assayxport.haskell::type::WhenRun — laws/haskell.lawspec:242.
+// WhenRun is assayxport.haskell::type::WhenRun — laws/haskell.lawspec:261.
 type WhenRun struct {
 	Packages []Package
 	Warnings []string
 	Paste    []string
 }
 
-// InitRun is assayxport.haskell::type::InitRun — laws/haskell.lawspec:248.
+// InitRun is assayxport.haskell::type::InitRun — laws/haskell.lawspec:267.
 type InitRun struct {
 	Status *LawSpecBigInt
 	Out    []string
 	Notes  []string
 }
 
-// ExitRun is assayxport.haskell::type::ExitRun — laws/haskell.lawspec:257.
+// ExitRun is assayxport.haskell::type::ExitRun — laws/haskell.lawspec:276.
 type ExitRun struct {
 	Status *LawSpecBigInt
 	Out    string
 	Errors []string
 }
 
-// Leaf is assayxport.haskell.cpp::type::Leaf — laws/haskell_cpp.lawspec:40.
+// Leaf is assayxport.haskell.cpp::type::Leaf — laws/haskell_cpp.lawspec:49.
 type Leaf struct {
 	Forms   []*LawSpecBigInt
 	HasElse bool
 }
 
-// Inner is assayxport.haskell.cpp::type::Inner — laws/haskell_cpp.lawspec:45.
+// Inner is assayxport.haskell.cpp::type::Inner — laws/haskell_cpp.lawspec:54.
 type Inner interface {
 	lawSpecInner()
 }
@@ -976,13 +992,13 @@ type InnerInGroup struct {
 
 func (InnerInGroup) lawSpecInner() {}
 
-// Arm is assayxport.haskell.cpp::type::Arm — laws/haskell_cpp.lawspec:47.
+// Arm is assayxport.haskell.cpp::type::Arm — laws/haskell_cpp.lawspec:56.
 type Arm struct {
 	Form *LawSpecBigInt
 	Body []Inner
 }
 
-// Section is assayxport.haskell.cpp::type::Section — laws/haskell_cpp.lawspec:52.
+// Section is assayxport.haskell.cpp::type::Section — laws/haskell_cpp.lawspec:61.
 type Section interface {
 	lawSpecSection()
 }
@@ -997,16 +1013,73 @@ type SectionGroup struct {
 
 func (SectionGroup) lawSpecSection() {}
 
-// Row is assayxport.haskell.cpp::type::Row — laws/haskell_cpp.lawspec:63.
+// Sets is assayxport.haskell.cpp::type::Sets — laws/haskell_cpp.lawspec:79.
+type Sets interface {
+	lawSpecSets()
+}
+
+type SetsSetsNothing struct{}
+
+func (SetsSetsNothing) lawSpecSets() {}
+
+type SetsSetsInt struct {
+	Value *LawSpecBigInt
+}
+
+func (SetsSetsInt) lawSpecSets() {}
+
+type SetsSetsOther struct{}
+
+func (SetsSetsOther) lawSpecSets() {}
+
+type SetsUnsets struct{}
+
+func (SetsUnsets) lawSpecSets() {}
+
+// Row is assayxport.haskell.cpp::type::Row — laws/haskell_cpp.lawspec:86.
 type Row struct {
 	Text      string
 	Terms     []Literal
 	Directive bool
 	Reads     bool
 	Name      string
+	Sets      Sets
 }
 
-// Walked is assayxport.haskell.cpp::type::Walked — laws/haskell_cpp.lawspec:354.
+// Frame is assayxport.haskell.cpp::type::Frame — laws/haskell_cpp.lawspec:254.
+type Frame struct {
+	Live bool
+	Done bool
+}
+
+// Walk is assayxport.haskell.cpp::type::Walk — laws/haskell_cpp.lawspec:259.
+type Walk struct {
+	Stack []Frame
+	Sets  []Entry[string, Sets]
+}
+
+// Reading is assayxport.haskell.cpp::type::Reading — laws/haskell_cpp.lawspec:380.
+type Reading interface {
+	lawSpecReading()
+}
+
+type ReadingNotRead struct{}
+
+func (ReadingNotRead) lawSpecReading() {}
+
+type ReadingByFile struct {
+	Value bool
+}
+
+func (ReadingByFile) lawSpecReading() {}
+
+type ReadingByTerm struct {
+	Value Literal
+}
+
+func (ReadingByTerm) lawSpecReading() {}
+
+// Walked is assayxport.haskell.cpp::type::Walked — laws/haskell_cpp.lawspec:621.
 type Walked struct {
 	Trace []*LawSpecBigInt
 	Copy  string
@@ -1129,22 +1202,7 @@ type CxTerm struct {
 	Text    string
 }
 
-// CxOpen is assayxport.haskell.extract::type::CxOpen — laws/haskell_extract.lawspec:2268.
-type CxOpen struct {
-	Outer   []CxTerm
-	Before  []CxTerm
-	Own     CxTerm
-	HasElse bool
-	Dead    bool
-}
-
-// CxState is assayxport.haskell.extract::type::CxState — laws/haskell_extract.lawspec:2276.
-type CxState struct {
-	Stack []CxOpen
-	Line  *LawSpecBigInt
-}
-
-// CxUnit is assayxport.haskell.extract::type::CxUnit — laws/haskell_extract.lawspec:2283.
+// CxUnit is assayxport.haskell.extract::type::CxUnit — laws/haskell_extract.lawspec:2266.
 type CxUnit struct {
 	Nlines *LawSpecBigInt
 	Text   string
@@ -1152,68 +1210,127 @@ type CxUnit struct {
 	Body   string
 }
 
-// CxRow is assayxport.haskell.extract::type::CxRow — laws/haskell_extract.lawspec:2293.
-type CxRow struct {
-	Nlines    *LawSpecBigInt
-	Directive bool
-	Reads     bool
-	Dead      bool
-	Terms     []CxTerm
-	Text      string
+// CxSets is assayxport.haskell.extract::type::CxSets — laws/haskell_extract.lawspec:2278.
+type CxSets interface {
+	lawSpecCxSets()
 }
 
-// CxPlan is assayxport.haskell.extract::type::CxPlan — laws/haskell_extract.lawspec:2305.
+type CxSetsXNothing struct{}
+
+func (CxSetsXNothing) lawSpecCxSets() {}
+
+type CxSetsXInt struct {
+	Value *LawSpecBigInt
+}
+
+func (CxSetsXInt) lawSpecCxSets() {}
+
+type CxSetsXOther struct{}
+
+func (CxSetsXOther) lawSpecCxSets() {}
+
+type CxSetsXUnset struct{}
+
+func (CxSetsXUnset) lawSpecCxSets() {}
+
+// CxDef is assayxport.haskell.extract::type::CxDef — laws/haskell_extract.lawspec:2285.
+type CxDef struct {
+	Name string
+	Sets CxSets
+}
+
+// CxRow is assayxport.haskell.extract::type::CxRow — laws/haskell_extract.lawspec:2299.
+type CxRow struct {
+	Nlines *LawSpecBigInt
+	Line   *LawSpecBigInt
+	Word   string
+	Text   string
+	Own    Literal
+	Names  []string
+	Vals   []string
+	Parsed bool
+	Name   string
+	Sets   CxSets
+}
+
+// CxPlan is assayxport.haskell.extract::type::CxPlan — laws/haskell_extract.lawspec:2315.
 type CxPlan struct {
 	Copies []string
 	Rows   []CxRow
 	Unread bool
 }
 
-// CxJoin is assayxport.haskell.extract::type::CxJoin — laws/haskell_extract.lawspec:2347.
+// CxJoin is assayxport.haskell.extract::type::CxJoin — laws/haskell_extract.lawspec:2357.
 type CxJoin struct {
 	Nlines *LawSpecBigInt
 	Text   string
 }
 
-// CxEffect is assayxport.haskell.extract::type::CxEffect — laws/haskell_extract.lawspec:2410.
-type CxEffect struct {
-	Stack []CxOpen
-	Terms []CxTerm
-	Reads bool
+// CxFrame is assayxport.haskell.extract::type::CxFrame — laws/haskell_extract.lawspec:2599.
+type CxFrame struct {
+	Live bool
+	Done bool
 }
 
-// CxWalk is assayxport.haskell.extract::type::CxWalk — laws/haskell_extract.lawspec:2561.
+// CxPass is assayxport.haskell.extract::type::CxPass — laws/haskell_extract.lawspec:2604.
+type CxPass struct {
+	Stack []CxFrame
+	Sets  []Entry[string, CxSets]
+}
+
+// CxReading is assayxport.haskell.extract::type::CxReading — laws/haskell_extract.lawspec:2677.
+type CxReading interface {
+	lawSpecCxReading()
+}
+
+type CxReadingXNotRead struct{}
+
+func (CxReadingXNotRead) lawSpecCxReading() {}
+
+type CxReadingXByFile struct {
+	Value bool
+}
+
+func (CxReadingXByFile) lawSpecCxReading() {}
+
+type CxReadingXByTerm struct {
+	Value Literal
+}
+
+func (CxReadingXByTerm) lawSpecCxReading() {}
+
+// CxWalk is assayxport.haskell.extract::type::CxWalk — laws/haskell_extract.lawspec:2818.
 type CxWalk struct {
 	Cubes [][]CxTerm
 	Count *LawSpecBigInt
 }
 
-// CxEdge is assayxport.haskell.extract::type::CxEdge — laws/haskell_extract.lawspec:2608.
+// CxEdge is assayxport.haskell.extract::type::CxEdge — laws/haskell_extract.lawspec:2870.
 type CxEdge struct {
 	Edge   CallEdge
 	Copies []*LawSpecBigInt
 }
 
-// CxSym is assayxport.haskell.extract::type::CxSym — laws/haskell_extract.lawspec:2613.
+// CxSym is assayxport.haskell.extract::type::CxSym — laws/haskell_extract.lawspec:2875.
 type CxSym struct {
 	Form   Decl
 	Copies []*LawSpecBigInt
 	Calls  []CxEdge
 }
 
-// CxBook is assayxport.haskell.extract::type::CxBook — laws/haskell_extract.lawspec:2619.
+// CxBook is assayxport.haskell.extract::type::CxBook — laws/haskell_extract.lawspec:2881.
 type CxBook struct {
 	Buckets []Entry[string, []CxSym]
 	Order   []string
 }
 
-// CxCopyPkg is assayxport.haskell.extract::type::CxCopyPkg — laws/haskell_extract.lawspec:2659.
+// CxCopyPkg is assayxport.haskell.extract::type::CxCopyPkg — laws/haskell_extract.lawspec:2921.
 type CxCopyPkg struct {
 	Index *LawSpecBigInt
 	Pkg   Package
 }
 
-// Slot is assayxport.haskell.extract::type::Slot — laws/haskell_extract.lawspec:3092.
+// Slot is assayxport.haskell.extract::type::Slot — laws/haskell_extract.lawspec:3354.
 type Slot struct {
 	Field  string
 	Many   bool
@@ -1221,20 +1338,20 @@ type Slot struct {
 	Kinds  []string
 }
 
-// Prod is assayxport.haskell.extract::type::Prod — laws/haskell_extract.lawspec:3099.
+// Prod is assayxport.haskell.extract::type::Prod — laws/haskell_extract.lawspec:3361.
 type Prod struct {
 	Kind  string
 	Slots []Slot
 }
 
-// Grammar is assayxport.haskell.extract::type::Grammar — laws/haskell_extract.lawspec:3110.
+// Grammar is assayxport.haskell.extract::type::Grammar — laws/haskell_extract.lawspec:3372.
 type Grammar struct {
 	Prods  []Prod
 	Groups []Slot
 	Texts  []Slot
 }
 
-// Pick is assayxport.haskell.extract::type::Pick — laws/haskell_extract.lawspec:3176.
+// Pick is assayxport.haskell.extract::type::Pick — laws/haskell_extract.lawspec:3438.
 type Pick struct {
 	Kind  string
 	Field string

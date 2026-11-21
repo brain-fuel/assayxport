@@ -1671,6 +1671,10 @@ func lawSpecTokCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*la
 				return TokTNum{
 					Value: lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer").toNative(data.fields[0]),
 				}
+			case "assayxport.conditions::type::Tok::TUNum":
+				return TokTUNum{
+					Value: lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer").toNative(data.fields[0]),
+				}
 			case "assayxport.conditions::type::Tok::TId":
 				return TokTId{
 					Value: lsScalarCodec[string](schema, bits, "Text").toNative(data.fields[0]),
@@ -1690,6 +1694,12 @@ func lawSpecTokCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*la
 			case TokTNum:
 				return schema.construct(typeRef, "assayxport.conditions::type::Tok::TNum", []LawSpecValue{
 					lsSchemaContext("assayxport.conditions::type::Tok::TNum.value", func() LawSpecValue {
+						return lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer").encode(native.Value, path)
+					}),
+				}, bits, symbols)
+			case TokTUNum:
+				return schema.construct(typeRef, "assayxport.conditions::type::Tok::TUNum", []LawSpecValue{
+					lsSchemaContext("assayxport.conditions::type::Tok::TUNum.value", func() LawSpecValue {
 						return lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer").encode(native.Value, path)
 					}),
 				}, bits, symbols)
@@ -2049,6 +2059,8 @@ func lawSpecBinOpCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*
 				return BinOpBLand{}
 			case "assayxport.conditions.policy::type::BinOp::BLor":
 				return BinOpBLor{}
+			case "assayxport.conditions.policy::type::BinOp::BComma":
+				return BinOpBComma{}
 			default:
 				panic("unknown checked constructor")
 			}
@@ -2091,6 +2103,8 @@ func lawSpecBinOpCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*
 				return schema.construct(typeRef, "assayxport.conditions.policy::type::BinOp::BLand", nil, bits, symbols)
 			case BinOpBLor:
 				return schema.construct(typeRef, "assayxport.conditions.policy::type::BinOp::BLor", nil, bits, symbols)
+			case BinOpBComma:
+				return schema.construct(typeRef, "assayxport.conditions.policy::type::BinOp::BComma", nil, bits, symbols)
 			default:
 				_ = native
 				panic("unexpected native constructor for assayxport.conditions.policy::type::BinOp")
@@ -2107,6 +2121,10 @@ func lawSpecCExprCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*
 			switch data.tag {
 			case "assayxport.conditions.policy::type::CExpr::Lit":
 				return CExprLit{
+					Value: lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer").toNative(data.fields[0]),
+				}
+			case "assayxport.conditions.policy::type::CExpr::ULit":
+				return CExprULit{
 					Value: lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer").toNative(data.fields[0]),
 				}
 			case "assayxport.conditions.policy::type::CExpr::Name":
@@ -2146,6 +2164,12 @@ func lawSpecCExprCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*
 			case CExprLit:
 				return schema.construct(typeRef, "assayxport.conditions.policy::type::CExpr::Lit", []LawSpecValue{
 					lsSchemaContext("assayxport.conditions.policy::type::CExpr::Lit.value", func() LawSpecValue {
+						return lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer").encode(native.Value, path)
+					}),
+				}, bits, symbols)
+			case CExprULit:
+				return schema.construct(typeRef, "assayxport.conditions.policy::type::CExpr::ULit", []LawSpecValue{
+					lsSchemaContext("assayxport.conditions.policy::type::CExpr::ULit.value", func() LawSpecValue {
 						return lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer").encode(native.Value, path)
 					}),
 				}, bits, symbols)
@@ -2772,6 +2796,48 @@ func lawSpecSectionCodec(schema *lawSpecSchema, bits int, contexts ...map[string
 		}, symbols)
 }
 
+func lawSpecSetsCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*lawSpecSymbol) lawSpecCodec[Sets] {
+	symbols := lsSchemaSymbols(contexts)
+	typeRef := lsNamed("assayxport.haskell.cpp::type::Sets")
+	return lsCodec(schema, bits, typeRef,
+		func(value LawSpecValue) Sets {
+			data := value.Data.(lawSpecData)
+			switch data.tag {
+			case "assayxport.haskell.cpp::type::Sets::SetsNothing":
+				return SetsSetsNothing{}
+			case "assayxport.haskell.cpp::type::Sets::SetsInt":
+				return SetsSetsInt{
+					Value: lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer").toNative(data.fields[0]),
+				}
+			case "assayxport.haskell.cpp::type::Sets::SetsOther":
+				return SetsSetsOther{}
+			case "assayxport.haskell.cpp::type::Sets::Unsets":
+				return SetsUnsets{}
+			default:
+				panic("unknown checked constructor")
+			}
+		},
+		func(value Sets, path lawSpecPath) LawSpecValue {
+			switch native := value.(type) {
+			case SetsSetsNothing:
+				return schema.construct(typeRef, "assayxport.haskell.cpp::type::Sets::SetsNothing", nil, bits, symbols)
+			case SetsSetsInt:
+				return schema.construct(typeRef, "assayxport.haskell.cpp::type::Sets::SetsInt", []LawSpecValue{
+					lsSchemaContext("assayxport.haskell.cpp::type::Sets::SetsInt.value", func() LawSpecValue {
+						return lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer").encode(native.Value, path)
+					}),
+				}, bits, symbols)
+			case SetsSetsOther:
+				return schema.construct(typeRef, "assayxport.haskell.cpp::type::Sets::SetsOther", nil, bits, symbols)
+			case SetsUnsets:
+				return schema.construct(typeRef, "assayxport.haskell.cpp::type::Sets::Unsets", nil, bits, symbols)
+			default:
+				_ = native
+				panic("unexpected native constructor for assayxport.haskell.cpp::type::Sets")
+			}
+		}, symbols)
+}
+
 func lawSpecRowCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*lawSpecSymbol) lawSpecCodec[Row] {
 	symbols := lsSchemaSymbols(contexts)
 	typeRef := lsNamed("assayxport.haskell.cpp::type::Row")
@@ -2786,6 +2852,7 @@ func lawSpecRowCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*la
 					Directive: lsScalarCodec[bool](schema, bits, "Bool").toNative(data.fields[2]),
 					Reads:     lsScalarCodec[bool](schema, bits, "Bool").toNative(data.fields[3]),
 					Name:      lsScalarCodec[string](schema, bits, "Text").toNative(data.fields[4]),
+					Sets:      lawSpecSetsCodec(schema, bits, symbols).toNative(data.fields[5]),
 				}
 			default:
 				panic("unknown checked constructor")
@@ -2809,7 +2876,112 @@ func lawSpecRowCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*la
 				lsSchemaContext("assayxport.haskell.cpp::type::Row::Row.name", func() LawSpecValue {
 					return lsScalarCodec[string](schema, bits, "Text").encode(native.Name, path)
 				}),
+				lsSchemaContext("assayxport.haskell.cpp::type::Row::Row.sets", func() LawSpecValue {
+					return lawSpecSetsCodec(schema, bits, symbols).encode(native.Sets, path)
+				}),
 			}, bits, symbols)
+		}, symbols)
+}
+
+func lawSpecFrameCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*lawSpecSymbol) lawSpecCodec[Frame] {
+	symbols := lsSchemaSymbols(contexts)
+	typeRef := lsNamed("assayxport.haskell.cpp::type::Frame")
+	return lsCodec(schema, bits, typeRef,
+		func(value LawSpecValue) Frame {
+			data := value.Data.(lawSpecData)
+			switch data.tag {
+			case "assayxport.haskell.cpp::type::Frame::Frame":
+				return Frame{
+					Live: lsScalarCodec[bool](schema, bits, "Bool").toNative(data.fields[0]),
+					Done: lsScalarCodec[bool](schema, bits, "Bool").toNative(data.fields[1]),
+				}
+			default:
+				panic("unknown checked constructor")
+			}
+		},
+		func(value Frame, path lawSpecPath) LawSpecValue {
+			native := value
+			return schema.construct(typeRef, "assayxport.haskell.cpp::type::Frame::Frame", []LawSpecValue{
+				lsSchemaContext("assayxport.haskell.cpp::type::Frame::Frame.live", func() LawSpecValue {
+					return lsScalarCodec[bool](schema, bits, "Bool").encode(native.Live, path)
+				}),
+				lsSchemaContext("assayxport.haskell.cpp::type::Frame::Frame.done", func() LawSpecValue {
+					return lsScalarCodec[bool](schema, bits, "Bool").encode(native.Done, path)
+				}),
+			}, bits, symbols)
+		}, symbols)
+}
+
+func lawSpecWalkCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*lawSpecSymbol) lawSpecCodec[Walk] {
+	symbols := lsSchemaSymbols(contexts)
+	typeRef := lsNamed("assayxport.haskell.cpp::type::Walk")
+	return lsCodec(schema, bits, typeRef,
+		func(value LawSpecValue) Walk {
+			data := value.Data.(lawSpecData)
+			switch data.tag {
+			case "assayxport.haskell.cpp::type::Walk::Walk":
+				return Walk{
+					Stack: lsListCodec(schema, bits, lawSpecFrameCodec(schema, bits, symbols), symbols).toNative(data.fields[0]),
+					Sets:  lsCollectionCodec(schema, bits, "KeyVal", []lawSpecTypeRef{lsScalarCodec[string](schema, bits, "Text").typeRef, lawSpecSetsCodec(schema, bits, symbols).typeRef}, lawSpecEntryCodec(schema, bits, lsScalarCodec[string](schema, bits, "Text"), lawSpecSetsCodec(schema, bits, symbols), symbols), symbols).toNative(data.fields[1]),
+				}
+			default:
+				panic("unknown checked constructor")
+			}
+		},
+		func(value Walk, path lawSpecPath) LawSpecValue {
+			native := value
+			return schema.construct(typeRef, "assayxport.haskell.cpp::type::Walk::Walk", []LawSpecValue{
+				lsSchemaContext("assayxport.haskell.cpp::type::Walk::Walk.stack", func() LawSpecValue {
+					return lsListCodec(schema, bits, lawSpecFrameCodec(schema, bits, symbols), symbols).encode(native.Stack, path)
+				}),
+				lsSchemaContext("assayxport.haskell.cpp::type::Walk::Walk.sets", func() LawSpecValue {
+					return lsCollectionCodec(schema, bits, "KeyVal", []lawSpecTypeRef{lsScalarCodec[string](schema, bits, "Text").typeRef, lawSpecSetsCodec(schema, bits, symbols).typeRef}, lawSpecEntryCodec(schema, bits, lsScalarCodec[string](schema, bits, "Text"), lawSpecSetsCodec(schema, bits, symbols), symbols), symbols).encode(native.Sets, path)
+				}),
+			}, bits, symbols)
+		}, symbols)
+}
+
+func lawSpecReadingCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*lawSpecSymbol) lawSpecCodec[Reading] {
+	symbols := lsSchemaSymbols(contexts)
+	typeRef := lsNamed("assayxport.haskell.cpp::type::Reading")
+	return lsCodec(schema, bits, typeRef,
+		func(value LawSpecValue) Reading {
+			data := value.Data.(lawSpecData)
+			switch data.tag {
+			case "assayxport.haskell.cpp::type::Reading::NotRead":
+				return ReadingNotRead{}
+			case "assayxport.haskell.cpp::type::Reading::ByFile":
+				return ReadingByFile{
+					Value: lsScalarCodec[bool](schema, bits, "Bool").toNative(data.fields[0]),
+				}
+			case "assayxport.haskell.cpp::type::Reading::ByTerm":
+				return ReadingByTerm{
+					Value: lawSpecLiteralCodec(schema, bits, symbols).toNative(data.fields[0]),
+				}
+			default:
+				panic("unknown checked constructor")
+			}
+		},
+		func(value Reading, path lawSpecPath) LawSpecValue {
+			switch native := value.(type) {
+			case ReadingNotRead:
+				return schema.construct(typeRef, "assayxport.haskell.cpp::type::Reading::NotRead", nil, bits, symbols)
+			case ReadingByFile:
+				return schema.construct(typeRef, "assayxport.haskell.cpp::type::Reading::ByFile", []LawSpecValue{
+					lsSchemaContext("assayxport.haskell.cpp::type::Reading::ByFile.value", func() LawSpecValue {
+						return lsScalarCodec[bool](schema, bits, "Bool").encode(native.Value, path)
+					}),
+				}, bits, symbols)
+			case ReadingByTerm:
+				return schema.construct(typeRef, "assayxport.haskell.cpp::type::Reading::ByTerm", []LawSpecValue{
+					lsSchemaContext("assayxport.haskell.cpp::type::Reading::ByTerm.value", func() LawSpecValue {
+						return lawSpecLiteralCodec(schema, bits, symbols).encode(native.Value, path)
+					}),
+				}, bits, symbols)
+			default:
+				_ = native
+				panic("unexpected native constructor for assayxport.haskell.cpp::type::Reading")
+			}
 		}, symbols)
 }
 
@@ -3189,76 +3361,6 @@ func lawSpecCxTermCodec(schema *lawSpecSchema, bits int, contexts ...map[string]
 		}, symbols)
 }
 
-func lawSpecCxOpenCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*lawSpecSymbol) lawSpecCodec[CxOpen] {
-	symbols := lsSchemaSymbols(contexts)
-	typeRef := lsNamed("assayxport.haskell.extract::type::CxOpen")
-	return lsCodec(schema, bits, typeRef,
-		func(value LawSpecValue) CxOpen {
-			data := value.Data.(lawSpecData)
-			switch data.tag {
-			case "assayxport.haskell.extract::type::CxOpen::CxOpen":
-				return CxOpen{
-					Outer:   lsListCodec(schema, bits, lawSpecCxTermCodec(schema, bits, symbols), symbols).toNative(data.fields[0]),
-					Before:  lsListCodec(schema, bits, lawSpecCxTermCodec(schema, bits, symbols), symbols).toNative(data.fields[1]),
-					Own:     lawSpecCxTermCodec(schema, bits, symbols).toNative(data.fields[2]),
-					HasElse: lsScalarCodec[bool](schema, bits, "Bool").toNative(data.fields[3]),
-					Dead:    lsScalarCodec[bool](schema, bits, "Bool").toNative(data.fields[4]),
-				}
-			default:
-				panic("unknown checked constructor")
-			}
-		},
-		func(value CxOpen, path lawSpecPath) LawSpecValue {
-			native := value
-			return schema.construct(typeRef, "assayxport.haskell.extract::type::CxOpen::CxOpen", []LawSpecValue{
-				lsSchemaContext("assayxport.haskell.extract::type::CxOpen::CxOpen.outer", func() LawSpecValue {
-					return lsListCodec(schema, bits, lawSpecCxTermCodec(schema, bits, symbols), symbols).encode(native.Outer, path)
-				}),
-				lsSchemaContext("assayxport.haskell.extract::type::CxOpen::CxOpen.before", func() LawSpecValue {
-					return lsListCodec(schema, bits, lawSpecCxTermCodec(schema, bits, symbols), symbols).encode(native.Before, path)
-				}),
-				lsSchemaContext("assayxport.haskell.extract::type::CxOpen::CxOpen.own", func() LawSpecValue {
-					return lawSpecCxTermCodec(schema, bits, symbols).encode(native.Own, path)
-				}),
-				lsSchemaContext("assayxport.haskell.extract::type::CxOpen::CxOpen.hasElse", func() LawSpecValue {
-					return lsScalarCodec[bool](schema, bits, "Bool").encode(native.HasElse, path)
-				}),
-				lsSchemaContext("assayxport.haskell.extract::type::CxOpen::CxOpen.dead", func() LawSpecValue {
-					return lsScalarCodec[bool](schema, bits, "Bool").encode(native.Dead, path)
-				}),
-			}, bits, symbols)
-		}, symbols)
-}
-
-func lawSpecCxStateCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*lawSpecSymbol) lawSpecCodec[CxState] {
-	symbols := lsSchemaSymbols(contexts)
-	typeRef := lsNamed("assayxport.haskell.extract::type::CxState")
-	return lsCodec(schema, bits, typeRef,
-		func(value LawSpecValue) CxState {
-			data := value.Data.(lawSpecData)
-			switch data.tag {
-			case "assayxport.haskell.extract::type::CxState::CxState":
-				return CxState{
-					Stack: lsListCodec(schema, bits, lawSpecCxOpenCodec(schema, bits, symbols), symbols).toNative(data.fields[0]),
-					Line:  lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer").toNative(data.fields[1]),
-				}
-			default:
-				panic("unknown checked constructor")
-			}
-		},
-		func(value CxState, path lawSpecPath) LawSpecValue {
-			native := value
-			return schema.construct(typeRef, "assayxport.haskell.extract::type::CxState::CxState", []LawSpecValue{
-				lsSchemaContext("assayxport.haskell.extract::type::CxState::CxState.stack", func() LawSpecValue {
-					return lsListCodec(schema, bits, lawSpecCxOpenCodec(schema, bits, symbols), symbols).encode(native.Stack, path)
-				}),
-				lsSchemaContext("assayxport.haskell.extract::type::CxState::CxState.line", func() LawSpecValue {
-					return lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer").encode(native.Line, path)
-				}),
-			}, bits, symbols)
-		}, symbols)
-}
-
 func lawSpecCxUnitCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*lawSpecSymbol) lawSpecCodec[CxUnit] {
 	symbols := lsSchemaSymbols(contexts)
 	typeRef := lsNamed("assayxport.haskell.extract::type::CxUnit")
@@ -3296,6 +3398,77 @@ func lawSpecCxUnitCodec(schema *lawSpecSchema, bits int, contexts ...map[string]
 		}, symbols)
 }
 
+func lawSpecCxSetsCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*lawSpecSymbol) lawSpecCodec[CxSets] {
+	symbols := lsSchemaSymbols(contexts)
+	typeRef := lsNamed("assayxport.haskell.extract::type::CxSets")
+	return lsCodec(schema, bits, typeRef,
+		func(value LawSpecValue) CxSets {
+			data := value.Data.(lawSpecData)
+			switch data.tag {
+			case "assayxport.haskell.extract::type::CxSets::XNothing":
+				return CxSetsXNothing{}
+			case "assayxport.haskell.extract::type::CxSets::XInt":
+				return CxSetsXInt{
+					Value: lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer").toNative(data.fields[0]),
+				}
+			case "assayxport.haskell.extract::type::CxSets::XOther":
+				return CxSetsXOther{}
+			case "assayxport.haskell.extract::type::CxSets::XUnset":
+				return CxSetsXUnset{}
+			default:
+				panic("unknown checked constructor")
+			}
+		},
+		func(value CxSets, path lawSpecPath) LawSpecValue {
+			switch native := value.(type) {
+			case CxSetsXNothing:
+				return schema.construct(typeRef, "assayxport.haskell.extract::type::CxSets::XNothing", nil, bits, symbols)
+			case CxSetsXInt:
+				return schema.construct(typeRef, "assayxport.haskell.extract::type::CxSets::XInt", []LawSpecValue{
+					lsSchemaContext("assayxport.haskell.extract::type::CxSets::XInt.value", func() LawSpecValue {
+						return lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer").encode(native.Value, path)
+					}),
+				}, bits, symbols)
+			case CxSetsXOther:
+				return schema.construct(typeRef, "assayxport.haskell.extract::type::CxSets::XOther", nil, bits, symbols)
+			case CxSetsXUnset:
+				return schema.construct(typeRef, "assayxport.haskell.extract::type::CxSets::XUnset", nil, bits, symbols)
+			default:
+				_ = native
+				panic("unexpected native constructor for assayxport.haskell.extract::type::CxSets")
+			}
+		}, symbols)
+}
+
+func lawSpecCxDefCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*lawSpecSymbol) lawSpecCodec[CxDef] {
+	symbols := lsSchemaSymbols(contexts)
+	typeRef := lsNamed("assayxport.haskell.extract::type::CxDef")
+	return lsCodec(schema, bits, typeRef,
+		func(value LawSpecValue) CxDef {
+			data := value.Data.(lawSpecData)
+			switch data.tag {
+			case "assayxport.haskell.extract::type::CxDef::CxDef":
+				return CxDef{
+					Name: lsScalarCodec[string](schema, bits, "Text").toNative(data.fields[0]),
+					Sets: lawSpecCxSetsCodec(schema, bits, symbols).toNative(data.fields[1]),
+				}
+			default:
+				panic("unknown checked constructor")
+			}
+		},
+		func(value CxDef, path lawSpecPath) LawSpecValue {
+			native := value
+			return schema.construct(typeRef, "assayxport.haskell.extract::type::CxDef::CxDef", []LawSpecValue{
+				lsSchemaContext("assayxport.haskell.extract::type::CxDef::CxDef.name", func() LawSpecValue {
+					return lsScalarCodec[string](schema, bits, "Text").encode(native.Name, path)
+				}),
+				lsSchemaContext("assayxport.haskell.extract::type::CxDef::CxDef.sets", func() LawSpecValue {
+					return lawSpecCxSetsCodec(schema, bits, symbols).encode(native.Sets, path)
+				}),
+			}, bits, symbols)
+		}, symbols)
+}
+
 func lawSpecCxRowCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*lawSpecSymbol) lawSpecCodec[CxRow] {
 	symbols := lsSchemaSymbols(contexts)
 	typeRef := lsNamed("assayxport.haskell.extract::type::CxRow")
@@ -3305,12 +3478,16 @@ func lawSpecCxRowCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*
 			switch data.tag {
 			case "assayxport.haskell.extract::type::CxRow::CxRow":
 				return CxRow{
-					Nlines:    lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer").toNative(data.fields[0]),
-					Directive: lsScalarCodec[bool](schema, bits, "Bool").toNative(data.fields[1]),
-					Reads:     lsScalarCodec[bool](schema, bits, "Bool").toNative(data.fields[2]),
-					Dead:      lsScalarCodec[bool](schema, bits, "Bool").toNative(data.fields[3]),
-					Terms:     lsListCodec(schema, bits, lawSpecCxTermCodec(schema, bits, symbols), symbols).toNative(data.fields[4]),
-					Text:      lsScalarCodec[string](schema, bits, "Text").toNative(data.fields[5]),
+					Nlines: lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer").toNative(data.fields[0]),
+					Line:   lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer").toNative(data.fields[1]),
+					Word:   lsScalarCodec[string](schema, bits, "Text").toNative(data.fields[2]),
+					Text:   lsScalarCodec[string](schema, bits, "Text").toNative(data.fields[3]),
+					Own:    lawSpecLiteralCodec(schema, bits, symbols).toNative(data.fields[4]),
+					Names:  lsListCodec(schema, bits, lsScalarCodec[string](schema, bits, "Text"), symbols).toNative(data.fields[5]),
+					Vals:   lsListCodec(schema, bits, lsScalarCodec[string](schema, bits, "Text"), symbols).toNative(data.fields[6]),
+					Parsed: lsScalarCodec[bool](schema, bits, "Bool").toNative(data.fields[7]),
+					Name:   lsScalarCodec[string](schema, bits, "Text").toNative(data.fields[8]),
+					Sets:   lawSpecCxSetsCodec(schema, bits, symbols).toNative(data.fields[9]),
 				}
 			default:
 				panic("unknown checked constructor")
@@ -3322,20 +3499,32 @@ func lawSpecCxRowCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*
 				lsSchemaContext("assayxport.haskell.extract::type::CxRow::CxRow.nlines", func() LawSpecValue {
 					return lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer").encode(native.Nlines, path)
 				}),
-				lsSchemaContext("assayxport.haskell.extract::type::CxRow::CxRow.directive", func() LawSpecValue {
-					return lsScalarCodec[bool](schema, bits, "Bool").encode(native.Directive, path)
+				lsSchemaContext("assayxport.haskell.extract::type::CxRow::CxRow.line", func() LawSpecValue {
+					return lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer").encode(native.Line, path)
 				}),
-				lsSchemaContext("assayxport.haskell.extract::type::CxRow::CxRow.reads", func() LawSpecValue {
-					return lsScalarCodec[bool](schema, bits, "Bool").encode(native.Reads, path)
-				}),
-				lsSchemaContext("assayxport.haskell.extract::type::CxRow::CxRow.dead", func() LawSpecValue {
-					return lsScalarCodec[bool](schema, bits, "Bool").encode(native.Dead, path)
-				}),
-				lsSchemaContext("assayxport.haskell.extract::type::CxRow::CxRow.terms", func() LawSpecValue {
-					return lsListCodec(schema, bits, lawSpecCxTermCodec(schema, bits, symbols), symbols).encode(native.Terms, path)
+				lsSchemaContext("assayxport.haskell.extract::type::CxRow::CxRow.word", func() LawSpecValue {
+					return lsScalarCodec[string](schema, bits, "Text").encode(native.Word, path)
 				}),
 				lsSchemaContext("assayxport.haskell.extract::type::CxRow::CxRow.text", func() LawSpecValue {
 					return lsScalarCodec[string](schema, bits, "Text").encode(native.Text, path)
+				}),
+				lsSchemaContext("assayxport.haskell.extract::type::CxRow::CxRow.own", func() LawSpecValue {
+					return lawSpecLiteralCodec(schema, bits, symbols).encode(native.Own, path)
+				}),
+				lsSchemaContext("assayxport.haskell.extract::type::CxRow::CxRow.names", func() LawSpecValue {
+					return lsListCodec(schema, bits, lsScalarCodec[string](schema, bits, "Text"), symbols).encode(native.Names, path)
+				}),
+				lsSchemaContext("assayxport.haskell.extract::type::CxRow::CxRow.vals", func() LawSpecValue {
+					return lsListCodec(schema, bits, lsScalarCodec[string](schema, bits, "Text"), symbols).encode(native.Vals, path)
+				}),
+				lsSchemaContext("assayxport.haskell.extract::type::CxRow::CxRow.parsed", func() LawSpecValue {
+					return lsScalarCodec[bool](schema, bits, "Bool").encode(native.Parsed, path)
+				}),
+				lsSchemaContext("assayxport.haskell.extract::type::CxRow::CxRow.name", func() LawSpecValue {
+					return lsScalarCodec[string](schema, bits, "Text").encode(native.Name, path)
+				}),
+				lsSchemaContext("assayxport.haskell.extract::type::CxRow::CxRow.sets", func() LawSpecValue {
+					return lawSpecCxSetsCodec(schema, bits, symbols).encode(native.Sets, path)
 				}),
 			}, bits, symbols)
 		}, symbols)
@@ -3403,36 +3592,105 @@ func lawSpecCxJoinCodec(schema *lawSpecSchema, bits int, contexts ...map[string]
 		}, symbols)
 }
 
-func lawSpecCxEffectCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*lawSpecSymbol) lawSpecCodec[CxEffect] {
+func lawSpecCxFrameCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*lawSpecSymbol) lawSpecCodec[CxFrame] {
 	symbols := lsSchemaSymbols(contexts)
-	typeRef := lsNamed("assayxport.haskell.extract::type::CxEffect")
+	typeRef := lsNamed("assayxport.haskell.extract::type::CxFrame")
 	return lsCodec(schema, bits, typeRef,
-		func(value LawSpecValue) CxEffect {
+		func(value LawSpecValue) CxFrame {
 			data := value.Data.(lawSpecData)
 			switch data.tag {
-			case "assayxport.haskell.extract::type::CxEffect::CxEffect":
-				return CxEffect{
-					Stack: lsListCodec(schema, bits, lawSpecCxOpenCodec(schema, bits, symbols), symbols).toNative(data.fields[0]),
-					Terms: lsListCodec(schema, bits, lawSpecCxTermCodec(schema, bits, symbols), symbols).toNative(data.fields[1]),
-					Reads: lsScalarCodec[bool](schema, bits, "Bool").toNative(data.fields[2]),
+			case "assayxport.haskell.extract::type::CxFrame::CxFrame":
+				return CxFrame{
+					Live: lsScalarCodec[bool](schema, bits, "Bool").toNative(data.fields[0]),
+					Done: lsScalarCodec[bool](schema, bits, "Bool").toNative(data.fields[1]),
 				}
 			default:
 				panic("unknown checked constructor")
 			}
 		},
-		func(value CxEffect, path lawSpecPath) LawSpecValue {
+		func(value CxFrame, path lawSpecPath) LawSpecValue {
 			native := value
-			return schema.construct(typeRef, "assayxport.haskell.extract::type::CxEffect::CxEffect", []LawSpecValue{
-				lsSchemaContext("assayxport.haskell.extract::type::CxEffect::CxEffect.stack", func() LawSpecValue {
-					return lsListCodec(schema, bits, lawSpecCxOpenCodec(schema, bits, symbols), symbols).encode(native.Stack, path)
+			return schema.construct(typeRef, "assayxport.haskell.extract::type::CxFrame::CxFrame", []LawSpecValue{
+				lsSchemaContext("assayxport.haskell.extract::type::CxFrame::CxFrame.live", func() LawSpecValue {
+					return lsScalarCodec[bool](schema, bits, "Bool").encode(native.Live, path)
 				}),
-				lsSchemaContext("assayxport.haskell.extract::type::CxEffect::CxEffect.terms", func() LawSpecValue {
-					return lsListCodec(schema, bits, lawSpecCxTermCodec(schema, bits, symbols), symbols).encode(native.Terms, path)
-				}),
-				lsSchemaContext("assayxport.haskell.extract::type::CxEffect::CxEffect.reads", func() LawSpecValue {
-					return lsScalarCodec[bool](schema, bits, "Bool").encode(native.Reads, path)
+				lsSchemaContext("assayxport.haskell.extract::type::CxFrame::CxFrame.done", func() LawSpecValue {
+					return lsScalarCodec[bool](schema, bits, "Bool").encode(native.Done, path)
 				}),
 			}, bits, symbols)
+		}, symbols)
+}
+
+func lawSpecCxPassCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*lawSpecSymbol) lawSpecCodec[CxPass] {
+	symbols := lsSchemaSymbols(contexts)
+	typeRef := lsNamed("assayxport.haskell.extract::type::CxPass")
+	return lsCodec(schema, bits, typeRef,
+		func(value LawSpecValue) CxPass {
+			data := value.Data.(lawSpecData)
+			switch data.tag {
+			case "assayxport.haskell.extract::type::CxPass::CxPass":
+				return CxPass{
+					Stack: lsListCodec(schema, bits, lawSpecCxFrameCodec(schema, bits, symbols), symbols).toNative(data.fields[0]),
+					Sets:  lsCollectionCodec(schema, bits, "KeyVal", []lawSpecTypeRef{lsScalarCodec[string](schema, bits, "Text").typeRef, lawSpecCxSetsCodec(schema, bits, symbols).typeRef}, lawSpecEntryCodec(schema, bits, lsScalarCodec[string](schema, bits, "Text"), lawSpecCxSetsCodec(schema, bits, symbols), symbols), symbols).toNative(data.fields[1]),
+				}
+			default:
+				panic("unknown checked constructor")
+			}
+		},
+		func(value CxPass, path lawSpecPath) LawSpecValue {
+			native := value
+			return schema.construct(typeRef, "assayxport.haskell.extract::type::CxPass::CxPass", []LawSpecValue{
+				lsSchemaContext("assayxport.haskell.extract::type::CxPass::CxPass.stack", func() LawSpecValue {
+					return lsListCodec(schema, bits, lawSpecCxFrameCodec(schema, bits, symbols), symbols).encode(native.Stack, path)
+				}),
+				lsSchemaContext("assayxport.haskell.extract::type::CxPass::CxPass.sets", func() LawSpecValue {
+					return lsCollectionCodec(schema, bits, "KeyVal", []lawSpecTypeRef{lsScalarCodec[string](schema, bits, "Text").typeRef, lawSpecCxSetsCodec(schema, bits, symbols).typeRef}, lawSpecEntryCodec(schema, bits, lsScalarCodec[string](schema, bits, "Text"), lawSpecCxSetsCodec(schema, bits, symbols), symbols), symbols).encode(native.Sets, path)
+				}),
+			}, bits, symbols)
+		}, symbols)
+}
+
+func lawSpecCxReadingCodec(schema *lawSpecSchema, bits int, contexts ...map[string]*lawSpecSymbol) lawSpecCodec[CxReading] {
+	symbols := lsSchemaSymbols(contexts)
+	typeRef := lsNamed("assayxport.haskell.extract::type::CxReading")
+	return lsCodec(schema, bits, typeRef,
+		func(value LawSpecValue) CxReading {
+			data := value.Data.(lawSpecData)
+			switch data.tag {
+			case "assayxport.haskell.extract::type::CxReading::XNotRead":
+				return CxReadingXNotRead{}
+			case "assayxport.haskell.extract::type::CxReading::XByFile":
+				return CxReadingXByFile{
+					Value: lsScalarCodec[bool](schema, bits, "Bool").toNative(data.fields[0]),
+				}
+			case "assayxport.haskell.extract::type::CxReading::XByTerm":
+				return CxReadingXByTerm{
+					Value: lawSpecLiteralCodec(schema, bits, symbols).toNative(data.fields[0]),
+				}
+			default:
+				panic("unknown checked constructor")
+			}
+		},
+		func(value CxReading, path lawSpecPath) LawSpecValue {
+			switch native := value.(type) {
+			case CxReadingXNotRead:
+				return schema.construct(typeRef, "assayxport.haskell.extract::type::CxReading::XNotRead", nil, bits, symbols)
+			case CxReadingXByFile:
+				return schema.construct(typeRef, "assayxport.haskell.extract::type::CxReading::XByFile", []LawSpecValue{
+					lsSchemaContext("assayxport.haskell.extract::type::CxReading::XByFile.value", func() LawSpecValue {
+						return lsScalarCodec[bool](schema, bits, "Bool").encode(native.Value, path)
+					}),
+				}, bits, symbols)
+			case CxReadingXByTerm:
+				return schema.construct(typeRef, "assayxport.haskell.extract::type::CxReading::XByTerm", []LawSpecValue{
+					lsSchemaContext("assayxport.haskell.extract::type::CxReading::XByTerm.value", func() LawSpecValue {
+						return lawSpecLiteralCodec(schema, bits, symbols).encode(native.Value, path)
+					}),
+				}, bits, symbols)
+			default:
+				_ = native
+				panic("unexpected native constructor for assayxport.haskell.extract::type::CxReading")
+			}
 		}, symbols)
 }
 

@@ -125,9 +125,9 @@ type Symbol struct {
 	// it are not evaluated. A part is one directive's expression as written in
 	// the source: bare when it is a name, one macro call or a number, otherwise
 	// in parentheses; !(...) is the directive failing; #ifdef X is written
-	// defined(X). Two values are C strings and are never decided: "unread" (the
+	// defined(X). Three values are C strings and are never decided: "unread" (the
 	// file has more builds than are read) and, as a part, ("unreadable #if at
-	// line N"). Omitted when the symbol is unconditional. The grammar is in the
+	// line N") and ("#if at line N reads a name the file defines"). Omitted when the symbol is unconditional. The grammar is in the
 	// README.
 	When string `json:"when,omitempty"`
 }

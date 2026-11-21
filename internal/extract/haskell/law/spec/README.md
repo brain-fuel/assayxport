@@ -5,14 +5,14 @@ into the parent package `law` (`lawspec generate`). `../../haskell.gp` holds
 only what LawSpec cannot do: walk the tree-sitter tree, read files, and wire
 the CLI.
 
-- `laws/`: six units, 160 laws.
+- `laws/`: six units, 170 laws.
   - `haskell_extract`, `haskell_policy`, `conditions`, `conditions_policy` and
     `haskell_cpp` are pure: they state the extraction, the `when` conditions
     and the CPP build walk, and check them against independent references
     (for example every assignment of the CPP names, `cpp.everyCopies`).
   - `haskell` is conformance: it runs the built `ax` binary (`AX_BIN`) on
-    generated trees and checks the manifest, `--when`, the decisions file and
-    `ax when init`.
+    generated trees and checks the manifest, `--when`, the decisions file (`<root>/assayxport.when`)
+    and `ax when init`.
 - `contract/`: the shared `assayxport.contract` package the units depend on.
 - `conformance/adapter.go.txt`: the native adapter the conformance unit's
   generated tests use (`Workspace`, `AssayWith`, ...). It lives in the test

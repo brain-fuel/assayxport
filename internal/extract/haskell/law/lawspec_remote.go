@@ -9,7 +9,7 @@ import "time"
 // LawSpecEvaluateRemote evaluates one on the node at an address. Values
 // are logical values, as the runtime's checks use them.
 
-var lawSpecRemoteTypes = LawSpecTypes("(data lawspec.resilience::type::Breaker (ctor lawspec.resilience::type::Breaker::Closed (list (int Integer _ _))) (ctor lawspec.resilience::type::Breaker::Open (int Integer _ _)) (ctor lawspec.resilience::type::Breaker::HalfOpen)) (data lawspec.resilience::type::Bulkhead (ctor lawspec.resilience::type::Bulkhead::Bulkhead (int Integer _ _))) (data lawspec.resilience::type::FixedWindow (ctor lawspec.resilience::type::FixedWindow::FixedWindow (int Integer _ _) (int Integer _ _))) (data lawspec.resilience::type::LeakyBucket (ctor lawspec.resilience::type::LeakyBucket::LeakyBucket (int Integer _ _))) (data lawspec.resilience::type::SlidingWindow (ctor lawspec.resilience::type::SlidingWindow::SlidingWindow (list (int Integer _ _)))) (data lawspec.resilience::type::TokenBucket (ctor lawspec.resilience::type::TokenBucket::TokenBucket (int Integer _ _) (int Integer _ _))) (data lawspec.matchers::type::Regex (ctor lawspec.matchers::type::Regex::Regex (text))) (data lawspec.resources::type::TemporaryDirectory (ctor lawspec.resources::type::TemporaryDirectory::TemporaryDirectory (text))) (data lawspec.resources::type::TemporaryFile (ctor lawspec.resources::type::TemporaryFile::TemporaryFile (text))) (data lawspec.resources::type::FreePort (ctor lawspec.resources::type::FreePort::FreePort (int Int32 -2147483648 2147483647))) (data assayxport.contract::type::Package (ctor assayxport.contract::type::Package::Package (text) (text) (text) (text) (text) (text) (list (text)) (bool) (maybe (ref assayxport.contract::type::Invocation)) (list (ref assayxport.contract::type::Decl)))) (data assayxport.contract::type::Invocation (ctor assayxport.contract::type::Invocation::Invocation (text) (text))) (data assayxport.contract::type::Decl (ctor assayxport.contract::type::Decl::Decl (text) (text) (ref assayxport.contract::type::SymbolKind) (ref assayxport.contract::type::Visibility) (ref assayxport.contract::type::VisibilityIdiom) (ref assayxport.contract::type::Location) (text) (ref assayxport.contract::type::DocText) (ref assayxport.contract::type::EntryPoint) (ref assayxport.contract::type::Detail) (list (ref assayxport.contract::type::CallEdge)) (text))) (data assayxport.contract::type::SymbolKind (ctor assayxport.contract::type::SymbolKind::KindType) (ctor assayxport.contract::type::SymbolKind::KindFunction) (ctor assayxport.contract::type::SymbolKind::KindFunc) (ctor assayxport.contract::type::SymbolKind::KindMethod) (ctor assayxport.contract::type::SymbolKind::KindConstructor) (ctor assayxport.contract::type::SymbolKind::KindField) (ctor assayxport.contract::type::SymbolKind::KindVariable) (ctor assayxport.contract::type::SymbolKind::KindVar) (ctor assayxport.contract::type::SymbolKind::KindConst) (ctor assayxport.contract::type::SymbolKind::KindProperty) (ctor assayxport.contract::type::SymbolKind::KindClass) (ctor assayxport.contract::type::SymbolKind::KindEnumConstant) (ctor assayxport.contract::type::SymbolKind::KindInstance) (ctor assayxport.contract::type::SymbolKind::KindOther (text))) (data assayxport.contract::type::Visibility (ctor assayxport.contract::type::Visibility::Exported) (ctor assayxport.contract::type::Visibility::Unexported) (ctor assayxport.contract::type::Visibility::Public) (ctor assayxport.contract::type::Visibility::Protected) (ctor assayxport.contract::type::Visibility::Private) (ctor assayxport.contract::type::Visibility::PackagePrivate) (ctor assayxport.contract::type::Visibility::VisibilityOther (text))) (data assayxport.contract::type::VisibilityIdiom (ctor assayxport.contract::type::VisibilityIdiom::Capitalized) (ctor assayxport.contract::type::VisibilityIdiom::Underscore) (ctor assayxport.contract::type::VisibilityIdiom::AccessModifier) (ctor assayxport.contract::type::VisibilityIdiom::ExportList) (ctor assayxport.contract::type::VisibilityIdiom::IdiomOther (text))) (data assayxport.contract::type::Location (ctor assayxport.contract::type::Location::Location (text) (int Integer _ _) (int Integer _ _) (int Integer _ _))) (data assayxport.contract::type::DocText (ctor assayxport.contract::type::DocText::DocText (text) (ref assayxport.contract::type::DocFormat))) (data assayxport.contract::type::DocFormat (ctor assayxport.contract::type::DocFormat::NoDoc) (ctor assayxport.contract::type::DocFormat::GoDoc) (ctor assayxport.contract::type::DocFormat::Docstring) (ctor assayxport.contract::type::DocFormat::JavaDoc) (ctor assayxport.contract::type::DocFormat::TSDoc) (ctor assayxport.contract::type::DocFormat::Haddock) (ctor assayxport.contract::type::DocFormat::DocOther (text))) (data assayxport.contract::type::EntryPoint (ctor assayxport.contract::type::EntryPoint::EntryPoint (bool) (maybe (ref assayxport.contract::type::Invocation)))) (data assayxport.contract::type::Detail (ctor assayxport.contract::type::Detail::Detail (ref assayxport.contract::type::Complexity) (maybe (ref assayxport.contract::type::Signature)) (text) (text) (text) (maybe (bool)) (list (text)) (list (text)) (ref assayxport.contract::type::Binary))) (data assayxport.contract::type::Complexity (ctor assayxport.contract::type::Complexity::Complexity (maybe (text)) (maybe (text)) (ref assayxport.contract::type::ComplexityMethod))) (data assayxport.contract::type::ComplexityMethod (ctor assayxport.contract::type::ComplexityMethod::Deferred) (ctor assayxport.contract::type::ComplexityMethod::LoopNesting) (ctor assayxport.contract::type::ComplexityMethod::Recursive) (ctor assayxport.contract::type::ComplexityMethod::MethodOther (text))) (data assayxport.contract::type::Signature (ctor assayxport.contract::type::Signature::Signature (list (ref assayxport.contract::type::Param)) (list (ref assayxport.contract::type::Param)) (list (ref assayxport.contract::type::TypeParam)) (maybe (ref assayxport.contract::type::Param)) (bool) (list (text)) (text) (list (text)))) (data assayxport.contract::type::Param (ctor assayxport.contract::type::Param::Param (text) (text) (list (text)) (bool))) (data assayxport.contract::type::TypeParam (ctor assayxport.contract::type::TypeParam::TypeParam (text) (text))) (data assayxport.contract::type::Binary (ctor assayxport.contract::type::Binary::Binary (text) (list (text)) (list (text)) (list (text)) (text) (text) (text) (list (text)) (text) (list (text)))) (data assayxport.contract::type::CallEdge (ctor assayxport.contract::type::CallEdge::CallEdge (ref assayxport.contract::type::CallKind) (text) (maybe (text)) (maybe (int Integer _ _)) (list (maybe (text))) (int Integer _ _) (text))) (data assayxport.contract::type::CallKind (ctor assayxport.contract::type::CallKind::Internal) (ctor assayxport.contract::type::CallKind::External) (ctor assayxport.contract::type::CallKind::Builtin) (ctor assayxport.contract::type::CallKind::Dynamic) (ctor assayxport.contract::type::CallKind::Unresolved) (ctor assayxport.contract::type::CallKind::CallOther (text))) (data assayxport.contract::type::EdgeKey (ctor assayxport.contract::type::EdgeKey::EdgeKey (text) (text) (text) (text))) (data assayxport.contract::type::ExtractFailure (ctor assayxport.contract::type::ExtractFailure::ExtractionFailed (ref lawspec::structural::record::f5f10555f6c6efcfede6a1b5b3a543dda5cd98cceb0297c257aa71c41066c7c7))) (data lawspec::structural::record::f5f10555f6c6efcfede6a1b5b3a543dda5cd98cceb0297c257aa71c41066c7c7 (ctor lawspec::structural::record::f5f10555f6c6efcfede6a1b5b3a543dda5cd98cceb0297c257aa71c41066c7c7::Record (text))) (data assayxport.contract::type::Extension (ctor assayxport.contract::type::Extension::HaskellFile) (ctor assayxport.contract::type::Extension::PythonFile) (ctor assayxport.contract::type::Extension::GoFile) (ctor assayxport.contract::type::Extension::TextFile)) (data assayxport.contract::type::RawFile (ctor assayxport.contract::type::RawFile::RawFile (int Int8 -128 127) (ref assayxport.contract::type::Extension) (text))) (data assayxport.contract::type::Observed (ctor assayxport.contract::type::Observed::Observed (list (ref assayxport.contract::type::Package)) (int Integer _ _) (int Integer _ _))) (data assayxport.contract::type::SourceFile (ctor assayxport.contract::type::SourceFile::SourceFile (text) (text))) (data assayxport.conditions::type::UseNote (ctor assayxport.conditions::type::UseNote::UseNote (ref assayxport.conditions.policy::type::UsePlace) (list (text)))) (data assayxport.conditions.policy::type::UsePlace (ctor assayxport.conditions.policy::type::UsePlace::UsePlace (text) (int Integer _ _) (text))) (data assayxport.conditions.policy::type::Outcome (ctor assayxport.conditions.policy::type::Outcome::Known (int Integer _ _)) (ctor assayxport.conditions.policy::type::Outcome::Unknown (ref assayxport.conditions.policy::type::OpenInfo)) (ctor assayxport.conditions.policy::type::Outcome::Bad)) (data assayxport.conditions.policy::type::OpenInfo (ctor assayxport.conditions.policy::type::OpenInfo::OpenInfo (list (text)) (bool))) (data assayxport.conditions.policy::type::BinOp (ctor assayxport.conditions.policy::type::BinOp::BMul) (ctor assayxport.conditions.policy::type::BinOp::BDiv) (ctor assayxport.conditions.policy::type::BinOp::BRem) (ctor assayxport.conditions.policy::type::BinOp::BAdd) (ctor assayxport.conditions.policy::type::BinOp::BSub) (ctor assayxport.conditions.policy::type::BinOp::BShl) (ctor assayxport.conditions.policy::type::BinOp::BShr) (ctor assayxport.conditions.policy::type::BinOp::BLt) (ctor assayxport.conditions.policy::type::BinOp::BLe) (ctor assayxport.conditions.policy::type::BinOp::BGt) (ctor assayxport.conditions.policy::type::BinOp::BGe) (ctor assayxport.conditions.policy::type::BinOp::BEq) (ctor assayxport.conditions.policy::type::BinOp::BNe) (ctor assayxport.conditions.policy::type::BinOp::BAnd) (ctor assayxport.conditions.policy::type::BinOp::BXor) (ctor assayxport.conditions.policy::type::BinOp::BOr) (ctor assayxport.conditions.policy::type::BinOp::BLand) (ctor assayxport.conditions.policy::type::BinOp::BLor)) (data assayxport.conditions.policy::type::BindingLine (ctor assayxport.conditions.policy::type::BindingLine::SetName (ref lawspec::structural::record::300f8ee2663116a4df043217f7ea6ba97553cbec2c2d22b95653ff1824c39e94)) (ctor assayxport.conditions.policy::type::BindingLine::FlagName (text)) (ctor assayxport.conditions.policy::type::BindingLine::UndefName (text)) (ctor assayxport.conditions.policy::type::BindingLine::SetPackage (ref lawspec::structural::record::b73bdc307fb73ba719a4683f12adef2a92bb186fed2e25b7cc94fa772d3afb90)) (ctor assayxport.conditions.policy::type::BindingLine::UnsetPackage (text)) (ctor assayxport.conditions.policy::type::BindingLine::Remark (text)) (ctor assayxport.conditions.policy::type::BindingLine::Blank)) (data lawspec::structural::record::300f8ee2663116a4df043217f7ea6ba97553cbec2c2d22b95653ff1824c39e94 (ctor lawspec::structural::record::300f8ee2663116a4df043217f7ea6ba97553cbec2c2d22b95653ff1824c39e94::Record (int Integer _ _) (text) (int Integer _ _))) (data lawspec::structural::record::b73bdc307fb73ba719a4683f12adef2a92bb186fed2e25b7cc94fa772d3afb90 (ctor lawspec::structural::record::b73bdc307fb73ba719a4683f12adef2a92bb186fed2e25b7cc94fa772d3afb90::Record (text) (list (int Integer _ _)))) (data assayxport.conditions.policy::type::Binding (ctor assayxport.conditions.policy::type::Binding::Defined (int Integer _ _)) (ctor assayxport.conditions.policy::type::Binding::Undefined)) (data assayxport.conditions.policy::type::Style (ctor assayxport.conditions.policy::type::Style::Style (int Integer _ _) (bool) (int Integer _ _) (int Integer _ _) (bool))) (data assayxport.conditions.policy::type::Literal (ctor assayxport.conditions.policy::type::Literal::Literal (bool) (text) (ref assayxport.conditions.policy::type::CExpr))) (data assayxport.conditions.policy::type::CExpr (ctor assayxport.conditions.policy::type::CExpr::Lit (int Integer _ _)) (ctor assayxport.conditions.policy::type::CExpr::Name (text)) (ctor assayxport.conditions.policy::type::CExpr::IsDefined (text)) (ctor assayxport.conditions.policy::type::CExpr::Un (ref lawspec::structural::record::9852b9b6fca91436fe827b0c22462c10f0326db165feba9174c83f369519fa9a)) (ctor assayxport.conditions.policy::type::CExpr::Bin (ref lawspec::structural::record::bf49f77319743fd50b1bbc192cc62afd154c09d229e418e2a6eacef553477614)) (ctor assayxport.conditions.policy::type::CExpr::Cond (ref lawspec::structural::record::03e0c0d3bd9272f1f4baae197fe7ba0405b7a3499bf8948dea3fdfc5752e6ae6)) (ctor assayxport.conditions.policy::type::CExpr::MinVersion (ref lawspec::structural::record::aa3f2c9a069b5fe04a44e334e8c37f982adcb2a495049a796191eb9e455da09c)) (ctor assayxport.conditions.policy::type::CExpr::MinGhc (ref lawspec::structural::record::6ccc5410198deed83d83257720a7f82920a084c4295ff6022d7754d7dd09140a))) (data lawspec::structural::record::9852b9b6fca91436fe827b0c22462c10f0326db165feba9174c83f369519fa9a (ctor lawspec::structural::record::9852b9b6fca91436fe827b0c22462c10f0326db165feba9174c83f369519fa9a::Record (ref assayxport.conditions.policy::type::CExpr) (ref assayxport.conditions.policy::type::UnOp))) (data assayxport.conditions.policy::type::UnOp (ctor assayxport.conditions.policy::type::UnOp::UPlus) (ctor assayxport.conditions.policy::type::UnOp::UMinus) (ctor assayxport.conditions.policy::type::UnOp::UNot) (ctor assayxport.conditions.policy::type::UnOp::UCompl)) (data lawspec::structural::record::bf49f77319743fd50b1bbc192cc62afd154c09d229e418e2a6eacef553477614 (ctor lawspec::structural::record::bf49f77319743fd50b1bbc192cc62afd154c09d229e418e2a6eacef553477614::Record (ref assayxport.conditions.policy::type::CExpr) (ref assayxport.conditions.policy::type::BinOp) (ref assayxport.conditions.policy::type::CExpr))) (data lawspec::structural::record::03e0c0d3bd9272f1f4baae197fe7ba0405b7a3499bf8948dea3fdfc5752e6ae6 (ctor lawspec::structural::record::03e0c0d3bd9272f1f4baae197fe7ba0405b7a3499bf8948dea3fdfc5752e6ae6::Record (ref assayxport.conditions.policy::type::CExpr) (ref assayxport.conditions.policy::type::CExpr) (ref assayxport.conditions.policy::type::CExpr))) (data lawspec::structural::record::aa3f2c9a069b5fe04a44e334e8c37f982adcb2a495049a796191eb9e455da09c (ctor lawspec::structural::record::aa3f2c9a069b5fe04a44e334e8c37f982adcb2a495049a796191eb9e455da09c::Record (ref assayxport.conditions.policy::type::CExpr) (ref assayxport.conditions.policy::type::CExpr) (ref assayxport.conditions.policy::type::CExpr) (text))) (data lawspec::structural::record::6ccc5410198deed83d83257720a7f82920a084c4295ff6022d7754d7dd09140a (ctor lawspec::structural::record::6ccc5410198deed83d83257720a7f82920a084c4295ff6022d7754d7dd09140a::Record (ref assayxport.conditions.policy::type::CExpr) (ref assayxport.conditions.policy::type::CExpr) (ref assayxport.conditions.policy::type::CExpr) (ref assayxport.conditions.policy::type::CExpr))) (data assayxport.conditions.policy::type::FactModel (ctor assayxport.conditions.policy::type::FactModel::FactModel (int Integer _ _) (ref assayxport.conditions.policy::type::Style))) (data assayxport.conditions.policy::type::Verdict (ctor assayxport.conditions.policy::type::Verdict::Holds) (ctor assayxport.conditions.policy::type::Verdict::Fails) (ctor assayxport.conditions.policy::type::Verdict::Undecided (ref assayxport.conditions.policy::type::Outcome))) (data assayxport.conditions.policy::type::Filtered (ctor assayxport.conditions.policy::type::Filtered::Filtered (list (ref assayxport.contract::type::Package)) (list (text)) (list (text)))) (data assayxport.conditions::type::Tok (ctor assayxport.conditions::type::Tok::TNum (int Integer _ _)) (ctor assayxport.conditions::type::Tok::TId (text)) (ctor assayxport.conditions::type::Tok::TOp (text)) (ctor assayxport.conditions::type::Tok::TUnread)) (data assayxport.conditions::type::Parsed (ctor assayxport.conditions::type::Parsed::Parsed (ref assayxport.conditions.policy::type::CExpr) (list (ref assayxport.conditions::type::Tok)))) (data assayxport.conditions::type::Note (ctor assayxport.conditions::type::Note::Note (text) (ref assayxport.conditions.policy::type::Outcome))) (data assayxport.conditions.policy::type::BindingError (ctor assayxport.conditions.policy::type::BindingError::BindingError (int Integer _ _) (text))) (data assayxport.haskell.cpp::type::Row (ctor assayxport.haskell.cpp::type::Row::Row (text) (list (ref assayxport.conditions.policy::type::Literal)) (bool) (bool) (text))) (data assayxport.haskell.extract::type::Point (ctor assayxport.haskell.extract::type::Point::Point (int Integer _ _) (int Integer _ _))) (data assayxport.haskell.extract::type::Syntax (ctor assayxport.haskell.extract::type::Syntax::Syntax (text) (text) (text) (ref assayxport.haskell.extract::type::Point) (ref assayxport.haskell.extract::type::Point) (bool) (list (ref assayxport.haskell.extract::type::Syntax)))) (data assayxport.haskell.policy::type::ValueModel (ctor assayxport.haskell.policy::type::ValueModel::ValueModel (bool) (int Int8 -128 127) (ref assayxport.haskell.policy::type::SigKind) (maybe (ref assayxport.haskell.policy::type::DocStyle)) (bool) (bool) (bool) (bool) (ref assayxport.haskell.policy::type::ScopeForm) (ref assayxport.haskell.policy::type::CallSite) (bool) (list (ref assayxport.haskell.policy::type::Callee)))) (data assayxport.haskell.policy::type::SigKind (ctor assayxport.haskell.policy::type::SigKind::SigNone) (ctor assayxport.haskell.policy::type::SigKind::SigValue) (ctor assayxport.haskell.policy::type::SigKind::SigFunc) (ctor assayxport.haskell.policy::type::SigKind::SigConstrained) (ctor assayxport.haskell.policy::type::SigKind::SigForall)) (data assayxport.haskell.policy::type::DocStyle (ctor assayxport.haskell.policy::type::DocStyle::DocOne) (ctor assayxport.haskell.policy::type::DocStyle::DocTwo) (ctor assayxport.haskell.policy::type::DocStyle::DocNoSpace) (ctor assayxport.haskell.policy::type::DocStyle::DocBlock) (ctor assayxport.haskell.policy::type::DocStyle::DocBlockTight) (ctor assayxport.haskell.policy::type::DocStyle::DocGap) (ctor assayxport.haskell.policy::type::DocStyle::DocGapComment) (ctor assayxport.haskell.policy::type::DocStyle::DocAfterComment)) (data assayxport.haskell.policy::type::ScopeForm (ctor assayxport.haskell.policy::type::ScopeForm::NoScope) (ctor assayxport.haskell.policy::type::ScopeForm::InWhere) (ctor assayxport.haskell.policy::type::ScopeForm::InLet) (ctor assayxport.haskell.policy::type::ScopeForm::InLambda) (ctor assayxport.haskell.policy::type::ScopeForm::InCase) (ctor assayxport.haskell.policy::type::ScopeForm::InDo) (ctor assayxport.haskell.policy::type::ScopeForm::InDoLet) (ctor assayxport.haskell.policy::type::ScopeForm::InPattern) (ctor assayxport.haskell.policy::type::ScopeForm::InPatGuard) (ctor assayxport.haskell.policy::type::ScopeForm::InGenerator) (ctor assayxport.haskell.policy::type::ScopeForm::InPatLet) (ctor assayxport.haskell.policy::type::ScopeForm::InWherePat) (ctor assayxport.haskell.policy::type::ScopeForm::InFieldPat) (ctor assayxport.haskell.policy::type::ScopeForm::InFieldPun) (ctor assayxport.haskell.policy::type::ScopeForm::InGuardLet) (ctor assayxport.haskell.policy::type::ScopeForm::InQualLet) (ctor assayxport.haskell.policy::type::ScopeForm::InAltWhere) (ctor assayxport.haskell.policy::type::ScopeForm::InRec)) (data assayxport.haskell.policy::type::CallSite (ctor assayxport.haskell.policy::type::CallSite::SiteList) (ctor assayxport.haskell.policy::type::CallSite::SiteDo) (ctor assayxport.haskell.policy::type::CallSite::SiteGuard) (ctor assayxport.haskell.policy::type::CallSite::SiteCase) (ctor assayxport.haskell.policy::type::CallSite::SiteFilter) (ctor assayxport.haskell.policy::type::CallSite::SiteSig)) (data assayxport.haskell.policy::type::Callee (ctor assayxport.haskell.policy::type::Callee::HTop (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::Callee::HTopOp (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::Callee::HField (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::Callee::HSelfQual (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::Callee::HLocal (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::Callee::HExplicit) (ctor assayxport.haskell.policy::type::Callee::HQualAs) (ctor assayxport.haskell.policy::type::Callee::HQualFull) (ctor assayxport.haskell.policy::type::Callee::HOpenName) (ctor assayxport.haskell.policy::type::Callee::HPrelude (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::Callee::HUnknown) (ctor assayxport.haskell.policy::type::Callee::HUnknownAlias) (ctor assayxport.haskell.policy::type::Callee::HLambdaApply) (ctor assayxport.haskell.policy::type::Callee::HCurried) (ctor assayxport.haskell.policy::type::Callee::HShared) (ctor assayxport.haskell.policy::type::Callee::HInsert) (ctor assayxport.haskell.policy::type::Callee::HPostQualified) (ctor assayxport.haskell.policy::type::Callee::HQualHidingKept) (ctor assayxport.haskell.policy::type::Callee::HQualHidingHidden)) (data assayxport.haskell.policy::type::HsDecl (ctor assayxport.haskell.policy::type::HsDecl::DValue (ref assayxport.haskell.policy::type::ValueModel)) (ctor assayxport.haskell.policy::type::HsDecl::DData (ref assayxport.haskell.policy::type::DataModel)) (ctor assayxport.haskell.policy::type::HsDecl::DSyn) (ctor assayxport.haskell.policy::type::HsDecl::DClass (ref assayxport.haskell.policy::type::ClassModel)) (ctor assayxport.haskell.policy::type::HsDecl::DInst (ref assayxport.haskell.policy::type::InstModel))) (data assayxport.haskell.policy::type::DataModel (ctor assayxport.haskell.policy::type::DataModel::DataModel (bool) (bool) (int Int8 -128 127) (int Int8 -128 127) (maybe (ref assayxport.haskell.policy::type::DocStyle)) (bool) (bool) (bool) (bool) (bool) (bool) (bool) (bool) (bool))) (data assayxport.haskell.policy::type::ClassModel (ctor assayxport.haskell.policy::type::ClassModel::ClassModel (int Int8 -128 127) (int Int8 -128 127) (bool) (bool) (bool) (bool) (maybe (ref assayxport.haskell.policy::type::DocStyle)))) (data assayxport.haskell.policy::type::InstModel (ctor assayxport.haskell.policy::type::InstModel::InstModel (bool) (int Int8 -128 127) (bool) (bool) (bool) (bool))) (data assayxport.haskell.policy::type::HsModule (ctor assayxport.haskell.policy::type::HsModule::HsModule (ref assayxport.haskell.policy::type::ModKind) (bool) (bool) (bool) (maybe (list (ref assayxport.haskell.policy::type::ExportPick))) (bool) (bool) (list (ref assayxport.haskell.policy::type::ImportModel)) (list (ref assayxport.haskell.policy::type::HsDecl)) (bool))) (data assayxport.haskell.policy::type::ModKind (ctor assayxport.haskell.policy::type::ModKind::Named) (ctor assayxport.haskell.policy::type::ModKind::Dotted) (ctor assayxport.haskell.policy::type::ModKind::MainHeader) (ctor assayxport.haskell.policy::type::ModKind::Headerless)) (data assayxport.haskell.policy::type::ExportPick (ctor assayxport.haskell.policy::type::ExportPick::EValue (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::ETypeAll (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::ETypeOnly (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::EClassAll (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::EClassOnly (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::ETypeSome (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::EField (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::EMethod (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::EMain) (ctor assayxport.haskell.policy::type::ExportPick::ESelf) (ctor assayxport.haskell.policy::type::ExportPick::EReexport) (ctor assayxport.haskell.policy::type::ExportPick::EClassOp (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::EOpMethod (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::EConOp (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::EQualSelf (int Int8 -128 127))) (data assayxport.haskell.policy::type::ImportModel (ctor assayxport.haskell.policy::type::ImportModel::ImpExplicit) (ctor assayxport.haskell.policy::type::ImportModel::ImpQualifiedAs) (ctor assayxport.haskell.policy::type::ImportModel::ImpQualified) (ctor assayxport.haskell.policy::type::ImportModel::ImpOpen) (ctor assayxport.haskell.policy::type::ImportModel::ImpHidePrelude) (ctor assayxport.haskell.policy::type::ImportModel::ImpPreludeOnly) (ctor assayxport.haskell.policy::type::ImportModel::ImpHidingTight) (ctor assayxport.haskell.policy::type::ImportModel::ImpQualifiedPost) (ctor assayxport.haskell.policy::type::ImportModel::ImpHidingLines) (ctor assayxport.haskell.policy::type::ImportModel::ImpPreludeEmpty) (ctor assayxport.haskell.policy::type::ImportModel::ImpPreludeQualified) (ctor assayxport.haskell.policy::type::ImportModel::ImpSharedAlias) (ctor assayxport.haskell.policy::type::ImportModel::ImpQualifiedHiding)) (data assayxport.haskell.policy::type::Block (ctor assayxport.haskell.policy::type::Block::Block (list (text)) (list (ref assayxport.contract::type::Decl)))) (data assayxport.haskell.policy::type::Ctx (ctor assayxport.haskell.policy::type::Ctx::Ctx (text) (list (ref assayxport.haskell.policy::type::TopName)) (list (ref assayxport.haskell.policy::type::ImportModel)) (bool) (list (text)) (list (ref assayxport.haskell.policy::type::TopName)))) (data assayxport.haskell.policy::type::TopName (ctor assayxport.haskell.policy::type::TopName::TopName (text) (text))) (data assayxport.haskell.policy::type::Rendered (ctor assayxport.haskell.policy::type::Rendered::Rendered (text) (text) (ref assayxport.contract::type::Package))) (data assayxport.haskell.policy::type::Ords (ctor assayxport.haskell.policy::type::Ords::Ords (int Integer _ _) (int Integer _ _) (int Integer _ _) (int Integer _ _) (int Integer _ _))) (data assayxport.haskell.policy::type::VParts (ctor assayxport.haskell.policy::type::VParts::VParts (list (text)) (list (text)) (bool) (int Integer _ _) (text))) (data assayxport.haskell.policy::type::HsTree (ctor assayxport.haskell.policy::type::HsTree::HsTree (list (ref assayxport.haskell.policy::type::HsModule)) (bool) (bool))) (data assayxport.haskell::type::WhenRun (ctor assayxport.haskell::type::WhenRun::WhenRun (list (ref assayxport.contract::type::Package)) (list (text)) (list (text)))) (data assayxport.haskell::type::ExitRun (ctor assayxport.haskell::type::ExitRun::ExitRun (int Integer _ _) (text) (list (text)))) (data assayxport.haskell::type::InitRun (ctor assayxport.haskell::type::InitRun::InitRun (int Integer _ _) (list (text)) (list (text)))) (data assayxport.haskell.cpp::type::Section (ctor assayxport.haskell.cpp::type::Section::Code) (ctor assayxport.haskell.cpp::type::Section::Group (ref lawspec::structural::record::0da2e14ca58604b3fe86a7b98c18b8fc5d80c0dfa11517770dd5008b6ef149d5))) (data lawspec::structural::record::0da2e14ca58604b3fe86a7b98c18b8fc5d80c0dfa11517770dd5008b6ef149d5 (ctor lawspec::structural::record::0da2e14ca58604b3fe86a7b98c18b8fc5d80c0dfa11517770dd5008b6ef149d5::Record (list (ref assayxport.haskell.cpp::type::Arm)) (list (ref assayxport.haskell.cpp::type::Inner)) (bool))) (data assayxport.haskell.cpp::type::Arm (ctor assayxport.haskell.cpp::type::Arm::Arm (int Integer _ _) (list (ref assayxport.haskell.cpp::type::Inner)))) (data assayxport.haskell.cpp::type::Inner (ctor assayxport.haskell.cpp::type::Inner::InCode) (ctor assayxport.haskell.cpp::type::Inner::InGroup (ref assayxport.haskell.cpp::type::Leaf))) (data assayxport.haskell.cpp::type::Leaf (ctor assayxport.haskell.cpp::type::Leaf::Leaf (list (int Integer _ _)) (bool))) (data assayxport.haskell.cpp::type::Walked (ctor assayxport.haskell.cpp::type::Walked::Walked (list (int Integer _ _)) (text))) (data assayxport.haskell.extract::type::Import (ctor assayxport.haskell.extract::type::Import::Import (text) (text) (list (text)) (list (text)) (bool) (bool) (bool) (bool))) (data assayxport.haskell.extract::type::CxPlan (ctor assayxport.haskell.extract::type::CxPlan::CxPlan (list (text)) (list (ref assayxport.haskell.extract::type::CxRow)) (bool))) (data assayxport.haskell.extract::type::CxRow (ctor assayxport.haskell.extract::type::CxRow::CxRow (int Integer _ _) (bool) (bool) (bool) (list (ref assayxport.haskell.extract::type::CxTerm)) (text))) (data assayxport.haskell.extract::type::CxTerm (ctor assayxport.haskell.extract::type::CxTerm::CxTerm (bool) (text))) (data assayxport.haskell.extract::type::CxEdge (ctor assayxport.haskell.extract::type::CxEdge::CxEdge (ref assayxport.contract::type::CallEdge) (list (int Integer _ _)))) (data assayxport.haskell.extract::type::CxSym (ctor assayxport.haskell.extract::type::CxSym::CxSym (ref assayxport.contract::type::Decl) (list (int Integer _ _)) (list (ref assayxport.haskell.extract::type::CxEdge)))) (data assayxport.haskell.extract::type::CxOpen (ctor assayxport.haskell.extract::type::CxOpen::CxOpen (list (ref assayxport.haskell.extract::type::CxTerm)) (list (ref assayxport.haskell.extract::type::CxTerm)) (ref assayxport.haskell.extract::type::CxTerm) (bool) (bool))) (data assayxport.haskell.extract::type::CxState (ctor assayxport.haskell.extract::type::CxState::CxState (list (ref assayxport.haskell.extract::type::CxOpen)) (int Integer _ _))) (data assayxport.haskell.extract::type::CxEffect (ctor assayxport.haskell.extract::type::CxEffect::CxEffect (list (ref assayxport.haskell.extract::type::CxOpen)) (list (ref assayxport.haskell.extract::type::CxTerm)) (bool))) (data assayxport.haskell.extract::type::CxJoin (ctor assayxport.haskell.extract::type::CxJoin::CxJoin (int Integer _ _) (text))) (data assayxport.haskell.extract::type::CxCopyPkg (ctor assayxport.haskell.extract::type::CxCopyPkg::CxCopyPkg (int Integer _ _) (ref assayxport.contract::type::Package))) (data assayxport.haskell.extract::type::CxUnit (ctor assayxport.haskell.extract::type::CxUnit::CxUnit (int Integer _ _) (text) (text) (text))) (data assayxport.haskell.extract::type::Grammar (ctor assayxport.haskell.extract::type::Grammar::Grammar (list (ref assayxport.haskell.extract::type::Prod)) (list (ref assayxport.haskell.extract::type::Slot)) (list (ref assayxport.haskell.extract::type::Slot)))) (data assayxport.haskell.extract::type::Prod (ctor assayxport.haskell.extract::type::Prod::Prod (text) (list (ref assayxport.haskell.extract::type::Slot)))) (data assayxport.haskell.extract::type::Slot (ctor assayxport.haskell.extract::type::Slot::Slot (text) (bool) (bool) (list (text)))) (data assayxport.haskell.extract::type::Pick (ctor assayxport.haskell.extract::type::Pick::Pick (text) (text) (int Integer _ _))) (data assayxport.haskell.extract::type::Where (ctor assayxport.haskell.extract::type::Where::WPlain) (ctor assayxport.haskell.extract::type::Where::WDo) (ctor assayxport.haskell.extract::type::Where::WFun) (ctor assayxport.haskell.extract::type::Where::WPat) (ctor assayxport.haskell.extract::type::Where::WView) (ctor assayxport.haskell.extract::type::Where::WLeft) (ctor assayxport.haskell.extract::type::Where::WRight) (ctor assayxport.haskell.extract::type::Where::WSpine) (ctor assayxport.haskell.extract::type::Where::WGuard) (ctor assayxport.haskell.extract::type::Where::WGuards) (ctor assayxport.haskell.extract::type::Where::WMatch) (ctor assayxport.haskell.extract::type::Where::WQuals) (ctor assayxport.haskell.extract::type::Where::WHead)) (data assayxport.haskell.policy::type::Res (ctor assayxport.haskell.policy::type::Res::Res (ref assayxport.contract::type::CallKind) (text) (maybe (text))))")
+var lawSpecRemoteTypes = LawSpecTypes("(data lawspec.resilience::type::Breaker (ctor lawspec.resilience::type::Breaker::Closed (list (int Integer _ _))) (ctor lawspec.resilience::type::Breaker::Open (int Integer _ _)) (ctor lawspec.resilience::type::Breaker::HalfOpen)) (data lawspec.resilience::type::Bulkhead (ctor lawspec.resilience::type::Bulkhead::Bulkhead (int Integer _ _))) (data lawspec.resilience::type::FixedWindow (ctor lawspec.resilience::type::FixedWindow::FixedWindow (int Integer _ _) (int Integer _ _))) (data lawspec.resilience::type::LeakyBucket (ctor lawspec.resilience::type::LeakyBucket::LeakyBucket (int Integer _ _))) (data lawspec.resilience::type::SlidingWindow (ctor lawspec.resilience::type::SlidingWindow::SlidingWindow (list (int Integer _ _)))) (data lawspec.resilience::type::TokenBucket (ctor lawspec.resilience::type::TokenBucket::TokenBucket (int Integer _ _) (int Integer _ _))) (data lawspec.matchers::type::Regex (ctor lawspec.matchers::type::Regex::Regex (text))) (data lawspec.resources::type::TemporaryDirectory (ctor lawspec.resources::type::TemporaryDirectory::TemporaryDirectory (text))) (data lawspec.resources::type::TemporaryFile (ctor lawspec.resources::type::TemporaryFile::TemporaryFile (text))) (data lawspec.resources::type::FreePort (ctor lawspec.resources::type::FreePort::FreePort (int Int32 -2147483648 2147483647))) (data assayxport.contract::type::Package (ctor assayxport.contract::type::Package::Package (text) (text) (text) (text) (text) (text) (list (text)) (bool) (maybe (ref assayxport.contract::type::Invocation)) (list (ref assayxport.contract::type::Decl)))) (data assayxport.contract::type::Invocation (ctor assayxport.contract::type::Invocation::Invocation (text) (text))) (data assayxport.contract::type::Decl (ctor assayxport.contract::type::Decl::Decl (text) (text) (ref assayxport.contract::type::SymbolKind) (ref assayxport.contract::type::Visibility) (ref assayxport.contract::type::VisibilityIdiom) (ref assayxport.contract::type::Location) (text) (ref assayxport.contract::type::DocText) (ref assayxport.contract::type::EntryPoint) (ref assayxport.contract::type::Detail) (list (ref assayxport.contract::type::CallEdge)) (text))) (data assayxport.contract::type::SymbolKind (ctor assayxport.contract::type::SymbolKind::KindType) (ctor assayxport.contract::type::SymbolKind::KindFunction) (ctor assayxport.contract::type::SymbolKind::KindFunc) (ctor assayxport.contract::type::SymbolKind::KindMethod) (ctor assayxport.contract::type::SymbolKind::KindConstructor) (ctor assayxport.contract::type::SymbolKind::KindField) (ctor assayxport.contract::type::SymbolKind::KindVariable) (ctor assayxport.contract::type::SymbolKind::KindVar) (ctor assayxport.contract::type::SymbolKind::KindConst) (ctor assayxport.contract::type::SymbolKind::KindProperty) (ctor assayxport.contract::type::SymbolKind::KindClass) (ctor assayxport.contract::type::SymbolKind::KindEnumConstant) (ctor assayxport.contract::type::SymbolKind::KindInstance) (ctor assayxport.contract::type::SymbolKind::KindOther (text))) (data assayxport.contract::type::Visibility (ctor assayxport.contract::type::Visibility::Exported) (ctor assayxport.contract::type::Visibility::Unexported) (ctor assayxport.contract::type::Visibility::Public) (ctor assayxport.contract::type::Visibility::Protected) (ctor assayxport.contract::type::Visibility::Private) (ctor assayxport.contract::type::Visibility::PackagePrivate) (ctor assayxport.contract::type::Visibility::VisibilityOther (text))) (data assayxport.contract::type::VisibilityIdiom (ctor assayxport.contract::type::VisibilityIdiom::Capitalized) (ctor assayxport.contract::type::VisibilityIdiom::Underscore) (ctor assayxport.contract::type::VisibilityIdiom::AccessModifier) (ctor assayxport.contract::type::VisibilityIdiom::ExportList) (ctor assayxport.contract::type::VisibilityIdiom::IdiomOther (text))) (data assayxport.contract::type::Location (ctor assayxport.contract::type::Location::Location (text) (int Integer _ _) (int Integer _ _) (int Integer _ _))) (data assayxport.contract::type::DocText (ctor assayxport.contract::type::DocText::DocText (text) (ref assayxport.contract::type::DocFormat))) (data assayxport.contract::type::DocFormat (ctor assayxport.contract::type::DocFormat::NoDoc) (ctor assayxport.contract::type::DocFormat::GoDoc) (ctor assayxport.contract::type::DocFormat::Docstring) (ctor assayxport.contract::type::DocFormat::JavaDoc) (ctor assayxport.contract::type::DocFormat::TSDoc) (ctor assayxport.contract::type::DocFormat::Haddock) (ctor assayxport.contract::type::DocFormat::DocOther (text))) (data assayxport.contract::type::EntryPoint (ctor assayxport.contract::type::EntryPoint::EntryPoint (bool) (maybe (ref assayxport.contract::type::Invocation)))) (data assayxport.contract::type::Detail (ctor assayxport.contract::type::Detail::Detail (ref assayxport.contract::type::Complexity) (maybe (ref assayxport.contract::type::Signature)) (text) (text) (text) (maybe (bool)) (list (text)) (list (text)) (ref assayxport.contract::type::Binary))) (data assayxport.contract::type::Complexity (ctor assayxport.contract::type::Complexity::Complexity (maybe (text)) (maybe (text)) (ref assayxport.contract::type::ComplexityMethod))) (data assayxport.contract::type::ComplexityMethod (ctor assayxport.contract::type::ComplexityMethod::Deferred) (ctor assayxport.contract::type::ComplexityMethod::LoopNesting) (ctor assayxport.contract::type::ComplexityMethod::Recursive) (ctor assayxport.contract::type::ComplexityMethod::MethodOther (text))) (data assayxport.contract::type::Signature (ctor assayxport.contract::type::Signature::Signature (list (ref assayxport.contract::type::Param)) (list (ref assayxport.contract::type::Param)) (list (ref assayxport.contract::type::TypeParam)) (maybe (ref assayxport.contract::type::Param)) (bool) (list (text)) (text) (list (text)))) (data assayxport.contract::type::Param (ctor assayxport.contract::type::Param::Param (text) (text) (list (text)) (bool))) (data assayxport.contract::type::TypeParam (ctor assayxport.contract::type::TypeParam::TypeParam (text) (text))) (data assayxport.contract::type::Binary (ctor assayxport.contract::type::Binary::Binary (text) (list (text)) (list (text)) (list (text)) (text) (text) (text) (list (text)) (text) (list (text)))) (data assayxport.contract::type::CallEdge (ctor assayxport.contract::type::CallEdge::CallEdge (ref assayxport.contract::type::CallKind) (text) (maybe (text)) (maybe (int Integer _ _)) (list (maybe (text))) (int Integer _ _) (text))) (data assayxport.contract::type::CallKind (ctor assayxport.contract::type::CallKind::Internal) (ctor assayxport.contract::type::CallKind::External) (ctor assayxport.contract::type::CallKind::Builtin) (ctor assayxport.contract::type::CallKind::Dynamic) (ctor assayxport.contract::type::CallKind::Unresolved) (ctor assayxport.contract::type::CallKind::CallOther (text))) (data assayxport.contract::type::EdgeKey (ctor assayxport.contract::type::EdgeKey::EdgeKey (text) (text) (text) (text))) (data assayxport.contract::type::ExtractFailure (ctor assayxport.contract::type::ExtractFailure::ExtractionFailed (ref lawspec::structural::record::f5f10555f6c6efcfede6a1b5b3a543dda5cd98cceb0297c257aa71c41066c7c7))) (data lawspec::structural::record::f5f10555f6c6efcfede6a1b5b3a543dda5cd98cceb0297c257aa71c41066c7c7 (ctor lawspec::structural::record::f5f10555f6c6efcfede6a1b5b3a543dda5cd98cceb0297c257aa71c41066c7c7::Record (text))) (data assayxport.contract::type::Extension (ctor assayxport.contract::type::Extension::HaskellFile) (ctor assayxport.contract::type::Extension::PythonFile) (ctor assayxport.contract::type::Extension::GoFile) (ctor assayxport.contract::type::Extension::TextFile)) (data assayxport.contract::type::RawFile (ctor assayxport.contract::type::RawFile::RawFile (int Int8 -128 127) (ref assayxport.contract::type::Extension) (text))) (data assayxport.contract::type::Observed (ctor assayxport.contract::type::Observed::Observed (list (ref assayxport.contract::type::Package)) (int Integer _ _) (int Integer _ _))) (data assayxport.contract::type::SourceFile (ctor assayxport.contract::type::SourceFile::SourceFile (text) (text))) (data assayxport.conditions::type::UseNote (ctor assayxport.conditions::type::UseNote::UseNote (ref assayxport.conditions.policy::type::UsePlace) (list (text)))) (data assayxport.conditions.policy::type::UsePlace (ctor assayxport.conditions.policy::type::UsePlace::UsePlace (text) (int Integer _ _) (text))) (data assayxport.conditions.policy::type::Outcome (ctor assayxport.conditions.policy::type::Outcome::Known (int Integer _ _)) (ctor assayxport.conditions.policy::type::Outcome::Unknown (ref assayxport.conditions.policy::type::OpenInfo)) (ctor assayxport.conditions.policy::type::Outcome::Bad)) (data assayxport.conditions.policy::type::OpenInfo (ctor assayxport.conditions.policy::type::OpenInfo::OpenInfo (list (text)) (bool))) (data assayxport.conditions.policy::type::BinOp (ctor assayxport.conditions.policy::type::BinOp::BMul) (ctor assayxport.conditions.policy::type::BinOp::BDiv) (ctor assayxport.conditions.policy::type::BinOp::BRem) (ctor assayxport.conditions.policy::type::BinOp::BAdd) (ctor assayxport.conditions.policy::type::BinOp::BSub) (ctor assayxport.conditions.policy::type::BinOp::BShl) (ctor assayxport.conditions.policy::type::BinOp::BShr) (ctor assayxport.conditions.policy::type::BinOp::BLt) (ctor assayxport.conditions.policy::type::BinOp::BLe) (ctor assayxport.conditions.policy::type::BinOp::BGt) (ctor assayxport.conditions.policy::type::BinOp::BGe) (ctor assayxport.conditions.policy::type::BinOp::BEq) (ctor assayxport.conditions.policy::type::BinOp::BNe) (ctor assayxport.conditions.policy::type::BinOp::BAnd) (ctor assayxport.conditions.policy::type::BinOp::BXor) (ctor assayxport.conditions.policy::type::BinOp::BOr) (ctor assayxport.conditions.policy::type::BinOp::BLand) (ctor assayxport.conditions.policy::type::BinOp::BLor) (ctor assayxport.conditions.policy::type::BinOp::BComma)) (data assayxport.conditions.policy::type::BindingLine (ctor assayxport.conditions.policy::type::BindingLine::SetName (ref lawspec::structural::record::300f8ee2663116a4df043217f7ea6ba97553cbec2c2d22b95653ff1824c39e94)) (ctor assayxport.conditions.policy::type::BindingLine::FlagName (text)) (ctor assayxport.conditions.policy::type::BindingLine::UndefName (text)) (ctor assayxport.conditions.policy::type::BindingLine::SetPackage (ref lawspec::structural::record::b73bdc307fb73ba719a4683f12adef2a92bb186fed2e25b7cc94fa772d3afb90)) (ctor assayxport.conditions.policy::type::BindingLine::UnsetPackage (text)) (ctor assayxport.conditions.policy::type::BindingLine::Remark (text)) (ctor assayxport.conditions.policy::type::BindingLine::Blank)) (data lawspec::structural::record::300f8ee2663116a4df043217f7ea6ba97553cbec2c2d22b95653ff1824c39e94 (ctor lawspec::structural::record::300f8ee2663116a4df043217f7ea6ba97553cbec2c2d22b95653ff1824c39e94::Record (int Integer _ _) (text) (int Integer _ _))) (data lawspec::structural::record::b73bdc307fb73ba719a4683f12adef2a92bb186fed2e25b7cc94fa772d3afb90 (ctor lawspec::structural::record::b73bdc307fb73ba719a4683f12adef2a92bb186fed2e25b7cc94fa772d3afb90::Record (text) (list (int Integer _ _)))) (data assayxport.conditions.policy::type::Binding (ctor assayxport.conditions.policy::type::Binding::Defined (int Integer _ _)) (ctor assayxport.conditions.policy::type::Binding::Undefined)) (data assayxport.conditions.policy::type::Style (ctor assayxport.conditions.policy::type::Style::Style (int Integer _ _) (bool) (int Integer _ _) (int Integer _ _) (bool))) (data assayxport.conditions.policy::type::Literal (ctor assayxport.conditions.policy::type::Literal::Literal (bool) (text) (ref assayxport.conditions.policy::type::CExpr))) (data assayxport.conditions.policy::type::CExpr (ctor assayxport.conditions.policy::type::CExpr::Lit (int Integer _ _)) (ctor assayxport.conditions.policy::type::CExpr::ULit (int Integer _ _)) (ctor assayxport.conditions.policy::type::CExpr::Name (text)) (ctor assayxport.conditions.policy::type::CExpr::IsDefined (text)) (ctor assayxport.conditions.policy::type::CExpr::Un (ref lawspec::structural::record::9852b9b6fca91436fe827b0c22462c10f0326db165feba9174c83f369519fa9a)) (ctor assayxport.conditions.policy::type::CExpr::Bin (ref lawspec::structural::record::bf49f77319743fd50b1bbc192cc62afd154c09d229e418e2a6eacef553477614)) (ctor assayxport.conditions.policy::type::CExpr::Cond (ref lawspec::structural::record::03e0c0d3bd9272f1f4baae197fe7ba0405b7a3499bf8948dea3fdfc5752e6ae6)) (ctor assayxport.conditions.policy::type::CExpr::MinVersion (ref lawspec::structural::record::aa3f2c9a069b5fe04a44e334e8c37f982adcb2a495049a796191eb9e455da09c)) (ctor assayxport.conditions.policy::type::CExpr::MinGhc (ref lawspec::structural::record::6ccc5410198deed83d83257720a7f82920a084c4295ff6022d7754d7dd09140a))) (data lawspec::structural::record::9852b9b6fca91436fe827b0c22462c10f0326db165feba9174c83f369519fa9a (ctor lawspec::structural::record::9852b9b6fca91436fe827b0c22462c10f0326db165feba9174c83f369519fa9a::Record (ref assayxport.conditions.policy::type::CExpr) (ref assayxport.conditions.policy::type::UnOp))) (data assayxport.conditions.policy::type::UnOp (ctor assayxport.conditions.policy::type::UnOp::UPlus) (ctor assayxport.conditions.policy::type::UnOp::UMinus) (ctor assayxport.conditions.policy::type::UnOp::UNot) (ctor assayxport.conditions.policy::type::UnOp::UCompl)) (data lawspec::structural::record::bf49f77319743fd50b1bbc192cc62afd154c09d229e418e2a6eacef553477614 (ctor lawspec::structural::record::bf49f77319743fd50b1bbc192cc62afd154c09d229e418e2a6eacef553477614::Record (ref assayxport.conditions.policy::type::CExpr) (ref assayxport.conditions.policy::type::BinOp) (ref assayxport.conditions.policy::type::CExpr))) (data lawspec::structural::record::03e0c0d3bd9272f1f4baae197fe7ba0405b7a3499bf8948dea3fdfc5752e6ae6 (ctor lawspec::structural::record::03e0c0d3bd9272f1f4baae197fe7ba0405b7a3499bf8948dea3fdfc5752e6ae6::Record (ref assayxport.conditions.policy::type::CExpr) (ref assayxport.conditions.policy::type::CExpr) (ref assayxport.conditions.policy::type::CExpr))) (data lawspec::structural::record::aa3f2c9a069b5fe04a44e334e8c37f982adcb2a495049a796191eb9e455da09c (ctor lawspec::structural::record::aa3f2c9a069b5fe04a44e334e8c37f982adcb2a495049a796191eb9e455da09c::Record (ref assayxport.conditions.policy::type::CExpr) (ref assayxport.conditions.policy::type::CExpr) (ref assayxport.conditions.policy::type::CExpr) (text))) (data lawspec::structural::record::6ccc5410198deed83d83257720a7f82920a084c4295ff6022d7754d7dd09140a (ctor lawspec::structural::record::6ccc5410198deed83d83257720a7f82920a084c4295ff6022d7754d7dd09140a::Record (ref assayxport.conditions.policy::type::CExpr) (ref assayxport.conditions.policy::type::CExpr) (ref assayxport.conditions.policy::type::CExpr) (ref assayxport.conditions.policy::type::CExpr))) (data assayxport.conditions.policy::type::FactModel (ctor assayxport.conditions.policy::type::FactModel::FactModel (int Integer _ _) (ref assayxport.conditions.policy::type::Style))) (data assayxport.conditions.policy::type::Verdict (ctor assayxport.conditions.policy::type::Verdict::Holds) (ctor assayxport.conditions.policy::type::Verdict::Fails) (ctor assayxport.conditions.policy::type::Verdict::Undecided (ref assayxport.conditions.policy::type::Outcome))) (data assayxport.conditions.policy::type::Filtered (ctor assayxport.conditions.policy::type::Filtered::Filtered (list (ref assayxport.contract::type::Package)) (list (text)) (list (text)))) (data assayxport.conditions::type::Tok (ctor assayxport.conditions::type::Tok::TNum (int Integer _ _)) (ctor assayxport.conditions::type::Tok::TUNum (int Integer _ _)) (ctor assayxport.conditions::type::Tok::TId (text)) (ctor assayxport.conditions::type::Tok::TOp (text)) (ctor assayxport.conditions::type::Tok::TUnread)) (data assayxport.conditions::type::Parsed (ctor assayxport.conditions::type::Parsed::Parsed (ref assayxport.conditions.policy::type::CExpr) (list (ref assayxport.conditions::type::Tok)))) (data assayxport.conditions::type::Note (ctor assayxport.conditions::type::Note::Note (text) (ref assayxport.conditions.policy::type::Outcome))) (data assayxport.conditions.policy::type::BindingError (ctor assayxport.conditions.policy::type::BindingError::BindingError (int Integer _ _) (text))) (data assayxport.haskell.cpp::type::Row (ctor assayxport.haskell.cpp::type::Row::Row (text) (list (ref assayxport.conditions.policy::type::Literal)) (bool) (bool) (text) (ref assayxport.haskell.cpp::type::Sets))) (data assayxport.haskell.cpp::type::Sets (ctor assayxport.haskell.cpp::type::Sets::SetsNothing) (ctor assayxport.haskell.cpp::type::Sets::SetsInt (int Integer _ _)) (ctor assayxport.haskell.cpp::type::Sets::SetsOther) (ctor assayxport.haskell.cpp::type::Sets::Unsets)) (data assayxport.haskell.cpp::type::Frame (ctor assayxport.haskell.cpp::type::Frame::Frame (bool) (bool))) (data assayxport.haskell.extract::type::Point (ctor assayxport.haskell.extract::type::Point::Point (int Integer _ _) (int Integer _ _))) (data assayxport.haskell.extract::type::Syntax (ctor assayxport.haskell.extract::type::Syntax::Syntax (text) (text) (text) (ref assayxport.haskell.extract::type::Point) (ref assayxport.haskell.extract::type::Point) (bool) (list (ref assayxport.haskell.extract::type::Syntax)))) (data assayxport.haskell.policy::type::ValueModel (ctor assayxport.haskell.policy::type::ValueModel::ValueModel (bool) (int Int8 -128 127) (ref assayxport.haskell.policy::type::SigKind) (maybe (ref assayxport.haskell.policy::type::DocStyle)) (bool) (bool) (bool) (bool) (ref assayxport.haskell.policy::type::ScopeForm) (ref assayxport.haskell.policy::type::CallSite) (bool) (list (ref assayxport.haskell.policy::type::Callee)))) (data assayxport.haskell.policy::type::SigKind (ctor assayxport.haskell.policy::type::SigKind::SigNone) (ctor assayxport.haskell.policy::type::SigKind::SigValue) (ctor assayxport.haskell.policy::type::SigKind::SigFunc) (ctor assayxport.haskell.policy::type::SigKind::SigConstrained) (ctor assayxport.haskell.policy::type::SigKind::SigForall)) (data assayxport.haskell.policy::type::DocStyle (ctor assayxport.haskell.policy::type::DocStyle::DocOne) (ctor assayxport.haskell.policy::type::DocStyle::DocTwo) (ctor assayxport.haskell.policy::type::DocStyle::DocNoSpace) (ctor assayxport.haskell.policy::type::DocStyle::DocBlock) (ctor assayxport.haskell.policy::type::DocStyle::DocBlockTight) (ctor assayxport.haskell.policy::type::DocStyle::DocGap) (ctor assayxport.haskell.policy::type::DocStyle::DocGapComment) (ctor assayxport.haskell.policy::type::DocStyle::DocAfterComment)) (data assayxport.haskell.policy::type::ScopeForm (ctor assayxport.haskell.policy::type::ScopeForm::NoScope) (ctor assayxport.haskell.policy::type::ScopeForm::InWhere) (ctor assayxport.haskell.policy::type::ScopeForm::InLet) (ctor assayxport.haskell.policy::type::ScopeForm::InLambda) (ctor assayxport.haskell.policy::type::ScopeForm::InCase) (ctor assayxport.haskell.policy::type::ScopeForm::InDo) (ctor assayxport.haskell.policy::type::ScopeForm::InDoLet) (ctor assayxport.haskell.policy::type::ScopeForm::InPattern) (ctor assayxport.haskell.policy::type::ScopeForm::InPatGuard) (ctor assayxport.haskell.policy::type::ScopeForm::InGenerator) (ctor assayxport.haskell.policy::type::ScopeForm::InPatLet) (ctor assayxport.haskell.policy::type::ScopeForm::InWherePat) (ctor assayxport.haskell.policy::type::ScopeForm::InFieldPat) (ctor assayxport.haskell.policy::type::ScopeForm::InFieldPun) (ctor assayxport.haskell.policy::type::ScopeForm::InGuardLet) (ctor assayxport.haskell.policy::type::ScopeForm::InQualLet) (ctor assayxport.haskell.policy::type::ScopeForm::InAltWhere) (ctor assayxport.haskell.policy::type::ScopeForm::InRec)) (data assayxport.haskell.policy::type::CallSite (ctor assayxport.haskell.policy::type::CallSite::SiteList) (ctor assayxport.haskell.policy::type::CallSite::SiteDo) (ctor assayxport.haskell.policy::type::CallSite::SiteGuard) (ctor assayxport.haskell.policy::type::CallSite::SiteCase) (ctor assayxport.haskell.policy::type::CallSite::SiteFilter) (ctor assayxport.haskell.policy::type::CallSite::SiteSig)) (data assayxport.haskell.policy::type::Callee (ctor assayxport.haskell.policy::type::Callee::HTop (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::Callee::HTopOp (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::Callee::HField (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::Callee::HSelfQual (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::Callee::HLocal (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::Callee::HExplicit) (ctor assayxport.haskell.policy::type::Callee::HQualAs) (ctor assayxport.haskell.policy::type::Callee::HQualFull) (ctor assayxport.haskell.policy::type::Callee::HOpenName) (ctor assayxport.haskell.policy::type::Callee::HPrelude (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::Callee::HUnknown) (ctor assayxport.haskell.policy::type::Callee::HUnknownAlias) (ctor assayxport.haskell.policy::type::Callee::HLambdaApply) (ctor assayxport.haskell.policy::type::Callee::HCurried) (ctor assayxport.haskell.policy::type::Callee::HShared) (ctor assayxport.haskell.policy::type::Callee::HInsert) (ctor assayxport.haskell.policy::type::Callee::HPostQualified) (ctor assayxport.haskell.policy::type::Callee::HQualHidingKept) (ctor assayxport.haskell.policy::type::Callee::HQualHidingHidden)) (data assayxport.haskell.policy::type::HsDecl (ctor assayxport.haskell.policy::type::HsDecl::DValue (ref assayxport.haskell.policy::type::ValueModel)) (ctor assayxport.haskell.policy::type::HsDecl::DData (ref assayxport.haskell.policy::type::DataModel)) (ctor assayxport.haskell.policy::type::HsDecl::DSyn) (ctor assayxport.haskell.policy::type::HsDecl::DClass (ref assayxport.haskell.policy::type::ClassModel)) (ctor assayxport.haskell.policy::type::HsDecl::DInst (ref assayxport.haskell.policy::type::InstModel))) (data assayxport.haskell.policy::type::DataModel (ctor assayxport.haskell.policy::type::DataModel::DataModel (bool) (bool) (int Int8 -128 127) (int Int8 -128 127) (maybe (ref assayxport.haskell.policy::type::DocStyle)) (bool) (bool) (bool) (bool) (bool) (bool) (bool) (bool) (bool))) (data assayxport.haskell.policy::type::ClassModel (ctor assayxport.haskell.policy::type::ClassModel::ClassModel (int Int8 -128 127) (int Int8 -128 127) (bool) (bool) (bool) (bool) (maybe (ref assayxport.haskell.policy::type::DocStyle)))) (data assayxport.haskell.policy::type::InstModel (ctor assayxport.haskell.policy::type::InstModel::InstModel (bool) (int Int8 -128 127) (bool) (bool) (bool) (bool))) (data assayxport.haskell.policy::type::HsModule (ctor assayxport.haskell.policy::type::HsModule::HsModule (ref assayxport.haskell.policy::type::ModKind) (bool) (bool) (bool) (maybe (list (ref assayxport.haskell.policy::type::ExportPick))) (bool) (bool) (list (ref assayxport.haskell.policy::type::ImportModel)) (list (ref assayxport.haskell.policy::type::HsDecl)) (bool))) (data assayxport.haskell.policy::type::ModKind (ctor assayxport.haskell.policy::type::ModKind::Named) (ctor assayxport.haskell.policy::type::ModKind::Dotted) (ctor assayxport.haskell.policy::type::ModKind::MainHeader) (ctor assayxport.haskell.policy::type::ModKind::Headerless)) (data assayxport.haskell.policy::type::ExportPick (ctor assayxport.haskell.policy::type::ExportPick::EValue (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::ETypeAll (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::ETypeOnly (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::EClassAll (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::EClassOnly (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::ETypeSome (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::EField (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::EMethod (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::EMain) (ctor assayxport.haskell.policy::type::ExportPick::ESelf) (ctor assayxport.haskell.policy::type::ExportPick::EReexport) (ctor assayxport.haskell.policy::type::ExportPick::EClassOp (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::EOpMethod (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::EConOp (int Int8 -128 127)) (ctor assayxport.haskell.policy::type::ExportPick::EQualSelf (int Int8 -128 127))) (data assayxport.haskell.policy::type::ImportModel (ctor assayxport.haskell.policy::type::ImportModel::ImpExplicit) (ctor assayxport.haskell.policy::type::ImportModel::ImpQualifiedAs) (ctor assayxport.haskell.policy::type::ImportModel::ImpQualified) (ctor assayxport.haskell.policy::type::ImportModel::ImpOpen) (ctor assayxport.haskell.policy::type::ImportModel::ImpHidePrelude) (ctor assayxport.haskell.policy::type::ImportModel::ImpPreludeOnly) (ctor assayxport.haskell.policy::type::ImportModel::ImpHidingTight) (ctor assayxport.haskell.policy::type::ImportModel::ImpQualifiedPost) (ctor assayxport.haskell.policy::type::ImportModel::ImpHidingLines) (ctor assayxport.haskell.policy::type::ImportModel::ImpPreludeEmpty) (ctor assayxport.haskell.policy::type::ImportModel::ImpPreludeQualified) (ctor assayxport.haskell.policy::type::ImportModel::ImpSharedAlias) (ctor assayxport.haskell.policy::type::ImportModel::ImpQualifiedHiding)) (data assayxport.haskell.policy::type::Block (ctor assayxport.haskell.policy::type::Block::Block (list (text)) (list (ref assayxport.contract::type::Decl)))) (data assayxport.haskell.policy::type::Ctx (ctor assayxport.haskell.policy::type::Ctx::Ctx (text) (list (ref assayxport.haskell.policy::type::TopName)) (list (ref assayxport.haskell.policy::type::ImportModel)) (bool) (list (text)) (list (ref assayxport.haskell.policy::type::TopName)))) (data assayxport.haskell.policy::type::TopName (ctor assayxport.haskell.policy::type::TopName::TopName (text) (text))) (data assayxport.haskell.policy::type::Rendered (ctor assayxport.haskell.policy::type::Rendered::Rendered (text) (text) (ref assayxport.contract::type::Package))) (data assayxport.haskell.policy::type::Ords (ctor assayxport.haskell.policy::type::Ords::Ords (int Integer _ _) (int Integer _ _) (int Integer _ _) (int Integer _ _) (int Integer _ _))) (data assayxport.haskell.policy::type::VParts (ctor assayxport.haskell.policy::type::VParts::VParts (list (text)) (list (text)) (bool) (int Integer _ _) (text))) (data assayxport.haskell.policy::type::HsTree (ctor assayxport.haskell.policy::type::HsTree::HsTree (list (ref assayxport.haskell.policy::type::HsModule)) (bool) (bool))) (data assayxport.haskell::type::WhenRun (ctor assayxport.haskell::type::WhenRun::WhenRun (list (ref assayxport.contract::type::Package)) (list (text)) (list (text)))) (data assayxport.haskell::type::ExitRun (ctor assayxport.haskell::type::ExitRun::ExitRun (int Integer _ _) (text) (list (text)))) (data assayxport.haskell::type::InitRun (ctor assayxport.haskell::type::InitRun::InitRun (int Integer _ _) (list (text)) (list (text)))) (data assayxport.haskell.cpp::type::Section (ctor assayxport.haskell.cpp::type::Section::Code) (ctor assayxport.haskell.cpp::type::Section::Group (ref lawspec::structural::record::0da2e14ca58604b3fe86a7b98c18b8fc5d80c0dfa11517770dd5008b6ef149d5))) (data lawspec::structural::record::0da2e14ca58604b3fe86a7b98c18b8fc5d80c0dfa11517770dd5008b6ef149d5 (ctor lawspec::structural::record::0da2e14ca58604b3fe86a7b98c18b8fc5d80c0dfa11517770dd5008b6ef149d5::Record (list (ref assayxport.haskell.cpp::type::Arm)) (list (ref assayxport.haskell.cpp::type::Inner)) (bool))) (data assayxport.haskell.cpp::type::Arm (ctor assayxport.haskell.cpp::type::Arm::Arm (int Integer _ _) (list (ref assayxport.haskell.cpp::type::Inner)))) (data assayxport.haskell.cpp::type::Inner (ctor assayxport.haskell.cpp::type::Inner::InCode) (ctor assayxport.haskell.cpp::type::Inner::InGroup (ref assayxport.haskell.cpp::type::Leaf))) (data assayxport.haskell.cpp::type::Leaf (ctor assayxport.haskell.cpp::type::Leaf::Leaf (list (int Integer _ _)) (bool))) (data assayxport.haskell.cpp::type::Walked (ctor assayxport.haskell.cpp::type::Walked::Walked (list (int Integer _ _)) (text))) (data assayxport.haskell.extract::type::Import (ctor assayxport.haskell.extract::type::Import::Import (text) (text) (list (text)) (list (text)) (bool) (bool) (bool) (bool))) (data assayxport.haskell.extract::type::CxPlan (ctor assayxport.haskell.extract::type::CxPlan::CxPlan (list (text)) (list (ref assayxport.haskell.extract::type::CxRow)) (bool))) (data assayxport.haskell.extract::type::CxRow (ctor assayxport.haskell.extract::type::CxRow::CxRow (int Integer _ _) (int Integer _ _) (text) (text) (ref assayxport.conditions.policy::type::Literal) (list (text)) (list (text)) (bool) (text) (ref assayxport.haskell.extract::type::CxSets))) (data assayxport.haskell.extract::type::CxSets (ctor assayxport.haskell.extract::type::CxSets::XNothing) (ctor assayxport.haskell.extract::type::CxSets::XInt (int Integer _ _)) (ctor assayxport.haskell.extract::type::CxSets::XOther) (ctor assayxport.haskell.extract::type::CxSets::XUnset)) (data assayxport.haskell.extract::type::CxEdge (ctor assayxport.haskell.extract::type::CxEdge::CxEdge (ref assayxport.contract::type::CallEdge) (list (int Integer _ _)))) (data assayxport.haskell.extract::type::CxSym (ctor assayxport.haskell.extract::type::CxSym::CxSym (ref assayxport.contract::type::Decl) (list (int Integer _ _)) (list (ref assayxport.haskell.extract::type::CxEdge)))) (data assayxport.haskell.extract::type::CxTerm (ctor assayxport.haskell.extract::type::CxTerm::CxTerm (bool) (text))) (data assayxport.haskell.extract::type::CxDef (ctor assayxport.haskell.extract::type::CxDef::CxDef (text) (ref assayxport.haskell.extract::type::CxSets))) (data assayxport.haskell.extract::type::CxJoin (ctor assayxport.haskell.extract::type::CxJoin::CxJoin (int Integer _ _) (text))) (data assayxport.haskell.extract::type::CxCopyPkg (ctor assayxport.haskell.extract::type::CxCopyPkg::CxCopyPkg (int Integer _ _) (ref assayxport.contract::type::Package))) (data assayxport.haskell.extract::type::CxFrame (ctor assayxport.haskell.extract::type::CxFrame::CxFrame (bool) (bool))) (data assayxport.haskell.extract::type::CxUnit (ctor assayxport.haskell.extract::type::CxUnit::CxUnit (int Integer _ _) (text) (text) (text))) (data assayxport.haskell.extract::type::Grammar (ctor assayxport.haskell.extract::type::Grammar::Grammar (list (ref assayxport.haskell.extract::type::Prod)) (list (ref assayxport.haskell.extract::type::Slot)) (list (ref assayxport.haskell.extract::type::Slot)))) (data assayxport.haskell.extract::type::Prod (ctor assayxport.haskell.extract::type::Prod::Prod (text) (list (ref assayxport.haskell.extract::type::Slot)))) (data assayxport.haskell.extract::type::Slot (ctor assayxport.haskell.extract::type::Slot::Slot (text) (bool) (bool) (list (text)))) (data assayxport.haskell.extract::type::Pick (ctor assayxport.haskell.extract::type::Pick::Pick (text) (text) (int Integer _ _))) (data assayxport.haskell.extract::type::Where (ctor assayxport.haskell.extract::type::Where::WPlain) (ctor assayxport.haskell.extract::type::Where::WDo) (ctor assayxport.haskell.extract::type::Where::WFun) (ctor assayxport.haskell.extract::type::Where::WPat) (ctor assayxport.haskell.extract::type::Where::WView) (ctor assayxport.haskell.extract::type::Where::WLeft) (ctor assayxport.haskell.extract::type::Where::WRight) (ctor assayxport.haskell.extract::type::Where::WSpine) (ctor assayxport.haskell.extract::type::Where::WGuard) (ctor assayxport.haskell.extract::type::Where::WGuards) (ctor assayxport.haskell.extract::type::Where::WMatch) (ctor assayxport.haskell.extract::type::Where::WQuals) (ctor assayxport.haskell.extract::type::Where::WHead)) (data assayxport.haskell.policy::type::Res (ctor assayxport.haskell.policy::type::Res::Res (ref assayxport.contract::type::CallKind) (text) (maybe (text))))")
 
 // lawSpecRemoteDefinitions maps a qualified name to its content hash and
 // how to evaluate it.
@@ -158,7 +158,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsBinOpFor": {
-		"blake3-semantic-1:add2a654dd6e3b0c3e2729ce09eb179546ea4854e24367e0adc24729f9a152db",
+		"blake3-semantic-1:4bc2f74eb5407d61a30b9500e0dfbf122a6f9bf4a9ce61a224ca490c4047053a",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportConditionsBinOpFor_2(map[string]*LawSpecSymbol{}, a[0])
@@ -187,8 +187,28 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(text)"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportConditionsCharCode": {
+		"blake3-semantic-1:a66a77c4d69182b6daf223d5e99cfb36080b26f00282e956b1bad104f54b4057",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportConditionsCharCode_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(maybe (int Integer _ _))"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportConditionsCharTok": {
+		"blake3-semantic-1:c2a10055e7cdcbf03de9a85007a9867149d348eeb22efef0a6701c2dc7b159ab",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportConditionsCharTok_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(ref assayxport.conditions::type::Tok)"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportConditionsCloseCall": {
-		"blake3-semantic-1:6604c03a5af6d27ad827e6147903468a463e31e4d2bfac221778c4e665be1e79",
+		"blake3-semantic-1:9e4d066b6cb257e5a62f4097c33f7a3d787d9a473bbd40b7e4e533cecb196b3c",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportConditionsCloseCall_2(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3], a[4], a[5])
@@ -268,7 +288,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsExpectOp": {
-		"blake3-semantic-1:ecf480ef761bab5adf0baa568d9177134da695c2a632af90783d688897932dcd",
+		"blake3-semantic-1:2d619c9f5d44a0b74e89c503c4934ef800a736eb3c6ee0d6853e2cdac0d1c93f",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportConditionsExpectOp_2(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -368,7 +388,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsLexT": {
-		"blake3-semantic-1:c28e7f1082be0c80e9354c10dad34b3f767dfae33c3a69c653a5c36c920e2757",
+		"blake3-semantic-1:c40c5a7c47b680e3944a16086f82b922ab1b2967fec8da39cb0d169fd490616f",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportConditionsLexT_2(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
@@ -448,7 +468,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsNumberTok": {
-		"blake3-semantic-1:9610b78f98c727c72a80200665d4741ad488ac6a3cbdc3ab02fb8c38b11ef39b",
+		"blake3-semantic-1:07fe20bb1636b1f4efe9eb4809b3d4c911b41d39004b9828be86e07feda6fe07",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportConditionsNumberTok_2(map[string]*LawSpecSymbol{}, a[0])
@@ -468,7 +488,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsParseLevel": {
-		"blake3-semantic-1:66a14f9f0a5291cbda101bbc04a2baf220064d8e6a3ac8df05176c0136be0e8f",
+		"blake3-semantic-1:3827117705b60a31ed267ba35c5d680096588d5e91e4ec780689b1b1c851550f",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportConditionsParseLevel_2(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3])
@@ -478,13 +498,23 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsParseWhen": {
-		"blake3-semantic-1:ffb96631fb2f27857a44c823739a8acc7b9ac485a76800123b0d17419262675c",
+		"blake3-semantic-1:35abb81fdd69a3840ec5095c42e9e1e965b215ed4c7734e75ae382ee92130f3b",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportConditionsParseWhen_2(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(text)")},
 			LawSpecDescriptor("(maybe (ref assayxport.conditions.policy::type::CExpr))"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportConditionsPlainCodes": {
+		"blake3-semantic-1:f73fbd063ffaefd9884b7c57811a9ba0e65330dc7fb51e7f1d420e29f6895596",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportConditionsPlainCodes_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(unit)")},
+			LawSpecDescriptor("(text)"),
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsPolicyAsTruth": {
@@ -498,12 +528,22 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsPolicyBinary": {
-		"blake3-semantic-1:b25106674c798ee546c3bd51d5c98a5dcb18b6699b4ab1568279a5a0f5cb647b",
+		"blake3-semantic-1:be93657004263e12505108ad1ecfbc8de8352c8da820b9f7cce1b4b88b9a2a13",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportConditionsPolicyBinary_4(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
 			},
 			[]any{LawSpecDescriptor("(ref assayxport.conditions.policy::type::BinOp)"), LawSpecDescriptor("(ref assayxport.conditions.policy::type::Outcome)"), LawSpecDescriptor("(ref assayxport.conditions.policy::type::Outcome)")},
+			LawSpecDescriptor("(ref assayxport.conditions.policy::type::Outcome)"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportConditionsPolicyBinaryAs": {
+		"blake3-semantic-1:5fac7766d666b3f677a56bf08aa024bbf9e773dfdf8bf17b769b1ec86119ea22",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportConditionsPolicyBinaryAs_4(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3], a[4])
+			},
+			[]any{LawSpecDescriptor("(bool)"), LawSpecDescriptor("(bool)"), LawSpecDescriptor("(ref assayxport.conditions.policy::type::BinOp)"), LawSpecDescriptor("(ref assayxport.conditions.policy::type::Outcome)"), LawSpecDescriptor("(ref assayxport.conditions.policy::type::Outcome)")},
 			LawSpecDescriptor("(ref assayxport.conditions.policy::type::Outcome)"),
 		},
 	},
@@ -557,6 +597,16 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(int Integer _ _)"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportConditionsPolicyComma": {
+		"blake3-semantic-1:2199030e1dad954f4a2e4f088a0549739ca507b6045068cdd2fcdcc586e92349",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportConditionsPolicyComma_4(map[string]*LawSpecSymbol{}, a[0], a[1])
+			},
+			[]any{LawSpecDescriptor("(ref assayxport.conditions.policy::type::Outcome)"), LawSpecDescriptor("(ref assayxport.conditions.policy::type::Outcome)")},
+			LawSpecDescriptor("(ref assayxport.conditions.policy::type::Outcome)"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportConditionsPolicyComponent": {
 		"blake3-semantic-1:b920cb5fa0c87511bc87341d19e758d5ecef4e6958de67e02f2d463a96f07cba",
 		LawSpecRemoteDefinition{
@@ -567,21 +617,21 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(int Integer _ _)"),
 		},
 	},
-	"assayxport.haskell.extract::assayxportConditionsPolicyCompute": {
-		"blake3-semantic-1:d5e9bfc0f4cb439acf887bdf3891801f18aaf884cff0d0d91ec233d3a180b2d3",
+	"assayxport.haskell.extract::assayxportConditionsPolicyComputeAs": {
+		"blake3-semantic-1:c5351ed076ec6837fdc604ad7331f3dece6635a33d8aa04818102ecdbf280322",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateAssayxportConditionsPolicyCompute_4(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
+				return lawSpecEvaluateAssayxportConditionsPolicyComputeAs_4(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3], a[4])
 			},
-			[]any{LawSpecDescriptor("(ref assayxport.conditions.policy::type::BinOp)"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)")},
+			[]any{LawSpecDescriptor("(bool)"), LawSpecDescriptor("(bool)"), LawSpecDescriptor("(ref assayxport.conditions.policy::type::BinOp)"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)")},
 			LawSpecDescriptor("(ref assayxport.conditions.policy::type::Outcome)"),
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsPolicyConditionText": {
-		"blake3-semantic-1:1d9daa55ccecefc5820a4e0ed508714db0f5f547137329c6f6f56978b8a86549",
+		"blake3-semantic-1:c98b26b3adde6d0b15391b3a19cff7225f3e8aeace8a9ed4fa4395e0b6e2b1f9",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateAssayxportConditionsPolicyConditionText_3(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateAssayxportConditionsPolicyConditionText_4(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(list (list (ref assayxport.conditions.policy::type::Literal)))")},
 			LawSpecDescriptor("(text)"),
@@ -598,33 +648,43 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsPolicyCubeText": {
-		"blake3-semantic-1:fec471ec55e966dd959d8c76d334c33747b15e4a0c12cfeeb15a6471c2c69f63",
+		"blake3-semantic-1:86478cf8e1f2910bed32619368e09b72ca9ef15bc48672aef7c55a7e39de4ecf",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateAssayxportConditionsPolicyCubeText_3(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateAssayxportConditionsPolicyCubeText_4(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(list (ref assayxport.conditions.policy::type::Literal))")},
 			LawSpecDescriptor("(text)"),
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsPolicyCubesText": {
-		"blake3-semantic-1:3f13a5d7135a8f0b39380c207f129c9ecc717d63cb16add09800445302a4f69c",
+		"blake3-semantic-1:e3ac021d5d5a6463ef38370e1bfc3a964d942d81685f13693cffaf252e3b7c32",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateAssayxportConditionsPolicyCubesText_3(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateAssayxportConditionsPolicyCubesText_4(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(list (list (ref assayxport.conditions.policy::type::Literal)))")},
 			LawSpecDescriptor("(text)"),
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsPolicyDecisionsHeader": {
-		"blake3-semantic-1:24a91e45e2f4270cd73bf9dc8366f58ab8efc1c56d008f8924f16645e5c68cb6",
+		"blake3-semantic-1:7de4a39cc9646f05983e732d13da71d871cbf7b6dbe04dbd7f4e84e018929850",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportConditionsPolicyDecisionsHeader_3(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(unit)")},
 			LawSpecDescriptor("(list (text))"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportConditionsPolicyDecisionsPath": {
+		"blake3-semantic-1:a4e02a858a4b9e9002200c6f8a13664654e248b1ee57f89cf2b454a7b85afa67",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportConditionsPolicyDecisionsPath_3(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(unit)")},
+			LawSpecDescriptor("(text)"),
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsPolicyDefinedAs": {
@@ -648,13 +708,23 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsPolicyEmptyCube": {
-		"blake3-semantic-1:cebf00122b5380681b74f87ebb10fb035f58af6d3afefe4a46fc4eebeec7686b",
+		"blake3-semantic-1:d0c43abf0c3e3ca355c950a3e6356e7b0114d421f3acf0def5e6dc14e54ce199",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateAssayxportConditionsPolicyEmptyCube_3(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateAssayxportConditionsPolicyEmptyCube_4(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(list (ref assayxport.conditions.policy::type::Literal))")},
 			LawSpecDescriptor("(bool)"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportConditionsPolicyFileDefinedTerm": {
+		"blake3-semantic-1:dbab0584df7f61f46233886f1e542e097dd40853c042fe24c3d99a63126a31d7",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportConditionsPolicyFileDefinedTerm_3(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(int Integer _ _)")},
+			LawSpecDescriptor("(text)"),
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsPolicyFromInt64": {
@@ -682,6 +752,16 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportConditionsPolicyHalved_4(map[string]*LawSpecSymbol{}, a[0], a[1])
+			},
+			[]any{LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)")},
+			LawSpecDescriptor("(int Integer _ _)"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportConditionsPolicyHalvedU": {
+		"blake3-semantic-1:78752ecdc60d2f992d436ead557c8ea698f454d327461bfce821188ea24b8a3e",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportConditionsPolicyHalvedU_4(map[string]*LawSpecSymbol{}, a[0], a[1])
 			},
 			[]any{LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)")},
 			LawSpecDescriptor("(int Integer _ _)"),
@@ -718,7 +798,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsPolicyIsDivision": {
-		"blake3-semantic-1:902ecc994dde8972d941e83b7738482208cb3f3b204b6a3e65ace661de99d50e",
+		"blake3-semantic-1:514c0928dd3cf8fa1bc8b961e57d55764fa13a46991b72e1e9f6805f0336e113",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportConditionsPolicyIsDivision_4(map[string]*LawSpecSymbol{}, a[0])
@@ -738,7 +818,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsPolicyLessOr": {
-		"blake3-semantic-1:35ea054bf4bd1cef4643b403f54f6a0cfe1745f48d7f5300b02bf87151979b7b",
+		"blake3-semantic-1:dcf49ee6626cb6e3df0e2614e5c2dedf90581f98a0294ab7caa7860305faa7bd",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportConditionsPolicyLessOr_4(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -748,10 +828,10 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsPolicyLitText": {
-		"blake3-semantic-1:55a5ae5440015b0175b91b2e599413f3e7a3faf2d6c67783ea36bbe604f0347e",
+		"blake3-semantic-1:f8bc825f6794da82a444353efa1fa42fcaf5062be67fdefc882882e42fae1f60",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateAssayxportConditionsPolicyLitText_3(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateAssayxportConditionsPolicyLitText_4(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(ref assayxport.conditions.policy::type::Literal)")},
 			LawSpecDescriptor("(text)"),
@@ -777,18 +857,18 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(text)"),
 		},
 	},
-	"assayxport.haskell.extract::assayxportConditionsPolicyMaxLit": {
-		"blake3-semantic-1:63249375f9c85cfd6075bb3293dedd2bd27fb55cff8df4b5f33d04776497554e",
+	"assayxport.haskell.extract::assayxportConditionsPolicyMaxULit": {
+		"blake3-semantic-1:82f409483471cd875c50b59d784045793f756838c8e0e016c7a0b69892424bff",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateAssayxportConditionsPolicyMaxLit_4(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateAssayxportConditionsPolicyMaxULit_4(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(unit)")},
 			LawSpecDescriptor("(int Integer _ _)"),
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsPolicyMinVersion": {
-		"blake3-semantic-1:d5042f4d1845434457960b4a38d66456a44886c72bc51da83ee78fdbc293ae4a",
+		"blake3-semantic-1:8b30d93357f5e63d710a5b04e5b3b1e69c29d2847d2c51dc5114d14ce01e3d1e",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportConditionsPolicyMinVersion_4(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3])
@@ -831,7 +911,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		"blake3-semantic-1:75b98b2b40745761dbba15f0f83b194f2b7c8297c9fafe7823edc1396c1580dc",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateAssayxportConditionsPolicyNotDefined_3(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateAssayxportConditionsPolicyNotDefined_4(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(unit)")},
 			LawSpecDescriptor("(ref assayxport.conditions.policy::type::Binding)"),
@@ -888,7 +968,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsPolicySame": {
-		"blake3-semantic-1:e99fe5ca7be0735bfbe06bd4e09d4a1fba4c76dc685e41363dbe4402ad16c7bc",
+		"blake3-semantic-1:0458f101c66885d11200e9f84f93915faa38ea33e96f95fc34bedd0da529f611",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportConditionsPolicySame_4(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -917,6 +997,26 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(int Integer _ _)"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportConditionsPolicyShiftRightAs": {
+		"blake3-semantic-1:c2e0bf6987dd3d492c00d24496024d14c2240fea43dc6e483c1f0ea68cefd3f0",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportConditionsPolicyShiftRightAs_4(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
+			},
+			[]any{LawSpecDescriptor("(bool)"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)")},
+			LawSpecDescriptor("(int Integer _ _)"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportConditionsPolicyShiftRightU": {
+		"blake3-semantic-1:6dbcbc22e43a75c7a6b4085e1e6ef841ed58c648b26e61d56897bf03e57a3c70",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportConditionsPolicyShiftRightU_4(map[string]*LawSpecSymbol{}, a[0], a[1])
+			},
+			[]any{LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)")},
+			LawSpecDescriptor("(int Integer _ _)"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportConditionsPolicyShownLine": {
 		"blake3-semantic-1:021d6e7f68bfe9dbca55322f401841d129b729e5dc62ac25729fa7bf71e17df7",
 		LawSpecRemoteDefinition{
@@ -931,7 +1031,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		"blake3-semantic-1:3b14b66dc80737d4bdd38515f602f2cb5b3c98227e743d35933b573fa87252ab",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateAssayxportConditionsPolicySimple_3(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateAssayxportConditionsPolicySimple_4(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(text)")},
 			LawSpecDescriptor("(bool)"),
@@ -1107,6 +1207,16 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(int Integer _ _)"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportConditionsPolicyUnsignedOf": {
+		"blake3-semantic-1:5d19de50a7213fe0779b8f8a8fa2f85c5b1b57afb3f86b2970c9ced1d472ffe1",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportConditionsPolicyUnsignedOf_4(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(ref assayxport.conditions.policy::type::CExpr)")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportConditionsPolicyUseAt": {
 		"blake3-semantic-1:86e0a5461f87a430f8b6046db9ce1fbcf11b7d08558a2f4ab78840d76ad30617",
 		LawSpecRemoteDefinition{
@@ -1138,7 +1248,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsPolicyWarningsOf": {
-		"blake3-semantic-1:8283abf68d3b867eb92bc2564dcadcf32be960b57d83f8785a6f7e9991367c54",
+		"blake3-semantic-1:ffc090d39cc86bb8d97e5e027595b019d81f29d1b9d443c89fd188a691f5fe27",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportConditionsPolicyWarningsOf_3(map[string]*LawSpecSymbol{}, a[0])
@@ -1148,7 +1258,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsPolicyWarningsWith": {
-		"blake3-semantic-1:3b34a0c8acfbb8a6d5b0a44a333d1b15f2660eae629c59d541e78dc3eb8d6dfc",
+		"blake3-semantic-1:32fe9e9cd45c17f6b67ed3add5975aae97dc73fbd0d41ba1dbf27b430f05b89a",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportConditionsPolicyWarningsWith_3(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -1218,7 +1328,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsTokOfNumber": {
-		"blake3-semantic-1:6708d018cc88dd46fb1233ea50cebe60747a13bbb0a9706d0f3d9d88f1ee50c9",
+		"blake3-semantic-1:9a38543bc92df39d69ab3ac578fffd3aa926679b02bf69d10407bf779bd2744e",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportConditionsTokOfNumber_2(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -1228,7 +1338,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportConditionsTokOp": {
-		"blake3-semantic-1:799207e0f216a43ea8ba39b8421d8b0f9360b0a8da398f07714fd1aebd838f14",
+		"blake3-semantic-1:7f91900d49e27974ead0e460da8083ab01dd3a4d5bd0c40fc2749ef2b808ec3b",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportConditionsTokOp_2(map[string]*LawSpecSymbol{}, a[0])
@@ -1597,8 +1707,18 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(bool)"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppAddTerm": {
+		"blake3-semantic-1:3fa3997da77f12b95df95e465776cd212d1ee3e145302d387a4e559a7210f0d4",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppAddTerm_2(map[string]*LawSpecSymbol{}, a[0], a[1])
+			},
+			[]any{LawSpecDescriptor("(text)"), LawSpecDescriptor("(list (text))")},
+			LawSpecDescriptor("(list (text))"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppAllArms": {
-		"blake3-semantic-1:80bb2023a1ee62e1491280fe4453de5d24cd13e195d7efa0591e8c5e11afb630",
+		"blake3-semantic-1:8fba7ef4c77b3a6b619fd76efa5e5665a7556a1ff51ced097582842d0659c9de",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppAllArms(map[string]*LawSpecSymbol{}, a[0])
@@ -1608,7 +1728,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppAllArmsText": {
-		"blake3-semantic-1:9632e2367a3679e19f3af8a96b4d7483ce28d27dcf87cefb8b6bbf9a7bc77e4a",
+		"blake3-semantic-1:d2662626b7b2392c0d6e12a7e857519279566436df2ca58857c182aa2738bdc5",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppAllArmsText(map[string]*LawSpecSymbol{}, a[0])
@@ -1628,7 +1748,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppArmsRows": {
-		"blake3-semantic-1:b1096e12ffeb54e82e388d9387ebfe299092190ef951fe4f7a68b308a5c94236",
+		"blake3-semantic-1:51f0b17d246bcf1f91a364e1fb419512f0ba08b6128d311d24e53c596731b879",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppArmsRows(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3], a[4], a[5])
@@ -1637,8 +1757,18 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppBaseAtLeast48": {
+		"blake3-semantic-1:7c29e3317b8a1a752ffb67e947e6d3e5c36e81dfb98dd954c4e8b877c42c2c63",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppBaseAtLeast48_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(unit)")},
+			LawSpecDescriptor("(ref assayxport.conditions.policy::type::Literal)"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppBlankIf": {
-		"blake3-semantic-1:615d25cf2b04c44d0b6c4834c7d15882babb6f4bc8fdd5e0f4c9fdd7419435dc",
+		"blake3-semantic-1:fb522dd5721a7914ad9ecba7e3999909a10ab7c061dc1f33c79204960ebfa862",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppBlankIf_2(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -1648,7 +1778,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppBlockRows": {
-		"blake3-semantic-1:416823054e3b7f8d413350626f4e89734f34eb3302f1c2cfa86da2aa724199ab",
+		"blake3-semantic-1:3607f529d26e205617404d69b8a27b0d456112ef63222200e1840ca8b328c068",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppBlockRows(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -1658,17 +1788,17 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppBuildCount": {
-		"blake3-semantic-1:eb7f782a16a930bd5d36bd0fe168a8e90dad8edb9e4342a6c3ba0193628e8e88",
+		"blake3-semantic-1:c2bf0478b09e08f642fca00ea82900be8f3001b140ef4262a73333150b26df9c",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateAssayxportHaskellCppBuildCount(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateAssayxportHaskellCppBuildCount_2(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))")},
 			LawSpecDescriptor("(int Integer _ _)"),
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppCodeRows": {
-		"blake3-semantic-1:4a6a64894e56384baa82bf6bfeb6a8637af6f51992a5d49d9148453e63f29b48",
+		"blake3-semantic-1:99e319b799b69ab53ac80f89023c8d468d4968b05122d48245c12c6ad5912e53",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppCodeRows_2(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -1678,7 +1808,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppConditionAt": {
-		"blake3-semantic-1:bb8a6be4e011b643e32d0fd8553642f888d6989d258b7613512a49ea3ccc64cb",
+		"blake3-semantic-1:3a971177afb1420bfb6ec2de5c0ec7ebf7c087ec8a9e7537359871c2bf39df79",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppConditionAt(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -1688,17 +1818,17 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppConditionText": {
-		"blake3-semantic-1:18aee2f56b85d092125e342d8e1640f401ddf7510e7bf6067e983d5264e8e0a3",
+		"blake3-semantic-1:7bb09a1a6dd21f4a4bdf76cf53d90dd8ee60f565e41c12e548e0995cfc415a6d",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateAssayxportHaskellCppConditionText(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateAssayxportHaskellCppConditionText_2(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(list (ref assayxport.conditions.policy::type::Literal))")},
 			LawSpecDescriptor("(text)"),
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppConditioned": {
-		"blake3-semantic-1:d296001c67c5fd83af18ca91a986ea2fd4138fd6b7bfb72e6c7f13d2c762606e",
+		"blake3-semantic-1:24f830a4420a70b8007adc9c2d6d3aa7e386942859451cd4d57afb2dbea6141b",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppConditioned(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -1708,7 +1838,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppCopies": {
-		"blake3-semantic-1:431716103d97cb7e407676cdbcbdb7ffb7da528fa1424a773a2eeaa094435b01",
+		"blake3-semantic-1:abc0d66a999641ace7f00dddfbcd908f92674e14b77a9e3ff7e049cba003123b",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppCopies(map[string]*LawSpecSymbol{}, a[0])
@@ -1718,10 +1848,10 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppCopiesOfRows": {
-		"blake3-semantic-1:cc9d980a52e2f14fcc4a91e4ea186b8b7695cdcc66795c2317ffd220ef56fa98",
+		"blake3-semantic-1:3440f2f6dff3c1e27a1d097655c640069a95ee65169e6bfcb4bdfc3756601bc8",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateAssayxportHaskellCppCopiesOfRows(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateAssayxportHaskellCppCopiesOfRows_2(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))")},
 			LawSpecDescriptor("(list (text))"),
@@ -1738,7 +1868,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppDeclRows": {
-		"blake3-semantic-1:af734a8f79ea43c6f80286b1e950393ac253e9cac8970a6f381d1c6e61bde505",
+		"blake3-semantic-1:74d54179cc1f46f9eba4ba7e85280a9b1c9fbba98357e20432c5325fe26a8eda",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppDeclRows(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -1748,7 +1878,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppDeclsAt": {
-		"blake3-semantic-1:360fb2d6d61ecf6b2cfcb4709a622c2a96d7abdc8615c2a287dd15d3aa87d0a9",
+		"blake3-semantic-1:31c79834b44b79410a895c990f25a5ac6243683eb545589b2cf14fc1af9e7d24",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppDeclsAt(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -1758,7 +1888,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppDefinedAnd": {
-		"blake3-semantic-1:91bebcf8500fe425f1ed8a69eeb3a44f79df3453bb83413ca4175029bc6dc1b3",
+		"blake3-semantic-1:a2be3a43717f6a0a180db526ba0b2df212ab97aafb96bf9ee7a4c0b197586bcb",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppDefinedAnd_2(map[string]*LawSpecSymbol{}, a[0])
@@ -1767,8 +1897,28 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(ref assayxport.conditions.policy::type::CExpr)"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppDefiner": {
+		"blake3-semantic-1:6fdec6cc06b35c4823b1ce7af73c34ec0979bf3ff1fcfde5f89ae8e13b1d8ad1",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppDefiner_2(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3])
+			},
+			[]any{LawSpecDescriptor("(text)"), LawSpecDescriptor("(list (ref assayxport.conditions.policy::type::Literal))"), LawSpecDescriptor("(text)"), LawSpecDescriptor("(ref assayxport.haskell.cpp::type::Sets)")},
+			LawSpecDescriptor("(ref assayxport.haskell.cpp::type::Row)"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppDiffersFrom": {
+		"blake3-semantic-1:24af3e6a3980795e18ad44cdc499947259132833a587229b2f69f4d52dc7faab",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppDiffersFrom_2(map[string]*LawSpecSymbol{}, a[0], a[1])
+			},
+			[]any{LawSpecDescriptor("(text)"), LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppDirectiveOf": {
-		"blake3-semantic-1:4421dc1f1e1231e9c12324d7ca9485a45c9d5d35fbfc8b3c6382ef5b57962c6b",
+		"blake3-semantic-1:7f30dff6071984db3e51997f0d8e9fd0d6c43a669c10afc9d70c199942e02646",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppDirectiveOf_2(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
@@ -1788,7 +1938,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppEveryCopies": {
-		"blake3-semantic-1:5ce58892ef9218f3a9f3220a5e068d0082f93d0ed36a79f5fe6fa5dfe5c57bd1",
+		"blake3-semantic-1:09490967de664b102c080a5e9672b18ccabade439b275c51c1e161d18a97155e",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppEveryCopies(map[string]*LawSpecSymbol{}, a[0])
@@ -1798,7 +1948,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppExportRows": {
-		"blake3-semantic-1:34564cd05704a81732485119c581f56f3a98afe5b78ab927f768f0d7c709df5f",
+		"blake3-semantic-1:c968b745fdc489bf7b7fbe9ef7ba7debb0a6d770a4433d51399e83198006e676",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppExportRows(map[string]*LawSpecSymbol{}, a[0])
@@ -1807,8 +1957,28 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppFileDecidesSome": {
+		"blake3-semantic-1:af3c25346a17d15586f2ae1982d34ab3933a124a27d73470ddeb39f71d240b09",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppFileDecidesSome_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppFileTerm": {
+		"blake3-semantic-1:faf4419b1ddc755accd6238844272b30bba5fd93eb63732a050664ccbe903a06",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppFileTerm_2(map[string]*LawSpecSymbol{}, a[0], a[1])
+			},
+			[]any{LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(ref assayxport.conditions.policy::type::Literal)")},
+			LawSpecDescriptor("(ref assayxport.conditions.policy::type::Literal)"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppFirstCopy": {
-		"blake3-semantic-1:125b8cd3c0e0eeae8ea6df316c7b9c5b05c3244c0b00c6587fb6fc15ea923546",
+		"blake3-semantic-1:99fe3e797b7dda6cbdbf80fd922867df498ea5c5e9aeea6162cd8c0a5bbaa633",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppFirstCopy(map[string]*LawSpecSymbol{}, a[0])
@@ -1818,10 +1988,10 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppFirstCopyOfRows": {
-		"blake3-semantic-1:a0c5fced66a32d75c5bfe998db73867265afaff08d5737ed7ed1358f2ab3d2e9",
+		"blake3-semantic-1:1fff4219d3ac1dbd3d7b9eca65b910643637c609262b2b76903ac721c9af4d20",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateAssayxportHaskellCppFirstCopyOfRows(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateAssayxportHaskellCppFirstCopyOfRows_2(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))")},
 			LawSpecDescriptor("(text)"),
@@ -1837,18 +2007,38 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(text)"),
 		},
 	},
-	"assayxport.haskell.extract::assayxportHaskellCppHasGroup": {
-		"blake3-semantic-1:2319de8bc7c49d0f598089d3d97e23bb6b3be9f98d6dd91b010b4fcd798b494e",
+	"assayxport.haskell.extract::assayxportHaskellCppHasAndFoo": {
+		"blake3-semantic-1:80cf9fe4a2019894139a8a58d8286b035fb58187c7ec64917f9491492b70958d",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateAssayxportHaskellCppHasGroup(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateAssayxportHaskellCppHasAndFoo_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(unit)")},
+			LawSpecDescriptor("(ref assayxport.conditions.policy::type::Literal)"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppHasElifdef": {
+		"blake3-semantic-1:dc1e49b87e9fe0f7c411a42ff533e23645fa4145c3d961203cde03c555ea1c7c",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppHasElifdef(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppHasGroup": {
+		"blake3-semantic-1:cc66bfad99f4c550416eedcd91033f9ae657bfe68aefae4db0bce5ff00c575a7",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppHasGroup_2(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))")},
 			LawSpecDescriptor("(bool)"),
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppImportRows": {
-		"blake3-semantic-1:392af0f15ee20877d3fe79e2235c7ea9d9b7b6995554d4e1efa3b9e39a8580a1",
+		"blake3-semantic-1:7f9dca56f0cf38aab90773dc1c80cd6166e4f322ed24dc948d9321ea230fdaf4",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppImportRows_2(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -1857,8 +2047,18 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppInNames": {
+		"blake3-semantic-1:08d8c7381374f4353268d861af92e5e5744057a6b0f74e3f8aacb1e96956af2d",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppInNames(map[string]*LawSpecSymbol{}, a[0], a[1])
+			},
+			[]any{LawSpecDescriptor("(list (text))"), LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppInnerRows": {
-		"blake3-semantic-1:5ca8a36d2d4c768866779744a76d46e899fdbda3aa6190c1a3c26abaa3a6a5ff",
+		"blake3-semantic-1:74255fa83d1be3e3c6d146f502d715d65807cfac1c2b254f774ca1b3b3f62e53",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppInnerRows(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3])
@@ -1887,6 +2087,46 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Walked))"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppIsElif": {
+		"blake3-semantic-1:acbea1c53bed3063391c82d3eb63701708f86eb79204f4f196ef59e3288909f4",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppIsElif_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(ref assayxport.haskell.cpp::type::Row)")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppIsElse": {
+		"blake3-semantic-1:794779b36887b19fc8752b0c415adade968d75384005c136848f377a5ecd50af",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppIsElse_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(ref assayxport.haskell.cpp::type::Row)")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppIsEndif": {
+		"blake3-semantic-1:6f4154fe505e806ffd63805542aa758c186fd32768607e09251f754d54629565",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppIsEndif_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(ref assayxport.haskell.cpp::type::Row)")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppIsIf": {
+		"blake3-semantic-1:f1aa58fc79ace1dfb767ce065a087ebd4a3b27b187862a4bb759b34bbc5f4dc5",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppIsIf_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(ref assayxport.haskell.cpp::type::Row)")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppLeafLines": {
 		"blake3-semantic-1:890920d27ddf59af52a6156bc992c1601912730346859c62273dbf9890243a4a",
 		LawSpecRemoteDefinition{
@@ -1908,13 +2148,33 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppLeafRows": {
-		"blake3-semantic-1:e60ce90bb04f78ea3d3ef9e8ca6f19b053da1f2d7902fd2b330025e81176bcaf",
+		"blake3-semantic-1:72afd10fb26bae965e6afeab76c109417d641d70450899dc350f4a17f29e0c34",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppLeafRows(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3], a[4], a[5])
 			},
 			[]any{LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(list (ref assayxport.conditions.policy::type::Literal))"), LawSpecDescriptor("(list (int Integer _ _))"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(list (ref assayxport.conditions.policy::type::Literal))"), LawSpecDescriptor("(bool)")},
 			LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppLiveOf": {
+		"blake3-semantic-1:765c2e53cc32dd394e28cf7988b9296ee2385b7b4fae4cb35d8fa6c15acf4c4d",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppLiveOf_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Frame))")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppMayStayOpen": {
+		"blake3-semantic-1:d8ba68763f276d221c83f56e6033658ea947dc5918583eb0c0c2a676b6b94985",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppMayStayOpen(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
+			},
+			[]any{LawSpecDescriptor("(list (text))"), LawSpecDescriptor("(list (text))"), LawSpecDescriptor("(ref assayxport.conditions.policy::type::Literal)")},
+			LawSpecDescriptor("(bool)"),
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppModuleOf": {
@@ -1937,8 +2197,18 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(text)"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppNamesOf": {
+		"blake3-semantic-1:95ff3efb8cd9835e1d4967d9872b145b33ec37276aff2c134f012803ce16d21a",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppNamesOf_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(ref assayxport.conditions.policy::type::CExpr)")},
+			LawSpecDescriptor("(list (text))"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppNegate": {
-		"blake3-semantic-1:a27f930584b3b2e197a4547991269bd1ceeb19a0bc9047e1a62dc7ba96192565",
+		"blake3-semantic-1:0ef207e4d8e02d8f2c62105eeeb460c8afae88281425101d147c4e89d9b57d23",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppNegate_2(map[string]*LawSpecSymbol{}, a[0])
@@ -1947,8 +2217,38 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(ref assayxport.conditions.policy::type::Literal)"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppOldCopies": {
+		"blake3-semantic-1:7e29225e8643077678f5351012aa676ccea415e43e4e5efd7b108180127a63fe",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppOldCopies_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))")},
+			LawSpecDescriptor("(list (text))"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppOldRuleDiffers": {
+		"blake3-semantic-1:a05065056fda813b926fc7f2ddd265fa89c07fdeb88f8b60497923c40ea0c412",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppOldRuleDiffers_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppOneArm": {
+		"blake3-semantic-1:26d924af3b510ddca057ce5c3d2e279f4bfe3ed65ba77aad21bb7c8f4ee1a449",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppOneArm_2(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3])
+			},
+			[]any{LawSpecDescriptor("(ref assayxport.conditions.policy::type::Literal)"), LawSpecDescriptor("(text)"), LawSpecDescriptor("(text)"), LawSpecDescriptor("(list (text))")},
+			LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppOneGroup": {
-		"blake3-semantic-1:b619c14492d7b1dce0aa209329a686e3a1369045479ec46074cdb8d5f8791337",
+		"blake3-semantic-1:0135468b08c4d8819db6d71c26c5f090eb96e27b450faee84ed9b9ea7763ece8",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppOneGroup_2(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3], a[4], a[5])
@@ -1958,7 +2258,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppOpener": {
-		"blake3-semantic-1:cb0681f4a04b80fe50ea8e547d310979b06c0f41c5cdbd77db95fc48e888873a",
+		"blake3-semantic-1:2db72fb6f811a4e0611943894ee93b64021020860d9126910581a945d1548bd1",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppOpener_2(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
@@ -1968,7 +2268,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppOverCap": {
-		"blake3-semantic-1:92e218889673145508c8b89bb9eeb651e07c50335aaca67e0e1f666cb1a30f71",
+		"blake3-semantic-1:17291da537a5caea8185e9a2764d8c5023c32be2b6ecba8f5fb97fcd40a4bdf4",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppOverCap(map[string]*LawSpecSymbol{}, a[0])
@@ -1978,33 +2278,63 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppOverCapRows": {
-		"blake3-semantic-1:21adf18d2dbfb512a0feaa3807257698c52dc1466b5c4e4f4ddb3c3f859372bc",
+		"blake3-semantic-1:7896c79b3c4b803be60777b047957d826252906ee36450392fc8f75c5417fbb6",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateAssayxportHaskellCppOverCapRows(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateAssayxportHaskellCppOverCapRows_2(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))")},
 			LawSpecDescriptor("(bool)"),
 		},
 	},
-	"assayxport.haskell.extract::assayxportHaskellCppOwnText": {
-		"blake3-semantic-1:9601855a3f58d9d027be0d33caa147035dc78255cffdfc658e280da8c6c95649",
+	"assayxport.haskell.extract::assayxportHaskellCppOwnLit": {
+		"blake3-semantic-1:1677eaad036ab566d11fe28db65567d6604ef5e70efdb4002b9d3f873116aaa8",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateAssayxportHaskellCppOwnText(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateAssayxportHaskellCppOwnLit_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(ref assayxport.haskell.cpp::type::Row)")},
+			LawSpecDescriptor("(maybe (ref assayxport.conditions.policy::type::Literal))"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppOwnText": {
+		"blake3-semantic-1:101330f03c995cdfd86e89746cf728cdd55b254e7072fb4540d93b3e957ecf5f",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppOwnText_2(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(list (ref assayxport.conditions.policy::type::Literal))")},
 			LawSpecDescriptor("(text)"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppOwnTexts": {
+		"blake3-semantic-1:c26e6d732d02c551815b8254d839cfc8f58b66a93db4564a6c32d730e92a978c",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppOwnTexts_2(map[string]*LawSpecSymbol{}, a[0], a[1])
+			},
+			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))"), LawSpecDescriptor("(list (text))")},
+			LawSpecDescriptor("(list (text))"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppPackagesAt": {
-		"blake3-semantic-1:3ba23a3a424c6764995b92ccb4a459b36e0dc0e6b27f14c183cfe089b85d12f1",
+		"blake3-semantic-1:620061ef50562c06683ab67ad4ed40e003b799bfe50685527a3e422b3cb57e6a",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppPackagesAt(map[string]*LawSpecSymbol{}, a[0], a[1])
 			},
 			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))"), LawSpecDescriptor("(list (ref assayxport.contract::type::Package))")},
 			LawSpecDescriptor("(list (ref assayxport.contract::type::Package))"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppPathTexts": {
+		"blake3-semantic-1:59a237ef0a47c24b630870cf04d68451595412550e50f1b0dd847ee64c1fd313",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppPathTexts_2(map[string]*LawSpecSymbol{}, a[0], a[1])
+			},
+			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))"), LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(list (text))"),
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppPoolForm": {
@@ -2027,8 +2357,28 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(text)"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppReachedIn": {
+		"blake3-semantic-1:6e6897496ac0984835376ce933b823ff2b76d838d24d8e0feccc9ef631af0463",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppReachedIn_2(map[string]*LawSpecSymbol{}, a[0], a[1])
+			},
+			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Frame))"), LawSpecDescriptor("(ref assayxport.haskell.cpp::type::Row)")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppReadOnTwoPaths": {
+		"blake3-semantic-1:6e43b199f1fd65d3908d6035a21cea294ae464233e4fd8dd139d38ddc599eb3c",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppReadOnTwoPaths_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppRender": {
-		"blake3-semantic-1:b90e3d23ad0ecca6a5f5a05b7c9fe3afdf1c3a00a17c7c7fe0ae4812ccfb6a9c",
+		"blake3-semantic-1:3fe623cbe7145a65b5951fa000a984e05e7b82a8e7e43ee22b7734dd831a0f59",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppRender(map[string]*LawSpecSymbol{}, a[0])
@@ -2037,8 +2387,28 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(text)"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppReproDefineCopies": {
+		"blake3-semantic-1:f025f1d229ead0226fbaa46f83248aeb75ccae62f93007317be3b7c7420abe24",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppReproDefineCopies_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(unit)")},
+			LawSpecDescriptor("(list (text))"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppReproDefsCopies": {
+		"blake3-semantic-1:b5e48859d661ee19853eb9b8ec83cfdc286e4ff37fc2afc4747922cc538d9b3d",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppReproDefsCopies(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(unit)")},
+			LawSpecDescriptor("(list (text))"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppReproElif": {
-		"blake3-semantic-1:02212fd5d26434367ef1c94fa4ffb5f675a485d8e40aa7e36e42665344404668",
+		"blake3-semantic-1:a1c8c74b535c1e10b31ade9ae863902d1b11ebef63cc4d9edbd225f48425a7bd",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppReproElif_2(map[string]*LawSpecSymbol{}, a[0])
@@ -2057,8 +2427,28 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(list (text))"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppReproElifdefCopies": {
+		"blake3-semantic-1:d85d8957352dbc048986146a7cbaeef562b494ec6434a678f5443b7400a695f2",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppReproElifdefCopies_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(unit)")},
+			LawSpecDescriptor("(list (text))"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppReproGuardCopies": {
+		"blake3-semantic-1:19fda1be1d327e0c4c5fd79ef3b5c313a349343f658fb20c9bf63ee173b8fc09",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppReproGuardCopies_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(unit)")},
+			LawSpecDescriptor("(list (text))"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppReproLost": {
-		"blake3-semantic-1:7c80af2aff81d350b4f781cb0217bfb157d3f106dcff552fe05ce80ee36141a6",
+		"blake3-semantic-1:bc4eb48e409c074ca220a185b210cf1e86f94f9c9e26f0b533c42f128e7f67da",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppReproLost_2(map[string]*LawSpecSymbol{}, a[0])
@@ -2078,7 +2468,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppReproTail": {
-		"blake3-semantic-1:084b299628ff150bebecb6052c4b03a2ec40730869459dec190b641051546126",
+		"blake3-semantic-1:a95ebc4a6f66724527273edd48138166100d66af40f438b292609b6771bfc7c7",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppReproTail_2(map[string]*LawSpecSymbol{}, a[0])
@@ -2097,8 +2487,18 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(list (text))"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppReproUndecided": {
+		"blake3-semantic-1:94ff7b1f8f7873a2e47ba90a4d3ab185f66ff1b19a15496a590ed514560f40ba",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppReproUndecided_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(unit)")},
+			LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppRow": {
-		"blake3-semantic-1:ef79962334f4e02969014c951163ce571204f78ae31d89c7e1dfbd51aa9d9b52",
+		"blake3-semantic-1:1b2016db0e81201c0af039dcbcb32765d53f3ce680e29dcea1e59133c7bda573",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppRow_2(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
@@ -2108,7 +2508,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppRowsOf": {
-		"blake3-semantic-1:dff9dd836c577eb3f183f77d2400d80b4a8eb499ee792ca8114441bf583775ef",
+		"blake3-semantic-1:2eb4f34f152a7d6ce90cfb3a0dda129ae631f3cd514061a7382ea73b6ef39790",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppRowsOf(map[string]*LawSpecSymbol{}, a[0])
@@ -2118,7 +2518,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppSectionRows": {
-		"blake3-semantic-1:36f9d083ff8c2e34499d479990cf2039cbf6d71be82ae1f2b56c086f4868615b",
+		"blake3-semantic-1:1e9f56f8a3a34a7c2f88e6f130dd359e61d78bb9365744648e741d5c82399c5d",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppSectionRows(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -2137,8 +2537,58 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Section))"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppSetKind": {
+		"blake3-semantic-1:3269de504b05718354b2ef0d330da040d79585dc37073b3721a6fec81ea3e9a8",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppSetKind_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(int Integer _ _)")},
+			LawSpecDescriptor("(ref assayxport.haskell.cpp::type::Sets)"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppSetNames": {
+		"blake3-semantic-1:a9ce010c851e66061d2b9bf9dbdf6e79e707bad4e8c44b9ba46898712eea63f7",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppSetNames(map[string]*LawSpecSymbol{}, a[0], a[1])
+			},
+			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))"), LawSpecDescriptor("(bool)")},
+			LawSpecDescriptor("(list (text))"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppSetText": {
+		"blake3-semantic-1:da94cfdf929f35ba2c118f8ba0d6a8dd090fd56e0b542cdcb55ae8f6f4c891f1",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppSetText_2(map[string]*LawSpecSymbol{}, a[0], a[1])
+			},
+			[]any{LawSpecDescriptor("(text)"), LawSpecDescriptor("(int Integer _ _)")},
+			LawSpecDescriptor("(text)"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppSeveralBuilds": {
+		"blake3-semantic-1:2bbbfb915f7b4aa9700fcd0e6b75e1f988ad0b978622e48f1e89cd1c86f738c2",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppSeveralBuilds(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppSeveralIn": {
+		"blake3-semantic-1:a20263175e3946999df7f3e0552b70f094a93b15f673271a253c26fbe2d7a1c8",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppSeveralIn_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(list (text))")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppSourceOf": {
-		"blake3-semantic-1:676069b0be08cb85b4f695d54554f621a7023b379d450113e593cdc2b02e9685",
+		"blake3-semantic-1:3c51c54c60a7e9e5a0fa7490679672d1abb7fc6a3b1391f1f9450bfc68c897f6",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppSourceOf_2(map[string]*LawSpecSymbol{}, a[0])
@@ -2147,8 +2597,28 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(text)"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppSpecial": {
+		"blake3-semantic-1:3be9cb0394e96fc1878bb8bacc7a3c810fa4be27bb6a54a5880c794e527faf29",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppSpecial_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
+	"assayxport.haskell.extract::assayxportHaskellCppStepped": {
+		"blake3-semantic-1:e11f027597efd031f1f5dffd5fc2b6e7fe9ea9ba2fe24e999172b4b129bef426",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppStepped_2(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
+			},
+			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Frame))"), LawSpecDescriptor("(ref assayxport.haskell.cpp::type::Row)"), LawSpecDescriptor("(bool)")},
+			LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Frame))"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppTangle": {
-		"blake3-semantic-1:bc2ca13aad01104db51ab9dfd7524830c6b9bbc15c9901c5256cbedf10a7b2cf",
+		"blake3-semantic-1:8288e716fc4043471a985e382e4564c834887ff02bd920781333235044b92c68",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppTangle(map[string]*LawSpecSymbol{}, a[0])
@@ -2178,7 +2648,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppTermOf": {
-		"blake3-semantic-1:3101c56212b90e87481e5fc2ef0fd3a41ba9965c553c5725c77c1a89411e225c",
+		"blake3-semantic-1:d5c51da7c9dd879734719cb62ceeb5ebd9f751587f0e74147c6520f326518192",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppTermOf_2(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
@@ -2187,8 +2657,18 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(ref assayxport.conditions.policy::type::Literal)"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppTermsFrom": {
+		"blake3-semantic-1:e8f419aff6ffb52cb429d0cf14a4c8bd382ab0819e7f79e21fe6be2ae0466475",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppTermsFrom(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3], a[4])
+			},
+			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))"), LawSpecDescriptor("(list (text))"), LawSpecDescriptor("(list (text))"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(list (text))")},
+			LawSpecDescriptor("(list (text))"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppTermsIn": {
-		"blake3-semantic-1:7d1c1a9527cd3e4df7727cee416df126db9d17ce379f6a02ecc1a97d5da3466e",
+		"blake3-semantic-1:fb9fe917ec2286cbfe071452e670f7bc4782fffebea5d1ca7c1dd7dc60eab822",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppTermsIn(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -2207,8 +2687,18 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(bool)"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppTwoPathsOf": {
+		"blake3-semantic-1:dc9fe985248ebc184c209cf2192054148ddf158f0c7fb58af8f739fd0cb70bc4",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppTwoPathsOf_2(map[string]*LawSpecSymbol{}, a[0], a[1])
+			},
+			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))"), LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppUnder": {
-		"blake3-semantic-1:886fd24f0362dad66f18f2bc55f117ab4ccfd6c5ad4448ddc2148fb264b4fc9d",
+		"blake3-semantic-1:1842ae1c22ef7d45cbc36f64f9e9819f674bbf6f6668a6fb112b2f6833d3fbcb",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppUnder_2(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3], a[4])
@@ -2237,8 +2727,18 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(list (ref assayxport.contract::type::Decl))"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppValueNames": {
+		"blake3-semantic-1:8539b3957108d192f694dcbfc456ef64376822cb1b309c746764f443edae669b",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppValueNames_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(ref assayxport.conditions.policy::type::CExpr)")},
+			LawSpecDescriptor("(list (text))"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppWeave": {
-		"blake3-semantic-1:54a02143274619a8f3f0a5d86326e870237820c2015f356c44266de538b67643",
+		"blake3-semantic-1:e6a97453aff874c92d1738f60cbc5ffe0d1762c2f0c5b1758acb1053d98cd148",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppWeave_2(map[string]*LawSpecSymbol{}, a[0])
@@ -2248,7 +2748,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppWeaveArms": {
-		"blake3-semantic-1:b422dfb9e6484a7a4915a6cea8f18b0e0340e88751e6fcd3eb3cbfcad7915176",
+		"blake3-semantic-1:884d8f5b08dd1a659ba3a03d1b22b048356941e6b325f41c681194b48754453f",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppWeaveArms_2(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8])
@@ -2258,7 +2758,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::assayxportHaskellCppWeaveForm": {
-		"blake3-semantic-1:8a2d7e970ea84416834c72f4748ad4c0a4cf3e0fcff288d75eb8bdfd26ec26c7",
+		"blake3-semantic-1:758491def498f8acd22564f374cbcf3fdf9a90ae73d1d9abd6ac1b0c5f420eeb",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppWeaveForm_2(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
@@ -2277,8 +2777,18 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(text)"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppWeaveNew": {
+		"blake3-semantic-1:5110409f0616526ba0eaf851241325a28f1d90a58a6c7248082fcde1d92c3857",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppWeaveNew_2(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(int Integer _ _)")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppWeaveSection": {
-		"blake3-semantic-1:c8f202033acf333ca2b9c7d159416c30e5a6af480e1d2c71e9f2bfa3d6a3d988",
+		"blake3-semantic-1:9b3b2ce657827fe3ed0d09ba2db64de1cbe78433a68729c4cf0d75f0e0df6e33",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppWeaveSection_2(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -2287,8 +2797,18 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))"),
 		},
 	},
+	"assayxport.haskell.extract::assayxportHaskellCppWeaveSets": {
+		"blake3-semantic-1:94b45551117655290088eae873783a8a63f989ee7c08e4d3d7347cbbd3298920",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateAssayxportHaskellCppWeaveSets_2(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3])
+			},
+			[]any{LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(list (ref assayxport.conditions.policy::type::Literal))")},
+			LawSpecDescriptor("(list (ref assayxport.haskell.cpp::type::Row))"),
+		},
+	},
 	"assayxport.haskell.extract::assayxportHaskellCppWideRows": {
-		"blake3-semantic-1:4964c807eac7a510ae5d6fa1693e2b1f68117b49a9409b22f0c83be0cd50719b",
+		"blake3-semantic-1:d38a3581a9035974af92254e3080750829a48924db40ac9c9a0693e8aa0ede4e",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateAssayxportHaskellCppWideRows_2(map[string]*LawSpecSymbol{}, a[0])
@@ -4907,6 +5427,16 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(bool)"),
 		},
 	},
+	"assayxport.haskell.extract::basePackage": {
+		"blake3-semantic-1:ee8ac6a2dc9da21492dbc3cdd281b5cc8464d9e99bff88777e875e7ebf696628",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateBasePackage(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(list (int Integer _ _))")},
+			LawSpecDescriptor("(ref assayxport.conditions.policy::type::BindingLine)"),
+		},
+	},
 	"assayxport.haskell.extract::before": {
 		"blake3-semantic-1:bc3973109d9a53995afb5759299251d7f3fd6d12068d5bf7dcb839614e0a4e60",
 		LawSpecRemoteDefinition{
@@ -5028,7 +5558,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::buildTexts": {
-		"blake3-semantic-1:1359472f95c9998a8594262bfb0b01ce0a8d5a339b4e39fa2b27c7257264fb4a",
+		"blake3-semantic-1:3801938ce02a6d3957dd0c4587f0033c646ef5a1bd1a7e77d92ae9c4a7305738",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateBuildTexts(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -5258,7 +5788,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::cpp2BuildHolds": {
-		"blake3-semantic-1:922b598f1bd334fd571f67777212062ddc35ed5aec160d61840b1742b733b1f4",
+		"blake3-semantic-1:68d0632298394b58d9b7e85acf0e0df29f299d8df07fb9a8c311e362f5e1f0f9",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateCpp2BuildHolds(map[string]*LawSpecSymbol{}, a[0])
@@ -5268,7 +5798,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::cpp2BuildsHold": {
-		"blake3-semantic-1:16d2b82835673fd8b8a797ee4e87cd8d2711c8ced478cae22099d3ee102c6be7",
+		"blake3-semantic-1:60942ce0834214674cb184baf632bd6ddc08e788c90adc883956c81a5415a841",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateCpp2BuildsHold(map[string]*LawSpecSymbol{}, a[0])
@@ -5278,7 +5808,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::cpp2Filtered": {
-		"blake3-semantic-1:9edd9e1077fdfd8171110fb214f0236f3a00a212dcff68d39437b49f49c7b1d4",
+		"blake3-semantic-1:be0c242e5c8add6414376effba65b56f2ac2ecff8281486ac5d40c0ca6109cdf",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateCpp2Filtered(map[string]*LawSpecSymbol{}, a[0])
@@ -5298,7 +5828,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::cppCopies": {
-		"blake3-semantic-1:8671a00d42f09fceda83f4de3457abc99937738aedddf5b19112bc34b13f17e3",
+		"blake3-semantic-1:17a1fb747dc7e7ce63b3726fd41085bb8e9497cc8569279f919136483def02ad",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateCppCopies(map[string]*LawSpecSymbol{}, a[0])
@@ -5308,7 +5838,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::cppPlan": {
-		"blake3-semantic-1:505c8705810da56a7aa58b9c6d1658fe162b40a1bb5ce422037384d48623a759",
+		"blake3-semantic-1:34cc31669d1a8beacf841a64149d355eb38bb4ca22c181a93b6041fe1611bba6",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateCppPlan(map[string]*LawSpecSymbol{}, a[0])
@@ -5367,8 +5897,28 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(text)"),
 		},
 	},
+	"assayxport.haskell.extract::cxBodySets": {
+		"blake3-semantic-1:448177a59c01a3755dc93f3e0817e2a0a7aabc11ee4a70a2e9c762ca1ff5cdf9",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxBodySets(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(ref assayxport.haskell.extract::type::CxSets)"),
+		},
+	},
+	"assayxport.haskell.extract::cxCommentOpen": {
+		"blake3-semantic-1:8168457c40cbf2e7fa66390919d77fa24a1f24e2bc2fe9742815d59606d1bb5d",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxCommentOpen(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3], a[4])
+			},
+			[]any{LawSpecDescriptor("(text)"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(bool)"), LawSpecDescriptor("(int Integer _ _)")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
 	"assayxport.haskell.extract::cxCondText": {
-		"blake3-semantic-1:e4961f4f9da669c15e11ebd46e4307e8a75c401374d066ec2d60a96ab366bd7c",
+		"blake3-semantic-1:81a75e5fa6a611fb26584ff079868e01143a19a57e5a255ee714c73d56252295",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateCxCondText(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -5378,7 +5928,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::cxCubeLits": {
-		"blake3-semantic-1:aec86d5af7b1579ddf8e146ee0fc84d8fc0949284ae24a21fdb743bb1a809dbf",
+		"blake3-semantic-1:cfe9640bc35df7dfb23ee710576486689241a3f8d542ac8701032b32ffda91e3",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateCxCubeLits(map[string]*LawSpecSymbol{}, a[0])
@@ -5387,28 +5937,18 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(list (list (ref assayxport.conditions.policy::type::Literal)))"),
 		},
 	},
-	"assayxport.haskell.extract::cxDeadOf": {
-		"blake3-semantic-1:73ae73eabb839d7f318f81a2c814afcef4f18fa304363698b877ddde9c748bda",
+	"assayxport.haskell.extract::cxDefinition": {
+		"blake3-semantic-1:73a87269ccec066254df9bd88d6ab4ee688221b6355a4ca23424a421a74d077c",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateCxDeadOf(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateCxDefinition(map[string]*LawSpecSymbol{}, a[0], a[1])
 			},
-			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.extract::type::CxOpen))")},
-			LawSpecDescriptor("(bool)"),
-		},
-	},
-	"assayxport.haskell.extract::cxDirective": {
-		"blake3-semantic-1:2f487823410a685bbf91292f41d54746d5338fbea7b667d6d5b55abe3c747e70",
-		LawSpecRemoteDefinition{
-			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateCxDirective(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
-			},
-			[]any{LawSpecDescriptor("(text)"), LawSpecDescriptor("(text)"), LawSpecDescriptor("(ref assayxport.haskell.extract::type::CxState)")},
-			LawSpecDescriptor("(ref assayxport.haskell.extract::type::CxEffect)"),
+			[]any{LawSpecDescriptor("(text)"), LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(ref assayxport.haskell.extract::type::CxDef)"),
 		},
 	},
 	"assayxport.haskell.extract::cxEdgesCond": {
-		"blake3-semantic-1:be9e55118eb8cdf1abeaae62a2e56b49cf2194a9dca001190e0b9ecbec67c63a",
+		"blake3-semantic-1:0d3a3a45e2e92b999bc68ca6495caf2836d409abf288ce42d1ca01b56e155604",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateCxEdgesCond(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -5418,13 +5958,43 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::cxEmitSyms": {
-		"blake3-semantic-1:64b9ac268e0e15d89b9001355aab7bd1da793e09af9f0629b6facf1a4947a8d6",
+		"blake3-semantic-1:7d370598171d1cbcd7952369f06e3ad5fe5ac042f0516e01480f84dcdc4e576b",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateCxEmitSyms(map[string]*LawSpecSymbol{}, a[0], a[1])
 			},
 			[]any{LawSpecDescriptor("(ref assayxport.haskell.extract::type::CxPlan)"), LawSpecDescriptor("(list (ref assayxport.haskell.extract::type::CxSym))")},
 			LawSpecDescriptor("(list (ref assayxport.contract::type::Decl))"),
+		},
+	},
+	"assayxport.haskell.extract::cxExprOf": {
+		"blake3-semantic-1:67c7009df9dc7cccf43ee8b7399b8f3294747b181da0750b1fc56a238e72907d",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxExprOf(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(maybe (ref assayxport.conditions.policy::type::CExpr))"),
+		},
+	},
+	"assayxport.haskell.extract::cxFileTerm": {
+		"blake3-semantic-1:23ca8a3d05b16f5ce4db1c6cb88882f3796bdd83368ac2a71c26e9d9c835300b",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxFileTerm(map[string]*LawSpecSymbol{}, a[0], a[1])
+			},
+			[]any{LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(ref assayxport.conditions.policy::type::Literal)")},
+			LawSpecDescriptor("(ref assayxport.conditions.policy::type::Literal)"),
+		},
+	},
+	"assayxport.haskell.extract::cxFindOpen": {
+		"blake3-semantic-1:b0acddfc8cb4e676ac79177ef7677287109228ca14b852479b9bb1ad7b73313f",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxFindOpen(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
+			},
+			[]any{LawSpecDescriptor("(text)"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)")},
+			LawSpecDescriptor("(int Integer _ _)"),
 		},
 	},
 	"assayxport.haskell.extract::cxFirstId": {
@@ -5438,7 +6008,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::cxHasGroup": {
-		"blake3-semantic-1:64e0df4a927b6c0579e6e71c3ce0644271e2c9b5c1b3f3570ef9b9a336280594",
+		"blake3-semantic-1:03220cef4963127bcc76d966bc24c74de761031a9ecf0de1d05d278fc858334f",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateCxHasGroup(map[string]*LawSpecSymbol{}, a[0])
@@ -5457,6 +6027,16 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(text)"),
 		},
 	},
+	"assayxport.haskell.extract::cxIdents": {
+		"blake3-semantic-1:e834f014a4efec5cbd8bc2e80ab0eede804b472cfcb4eee131b8fa61601d648b",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxIdents(map[string]*LawSpecSymbol{}, a[0], a[1])
+			},
+			[]any{LawSpecDescriptor("(text)"), LawSpecDescriptor("(int Integer _ _)")},
+			LawSpecDescriptor("(list (text))"),
+		},
+	},
 	"assayxport.haskell.extract::cxIsBlank": {
 		"blake3-semantic-1:3a9b90f7bf233edea074ae692db66dcd3f951dcc579a0b35a863a5fe5c3b5ef3",
 		LawSpecRemoteDefinition{
@@ -5467,8 +6047,38 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(bool)"),
 		},
 	},
+	"assayxport.haskell.extract::cxIsDefForm": {
+		"blake3-semantic-1:4e127aaf27b546060f31aa559f7287ad902a8de37e769301c3018a6751b155f6",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxIsDefForm(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
+	"assayxport.haskell.extract::cxIsElifWord": {
+		"blake3-semantic-1:5f8f954b4ea4c09f76a250c6fc64c2a72b370ad0db6bce0677f8f8678836963d",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxIsElifWord(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
+	"assayxport.haskell.extract::cxIsIfWord": {
+		"blake3-semantic-1:774f077e83ea66cde0b21feff7911eaacd3eed9fbcc817ae80ee480d9ca41dfe",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxIsIfWord(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
 	"assayxport.haskell.extract::cxJoin": {
-		"blake3-semantic-1:672e45d004f74a5a832c9daf11b2ac739693881f06f022a7abe3a97ae7fdc899",
+		"blake3-semantic-1:2eb3adce843f8c6a10f567c07d0daba9314627b844360b97cf10daac93ea675a",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateCxJoin(map[string]*LawSpecSymbol{}, a[0])
@@ -5477,8 +6087,28 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(ref assayxport.haskell.extract::type::CxJoin)"),
 		},
 	},
+	"assayxport.haskell.extract::cxJoinMore": {
+		"blake3-semantic-1:8352d1474b4dc389573e1b62a92a679ae9849b4db4ac50ee5b5672e9db877cba",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxJoinMore(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3])
+			},
+			[]any{LawSpecDescriptor("(text)"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(list (text))"), LawSpecDescriptor("(int Integer _ _)")},
+			LawSpecDescriptor("(ref assayxport.haskell.extract::type::CxJoin)"),
+		},
+	},
+	"assayxport.haskell.extract::cxLitValue": {
+		"blake3-semantic-1:b761d04882513d4082a4facc246f1eb5070996108ded113430ce5491d309eae8",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxLitValue(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(maybe (int Integer _ _))"),
+		},
+	},
 	"assayxport.haskell.extract::cxLits": {
-		"blake3-semantic-1:d943aa344d32d3d01440aadd9938032cc4a38511177668ca26bc0152ead4bd7a",
+		"blake3-semantic-1:803133ed2b29d0e99f050ba95d64d589b27987f58ff9857128a25f8ec3c56c70",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateCxLits(map[string]*LawSpecSymbol{}, a[0])
@@ -5497,34 +6127,34 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(list (ref assayxport.haskell.extract::type::CxCopyPkg))"),
 		},
 	},
-	"assayxport.haskell.extract::cxNegate": {
-		"blake3-semantic-1:4501380883acd89e4a08323871e4d7c5343520f3ce25f0fc81c7e3726567862b",
+	"assayxport.haskell.extract::cxLiveOf": {
+		"blake3-semantic-1:765c2e53cc32dd394e28cf7988b9296ee2385b7b4fae4cb35d8fa6c15acf4c4d",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateCxNegate(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateCxLiveOf(map[string]*LawSpecSymbol{}, a[0])
 			},
-			[]any{LawSpecDescriptor("(ref assayxport.haskell.extract::type::CxTerm)")},
-			LawSpecDescriptor("(ref assayxport.haskell.extract::type::CxTerm)"),
+			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.extract::type::CxFrame))")},
+			LawSpecDescriptor("(bool)"),
 		},
 	},
-	"assayxport.haskell.extract::cxOwnText": {
-		"blake3-semantic-1:328be9e8f0da25ffba058c16ecd5a2a8b911c0ded282312180483e64f76d54f1",
+	"assayxport.haskell.extract::cxNamesOf": {
+		"blake3-semantic-1:95ff3efb8cd9835e1d4967d9872b145b33ec37276aff2c134f012803ce16d21a",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateCxOwnText(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateCxNamesOf(map[string]*LawSpecSymbol{}, a[0])
 			},
-			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.extract::type::CxTerm))")},
-			LawSpecDescriptor("(text)"),
+			[]any{LawSpecDescriptor("(ref assayxport.conditions.policy::type::CExpr)")},
+			LawSpecDescriptor("(list (text))"),
 		},
 	},
-	"assayxport.haskell.extract::cxPathOf": {
-		"blake3-semantic-1:25b0c57bd8cfc96542eb016f975507ab3670de62c27102dd43d2a7ad090c8cbc",
+	"assayxport.haskell.extract::cxNoTerm": {
+		"blake3-semantic-1:65f15cc6e5ebaf63b80599788960ae92d0a8a69759b0159d8100b92d05be4db8",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateCxPathOf(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateCxNoTerm(map[string]*LawSpecSymbol{}, a[0])
 			},
-			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.extract::type::CxOpen))")},
-			LawSpecDescriptor("(list (ref assayxport.haskell.extract::type::CxTerm))"),
+			[]any{LawSpecDescriptor("(unit)")},
+			LawSpecDescriptor("(ref assayxport.conditions.policy::type::Literal)"),
 		},
 	},
 	"assayxport.haskell.extract::cxPrefixed": {
@@ -5537,13 +6167,43 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(list (list (ref assayxport.haskell.extract::type::CxTerm)))"),
 		},
 	},
+	"assayxport.haskell.extract::cxReachedIn": {
+		"blake3-semantic-1:cf0a9fed74968a43e4ed5d8efeddaeb43dc88b6c5211db9293a9ee2fa934ff96",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxReachedIn(map[string]*LawSpecSymbol{}, a[0], a[1])
+			},
+			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.extract::type::CxFrame))"), LawSpecDescriptor("(ref assayxport.haskell.extract::type::CxRow)")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
+	"assayxport.haskell.extract::cxReadsWord": {
+		"blake3-semantic-1:ca46a097c656efc5fb3ae6482a0d999b0031183e842258df52641bbcf7c7bf17",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxReadsWord(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
+	"assayxport.haskell.extract::cxRowOf": {
+		"blake3-semantic-1:978fb6873afca84b445708cfde1e9cb6b1483599d8a0aabce9a5faad7a179ef2",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxRowOf(map[string]*LawSpecSymbol{}, a[0], a[1])
+			},
+			[]any{LawSpecDescriptor("(ref assayxport.haskell.extract::type::CxUnit)"), LawSpecDescriptor("(int Integer _ _)")},
+			LawSpecDescriptor("(ref assayxport.haskell.extract::type::CxRow)"),
+		},
+	},
 	"assayxport.haskell.extract::cxScan": {
-		"blake3-semantic-1:10b8e26aca2fcf5416e3d7cf97834e97bcead785c12339d818d854a10877970f",
+		"blake3-semantic-1:0ee78a8414869cd3a7f7eeac6f04058d2a8c8b2f593417588ddcc62c91092c64",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateCxScan(map[string]*LawSpecSymbol{}, a[0], a[1])
 			},
-			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.extract::type::CxUnit))"), LawSpecDescriptor("(ref assayxport.haskell.extract::type::CxState)")},
+			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.extract::type::CxUnit))"), LawSpecDescriptor("(int Integer _ _)")},
 			LawSpecDescriptor("(list (ref assayxport.haskell.extract::type::CxRow))"),
 		},
 	},
@@ -5557,24 +6217,64 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(text)"),
 		},
 	},
+	"assayxport.haskell.extract::cxSpecial": {
+		"blake3-semantic-1:3be9cb0394e96fc1878bb8bacc7a3c810fa4be27bb6a54a5880c794e527faf29",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxSpecial(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
+	"assayxport.haskell.extract::cxSpliced": {
+		"blake3-semantic-1:d5ac47decb5bad78498b2e36e792e07432f5323306d96f5284cc34c9157fa020",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxSpliced(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(bool)"),
+		},
+	},
+	"assayxport.haskell.extract::cxStepped": {
+		"blake3-semantic-1:278dfa3985d8cb7b9430a06436877a54cf2ebf412a626dda660009098de9847e",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxStepped(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
+			},
+			[]any{LawSpecDescriptor("(list (ref assayxport.haskell.extract::type::CxFrame))"), LawSpecDescriptor("(ref assayxport.haskell.extract::type::CxRow)"), LawSpecDescriptor("(bool)")},
+			LawSpecDescriptor("(list (ref assayxport.haskell.extract::type::CxFrame))"),
+		},
+	},
+	"assayxport.haskell.extract::cxStrip": {
+		"blake3-semantic-1:ab27928af9b7b4a16989b0cf59b3a22d76d0ffc52f82b77b836f6ec5f7b15fd0",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxStrip(map[string]*LawSpecSymbol{}, a[0], a[1])
+			},
+			[]any{LawSpecDescriptor("(text)"), LawSpecDescriptor("(int Integer _ _)")},
+			LawSpecDescriptor("(text)"),
+		},
+	},
 	"assayxport.haskell.extract::cxTermOf": {
-		"blake3-semantic-1:4afc561929091be80d746fa30131f84a33dd8eb7adf1dd2b49a5cae9db33a3c7",
+		"blake3-semantic-1:dc4fe982ba09d28cf80713b8878071f74fd2ebc086515f1989e8ea0404ed86c7",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateCxTermOf(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
 			},
 			[]any{LawSpecDescriptor("(text)"), LawSpecDescriptor("(text)"), LawSpecDescriptor("(int Integer _ _)")},
-			LawSpecDescriptor("(ref assayxport.haskell.extract::type::CxTerm)"),
+			LawSpecDescriptor("(ref assayxport.conditions.policy::type::Literal)"),
 		},
 	},
-	"assayxport.haskell.extract::cxTopEffect": {
-		"blake3-semantic-1:6fea4ef717398d59ec8f55826c8a25363e90faafc61c2399988aac22f22000ed",
+	"assayxport.haskell.extract::cxTextOf": {
+		"blake3-semantic-1:daae791eababd3ee25a1dcc090a18e368d2c6048c94ca6b802f60f0c6dde60ab",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateCxTopEffect(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
+				return lawSpecEvaluateCxTextOf(map[string]*LawSpecSymbol{}, a[0], a[1])
 			},
-			[]any{LawSpecDescriptor("(ref assayxport.haskell.extract::type::CxOpen)"), LawSpecDescriptor("(list (ref assayxport.haskell.extract::type::CxOpen))"), LawSpecDescriptor("(bool)")},
-			LawSpecDescriptor("(ref assayxport.haskell.extract::type::CxEffect)"),
+			[]any{LawSpecDescriptor("(text)"), LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(text)"),
 		},
 	},
 	"assayxport.haskell.extract::cxTrim": {
@@ -5598,7 +6298,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::cxUnits": {
-		"blake3-semantic-1:fa1ecccffe895518923e6c1b22a8c5c7b3ae6a97665d629d62263950524e90dd",
+		"blake3-semantic-1:62b74b3414f80e4d0c2735052f933efbefe6b957b6a2426c93ee11e7465e9607",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateCxUnits(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -5637,6 +6337,26 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(list (ref assayxport.contract::type::Package))"),
 		},
 	},
+	"assayxport.haskell.extract::cxUnsplice": {
+		"blake3-semantic-1:468152af87ed762760a1be52da3edd659ee483a5270b4b214812e490ec201581",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxUnsplice(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(text)"),
+		},
+	},
+	"assayxport.haskell.extract::cxValueNames": {
+		"blake3-semantic-1:8539b3957108d192f694dcbfc456ef64376822cb1b309c746764f443edae669b",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateCxValueNames(map[string]*LawSpecSymbol{}, a[0])
+			},
+			[]any{LawSpecDescriptor("(ref assayxport.conditions.policy::type::CExpr)")},
+			LawSpecDescriptor("(list (text))"),
+		},
+	},
 	"assayxport.haskell.extract::cxWordLen": {
 		"blake3-semantic-1:7e16bc83ee939d253c3590275245de4c8a55b2abcc8173669b84abe33a758d74",
 		LawSpecRemoteDefinition{
@@ -5648,7 +6368,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::cxWordOf": {
-		"blake3-semantic-1:3a1fe7b97c71cc46f25bd0c8a4f51236e7e0eb3d2c2a8b8c71956252bdbf9c72",
+		"blake3-semantic-1:a3d042bd7734de4b26ff0526413335c27139b5aa1a82f8f734659a3ae003a628",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateCxWordOf(map[string]*LawSpecSymbol{}, a[0])
@@ -5888,7 +6608,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::extractEach": {
-		"blake3-semantic-1:6c849e5f0a6c485ffb3422e12693a9d69845ad6a72efeb30f36c696cc8242464",
+		"blake3-semantic-1:1ee6eb06c1ded33738d1e14e534dd1d73ee37d2b2ab37d9f7c8434893edffe0b",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateExtractEach(map[string]*LawSpecSymbol{}, a[0])
@@ -5898,7 +6618,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::extractFiles": {
-		"blake3-semantic-1:d2f5d9087312da07cd030b33a6d0f0452796e3fbf7d778deafed08f23641ee0c",
+		"blake3-semantic-1:5b832ba6c2c2e9f42cafb57bcae99ea4ac021cf79251892574e27282219ad8c5",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateExtractFiles(map[string]*LawSpecSymbol{}, a[0])
@@ -5918,7 +6638,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::failingEnv": {
-		"blake3-semantic-1:4dddc2b69edc00e2ce70df8f5cc4edaf934e14dca99d75dff4f3415c95487ebb",
+		"blake3-semantic-1:2043adfac4a17be277fbfb90698b8ad4d3e04128016fbce942f0eab3f337ca64",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateFailingEnv(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3], a[4])
@@ -6018,7 +6738,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::fixtureBuildHolds": {
-		"blake3-semantic-1:37f7397a4a92ab88829687f3f3c2a86beb5101e41f625f0cc7662ac6ecf035ec",
+		"blake3-semantic-1:90b0c1ced798a80ac3d639da7dd5c5d83f52da573fc5efcdfa56ddf3014f47a7",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateFixtureBuildHolds(map[string]*LawSpecSymbol{}, a[0])
@@ -6028,7 +6748,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::fixtureFiltered": {
-		"blake3-semantic-1:c33fd57591f14354ca90c2cadd7b22134d7854abeb56c6f8a0e2ba0237173fd4",
+		"blake3-semantic-1:ccf7e64a3607266a550f9a4c63daf5d5e5829da98d27d17330cdcabf43887a33",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateFixtureFiltered(map[string]*LawSpecSymbol{}, a[0])
@@ -6048,7 +6768,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::fixtureMoreHolds": {
-		"blake3-semantic-1:8dfae3659e60cdf007395dcfbc6caa6b8e5c60013ba7b446e5badd622a34a069",
+		"blake3-semantic-1:889a9bfb2161d432e66d44e90bd9304bb46aea072c5c9ae8709e4dd59392dd31",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateFixtureMoreHolds(map[string]*LawSpecSymbol{}, a[0])
@@ -6931,7 +7651,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		"blake3-semantic-1:a75a15f96666ff00b808a346180fc260eefeb72517e5888a9546f6c384028905",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateLawspecResilienceAppended_4(map[string]*LawSpecSymbol{}, a[0], a[1])
+				return lawSpecEvaluateLawspecResilienceAppended_5(map[string]*LawSpecSymbol{}, a[0], a[1])
 			},
 			[]any{LawSpecDescriptor("(list (int Integer _ _))"), LawSpecDescriptor("(int Integer _ _)")},
 			LawSpecDescriptor("(list (int Integer _ _))"),
@@ -6941,7 +7661,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		"blake3-semantic-1:e7ca6b5f1a4d53ae44f989e3d4e750768bf63df8adce6b2b6221721b7370b0c1",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateLawspecResilienceAtLeastZero_4(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateLawspecResilienceAtLeastZero_5(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(int Integer _ _)")},
 			LawSpecDescriptor("(int Integer _ _)"),
@@ -6951,7 +7671,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		"blake3-semantic-1:bbc691d6ee94275dbe7bc11890a608170a06cf78477b00abb444f0756b145b63",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateLawspecResilienceBreakerRecord_4(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3], a[4], a[5])
+				return lawSpecEvaluateLawspecResilienceBreakerRecord_5(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3], a[4], a[5])
 			},
 			[]any{LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(ref lawspec.resilience::type::Breaker)"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(bool)")},
 			LawSpecDescriptor("(ref lawspec.resilience::type::Breaker)"),
@@ -6961,7 +7681,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		"blake3-semantic-1:a3d49fb371924e295700df4cb772d5fbf4b0c569159cd3850ba424ff54428dc8",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateLawspecResilienceBreakerStart_4(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateLawspecResilienceBreakerStart_5(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(int Integer _ _)")},
 			LawSpecDescriptor("(ref lawspec.resilience::type::Breaker)"),
@@ -6971,7 +7691,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		"blake3-semantic-1:852dc045ebc7394ca77017aef6097b17f79c7a41d93841e4d455918e896e995e",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateLawspecResilienceBulkheadRelease_4(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateLawspecResilienceBulkheadRelease_5(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(ref lawspec.resilience::type::Bulkhead)")},
 			LawSpecDescriptor("(ref lawspec.resilience::type::Bulkhead)"),
@@ -6981,7 +7701,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		"blake3-semantic-1:4c6247c24740761cb7e6b230cec7220c01c0c224b5cf15659ec6cdde58b6b0cd",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateLawspecResilienceBulkheadStart_4(map[string]*LawSpecSymbol{}, a[0], a[1])
+				return lawSpecEvaluateLawspecResilienceBulkheadStart_5(map[string]*LawSpecSymbol{}, a[0], a[1])
 			},
 			[]any{LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)")},
 			LawSpecDescriptor("(ref lawspec.resilience::type::Bulkhead)"),
@@ -6991,7 +7711,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		"blake3-semantic-1:9aabbba1eadd70020da1cbe75ac4ad095f301492786a44203ecbd25a5d9b3d50",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateLawspecResilienceCeilingQuotient_4(map[string]*LawSpecSymbol{}, a[0], a[1])
+				return lawSpecEvaluateLawspecResilienceCeilingQuotient_5(map[string]*LawSpecSymbol{}, a[0], a[1])
 			},
 			[]any{LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)")},
 			LawSpecDescriptor("(int Integer _ _)"),
@@ -7001,7 +7721,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		"blake3-semantic-1:63badc42ce07e69b83aef8276cbc39098321f95d518a300751237127b6834956",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateLawspecResilienceFixedWindowStart_4(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
+				return lawSpecEvaluateLawspecResilienceFixedWindowStart_5(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
 			},
 			[]any{LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)")},
 			LawSpecDescriptor("(ref lawspec.resilience::type::FixedWindow)"),
@@ -7011,7 +7731,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		"blake3-semantic-1:0c17434c382d87ab85fc3eccf50b56397b4d3a52bf8028a37c26b7bf95027200",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateLawspecResilienceLeakyBucketStart_4(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
+				return lawSpecEvaluateLawspecResilienceLeakyBucketStart_5(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
 			},
 			[]any{LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)")},
 			LawSpecDescriptor("(ref lawspec.resilience::type::LeakyBucket)"),
@@ -7021,7 +7741,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		"blake3-semantic-1:8384a1ae171b335a230074fb4ab9a57ac356f83f6815700d30f8de3d1bdc7dab",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateLawspecResilienceOldest_4(map[string]*LawSpecSymbol{}, a[0], a[1])
+				return lawSpecEvaluateLawspecResilienceOldest_5(map[string]*LawSpecSymbol{}, a[0], a[1])
 			},
 			[]any{LawSpecDescriptor("(list (int Integer _ _))"), LawSpecDescriptor("(int Integer _ _)")},
 			LawSpecDescriptor("(int Integer _ _)"),
@@ -7031,7 +7751,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		"blake3-semantic-1:686757a39d904d044f15ba6744f9d69c1f415a0abb998b6be84cab7c6e527e41",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateLawspecResilienceRecent_4(map[string]*LawSpecSymbol{}, a[0], a[1])
+				return lawSpecEvaluateLawspecResilienceRecent_5(map[string]*LawSpecSymbol{}, a[0], a[1])
 			},
 			[]any{LawSpecDescriptor("(list (int Integer _ _))"), LawSpecDescriptor("(int Integer _ _)")},
 			LawSpecDescriptor("(list (int Integer _ _))"),
@@ -7041,7 +7761,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		"blake3-semantic-1:ba5b1566caf9c4fda07df8ba2e9d26b314150c1c843f99ef77242b6d833b1d22",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateLawspecResilienceRefilled_4(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3])
+				return lawSpecEvaluateLawspecResilienceRefilled_5(map[string]*LawSpecSymbol{}, a[0], a[1], a[2], a[3])
 			},
 			[]any{LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)")},
 			LawSpecDescriptor("(int Integer _ _)"),
@@ -7051,7 +7771,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		"blake3-semantic-1:9133eccf302f3102c88f2b90410f5230c3f1e235b57375b07e645dcd6d6a9f76",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateLawspecResilienceSlidingWindowStart_4(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
+				return lawSpecEvaluateLawspecResilienceSlidingWindowStart_5(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
 			},
 			[]any{LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)")},
 			LawSpecDescriptor("(ref lawspec.resilience::type::SlidingWindow)"),
@@ -7061,7 +7781,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		"blake3-semantic-1:86e74a5c132995f7758171c01f6e5a0eb1ec66843965ee26ea996e3a66d32623",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateLawspecResilienceTokenBucketStart_4(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
+				return lawSpecEvaluateLawspecResilienceTokenBucketStart_5(map[string]*LawSpecSymbol{}, a[0], a[1], a[2])
 			},
 			[]any{LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)"), LawSpecDescriptor("(int Integer _ _)")},
 			LawSpecDescriptor("(ref lawspec.resilience::type::TokenBucket)"),
@@ -7387,6 +8107,16 @@ var lawSpecRemoteDefinitions = map[string]struct {
 			LawSpecDescriptor("(bool)"),
 		},
 	},
+	"assayxport.haskell.extract::missingWith": {
+		"blake3-semantic-1:a69aa3ee958cecd10bc500ba96e47b6ae944bc6a5705baffa9312a3438e781fa",
+		LawSpecRemoteDefinition{
+			func(a []LawSpecValue) LawSpecValue {
+				return lawSpecEvaluateMissingWith(map[string]*LawSpecSymbol{}, a[0], a[1])
+			},
+			[]any{LawSpecDescriptor("(list (ref assayxport.conditions.policy::type::BindingLine))"), LawSpecDescriptor("(text)")},
+			LawSpecDescriptor("(list (text))"),
+		},
+	},
 	"assayxport.haskell.extract::mix": {
 		"blake3-semantic-1:ea0f7ae3a6d1c42038d8718a2c82d3d75dcaf0558df152b34527e508829e7c93",
 		LawSpecRemoteDefinition{
@@ -7511,7 +8241,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		"blake3-semantic-1:d82991264e8d35f04c5e22652e762a49459701f64dccd37f56a64ba3a72268d6",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
-				return lawSpecEvaluateNamesOf(map[string]*LawSpecSymbol{}, a[0])
+				return lawSpecEvaluateNamesOf_2(map[string]*LawSpecSymbol{}, a[0])
 			},
 			[]any{LawSpecDescriptor("(ref assayxport.haskell.extract::type::Syntax)")},
 			LawSpecDescriptor("(list (text))"),
@@ -7618,7 +8348,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::packagesOfCopies": {
-		"blake3-semantic-1:a98317ca65ecff68f7db05205b959c1e04a284d1fee1246e29e51b16b1d8c8cf",
+		"blake3-semantic-1:b94562646a5eeb6622e23697c7779f634ae8f6014860ed15dd185d458f2d0b0b",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluatePackagesOfCopies(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -7688,7 +8418,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::poolFailure": {
-		"blake3-semantic-1:43d46ef54290ec3a46af8d25420b5e4015db8438c2932e788015bdc653e67445",
+		"blake3-semantic-1:df82591c3af3c46877339d665bedeb5229375681a37de432323daa00ee10d565",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluatePoolFailure(map[string]*LawSpecSymbol{}, a[0])
@@ -8168,7 +8898,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::unreadableWith": {
-		"blake3-semantic-1:7c1add5a975c86351a3cf57afa14732560949a54104f5006f2837567bd51067d",
+		"blake3-semantic-1:ce2925da44d7c97df6096f04ac7974b81fbea2ae3212f18559bd51c51a55d817",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateUnreadableWith(map[string]*LawSpecSymbol{}, a[0], a[1])
@@ -8198,7 +8928,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::whenHeader": {
-		"blake3-semantic-1:fba82d94eb3ad3b7ad2b1e8e7ee9ba7050435eb68210208297dd266d09dd6e3c",
+		"blake3-semantic-1:a4ad6424bf0047f0b8b26a10cd0b172ca8b2eb9c74560f2bf36ccb8369d42c9e",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateWhenHeader(map[string]*LawSpecSymbol{}, a[0])
@@ -8248,7 +8978,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::whenWarnings": {
-		"blake3-semantic-1:d8ffea6b8096008bd74a64fd94b6f1f5f7dfb68532c07ad047074753e3ede99c",
+		"blake3-semantic-1:6826dc33bbb2493efcadf59e836318f4e0190a47806e9593c41c0395cd4d31a5",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateWhenWarnings(map[string]*LawSpecSymbol{}, a[0])
@@ -8258,7 +8988,7 @@ var lawSpecRemoteDefinitions = map[string]struct {
 		},
 	},
 	"assayxport.haskell.extract::whenWarningsWith": {
-		"blake3-semantic-1:c33b5f743f32d604e663b4c3bdee5bf3d38281442e78275dbe234f509242f323",
+		"blake3-semantic-1:d74109194613f4fe5750d8b1e637e707924a06911b4f51ce647e55ef0536cfc2",
 		LawSpecRemoteDefinition{
 			func(a []LawSpecValue) LawSpecValue {
 				return lawSpecEvaluateWhenWarningsWith(map[string]*LawSpecSymbol{}, a[0], a[1])

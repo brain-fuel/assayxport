@@ -114,8 +114,10 @@ cube      = literal { " && " literal }
 literal   = simple | "(" directive ")" | "!(" directive ")"
 simple    = NAME | NAME "(" text with no parenthesis ")" | DIGITS
 directive = the expression of one #if or #elif, as written, its parentheses paired
-          | "defined(" NAME ")"                      for #ifdef and #ifndef
+          | "defined(" NAME ")"          for #ifdef, #ifndef, #elifdef and #elifndef
           | '"unreadable #if at line ' N '"'          a directive whose parentheses do not pair
+          | '"#if at line ' N ' reads a name the file defines"'   a directive the file's own
+                                                       definitions do not decide
 ```
 
 - A literal is one directive of the source. `(...)` marks one directive's whole
@@ -133,18 +135,35 @@ directive = the expression of one #if or #elif, as written, its parentheses pair
   absent. Given to `cpp` after one `#if` it is "missing binary operator before
   token". To ask a preprocessor, write a cube as nested `#if` lines, one literal
   each.
-- Two C strings are never decided. `"unread"`: the file has more builds than ax
+- Three C strings are never decided. `"unread"`: the file has more builds than ax
   reads; one was read; no names decide the fact. `("unreadable #if at line N")`:
-  that directive cannot be read as an expression. Neither is valid in an `#if`,
-  so neither can be taken for a value.
+  that directive cannot be read as an expression. `("#if at line N reads a name
+  the file defines")`: see below. None is valid in an `#if`, so none can be taken
+  for a value.
 
 To read the manifest for one build, decide the names the conditions test:
 
 ```
 ax assay . --when A=1 --when B --when "undef C" --when "package base=4.18.2"
 ax assay . --when-file decisions.txt     # the same lines, one per line
-ax assay . --when-complete               # a name not given is undefined, as the C preprocessor has it
+ax assay . --when-complete               # a name not given is undefined (see below)
 ```
+
+`--when-complete`: a name the build does not give is undefined, as the C
+preprocessor has it. A name the file itself defines or undefines (`#define`,
+`#undef`) is the file's from that line on, in the builds that keep the line: ax
+reads `#define NAME` and `#define NAME <integer>` as the preprocessor does, and a
+directive that tests only such names is decided with no `--when`. Where a
+directive mixes such a name with one of the build's, or the definition is
+anything but a plain integer, or the name is a version macro, ax does not decide
+it: its facts keep the condition `("#if at line N reads a name the file
+defines")` and a warning names it. Definitions in included files are not read.
+`#elifdef` and `#elifndef` are read. A directive continues through a C comment
+it opens. A condition ax cannot evaluate is never taken for true or false.
+Beyond errors the preprocessor would also report, ax does not read: character
+constants of several characters or with numeric escapes, literals past 2^64 - 1,
+and calls of macros other than `MIN_VERSION_*`. Integer literals are read as
+GHC's preprocessor mode reads them.
 
 A line is `NAME=<integer>`, `NAME`, `undef NAME`, `package P=X.Y.Z` (defines
 `MIN_VERSION_p` and `VERSION_p`) or `undef MIN_VERSION_p` (the package is not a
@@ -153,12 +172,13 @@ A line that cannot be read is a usage error (exit status 2, nothing on stdout).
 
 Names left undecided keep their condition and are reported on stderr, with the
 lines to paste into a decisions file. `ax when init [path]` writes a starter
-`<path>/.assayxport/when` listing every name the tree needs (it never overwrites
+`<path>/assayxport.when` listing every name the tree needs (it never overwrites
 an existing file: it prints the blocks for new names, to append with `>>`).
-`ax assay` reads `<path>/.assayxport/when` on every run, then `--when-file`
+`ax assay` reads `<path>/assayxport.when` on every run, then `--when-file`
 files, then `--when` values (a later line replaces an earlier one);
-`--when-no-discovery` leaves that file unread. The decisions file is read only
-when the path is a directory. `ax watch`, `ax serve` and `ax diff` read it as
+`--when-no-discovery` leaves that file unread. The decisions file is
+`assayxport.when` in the directory assayed, beside `assayxport.json`; a directory
+of that name is not read. It is read only when the path is a directory. `ax watch`, `ax serve` and `ax diff` read it as
 `ax assay` does (`diff`: each source's own), and take `--when-no-discovery`; they
 take no `--when`. `ax when init` lists every name of the files it could read in
 every build. A file with more than 256 builds is named in a warning and adds no

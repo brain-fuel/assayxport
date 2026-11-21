@@ -9,7 +9,10 @@ import assayxport.conditions.policy as wp (Env, Binding, Outcome, CExpr, BinOp, 
 -- (next-cycle-4/design.md, section 3), and its rule C2 rewritten in next
 -- cycle 6 for review 8, B1 (next-cycle-6/design.md, section 3): a term is a
 -- choice where the preprocessor's walk first meets it, not where it first
--- stands in the source. The REFERENCE for reading a source
+-- stands in the source. Next cycle 7 (next-cycle-7/design.md, section 4;
+-- review 9, B2 and S2): the walk keeps the file's own `#define` and
+-- `#undef`, as the preprocessor does, and reads `#elifdef` and
+-- `#elifndef`. The REFERENCE for reading a source
 -- with CPP conditionals: a model of such a source, the text it stands for,
 -- its builds, the copy an extractor must read for each build, the
 -- condition of a line, and what one environment keeps. The extractor
@@ -20,9 +23,15 @@ import assayxport.conditions.policy as wp (Env, Binding, Outcome, CExpr, BinOp, 
 -- A TERM is one directive's condition as written (`#ifdef X` reads
 -- `defined(X)`). Two directives with the same text are the same term: they
 -- have one value in any build. A BUILD gives a value to every term it
--- reads, and a line stands in it when every literal on the line's path
--- holds. So a build never takes the `#if X` arm of one group and the
--- `#else` of another `#if X`.
+-- reads, and a line stands in it when the preprocessor, walking the source
+-- under those values, keeps it. So a build never takes the `#if X` arm of
+-- one group and the `#else` of another `#if X`.
+--
+-- Next cycle 7: a directive that reads a name the FILE has defined or
+-- undefined on the way (rule C8) is no term of the environment. Where the
+-- file's definitions decide it, it is decided, with no choice and no
+-- literal; where they do not, it is a term of its own that nothing
+-- decides (`wp.fileDefinedTerm`).
 
 -- ---------------------------------------------------------------------------
 -- The first model (cycle 2): whole declarations, each arm with its own
@@ -59,13 +68,28 @@ end type
 -- term. A directive that opens an arm stands in that arm. `reads` marks an
 -- `#if` or `#elif` line: the preprocessor evaluates its own term, the last
 -- of `terms`, when the literals before it hold. `name` is the name such a
--- line tests ("" for any other line).
+-- line tests ("" for any other line). Next cycle 7: `sets` is what a
+-- `#define` or `#undef` line does to the name `name`.
+--
+-- The literals of `terms` are the path as the directives are WRITTEN. They
+-- give a first-model fact its condition (`conditionAt`), and a reading
+-- line its own term. Which lines a build keeps is not read from them (a
+-- name the file defines makes one text true in one place and false in
+-- another): it is the walk's (`after`, `readingAt`).
+type Sets is one of
+  | SetsNothing
+  | SetsInt of type Integer     -- `#define N <an integer literal>`
+  | SetsOther                   -- `#define N`, `#define N(..) ..`, any other body
+  | Unsets                      -- `#undef N`
+end type
+
 type Row is a record{
   text :: Text
   terms :: List Literal
   directive :: Bool
   reads :: Bool
-  name :: Text}
+  name :: Text
+  sets :: Sets}
 end type
 
 function nameOf (group :: Integer) (arm :: Integer) -> Text is "C" ++ prelude.textOf group ++ "_" ++ prelude.textOf arm end function
@@ -74,32 +98,42 @@ function definedAnd (n :: Text) -> CExpr is
   Bin record{ op = BLand , left = IsDefined n , right = Bin record{ op = BGe , left = Name n , right = Lit 2}}
 end function
 
+-- Next cycle 7 (review 9, S2): a later arm's forms 5 `#elifdef N` and
+-- 6 `#elifndef N` (C23; GCC 12 and later): the terms of `#ifdef` and
+-- `#ifndef`.
 function termOf (first :: Bool) (form :: Integer) (n :: Text) -> Literal is
-  if form = 1 then Literal record{ negated = false , text = "defined(" ++ n ++ ")" , expr = IsDefined n}
+  if form = 5 then Literal record{ negated = false , text = "defined(" ++ n ++ ")" , expr = IsDefined n}
+  else (if form = 6 then Literal record{ negated = true , text = "defined(" ++ n ++ ")" , expr = IsDefined n}
+  else (if form = 1 then Literal record{ negated = false , text = "defined(" ++ n ++ ")" , expr = IsDefined n}
   else (if form = 2 then
     (if first then Literal record{ negated = true , text = "defined(" ++ n ++ ")" , expr = IsDefined n}
      else Literal record{ negated = false , text = "!defined(" ++ n ++ ")" , expr = Un record{ op = UNot , arg = IsDefined n}} end if)
   else (if form = 3 then Literal record{ negated = false , text = "defined(" ++ n ++ ") && " ++ n ++ " >= 2" , expr = definedAnd n}
-  else Literal record{ negated = false , text = n , expr = Name n} end if) end if) end if
+  else Literal record{ negated = false , text = n , expr = Name n} end if) end if) end if) end if) end if
 end function
 
 function directiveOf (first :: Bool) (form :: Integer) (n :: Text) -> Text is
   if first then
     (if form = 1 then "#ifdef " ++ n else (if form = 2 then "#ifndef " ++ n else (if form = 3 then "#if defined(" ++ n ++ ") && " ++ n ++ " >= 2"
      else (if form = 4 then "#  if " ++ n ++ "  " else "#if " ++ n end if) end if) end if) end if)
-  else "#elif " ++ (termOf false form n).text end if
+  else (if form = 5 then "#elifdef " ++ n else (if form = 6 then "#elifndef " ++ n else "#elif " ++ (termOf false form n).text end if) end if) end if
 end function
 
 function negate (t :: Literal) -> Literal is t with negated = !t.negated end function
 
 -- A line of code, or a directive that reads no term (`#else`, `#endif`).
 function row (text :: Text) (terms :: List Literal) (directive :: Bool) -> Row is
-  Row record{ text = text ++ "\n" , terms = terms , directive = directive , reads = false , name = ""}
+  Row record{ text = text ++ "\n" , terms = terms , directive = directive , reads = false , name = "" , sets = SetsNothing}
 end function
 
 -- An `#if`, `#ifdef`, `#ifndef` or `#elif` line: `terms` end with its own.
 function opener (text :: Text) (terms :: List Literal) (name :: Text) -> Row is
-  Row record{ text = text ++ "\n" , terms = terms , directive = true , reads = true , name = name}
+  Row record{ text = text ++ "\n" , terms = terms , directive = true , reads = true , name = name , sets = SetsNothing}
+end function
+
+-- A `#define` or `#undef` line of the name `name` (next cycle 7).
+function definer (text :: Text) (terms :: List Literal) (name :: Text) (sets :: Sets) -> Row is
+  Row record{ text = text ++ "\n" , terms = terms , directive = true , reads = false , name = name , sets = sets}
 end function
 
 -- A block of code, by its number: four kinds of whole declarations, with
@@ -189,95 +223,273 @@ end function
 function allArms (ss :: List Section) -> Text is allArmsText (rowsOf ss) end function
 
 -- ---------------------------------------------------------------------------
--- Builds (rule C2, as next cycle 6 has it). A build is the values of the
--- terms it reads: 1 true, 0 false. The source is walked from its first line
--- as the preprocessor walks it. A directive is REACHED when every literal
--- before its own holds under the values so far: the arms that enclose it
--- are taken and the earlier arms of its own group have failed. At a reached
--- directive whose term has no value yet the term is a choice, true before
--- false; a directive that is not reached, or whose term has its value from
--- an earlier directive of the same text, is no choice. Every way through
--- is a build, and the builds stand in that order.
+-- Builds (rule C2 as next cycle 6 has it, with rule C8 of next cycle 7). A
+-- build is the values of the terms it reads: 1 true, 0 false. The source
+-- is walked from its first line as the preprocessor walks it, with the
+-- preprocessor's own state: the stack of open groups, and the names the
+-- file has defined or undefined so far. A directive is REACHED when the
+-- group it stands in is being kept and, for an `#elif`, no earlier arm of
+-- its group was taken. At a reached directive:
+--   * if it reads no name the file has set, its text is a term of the
+--     environment: a choice, true before false, when the term has no
+--     value yet; the value it has, when an earlier directive of the same
+--     text gave it one;
+--   * if it reads a name the file has set and the file's definitions
+--     decide it (rule C8), it is decided: no choice, no literal;
+--   * if it reads a name the file has set and they do not decide it, it
+--     is the term `wp.fileDefinedTerm` of its line: a choice that nothing
+--     decides.
+-- A directive that is not reached is no choice. Every way through is a
+-- build, and the builds stand in that order.
 --
--- Cycle 4 took the terms in the order they first stand in the source, and
--- asked of each whether some directive reading it was reached "under the
--- values chosen so far". A term whose first directive is skipped, and whose
--- later directive is guarded by a term that first stands after it, was then
--- no choice and got no value: its group's lines were in no copy (review 8,
--- B1). The walk has no such order to get wrong: it asks of a directive only
--- when it is at it.
+-- Cycle 4 took the terms in the order they first stand in the source
+-- (review 8, B1). Cycle 6 walked, but took a name the file defines for a
+-- name of the environment: under `#if V` / `#define HAS 1` / `#endif` /
+-- `#ifdef HAS` it asked the environment for HAS, which no environment
+-- sets, and with every name given it dropped what the preprocessor keeps
+-- (review 9, B2).
 
-function litHolds (asg :: KeyVal Text Integer) (l :: Literal) -> Bool is
-  first matching case of prelude.lookup l.text asg :
-    when Present v then (v != 0) != l.negated
-    when Absent then false
+-- An open group: `live`, its current arm is being kept; `done`, an arm of
+-- it has been taken, or the group stands in lines that are not kept.
+type Frame is a record{
+  live :: Bool
+  done :: Bool}
+end type
+
+type Walk is a record{
+  stack :: List Frame
+  sets :: KeyVal Text Sets}
+end type
+
+function startWalk (u :: Unit) -> Walk is Walk record{ stack = [] , sets = prelude.keyValOf []} end function
+
+function liveOf (stack :: List Frame) -> Bool is
+  first matching case of stack : when Nil then true when Cons f rest then f.live end case
+end function
+
+-- The directive words, read off the line as the preprocessor reads them.
+function isElif (r :: Row) -> Bool is r.reads && prelude.startsWith r.text "#elif" end function
+function isIf (r :: Row) -> Bool is r.reads && !(prelude.startsWith r.text "#elif") end function
+function isElse (r :: Row) -> Bool is r.directive && prelude.startsWith r.text "#else" end function
+function isEndif (r :: Row) -> Bool is r.directive && prelude.startsWith r.text "#endif" end function
+
+-- The preprocessor evaluates this line's condition.
+function reachedIn (stack :: List Frame) (r :: Row) -> Bool is
+  if isIf r then liveOf stack
+  else (if isElif r then
+    (first matching case of stack : when Nil then false when Cons f rest then liveOf rest && !f.done end case)
+  else false end if) end if
+end function
+
+-- The stack after a line; `v` is the value of its condition where it was
+-- reached (anything where it was not).
+function stepped (stack :: List Frame) (r :: Row) (v :: Bool) -> List Frame is
+  if isIf r then [Frame record{ live = liveOf stack && v , done = !(liveOf stack) || v}] ++ stack
+  else (if isElif r then
+    (first matching case of stack :
+      when Nil then []
+      when Cons f rest then [Frame record{ live = !f.done && v , done = f.done || v}] ++ rest
+    end case)
+  else (if isElse r then
+    (first matching case of stack :
+      when Nil then []
+      when Cons f rest then [Frame record{ live = !f.done , done = true}] ++ rest
+    end case)
+  else (if isEndif r then prelude.drop 1 stack else stack end if) end if) end if) end if
+end function
+
+function after (w :: Walk) (r :: Row) (v :: Bool) -> Walk is
+  Walk record{ stack = stepped w.stack r v ,
+               sets = (if !(r.sets matches SetsNothing) && liveOf w.stack then prelude.put r.name r.sets w.sets else w.sets end if)}
+end function
+
+function ownLit (r :: Row) -> Maybe Literal is prelude.at (prelude.length r.terms - 1) r.terms end function
+
+-- Rule C8: what the file's own definitions make of a directive.
+
+-- Every name an expression reads, as a value, under `defined`, or as a
+-- macro it calls. GHC's version macro is written in terms of the three
+-- version names.
+function namesOf (e :: CExpr) -> List Text is
+  first matching case of e :
+    when Lit n then []
+    when ULit n then []
+    when Name n then [n]
+    when IsDefined n then [n]
+    when Un u then namesOf u.arg
+    when Bin b then namesOf b.left ++ namesOf b.right
+    when Cond k then namesOf k.test ++ namesOf k.yes ++ namesOf k.no
+    when MinVersion m then ["MIN_VERSION_" ++ m.pkg] ++ namesOf m.major1 ++ namesOf m.major2 ++ namesOf m.minor
+    when MinGhc m then
+      ["MIN_VERSION_GLASGOW_HASKELL", "__GLASGOW_HASKELL__", "__GLASGOW_HASKELL_PATCHLEVEL1__", "__GLASGOW_HASKELL_PATCHLEVEL2__"]
+        ++ namesOf m.major1 ++ namesOf m.major2 ++ namesOf m.patch1 ++ namesOf m.patch2
   end case
 end function
 
-function allHold (asg :: KeyVal Text Integer) (ls :: List Literal) -> Bool is prelude.all (litHolds asg) ls end function
-
-function ownText (ls :: List Literal) -> Text is
-  first matching case of prelude.at (prelude.length ls - 1) ls : when Present l then l.text when Absent then "" end case
+-- The names read as a value or called: not those that stand only under
+-- `defined`.
+function valueNames (e :: CExpr) -> List Text is
+  first matching case of e :
+    when Lit n then []
+    when ULit n then []
+    when Name n then [n]
+    when IsDefined n then []
+    when Un u then valueNames u.arg
+    when Bin b then valueNames b.left ++ valueNames b.right
+    when Cond k then valueNames k.test ++ valueNames k.yes ++ valueNames k.no
+    when MinVersion m then ["MIN_VERSION_" ++ m.pkg] ++ valueNames m.major1 ++ valueNames m.major2 ++ valueNames m.minor
+    when MinGhc m then
+      ["MIN_VERSION_GLASGOW_HASKELL", "__GLASGOW_HASKELL__", "__GLASGOW_HASKELL_PATCHLEVEL1__", "__GLASGOW_HASKELL_PATCHLEVEL2__"]
+        ++ valueNames m.major1 ++ valueNames m.major2 ++ valueNames m.patch1 ++ valueNames m.patch2
+  end case
 end function
 
--- The directive of this row is reached under the values so far.
-function reached (asg :: KeyVal Text Integer) (r :: Row) -> Bool is
-  r.reads && allHold asg (prelude.take (prelude.length r.terms - 1) r.terms)
+-- A name the evaluator gives a meaning of its own (`wp.valueOf`,
+-- `wp.definedOf`): Cabal's and GHC's version macros and names.
+function special (n :: Text) -> Bool is
+  prelude.startsWith n "MIN_VERSION_" || prelude.startsWith n "VERSION_" || prelude.startsWith n "__GLASGOW_HASKELL"
+end function
+
+function isSet (sets :: KeyVal Text Sets) (n :: Text) -> Bool is prelude.lookup n sets matches Present _ end function
+
+-- The name keeps the file from deciding the directive: the file has not
+-- set it (it is the environment's); or it is a special name; or the file
+-- defined it with no integer body and it is read as a value.
+function blocks (sets :: KeyVal Text Sets) (vals :: List Text) (n :: Text) -> Bool is
+  first matching case of prelude.lookup n sets :
+    when Absent then true
+    when Present s then special n || ((s matches SetsOther) && (vals contains n))
+  end case
+end function
+
+-- The file's definitions of the names, as an environment's.
+function fileNames (sets :: KeyVal Text Sets) (ns :: List Text) (acc :: KeyVal Text Binding) -> KeyVal Text Binding is
+  first matching case of ns :
+    when Nil then acc
+    when Cons n rest then
+      fileNames sets rest
+        (first matching case of prelude.lookup n sets :
+          when Present (SetsInt v) then prelude.put n (wp.definedAs v) acc
+          when Present Unsets then prelude.put n (wp.notDefined unitValue) acc
+          when Present SetsOther then prelude.put n (wp.definedAs 1) acc
+          otherwise acc
+        end case)
+  end case
+end function
+
+type Reading is one of | NotRead | ByFile of type Bool | ByTerm of type Literal end type
+
+-- The term of a directive the file reaches and does not decide. Its
+-- expression is one that cannot be evaluated.
+function fileTerm (line :: Integer) (l :: Literal) -> Literal is
+  Literal record{ negated = l.negated , text = wp.fileDefinedTerm line , expr = Bin record{ op = BDiv , left = Lit 1 , right = Lit 0}}
+end function
+
+-- Rule C8. A directive that reads no name the file has set is the term it
+-- is written as. One that reads such a name is decided by the file when
+-- every name it reads is set by the file, none of them blocks, and the
+-- expression has a value under exactly those definitions (`ByFile`: the
+-- directive holds or fails; `#ifndef` is already turned). Otherwise it is
+-- the term of its line that nothing decides.
+function decidedBy (sets :: KeyVal Text Sets) (l :: Literal) (line :: Integer) -> Reading is
+  let ns = namesOf l.expr in
+    (if !(prelude.any (isSet sets) ns) then ByTerm l
+     else (if prelude.any (blocks sets (valueNames l.expr)) ns then ByTerm (fileTerm line l)
+     else
+       (first matching case of refEval (completed ((emptyEnv unitValue) with names = fileNames sets ns (prelude.keyValOf []))) l.expr :
+         when Known v then ByFile ((v != 0) != l.negated)
+         when Unknown o then ByTerm (fileTerm line l)
+         when Bad then ByTerm (fileTerm line l)
+       end case) end if) end if)
+  end let
+end function
+
+-- What the walk meets at a line (its number from 1).
+function readingAt (w :: Walk) (r :: Row) (line :: Integer) -> Reading is
+  if !(reachedIn w.stack r) then NotRead
+  else (first matching case of ownLit r : when Absent then NotRead when Present l then decidedBy w.sets l line end case) end if
 end function
 
 function valued (asg :: KeyVal Text Integer) (t :: Text) -> Bool is
   first matching case of prelude.lookup t asg : when Present v then true when Absent then false end case
 end function
 
--- The row is a choice: its directive is reached, and its term has no value.
-function choiceAt (asg :: KeyVal Text Integer) (r :: Row) -> Bool is reached asg r && !(valued asg (ownText r.terms)) end function
+-- The directive holds under the values: a term with no value counts 0.
+function litTrue (asg :: KeyVal Text Integer) (l :: Literal) -> Bool is
+  first matching case of prelude.lookup l.text asg : when Present v then (v != 0) != l.negated when Absent then l.negated end case
+end function
 
--- The terms, each once, in the order they first stand in the source. No
--- rule of the builds reads this order: it only names the terms.
-function termsIn (rs :: List Row) (seen :: List Text) -> List Text is
-  first matching case of rs :
-    when Nil then seen
-    when Cons r rest then termsIn rest (if r.reads && !(seen contains ownText r.terms) then seen ++ [ownText r.terms] else seen end if)
+function truthAt (w :: Walk) (asg :: KeyVal Text Integer) (r :: Row) (line :: Integer) -> Bool is
+  first matching case of readingAt w r line :
+    when NotRead then false
+    when ByFile v then v
+    when ByTerm l then litTrue asg l
   end case
+end function
+
+function ownText (ls :: List Literal) -> Text is
+  first matching case of prelude.at (prelude.length ls - 1) ls : when Present l then l.text when Absent then "" end case
 end function
 
 -- The number of builds, counted no further than `budget + 1`.
-function countBuilds (rs :: List Row) (asg :: KeyVal Text Integer) (budget :: Integer) -> Integer is
+function countBuilds (rs :: List Row) (w :: Walk) (asg :: KeyVal Text Integer) (line :: Integer) (budget :: Integer) -> Integer is
   first matching case of rs :
     when Nil then 1
     when Cons r rest then
-      (if choiceAt asg r then
-        (let a = countBuilds rest (prelude.put (ownText r.terms) 1 asg) budget in
-          (if a > budget then a else a + countBuilds rest (prelude.put (ownText r.terms) 0 asg) (budget - a) end if) end let)
-       else countBuilds rest asg budget end if)
+      (first matching case of readingAt w r line :
+        when NotRead then countBuilds rest (after w r false) asg (line + 1) budget
+        when ByFile v then countBuilds rest (after w r v) asg (line + 1) budget
+        when ByTerm l then
+          (if valued asg l.text then countBuilds rest (after w r (litTrue asg l)) asg (line + 1) budget
+           else
+             (let a = countBuilds rest (after w r (!l.negated)) (prelude.put l.text 1 asg) (line + 1) budget in
+               (if a > budget then a
+                else a + countBuilds rest (after w r l.negated) (prelude.put l.text 0 asg) (line + 1) (budget - a) end if) end let) end if)
+      end case)
   end case
 end function
 
-function buildsFrom (rs :: List Row) (asg :: KeyVal Text Integer) -> List (KeyVal Text Integer) is
+function buildsFrom (rs :: List Row) (w :: Walk) (asg :: KeyVal Text Integer) (line :: Integer) -> List (KeyVal Text Integer) is
   first matching case of rs :
     when Nil then [asg]
     when Cons r rest then
-      (if choiceAt asg r then buildsFrom rest (prelude.put (ownText r.terms) 1 asg) ++ buildsFrom rest (prelude.put (ownText r.terms) 0 asg)
-       else buildsFrom rest asg end if)
+      (first matching case of readingAt w r line :
+        when NotRead then buildsFrom rest (after w r false) asg (line + 1)
+        when ByFile v then buildsFrom rest (after w r v) asg (line + 1)
+        when ByTerm l then
+          (if valued asg l.text then buildsFrom rest (after w r (litTrue asg l)) asg (line + 1)
+           else buildsFrom rest (after w r (!l.negated)) (prelude.put l.text 1 asg) (line + 1)
+                  ++ buildsFrom rest (after w r l.negated) (prelude.put l.text 0 asg) (line + 1) end if)
+      end case)
   end case
 end function
 
 -- The first build: every term it reads is true.
-function firstBuild (rs :: List Row) (asg :: KeyVal Text Integer) -> KeyVal Text Integer is
+function firstBuild (rs :: List Row) (w :: Walk) (asg :: KeyVal Text Integer) (line :: Integer) -> KeyVal Text Integer is
   first matching case of rs :
     when Nil then asg
-    when Cons r rest then firstBuild rest (if choiceAt asg r then prelude.put (ownText r.terms) 1 asg else asg end if)
+    when Cons r rest then
+      (first matching case of readingAt w r line :
+        when NotRead then firstBuild rest (after w r false) asg (line + 1)
+        when ByFile v then firstBuild rest (after w r v) asg (line + 1)
+        when ByTerm l then
+          (if valued asg l.text then firstBuild rest (after w r (litTrue asg l)) asg (line + 1)
+           else firstBuild rest (after w r (!l.negated)) (prelude.put l.text 1 asg) (line + 1) end if)
+      end case)
   end case
 end function
 
 -- A build's copy: the source with every directive line, and every line
--- that does not stand in the build, made empty. No line moves.
-function copyOf (asg :: KeyVal Text Integer) (rs :: List Row) -> Text is
+-- the walk does not keep under the build's values, made empty. No line
+-- moves.
+function copyFrom (rs :: List Row) (w :: Walk) (asg :: KeyVal Text Integer) (line :: Integer) -> Text is
   first matching case of rs :
     when Nil then ""
-    when Cons r rest then blankIf (r.directive || !(allHold asg r.terms)) r ++ copyOf asg rest
+    when Cons r rest then blankIf (r.directive || !(liveOf w.stack)) r ++ copyFrom rest (after w r (truthAt w asg r line)) asg (line + 1)
   end case
 end function
+
+function copyOf (asg :: KeyVal Text Integer) (rs :: List Row) -> Text is copyFrom rs (startWalk unitValue) asg 1 end function
 
 function copiesOf (rs :: List Row) (builds :: List (KeyVal Text Integer)) -> List Text is
   first matching case of builds : when Nil then [] when Cons b rest then [copyOf b rs] ++ copiesOf rs rest end case
@@ -287,7 +499,7 @@ function hasGroup (rs :: List Row) -> Bool is
   first matching case of rs : when Nil then false when Cons r rest then r.reads || hasGroup rest end case
 end function
 
-function buildCount (rs :: List Row) -> Integer is countBuilds rs (prelude.keyValOf []) (buildCap unitValue) end function
+function buildCount (rs :: List Row) -> Integer is countBuilds rs (startWalk unitValue) (prelude.keyValOf []) 1 (buildCap unitValue) end function
 
 -- More builds than are read (`wp.buildCap`).
 function overCapRows (rs :: List Row) -> Bool is buildCount rs > buildCap unitValue end function
@@ -298,11 +510,11 @@ function overCapRows (rs :: List Row) -> Bool is buildCount rs > buildCap unitVa
 function copiesOfRows (rs :: List Row) -> List Text is
   if !(hasGroup rs) then [sourceOf rs]
   else (if overCapRows rs then [firstCopyOfRows rs]
-  else copiesOf rs (buildsFrom rs (prelude.keyValOf [])) end if) end if
+  else copiesOf rs (buildsFrom rs (startWalk unitValue) (prelude.keyValOf []) 1) end if) end if
 end function
 
 -- The first build's copy.
-function firstCopyOfRows (rs :: List Row) -> Text is copyOf (firstBuild rs (prelude.keyValOf [])) rs end function
+function firstCopyOfRows (rs :: List Row) -> Text is copyOf (firstBuild rs (startWalk unitValue) (prelude.keyValOf []) 1) rs end function
 
 function copies (ss :: List Section) -> List Text is copiesOfRows (rowsOf ss) end function
 
@@ -323,6 +535,13 @@ function firstCopy (ss :: List Section) -> Text is firstCopyOfRows (rowsOf ss) e
 -- agree so far meet the same directive next, so no trace is the start of
 -- another). Rule C2 must give exactly these copies, in this order: HCP-4,
 -- and HSC-1 for the extractor. Only for sources of few terms: 2^k.
+--
+-- Next cycle 7: the terms are every reading line's own, and for a line
+-- the file's definitions might reach and not decide, the term of that
+-- line (`wp.fileDefinedTerm`). "Might" is read off the source with no
+-- walk: the line reads a name some line of the source sets, and is not a
+-- bare `N` or `defined(N)` that a definition always decides. A term no
+-- walk meets doubles the assignments and adds no trace.
 
 function withValue (t :: Text) (v :: Integer) (as :: List (KeyVal Text Integer)) -> List (KeyVal Text Integer) is
   first matching case of as : when Nil then [] when Cons a rest then [prelude.put t v a] ++ withValue t v rest end case
@@ -340,14 +559,62 @@ function valueIn (full :: KeyVal Text Integer) (t :: Text) -> Integer is
   first matching case of prelude.lookup t full : when Present v then v when Absent then 0 end case
 end function
 
--- What the preprocessor evaluates under a full assignment: the values of
--- the terms of the directives it reaches, in the order it first meets them.
-function traceOf (rs :: List Row) (full :: KeyVal Text Integer) (seen :: List Text) -> List Integer is
+-- The names some line of the source sets; `other`: only those a line
+-- defines with no integer body.
+function setNames (rs :: List Row) (onlyOther :: Bool) -> List Text is
   first matching case of rs :
     when Nil then []
     when Cons r rest then
-      (if reached full r && !(seen contains ownText r.terms) then [valueIn full (ownText r.terms)] ++ traceOf rest full (seen ++ [ownText r.terms])
-       else traceOf rest full seen end if)
+      (if (if onlyOther then r.sets matches SetsOther else !(r.sets matches SetsNothing) end if) then [r.name] else [] end if) ++ setNames rest onlyOther
+  end case
+end function
+
+function inNames (ns :: List Text) (n :: Text) -> Bool is ns contains n end function
+
+function mayStayOpen (setBy :: List Text) (otherBy :: List Text) (l :: Literal) -> Bool is
+  prelude.any (inNames setBy) (namesOf l.expr)
+    && !(first matching case of l.expr :
+           when Name n then !(special n) && !(otherBy contains n)
+           when IsDefined n then !(special n)
+           otherwise false
+         end case)
+end function
+
+function addTerm (t :: Text) (seen :: List Text) -> List Text is
+  if prelude.length t = 0 || (seen contains t) then seen else seen ++ [t] end if
+end function
+
+function termsFrom (rs :: List Row) (setBy :: List Text) (otherBy :: List Text) (line :: Integer) (seen :: List Text) -> List Text is
+  first matching case of rs :
+    when Nil then seen
+    when Cons r rest then
+      termsFrom rest setBy otherBy (line + 1)
+        (first matching case of ownLit r :
+          when Absent then seen
+          when Present l then
+            (if r.reads then addTerm (if mayStayOpen setBy otherBy l then wp.fileDefinedTerm line else "" end if) (addTerm l.text seen) else seen end if)
+        end case)
+  end case
+end function
+
+-- The terms, each once, in the order they first stand in the source. No
+-- rule of the builds reads this order: it only names the terms.
+function termsIn (rs :: List Row) (seen :: List Text) -> List Text is termsFrom rs (setNames rs false) (setNames rs true) 1 seen end function
+
+-- What the preprocessor evaluates under a full assignment: the values of
+-- the terms of the directives it reaches and the file does not decide, in
+-- the order it first meets them.
+function traceFrom (rs :: List Row) (w :: Walk) (full :: KeyVal Text Integer) (line :: Integer) (seen :: List Text) -> List Integer is
+  first matching case of rs :
+    when Nil then []
+    when Cons r rest then
+      (first matching case of readingAt w r line :
+        when NotRead then traceFrom rest (after w r false) full (line + 1) seen
+        when ByFile v then traceFrom rest (after w r v) full (line + 1) seen
+        when ByTerm l then
+          (if seen contains l.text then traceFrom rest (after w r (litTrue full l)) full (line + 1) seen
+           else [valueIn full l.text] ++ traceFrom rest (after w r (litTrue full l)) full (line + 1) (seen ++ [l.text]) end if)
+      end case)
   end case
 end function
 
@@ -379,7 +646,8 @@ end function
 function walkedAll (rs :: List Row) (fulls :: List (KeyVal Text Integer)) (acc :: List Walked) -> List Walked is
   first matching case of fulls :
     when Nil then acc
-    when Cons f rest then walkedAll rs rest (insertWalked (Walked record{ trace = traceOf rs f [] , copy = copyOf f rs}) acc)
+    when Cons f rest then
+      walkedAll rs rest (insertWalked (Walked record{ trace = traceFrom rs (startWalk unitValue) f 1 [] , copy = copyOf f rs}) acc)
   end case
 end function
 
@@ -391,6 +659,58 @@ end function
 function everyCopies (rs :: List Row) -> List Text is
   if !(hasGroup rs) then [sourceOf rs] else copiesOfWalked (walkedAll rs (assignments (termsIn rs [])) []) end if
 end function
+
+-- ---------------------------------------------------------------------------
+-- Cycle 4's rule C2, kept only so that the harness can say how often a
+-- drawn module is one it gets wrong (next cycle 7; review 9, N5). The
+-- terms in the order they first stand; a term is a choice when, under the
+-- values chosen so far, some directive that reads it has a path that
+-- holds. It knows no walk and no definition.
+
+function litHolds (asg :: KeyVal Text Integer) (l :: Literal) -> Bool is
+  first matching case of prelude.lookup l.text asg :
+    when Present v then (v != 0) != l.negated
+    when Absent then false
+  end case
+end function
+
+function allHold (asg :: KeyVal Text Integer) (ls :: List Literal) -> Bool is prelude.all (litHolds asg) ls end function
+
+function oldReadAt (rs :: List Row) (asg :: KeyVal Text Integer) (t :: Text) -> Bool is
+  first matching case of rs :
+    when Nil then false
+    when Cons r rest then (r.reads && ownText r.terms = t && allHold asg (prelude.take (prelude.length r.terms - 1) r.terms)) || oldReadAt rest asg t
+  end case
+end function
+
+function oldBuilds (rs :: List Row) (ts :: List Text) (asg :: KeyVal Text Integer) -> List (KeyVal Text Integer) is
+  first matching case of ts :
+    when Nil then [asg]
+    when Cons t rest then
+      (if oldReadAt rs asg t then oldBuilds rs rest (prelude.put t 1 asg) ++ oldBuilds rs rest (prelude.put t 0 asg)
+       else oldBuilds rs rest asg end if)
+  end case
+end function
+
+function oldCopy (asg :: KeyVal Text Integer) (rs :: List Row) -> Text is
+  first matching case of rs :
+    when Nil then ""
+    when Cons r rest then blankIf (r.directive || !(allHold asg r.terms)) r ++ oldCopy asg rest
+  end case
+end function
+
+function oldCopiesOf (rs :: List Row) (builds :: List (KeyVal Text Integer)) -> List Text is
+  first matching case of builds : when Nil then [] when Cons b rest then [oldCopy b rs] ++ oldCopiesOf rs rest end case
+end function
+
+function ownTexts (rs :: List Row) (seen :: List Text) -> List Text is
+  first matching case of rs :
+    when Nil then seen
+    when Cons r rest then ownTexts rest (if r.reads then addTerm (ownText r.terms) seen else seen end if)
+  end case
+end function
+
+function oldCopies (rs :: List Row) -> List Text is oldCopiesOf rs (oldBuilds rs (ownTexts rs []) (prelude.keyValOf [])) end function
 
 -- ---------------------------------------------------------------------------
 -- Conditions as text (rule C7; the writer is `wp.conditionText`).
@@ -447,12 +767,51 @@ function termHolds (env :: Env) (t :: Literal) -> Bool is
   end case
 end function
 
-function buildText (env :: Env) (rs :: List Row) -> Text is
+-- The text by the written paths: a line stands when every literal of its
+-- path holds under the environment. Right for a source with no `#define`
+-- and no `#undef` (cycle 6's `buildText`); HCP-1 holds it equal to the
+-- simulation below on the first and the second model.
+function pathBuildText (env :: Env) (rs :: List Row) -> Text is
   first matching case of rs :
     when Nil then ""
-    when Cons r rest then blankIf (r.directive || !(prelude.all (termHolds env) r.terms)) r ++ buildText env rest
+    when Cons r rest then blankIf (r.directive || !(prelude.all (termHolds env) r.terms)) r ++ pathBuildText env rest
   end case
 end function
+
+-- Next cycle 7 (review 9, B2): the preprocessor itself, with its macro
+-- table. It starts from the environment; a `#define` or `#undef` line it
+-- keeps changes the table for the lines after it; a directive it reaches
+-- is evaluated under the table as it then is. No term, no choice and no
+-- rule about which directives the file decides is in it: this is what
+-- rules C2 and C8 are held against (HCP-1, HSC-8, HSC-12, HSX-42).
+-- (`#define N` with no integer body is `Defined 1` here: right for
+-- `defined(N)`. Where such a name is read as a value the preprocessor
+-- stops with an error, and the build has no text to compare. A name of
+-- the kind `special` cannot be given to an environment this way, and no
+-- source held against this function defines one.)
+function tableAfter (env :: Env) (r :: Row) -> Env is
+  first matching case of r.sets :
+    when SetsNothing then env
+    when SetsInt v then env with names = prelude.put r.name (wp.definedAs v) env.names
+    when SetsOther then env with names = prelude.put r.name (wp.definedAs 1) env.names
+    when Unsets then env with names = prelude.put r.name (wp.notDefined unitValue) env.names
+  end case
+end function
+
+function ownHolds (env :: Env) (r :: Row) -> Bool is
+  first matching case of ownLit r : when Present l then termHolds env l when Absent then false end case
+end function
+
+function simulated (env :: Env) (stack :: List Frame) (rs :: List Row) -> Text is
+  first matching case of rs :
+    when Nil then ""
+    when Cons r rest then
+      blankIf (r.directive || !(liveOf stack)) r
+        ++ simulated (if liveOf stack then tableAfter env r else env end if) (stepped stack r (reachedIn stack r && ownHolds env r)) rest
+  end case
+end function
+
+function buildText (env :: Env) (rs :: List Row) -> Text is simulated env [] rs end function
 
 -- What the preprocessor leaves under a complete environment, line numbers
 -- kept.
@@ -653,13 +1012,44 @@ end function
 -- An arm holds its lines, or nothing, and then perhaps a nested group. At
 -- most six terms (`N` and `defined(N)` of three names): at most 64 builds.
 -- Every build is a module that parses.
+--
+-- Next cycle 7 (review 9, B2 and S2). Half the modules (`weaveNew`) are
+-- cycle 6's, line for line. In the other half a later arm may be written
+-- `#elifdef N` or `#elifndef N`, and one arm in three, and one section in
+-- four before its first line, holds a definition of one of the three
+-- names: `#define N 1`, `#define N 0`, `#define N 2` or `#undef N`. So a
+-- directive on N after it, on the walks that keep the definition, is
+-- decided by the file, and on the other walks by the environment; a
+-- definition stands under any nesting, and under terms it later decides.
+-- Every directive reads one name, so the file's definitions decide every
+-- directive that reads a name they set: no term of `wp.fileDefinedTerm`
+-- arises, and the terms are still at most six.
+
+function weaveNew (seed :: Integer) -> Bool is pick seed 9700 2 = 1 end function
+
+function setText (n :: Text) (k :: Integer) -> Text is
+  if k = 0 then "#define " ++ n ++ " 1" else (if k = 1 then "#define " ++ n ++ " 0" else (if k = 2 then "#undef " ++ n else "#define " ++ n ++ " 2" end if) end if) end if
+end function
+
+function setKind (k :: Integer) -> Sets is
+  if k = 0 then SetsInt 1 else (if k = 1 then SetsInt 0 else (if k = 2 then Unsets else SetsInt 2 end if) end if) end if
+end function
+
+-- The definition at a place (an arm, or a section's start), or none.
+function weaveSets (seed :: Integer) (place :: Integer) (odds :: Integer) (path :: List Literal) -> List Row is
+  if weaveNew seed && pick seed (10700 + place) odds = 0
+  then [definer (setText (poolName (pick seed (11700 + place) 3)) (pick seed (12700 + place) 4)) path (poolName (pick seed (11700 + place) 3)) (setKind (pick seed (12700 + place) 4))]
+  else [] end if
+end function
 
 function weaveName (seed :: Integer) (place :: Integer) -> Text is poolName (pick seed (700 + place) 3) end function
 
 -- A first arm's form: 0 `#if N`, 1 `#ifdef N`, 2 `#ifndef N`. A later
 -- arm's: 0 `#elif N`, 1 `#elif defined(N)`.
 function weaveForm (seed :: Integer) (place :: Integer) (first :: Bool) -> Integer is
-  if first then pick seed (1700 + place) 3 else pick seed (1700 + place) 2 end if
+  if first then pick seed (1700 + place) 3
+  else (if weaveNew seed then (let k = pick seed (1700 + place) 4 in (if k = 2 then 5 else (if k = 3 then 6 else k end if) end if) end let)
+  else pick seed (1700 + place) 2 end if) end if
 end function
 
 function leafLines (seed :: Integer) (tail :: Bool) (place :: Integer) -> List Text is
@@ -684,6 +1074,7 @@ function weaveArms (seed :: Integer) (group :: Integer) (outer :: List Literal) 
     (let place = group * 10 + k in let n = weaveName seed place in let form = weaveForm seed place (k = 0) in
      let own = termOf (k = 0) form n in let path = outer ++ before ++ [own] in
       [opener (directiveOf (k = 0) form n) path n]
+        ++ weaveSets seed place 3 path
         ++ (if pick seed (4700 + place) 4 = 0 then [] else codeRows (leafLines seed tail place) path end if)
         ++ (if depth > 0 && pick seed (5700 + place) 2 = 0
             then weaveArms seed place path [] 0 (1 + pick seed (6700 + place) 2) (depth - 1) tail (fuel - 1) else [] end if)
@@ -693,7 +1084,8 @@ end function
 
 function weaveSection (seed :: Integer) (i :: Integer) -> List Row is
   let tail = pick seed (7700 + i) 2 = 0 in let n = prelude.textOf i in
-    (if tail then codeRows ["t" ++ n ++ " :: Int", "t" ++ n ++ " = foo1 " ++ n] [] else [] end if)
+    weaveSets seed (9000 + i) 4 []
+      ++ (if tail then codeRows ["t" ++ n ++ " :: Int", "t" ++ n ++ " = foo1 " ++ n] [] else [] end if)
       ++ weaveArms seed i [] [] 0 (1 + pick seed (8700 + i) 3) 2 tail 16
   end let end let
 end function
@@ -737,6 +1129,182 @@ function reproTail (u :: Unit) -> List Row is
 end function
 
 -- ---------------------------------------------------------------------------
+-- Next cycle 7 (review 9, B2 and S2): sources with a `#define`, an
+-- `#undef`, `#elifdef` and `#elifndef`, as rows. The texts are
+-- next-cycle-7/repros/*.hs.
+
+-- One written arm on a term given whole: its directive, its lines, `#endif`.
+function oneArm (own :: Literal) (directive :: Text) (name :: Text) (yes :: List Text) -> List Row is
+  [opener directive [own] name] ++ codeRows yes [own] ++ [row "#endif" [negate own] true]
+end function
+
+function baseAtLeast48 (u :: Unit) -> Literal is
+  Literal record{ negated = false , text = "MIN_VERSION_base(4,8,0)" , expr = MinVersion record{ pkg = "base" , major1 = Lit 4 , major2 = Lit 8 , minor = Lit 0}}
+end function
+
+-- Review 9, B2 (`define.hs`): `#define HAS_VOID 1` under a version test,
+-- then `#ifdef HAS_VOID`.
+function reproDefine (u :: Unit) -> List Row is
+  let mv = baseAtLeast48 unitValue in
+    codeRows ["{-# LANGUAGE CPP #-}", "module M where"] []
+      ++ [opener "#if MIN_VERSION_base(4,8,0)" [mv] "MIN_VERSION_base", definer "#define HAS_VOID 1" [mv] "HAS_VOID" (SetsInt 1), row "#endif" [negate mv] true]
+      ++ oneGroup [] 1 "HAS_VOID" ["import Data.Void (absurd)", "f = absurd"] false []
+      ++ codeRows ["g :: Int", "g = 1"] []
+  end let
+end function
+
+-- The include-guard idiom (`guard.hs`): a default for a name the build
+-- may give.
+function reproGuard (u :: Unit) -> List Row is
+  let nd = termOf true 2 "LIMIT" in
+    codeRows ["{-# LANGUAGE CPP #-}", "module M where"] []
+      ++ [opener "#ifndef LIMIT" [nd] "LIMIT", definer "#define LIMIT 1" [nd] "LIMIT" (SetsInt 1), row "#endif" [negate nd] true]
+      ++ oneGroup [] 0 "LIMIT" ["a = 1"] true ["b = 2"]
+      ++ oneGroup [] 1 "LIMIT" ["c = 3"] false []
+  end let
+end function
+
+function sixteenAndDefined (u :: Unit) -> Literal is
+  Literal record{ negated = false , text = "N == 16 && defined(N)" ,
+                  expr = Bin record{ op = BLand , left = Bin record{ op = BEq , left = Name "N" , right = Lit 16} , right = IsDefined "N"}}
+end function
+
+-- `defs.hs`: a definition with no body, an `#undef` under `#else`, a
+-- hexadecimal body with a comment, an `#undef` of a name the file defined.
+function reproDefs (u :: Unit) -> List Row is
+  let a = termOf true 0 "A" in
+    codeRows ["{-# LANGUAGE CPP #-}", "module M where"] []
+      ++ [opener "#if A" [a] "A", definer "#define HAS_X" [a] "HAS_X" SetsOther, row "#else" [negate a] true,
+          definer "#undef HAS_Y" [negate a] "HAS_Y" Unsets, row "#endif" [] true]
+      ++ oneGroup [] 1 "HAS_X" ["a = 1"] false []
+      ++ oneGroup [] 2 "HAS_Y" ["b = 2"] false []
+      ++ oneGroup [] 1 "HAS_Y" ["c = 3"] false []
+      ++ [definer "#define N 0x10 /* sixteen */" [] "N" (SetsInt 16)]
+      ++ oneArm (sixteenAndDefined unitValue) "#if N == 16 && defined(N)" "N" ["d = 4"]
+      ++ [definer "#undef N" [] "N" Unsets]
+      ++ oneGroup [] 0 "N" ["e = 5"] true ["f = 6"]
+  end let
+end function
+
+function hasAndFoo (u :: Unit) -> Literal is
+  Literal record{ negated = false , text = "HAS && FOO" , expr = Bin record{ op = BLand , left = Name "HAS" , right = Name "FOO"}}
+end function
+
+-- `undecided.hs`: three directives the file reaches and does not decide: a
+-- name of the file beside a name of the environment; a name defined with
+-- no body, read as a value; a version macro the file defines itself where
+-- the build has none.
+function reproUndecided (u :: Unit) -> List Row is
+  let nd = termOf true 2 "MIN_VERSION_base" in
+    codeRows ["{-# LANGUAGE CPP #-}", "module M where"] []
+      ++ [definer "#define HAS 1" [] "HAS" (SetsInt 1)]
+      ++ oneArm (hasAndFoo unitValue) "#if HAS && FOO" "HAS" ["a = 1"]
+      ++ [definer "#define EMPTY" [] "EMPTY" SetsOther]
+      ++ oneGroup [] 0 "EMPTY" ["b = 2"] false []
+      ++ [opener "#ifndef MIN_VERSION_base" [nd] "MIN_VERSION_base",
+          definer "#define MIN_VERSION_base(x,y,z) 1" [nd] "MIN_VERSION_base" SetsOther, row "#endif" [negate nd] true]
+      ++ oneArm (baseAtLeast48 unitValue) "#if MIN_VERSION_base(4,8,0)" "MIN_VERSION_base" ["c = 3"]
+      ++ codeRows ["d = 4"] []
+  end let
+end function
+
+-- Review 9, S2 (`elifdef.hs`).
+function reproElifdef (u :: Unit) -> List Row is
+  let a = termOf true 0 "A" in let b = termOf false 5 "B" in let d = termOf false 6 "C" in
+    codeRows ["{-# LANGUAGE CPP #-}", "module M where"] []
+      ++ [opener "#if A" [a] "A"] ++ codeRows ["f = 1"] [a]
+      ++ [opener (directiveOf false 5 "B") [negate a, b] "B"] ++ codeRows ["g = 2"] [negate a, b]
+      ++ [opener (directiveOf false 6 "C") [negate a, negate b, d] "C"] ++ codeRows ["h = 3"] [negate a, negate b, d]
+      ++ [row "#else" [negate a, negate b, negate d] true] ++ codeRows ["k = 4"] [negate a, negate b, negate d] ++ [row "#endif" [] true]
+  end let end let end let
+end function
+
+function reproDefineCopies (u :: Unit) -> List Text is
+  ["{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\nimport Data.Void (absurd)\nf = absurd\n\ng :: Int\ng = 1\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\nimport Data.Void (absurd)\nf = absurd\n\ng :: Int\ng = 1\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\n\n\ng :: Int\ng = 1\n"]
+end function
+
+function reproGuardCopies (u :: Unit) -> List Text is
+  ["{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\na = 1\n\n\n\n\nc = 3\n\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\n\nb = 2\n\n\nc = 3\n\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\na = 1\n\n\n\n\nc = 3\n\n"]
+end function
+
+function reproDefsCopies (u :: Unit) -> List Text is
+  ["{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\n\na = 1\n\n\n\n\n\nc = 3\n\n\n\nd = 4\n\n\n\n\n\nf = 6\n\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\n\na = 1\n\n\nb = 2\n\n\n\n\n\n\nd = 4\n\n\n\n\n\nf = 6\n\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\n\na = 1\n\n\nb = 2\n\n\n\n\n\n\nd = 4\n\n\n\n\n\nf = 6\n\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\n\n\n\n\nb = 2\n\n\n\n\n\n\nd = 4\n\n\n\n\n\nf = 6\n\n"]
+end function
+
+function reproElifdefCopies (u :: Unit) -> List Text is
+  ["{-# LANGUAGE CPP #-}\nmodule M where\n\nf = 1\n\n\n\n\n\n\n\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\ng = 2\n\n\n\n\n\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\n\n\nk = 4\n\n",
+   "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\nh = 3\n\n\n\n"]
+end function
+
+-- An environment from lines such as `A=1`, `undef B`, `package base=4.18.0`
+-- is the callers'; here, the few the laws below need.
+function withName (n :: Text) (v :: Integer) (env :: Env) -> Env is env with names = prelude.put n (wp.definedAs v) env.names end function
+
+function noNames (u :: Unit) -> Env is completed (emptyEnv unitValue) end function
+
+function base418 (u :: Unit) -> Env is completed ((emptyEnv unitValue) with versions = prelude.put "base" [4, 18, 0] (prelude.keyValOf [])) end function
+
+-- ---------------------------------------------------------------------------
+-- What the harness says of a drawn module (next cycle 7; review 9, N5),
+-- so that a change to `pick` or to a model cannot empty a law quietly.
+
+function pathTexts (rs :: List Row) (t :: Text) -> List Text is
+  first matching case of rs :
+    when Nil then []
+    when Cons r rest then
+      (if r.reads && ownText r.terms = t then [conditionText (prelude.take (prelude.length r.terms - 1) r.terms)] else [] end if) ++ pathTexts rest t
+  end case
+end function
+
+function severalIn (ts :: List Text) -> Bool is
+  first matching case of ts : when Nil then false when Cons t rest then prelude.any (differsFrom t) rest end case
+end function
+
+function differsFrom (a :: Text) (b :: Text) -> Bool is a != b end function
+
+function twoPathsOf (rs :: List Row) (t :: Text) -> Bool is severalIn (pathTexts rs t) end function
+
+-- Some term is read by two directives that stand on different paths: the
+-- shape of review 7's and review 8's blockers.
+function readOnTwoPaths (rs :: List Row) -> Bool is prelude.any (twoPathsOf rs) (ownTexts rs []) end function
+
+-- Cycle 4's rule gives other copies than the walk's.
+function oldRuleDiffers (rs :: List Row) -> Bool is oldCopies rs != copiesOfRows rs end function
+
+-- On some walk a directive is decided by a definition of the file.
+function fileDecides (rs :: List Row) (w :: Walk) (asg :: KeyVal Text Integer) (line :: Integer) -> Bool is
+  first matching case of rs :
+    when Nil then false
+    when Cons r rest then
+      (first matching case of readingAt w r line :
+        when NotRead then fileDecides rest (after w r false) asg (line + 1)
+        when ByFile v then true
+        when ByTerm l then
+          (if valued asg l.text then fileDecides rest (after w r (litTrue asg l)) asg (line + 1)
+           else fileDecides rest (after w r (!l.negated)) (prelude.put l.text 1 asg) (line + 1)
+                  || fileDecides rest (after w r l.negated) (prelude.put l.text 0 asg) (line + 1) end if)
+      end case)
+  end case
+end function
+
+function fileDecidesSome (rs :: List Row) -> Bool is fileDecides rs (startWalk unitValue) (prelude.keyValOf []) 1 end function
+
+function hasElifdef (rs :: List Row) -> Bool is
+  first matching case of rs : when Nil then false when Cons r rest then prelude.startsWith r.text "#elifdef" || prelude.startsWith r.text "#elifndef" || hasElifdef rest end case
+end function
+
+function severalBuilds (rs :: List Row) -> Bool is buildCount rs >= 8 end function
+
+-- ---------------------------------------------------------------------------
 -- The reference agrees with itself.
 
 function newlines (t :: Text) (i :: Integer) -> Integer is
@@ -760,16 +1328,22 @@ law "|every copy has the source's line count, and an environment's build is one 
     every build. Beyond the cap there is one copy, the first build's.
     Next cycle 6: also for the third model (free nesting), and there and
     in the second model for every one of the 64 environments over the
-    three names, not for one drawn."
+    three names, not for one drawn. Next cycle 7: what an environment
+    keeps is the preprocessor's own walk with its macro table
+    (`buildText`), so in the third model also where the file defines or
+    undefines a name; and on the first and second model, which define
+    nothing, that walk keeps exactly the lines whose written path holds
+    (`pathBuildText`, cycle 6's reading)."
   end description
   definition :
     for all (seed :: Integer) (se :: Integer) =>
       (let m = moduleOf seed in
         prelude.all (sameLength (prelude.length (rowsOf m))) (copies m)
-          && (if overCap m then copies m = [firstCopy m] else inList (copies m) (buildOf (buildEnv se m) m) end if) end let)
+          && (if overCap m then copies m = [firstCopy m] else inList (copies m) (buildOf (buildEnv se m) m) end if)
+          && pathBuildText (buildEnv se m) (rowsOf m) = buildOf (buildEnv se m) m end let)
         && (let t = tangle seed in
           prelude.all (sameLength (prelude.length t)) (copiesOfRows t) && !(overCapRows t) && inList (copiesOfRows t) (buildText (tangleEnv se) t)
-            && poolBuildsIn t (copiesOfRows t) 64 end let)
+            && poolBuildsIn t (copiesOfRows t) 64 && pathBuildText (tangleEnv se) t = buildText (tangleEnv se) t end let)
         && (let w = weave seed in
           prelude.all (sameLength (prelude.length w)) (copiesOfRows w) && !(overCapRows w) && poolBuildsIn w (copiesOfRows w) 64 end let)
     end for all
@@ -826,7 +1400,12 @@ law "|the builds are exactly what the preprocessor keeps under every assignment 
     kept. So no build is missing (the defect of cycle 4's rule), none is
     invented, and none stands twice. HCP-1 holds only that an
     environment's build is among the copies, for the environments it
-    tries; this is an equality, over every assignment."
+    tries; this is an equality, over every assignment. Next cycle 7
+    (review 9, B2 and S2): half the modules of the third model hold
+    `#define` and `#undef` lines of the three names, under any nesting,
+    and `#elifdef` and `#elifndef` arms; a directive the file's
+    definitions decide is no term on that walk, and the two routes must
+    still give the same copies."
   end description
   definition :
     for all (seed :: Integer) =>
@@ -862,6 +1441,84 @@ law "|review 8's three sources: a term whose later directive is guarded by a ter
     && everyCopies (reproTail unitValue) = reproTailCopies unitValue
     && buildCount (reproElif unitValue) = 5 && buildCount (reproLost unitValue) = 7 && buildCount (reproTail unitValue) = 7
     && inList (copiesOfRows (reproLost unitValue)) "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\n\n\n\nb = 2\n\n\nc = 3\n"
+  end definition
+end law
+
+law "|review 9: a name the file defines or undefines is the file's, not the environment's| is
+  id: "HCP-6"
+  description :
+    "Review 9, B2, and rule C8, to the letter. (1) `#define HAS_VOID 1`
+    under `#if MIN_VERSION_base(4,8,0)`, then `#ifdef HAS_VOID`: three
+    builds. With the version test true the file defines the name and the
+    group is kept, with no question; with it false the name is the
+    environment's, defined or not. Cycle 6 had four builds, asked the
+    environment for HAS_VOID in each, and with base 4.18 given and every
+    other name undefined dropped `f`, which the preprocessor keeps: the
+    first copy is what it keeps. (2) The guard `#ifndef LIMIT` /
+    `#define LIMIT 1`: where the build gives no LIMIT it is 1, and the
+    `#if LIMIT` and `#ifdef LIMIT` after it are decided. (3) A definition
+    with no body is defined; an `#undef` undefines, also a name the
+    environment gives; an integer body is the name's value, a comment
+    after it apart; a name the file undefined after defining it is
+    undefined. (4) Three directives the file reaches and does not
+    decide: each is a choice of its own, sixteen builds with the
+    version macro's own two. In every source the copies are those of
+    every assignment of the terms, and what one environment keeps is
+    the preprocessor's own walk with its macro table (`buildText`), which
+    has no rule of choice in it. The copies were printed by
+    next-cycle-7/tools/cpp7.py, which shares no code with this
+    reference, and each environment's text there was compared with the
+    real cpp's."
+  end description
+  definition :
+    sourceOf (reproDefine unitValue) = "{-# LANGUAGE CPP #-}\nmodule M where\n#if MIN_VERSION_base(4,8,0)\n#define HAS_VOID 1\n#endif\n#ifdef HAS_VOID\nimport Data.Void (absurd)\nf = absurd\n#endif\ng :: Int\ng = 1\n"
+    && copiesOfRows (reproDefine unitValue) = reproDefineCopies unitValue
+    && everyCopies (reproDefine unitValue) = reproDefineCopies unitValue
+    && buildCount (reproDefine unitValue) = 3
+    && inList (prelude.take 1 (reproDefineCopies unitValue)) (buildText (base418 unitValue) (reproDefine unitValue))
+    && sourceOf (reproGuard unitValue) = "{-# LANGUAGE CPP #-}\nmodule M where\n#ifndef LIMIT\n#define LIMIT 1\n#endif\n#if LIMIT\na = 1\n#else\nb = 2\n#endif\n#ifdef LIMIT\nc = 3\n#endif\n"
+    && copiesOfRows (reproGuard unitValue) = reproGuardCopies unitValue
+    && everyCopies (reproGuard unitValue) = reproGuardCopies unitValue
+    && inList (prelude.take 1 (reproGuardCopies unitValue)) (buildText (noNames unitValue) (reproGuard unitValue))
+    && inList (prelude.take 1 (prelude.drop 1 (reproGuardCopies unitValue))) (buildText (withName "LIMIT" 0 (noNames unitValue)) (reproGuard unitValue))
+    && inList (prelude.take 1 (reproGuardCopies unitValue)) (buildText (withName "LIMIT" 2 (noNames unitValue)) (reproGuard unitValue))
+    && sourceOf (reproDefs unitValue) = "{-# LANGUAGE CPP #-}\nmodule M where\n#if A\n#define HAS_X\n#else\n#undef HAS_Y\n#endif\n#ifdef HAS_X\na = 1\n#endif\n#ifndef HAS_Y\nb = 2\n#endif\n#ifdef HAS_Y\nc = 3\n#endif\n#define N 0x10 /* sixteen */\n#if N == 16 && defined(N)\nd = 4\n#endif\n#undef N\n#if N\ne = 5\n#else\nf = 6\n#endif\n"
+    && copiesOfRows (reproDefs unitValue) = reproDefsCopies unitValue
+    && everyCopies (reproDefs unitValue) = reproDefsCopies unitValue
+    && inList (prelude.take 1 (prelude.drop 1 (reproDefsCopies unitValue))) (buildText (withName "A" 1 (noNames unitValue)) (reproDefs unitValue))
+    && inList (prelude.take 1 (reproDefsCopies unitValue)) (buildText (withName "HAS_Y" 1 (withName "A" 1 (noNames unitValue))) (reproDefs unitValue))
+    && inList (prelude.take 1 (prelude.drop 3 (reproDefsCopies unitValue))) (buildText (withName "HAS_Y" 1 (noNames unitValue)) (reproDefs unitValue))
+    && inList (prelude.take 1 (prelude.drop 2 (reproDefsCopies unitValue))) (buildText (withName "N" 5 (withName "HAS_X" 1 (noNames unitValue))) (reproDefs unitValue))
+    && sourceOf (reproUndecided unitValue) = "{-# LANGUAGE CPP #-}\nmodule M where\n#define HAS 1\n#if HAS && FOO\na = 1\n#endif\n#define EMPTY\n#if EMPTY\nb = 2\n#endif\n#ifndef MIN_VERSION_base\n#define MIN_VERSION_base(x,y,z) 1\n#endif\n#if MIN_VERSION_base(4,8,0)\nc = 3\n#endif\nd = 4\n"
+    && buildCount (reproUndecided unitValue) = 16
+    && copiesOfRows (reproUndecided unitValue) = everyCopies (reproUndecided unitValue)
+    && termsIn (reproUndecided unitValue) []
+         = ["HAS && FOO", wp.fileDefinedTerm 4, "EMPTY", wp.fileDefinedTerm 8, "defined(MIN_VERSION_base)", wp.fileDefinedTerm 11,
+            "MIN_VERSION_base(4,8,0)", wp.fileDefinedTerm 14]
+  end definition
+end law
+
+law "|#elifdef and #elifndef are #elif defined and #elif not defined| is
+  id: "HCP-7"
+  description :
+    "Review 9, S2. `#elifdef N` and `#elifndef N` (C23; GCC 12 and later
+    read them in every mode) are later arms whose term is `defined(N)`,
+    the second negated: the one term `#ifdef N` and `#ifndef N` have.
+    Cycle 6 did not know the words, took the lines for directives that
+    do nothing, and merged their arms into the arm before: with A=0 and
+    B defined it kept `k`, where the preprocessor keeps `g`. Four
+    builds, in the order of the terms' values, true first: `f`; `g`;
+    then C defined, which fails `#elifndef C` and leaves the `#else`
+    (`k`); then `h`."
+  end description
+  definition :
+    sourceOf (reproElifdef unitValue) = "{-# LANGUAGE CPP #-}\nmodule M where\n#if A\nf = 1\n#elifdef B\ng = 2\n#elifndef C\nh = 3\n#else\nk = 4\n#endif\n"
+    && copiesOfRows (reproElifdef unitValue) = reproElifdefCopies unitValue
+    && everyCopies (reproElifdef unitValue) = reproElifdefCopies unitValue
+    && inList (prelude.take 1 (prelude.drop 1 (reproElifdefCopies unitValue))) (buildText (withName "B" 1 (withName "A" 0 (noNames unitValue))) (reproElifdef unitValue))
+    && inList (prelude.take 1 (prelude.drop 3 (reproElifdefCopies unitValue))) (buildText (withName "A" 0 (noNames unitValue)) (reproElifdef unitValue))
+    && inList (prelude.take 1 (prelude.drop 2 (reproElifdefCopies unitValue))) (buildText (withName "C" 0 (noNames unitValue)) (reproElifdef unitValue))
+    && conditionText [negate (termOf true 0 "A"), negate (termOf false 5 "B"), termOf false 6 "C"] = "!(A) && !(defined(B)) && !(defined(C))"
   end definition
 end law
 
@@ -905,5 +1562,36 @@ function wideRows (n :: Integer) -> List Row is
   if n <= 0 then codeRows ["module W where"] []
   else wideRows (n - 1) ++ oneGroup [] 0 ("W" ++ prelude.textOf n) ["w" ++ prelude.textOf n ++ " = " ++ prelude.textOf n] false [] end if
 end function
+
+-- ---------------------------------------------------------------------------
+-- Next cycle 7 (review 9, N5): floors on what the drawn modules hold. The
+-- laws above are equalities over models; a change to `pick`, `mix` or a
+-- model that stopped drawing the shapes the equalities are for would
+-- leave every one of them green and empty. Each floor is half, or less,
+-- of the share measured over the law's own cases (design.md, section 9).
+harness assayxport.haskell.cpp.testing for assayxport.haskell.cpp is
+tags cpp
+parallel
+order random
+timeout 5 min
+
+for law "|every copy has the source's line count, and an environment's build is one of the copies|
+classify (weaveNew seed) as "third model: with definitions and #elifdef"
+classify (readOnTwoPaths (tangle seed)) as "second model: a term read on two paths"
+classify (severalBuilds (tangle seed)) as "second model: eight builds or more"
+cover 60% "third model: a term read on two paths" when readOnTwoPaths (weave seed)
+cover 15% "third model: the file decides a directive" when fileDecidesSome (weave seed)
+end for law
+
+for law "|the builds are exactly what the preprocessor keeps under every assignment of the terms|
+classify (weaveNew seed) as "third model: with definitions and #elifdef"
+cover 60% "third model: a term read on two paths" when readOnTwoPaths (weave seed)
+cover 40% "third model: cycle 4's rule gives other copies" when oldRuleDiffers (weave seed)
+cover 15% "third model: the file decides a directive" when fileDecidesSome (weave seed)
+cover 15% "third model: an #elifdef or #elifndef" when hasElifdef (weave seed)
+cover 40% "third model: eight builds or more" when severalBuilds (weave seed)
+end for law
+
+end harness
 
 end unit

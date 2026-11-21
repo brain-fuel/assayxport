@@ -209,7 +209,8 @@ end law
 -- The decisions file (next-cycle-3/design.md), observed through the CLI:
 --   ax when init <root> --lang haskell
 --   ax assay <root> --lang haskell --stdout [--when-no-discovery] ...
--- `<root>/.assayxport/when`, when it exists, is read as the first
+-- `<root>/assayxport.when` (next cycle 7; it was `<root>/.assayxport/when`),
+-- when it exists, is read as the first
 -- `--when-file`, before those given: so the order of reading is the
 -- discovered file, every `--when-file`, every `--when`, and a later line
 -- replaces an earlier one. `--when-no-discovery` leaves the file unread.
@@ -238,6 +239,24 @@ end law
 --   * `--quiet` silences every `ax: warning: ` line and the lines to
 --     paste; it changes neither the manifest nor the exit status, and a
 --     usage error is still printed.
+--
+-- Next cycle 7 (next-cycle-7/design.md, sections 3, 5, 6 and 7; review 9,
+-- B1, S1, N3, N4):
+--   * The decisions file is `<root>/assayxport.when`, in the root beside
+--     `assayxport.json`. Nothing under `.assayxport/` is read as one: every
+--     path there is a shard's, made from a source path.
+--   * Discovery never makes an error of a tree that assays without it,
+--     unless a decisions FILE is there and cannot be read. A directory at
+--     the decisions path is the user's directory, not a decisions file:
+--     the run is the run with `--when-no-discovery` (it was a usage
+--     error), and `ax when init` there is a usage error and writes
+--     nothing.
+--   * `ax serve` reads the decisions file at its first pass too, in its
+--     default mode and with `--no-watch`, as `ax assay` does.
+--   * `ax watch` and `ax serve` start a pass for a changed `.hs` file
+--     exactly when the extractor reads that path (`hx.skippedPath`).
+--   * A root that is a symbolic link to a directory is read as that
+--     directory. Only the root: a link inside the tree is not followed.
 
 type WhenRun is a record{
   packages :: List Package
@@ -297,6 +316,27 @@ ability HaskellWhen is
   -- result is as `assayInto`'s; a first pass that fails, fails with ax's
   -- message.
   watchInto :: Text -> Text -> List Text -> WhenRun fails with ExtractFailure
+  -- The first pass of `ax serve <root> --lang haskell --port <a free
+  -- port> <args>` (next cycle 7). The handler starts the command, asks
+  -- `GET /api/status` until it says the assay is complete (or the command
+  -- says the assay failed), reads `GET /api/index` and, for each package
+  -- of it, `GET /api/shard?path=<its shard>`, and stops the command. The
+  -- packages are those of the index and its shards, put together as
+  -- `--stdout` prints them; `warnings` and `paste` are as for `assayWith`,
+  -- from the command's stderr up to then. A first pass that fails, fails
+  -- with ax's message.
+  serveFirst :: Text -> List Text -> WhenRun fails with ExtractFailure
+  -- `ax watch <root> --lang haskell --out <out> --no-html` (next cycle
+  -- 7). The handler starts the command and waits for its first pass.
+  -- Then, for each path of the list in turn (relative to <root>, its
+  -- directories made), it writes a new Haskell module there and says
+  -- whether a pass followed: true as soon as ax reports one (waiting up
+  -- to 60 seconds), false when none was reported in 4 seconds (the
+  -- command looks for changes every 0.7 seconds). It stops the command.
+  watchPasses :: Text -> Text -> List Text -> List Bool
+  -- Make <link> a symbolic link to the directory <target> (next cycle 7;
+  -- lawspec.host has no such operation).
+  linkTo :: Text -> Text -> Unit
 end ability
 
 procedure cppRun (root :: Text) (args :: List Text) -> WhenRun uses FileSystem, HaskellWhen fails with ExtractFailure is
@@ -398,7 +438,7 @@ law "|haskell: with no --when the warning lists every name the module depends on
       = WhenRun record{ packages = (cppRun (directoryPath dir) []).packages ,
                         warnings = ["when: no value for ARG, EXPORT_K, FAST, LEGACY, MIN_VERSION_base, NO_T, OLD_Q, WIDE, WITH_Q, __GLASGOW_HASKELL__" ,
                                     "when: the call graph is incomplete until these names are decided" ,
-                                    "when: not yet in a decisions file: ARG, EXPORT_K, FAST, LEGACY, MIN_VERSION_base, NO_T, OLD_Q, WIDE, WITH_Q, __GLASGOW_HASKELL__; lines to paste into .assayxport/when follow"] ,
+                                    "when: not yet in a decisions file: ARG, EXPORT_K, FAST, LEGACY, MIN_VERSION_base, NO_T, OLD_Q, WIDE, WITH_Q, __GLASGOW_HASKELL__; lines to paste into assayxport.when follow"] ,
                         paste = cppBlocks unitValue}
     && sameRun (cppRun (directoryPath dir) []) (pureRun [] false)
     && c.normalForm (cppRun (directoryPath dir) []).packages = c.normalForm [fixtureCppPackage unitValue]
@@ -664,7 +704,7 @@ end law
 
 -- ---------------------------------------------------------------------------
 -- The decisions file (next-cycle-3/design.md): `ax when init`, the
--- discovered `.assayxport/when`, and the lines to paste.
+-- discovered `assayxport.when`, and the lines to paste.
 
 function decisionsFile (root :: Text) -> Text is root ++ "/" ++ wp.decisionsPath unitValue end function
 
@@ -785,7 +825,7 @@ law "|haskell: ax when init writes the starter decisions file, to the letter| fo
   description :
     "On the fixture's tree, with no decisions file: `ax when init` exits
     with status 0, prints nothing on stdout, says on stderr what it wrote,
-    and `<root>/.assayxport/when` holds exactly the header and the ten
+    and `<root>/assayxport.when` holds exactly the header and the ten
     blocks, each line ended by a newline. The blocks are those the checked
     definition gives for the fixture's expected manifest: extraction ran
     once, and the file is read off its manifest."
@@ -865,7 +905,7 @@ end law
 law "|haskell: the discovered decisions file is read as a when-file| for a :: TemporaryDirectory, b :: TemporaryDirectory is
   id: "HSX-19"
   description :
-    "A tree with `.assayxport/when` and no flag gives what the same tree
+    "A tree with `assayxport.when` and no flag gives what the same tree
     without it gives when the same lines are passed with `--when-file`:
     packages, warnings and lines to paste. With `--when-no-discovery` the
     file is not read: the run is that of the tree without it."
@@ -939,7 +979,7 @@ law "|haskell: a discovered decisions file that cannot be read is a usage error 
   id: "HSX-22"
   description :
     "As HSX-12 for a `--when-file`: the origin is the discovered file's
-    path, the root as given and `/.assayxport/when`. `ax when init` on
+    path, the root as given and `/assayxport.when`. `ax when init` on
     such a file exits with status 2 and the same message, prints nothing
     and leaves the file. `--when-no-discovery` does not read the file, so
     the assay runs. Changed in next cycle 6 (review 8, N3): the assay is
@@ -1025,7 +1065,7 @@ function flagBuild (u :: Unit) -> Text is "{-# LANGUAGE CPP #-}\nmodule M where\
 function flagWarnings (u :: Unit) -> List Text is
   ["when: no value for FLAG1",
    "when: the call graph is incomplete until these names are decided",
-   "when: not yet in a decisions file: FLAG1; lines to paste into .assayxport/when follow"]
+   "when: not yet in a decisions file: FLAG1; lines to paste into assayxport.when follow"]
 end function
 
 procedure flagTree (root :: Text) -> Unit uses FileSystem is
@@ -1041,7 +1081,7 @@ law "|haskell: the files written hold the build the names give; a missing name i
     nothing is warned. `--when FLAG2=1`, with `--no-html` and without:
     FLAG1 is still missing, the three warning lines say so, and the run
     is the `--stdout` run. Last, written into the root itself (where ax
-    writes when no `--out` is given), with a `.assayxport/when` that says
+    writes when no `--out` is given), with an `assayxport.when` that says
     `undef FLAG1`: the decisions file is read (the build without `foo`,
     no warning), with `--no-html` and without; and after ax has written
     its shards beside it the file holds the bytes it held (HSX-18 holds
@@ -1114,7 +1154,7 @@ law "|haskell: a decisions file with Windows line endings decides and lists as w
     ended with LF, which is the checked definitions' run for those lines;
     so does a file whose last line, an undecided one, ends with a lone CR
     or with no line end at all. The same bytes as the discovered
-    `.assayxport/when` give that run too; `ax when init` then prints
+    `assayxport.when` give that run too; `ax when init` then prints
     exactly the lines still to paste, and leaves the file's bytes, its
     carriage returns included, as they are."
   end description
@@ -1224,8 +1264,13 @@ law "|haskell: a root that is not a directory has no decisions file| for dir :: 
     `--when-no-discovery`, and no line of it starts with `when:`. In a
     directory whose `.assayxport` is a file, the decisions file cannot
     exist and counts as absent: the run is that of the tree without it.
-    A decisions path that is there and is a directory is still a usage
-    error that names it. `ax when init` on a root that is a file is a
+    Changed in next cycle 7 (review 9, B1): the file is
+    `<root>/assayxport.when`, so `.assayxport` being a file no longer
+    bears on it (the row stays: such a tree assays); and a decisions
+    path that is a directory is no decisions file: the run is the run
+    with `--when-no-discovery`, status 0 (it was a usage error, which is
+    how ax's own shard directory `.assayxport/when/` broke every later
+    run). `ax when init` on a root that is a file is a
     usage error: status 2, nothing printed, nothing written. (That a JAR
     is assayed with no flag is held by ax's own test of the command: a
     law cannot write a JAR's bytes.)"
@@ -1244,16 +1289,21 @@ law "|haskell: a root that is not a directory has no decisions file| for dir :: 
         assayExit (directoryPath dir ++ "/t") [])
       = assayExit (directoryPath dir ++ "/t") ["--when-no-discovery"]
     && (assayExit (directoryPath dir ++ "/t") []).status = 0
-    && (c.writeFile (directoryPath dir ++ "/u/.assayxport/when/x") (prelude.utf8 "x");
+    && (c.writeFile (decisionsFile (directoryPath dir ++ "/u") ++ "/x") (prelude.utf8 "x");
         c.writeSources (directoryPath dir ++ "/u") [SourceFile record{ path = "M.hs" , content = flagSource unitValue}];
-        (assayExit (directoryPath dir ++ "/u") []).status) = 2
-    && (assayExit (directoryPath dir ++ "/u") []).out = ""
-    && prelude.length (assayExit (directoryPath dir ++ "/u") []).errors = 1
-    && startsEach ("when: cannot read " ++ decisionsFile (directoryPath dir ++ "/u") ++ ": ") (assayExit (directoryPath dir ++ "/u") []).errors
+        assayExit (directoryPath dir ++ "/u") [])
+      = assayExit (directoryPath dir ++ "/u") ["--when-no-discovery"]
+    && (assayExit (directoryPath dir ++ "/u") []).status = 0
+    && !(prelude.any startsWhenError (assayExit (directoryPath dir ++ "/u") []).errors)
+    && whenInit (directoryPath dir ++ "/u")
+      = InitRun record{ status = 2 , out = [] , notes = ["when: cannot write " ++ decisionsFile (directoryPath dir ++ "/u") ++ ": it is a directory"]}
   end definition
 end law
 
 function startsWhen (t :: Text) -> Bool is prelude.startsWith t "when:" end function
+
+-- An error line about the decisions (a warning line starts `warning: `).
+function startsWhenError (t :: Text) -> Bool is prelude.startsWith t "when: cannot" end function
 
 procedure flagDecided (root :: Text) (lines :: List Text) -> Unit uses FileSystem is
   flagTree root; writeDecisions root lines
@@ -1267,7 +1317,7 @@ law "|haskell: ax diff reads each source's decisions file| for a :: TemporaryDir
   id: "HSX-38"
   description :
     "Review 8, S1. A source that is a directory is compared as `ax
-    assay` prints it: with its `.assayxport/when` read. Source a is the
+    assay` prints it: with its `assayxport.when` read. Source a is the
     module whose `foo` stands under `#ifdef FLAG1`, with a decisions file
     that says `undef FLAG1`; source b is that build's text. They do not
     differ (`--mode drift --exit-code`: status 0). With
@@ -1301,8 +1351,7 @@ law "|haskell: ax watch reads the decisions file as ax assay does| for dir :: Te
     that writes its files: with the decisions file read (the build
     without `foo`, nothing warned, nothing to paste), and with
     `--when-no-discovery` (`foo` under its condition, the three warning
-    lines, the lines to paste). `ax serve` runs the same extraction; it
-    is held by ax's own tests, as a law cannot stop a server."
+    lines, the lines to paste). `ax serve` is HSX-44 (next cycle 7)."
   end description
   definition :
     (flagDecided (directoryPath dir) ["undef FLAG1"]; watchInto (directoryPath dir) (directoryPath out) [])
@@ -1384,6 +1433,192 @@ end law
 
 -- Parser gaps: see the extract unit's laws of the same names, and
 -- next-cycle-2/design.md, section 12.
+
+-- ---------------------------------------------------------------------------
+-- Next cycle 7 (next-cycle-7/design.md; review 9).
+
+procedure whenTree (root :: Text) -> Unit uses FileSystem is
+  c.writeSources root [SourceFile record{ path = "M.hs" , content = flagSource unitValue},
+                       SourceFile record{ path = "when/X.hs" , content = "module X where\nx = 1\n"},
+                       SourceFile record{ path = wp.decisionsPath unitValue ++ "/Y.hs" , content = "module Y where\ny = 2\n"}]
+end procedure
+
+procedure whenTreeDecided (root :: Text) (lines :: List Text) -> Unit uses FileSystem is
+  c.writeSources root [SourceFile record{ path = "M.hs" , content = flagSource unitValue},
+                       SourceFile record{ path = "when/X.hs" , content = "module X where\nx = 1\n"}];
+  writeDecisions root lines
+end procedure
+
+law "|haskell: a source directory named like the decisions file, or like the place it once had, does not break the next run| for a :: TemporaryDirectory, b :: TemporaryDirectory, d :: TemporaryDirectory is
+  id: "HSX-43"
+  description :
+    "Review 9, B1. The decisions file stood at `.assayxport/when`, a
+    path in the namespace of the shards: a tree with a source directory
+    `when/` assayed once, its shard `.assayxport/when/X.hs.json` made
+    `.assayxport/when` a directory, and every later `assay`, `watch`,
+    `serve`, `diff` and `when init` of that tree failed with status 2
+    (`cannot read ... is a directory`); with a decisions file present,
+    the shard could not be written. The file now stands in the root, at
+    a path no shard has. (a) A tree with `when/X.hs`, and with a source
+    directory named as the decisions file is: the assay that writes
+    into its own root runs twice, and the second run is the first; so
+    is `ax watch`'s pass, and the run on stdout exits 0; all three
+    modules are there. A directory at the decisions path is no
+    decisions file, and `ax when init` says it cannot write. (b) The
+    same tree with a decisions file: both runs are the run on stdout,
+    the file decides (`foo` is gone, nothing is warned), and its bytes
+    are as they were. (d) A file left at the old place is not read: the
+    run is the run with `--when-no-discovery` (decision O101: the
+    feature was never in a released ax, so nothing is migrated)."
+  end description
+  definition :
+    (whenTree (directoryPath a); assayInto (directoryPath a) (directoryPath a) ["--no-html"])
+      = assayInto (directoryPath a) (directoryPath a) ["--no-html"]
+    && prelude.length (assayInto (directoryPath a) (directoryPath a) ["--no-html"]).packages = 3
+    && watchInto (directoryPath a) (directoryPath a) [] = assayInto (directoryPath a) (directoryPath a) ["--no-html"]
+    && (assayExit (directoryPath a) []).status = 0
+    && assayWith (directoryPath a) [] = assayWith (directoryPath a) ["--when-no-discovery"]
+    && (assayWith (directoryPath a) []).warnings = flagWarnings unitValue
+    && whenInit (directoryPath a)
+      = InitRun record{ status = 2 , out = [] , notes = ["when: cannot write " ++ decisionsFile (directoryPath a) ++ ": it is a directory"]}
+    && (whenTreeDecided (directoryPath b) ["undef FLAG1"]; assayInto (directoryPath b) (directoryPath b) ["--no-html"])
+      = assayInto (directoryPath b) (directoryPath b) ["--no-html"]
+    && assayInto (directoryPath b) (directoryPath b) ["--no-html"] = assayWith (directoryPath b) []
+    && (assayWith (directoryPath b) []).warnings = []
+    && prelude.length (assayWith (directoryPath b) []).packages = 2
+    && assayWith (directoryPath b) [] != assayWith (directoryPath b) ["--when-no-discovery"]
+    && readBytes (decisionsFile (directoryPath b)) = fileBytes ["undef FLAG1"]
+    && (flagTree (directoryPath d); c.writeFile (directoryPath d ++ "/.assayxport/when") (prelude.utf8 "undef FLAG1\n"); assayWith (directoryPath d) [])
+      = assayWith (directoryPath d) ["--when-no-discovery"]
+    && (assayWith (directoryPath d) []).warnings = flagWarnings unitValue
+  end definition
+end law
+
+law "|haskell: ax serve reads the decisions file at its first pass, in every mode| for dir :: TemporaryDirectory is
+  id: "HSX-44"
+  description :
+    "Review 9, S1. In its default mode (the lazy explorer) `ax serve`
+    ran its first pass with no decisions: for a tree whose decisions
+    file says `undef FLAG1` it served `foo` under its condition and
+    printed no warning, where `ax assay` on the same tree prints the
+    build; with `--no-watch` that pass is its only one. Cycle 6 held
+    `serve` by a test of ax that called the later passes' function. The
+    first pass of `ax serve`, in its default mode, with `--no-watch`,
+    with `--no-wasm` and with both, serves the manifest `ax assay`
+    prints, with the same warnings and lines to paste: with the
+    decisions file read, and with `--when-no-discovery`."
+  end description
+  definition :
+    (flagDecided (directoryPath dir) ["undef FLAG1"]; serveFirst (directoryPath dir) []) = assayWith (directoryPath dir) []
+    && serveFirst (directoryPath dir) ["--no-watch"] = assayWith (directoryPath dir) []
+    && serveFirst (directoryPath dir) ["--no-wasm"] = assayWith (directoryPath dir) []
+    && serveFirst (directoryPath dir) ["--no-wasm", "--no-watch"] = assayWith (directoryPath dir) []
+    && (assayWith (directoryPath dir) []).warnings = [] && (assayWith (directoryPath dir) []).paste = []
+    && serveFirst (directoryPath dir) ["--when-no-discovery"] = assayWith (directoryPath dir) ["--when-no-discovery"]
+    && serveFirst (directoryPath dir) ["--no-watch", "--when-no-discovery"] = assayWith (directoryPath dir) ["--when-no-discovery"]
+    && serveFirst (directoryPath dir) ["--no-wasm", "--when-no-discovery"] = assayWith (directoryPath dir) ["--when-no-discovery"]
+    && (assayWith (directoryPath dir) ["--when-no-discovery"]).warnings = flagWarnings unitValue
+    && serveFirst (directoryPath dir) ["--no-watch"]
+      = (flagBuilt (directoryPath dir); WhenRun record{ packages = extract (directoryPath dir) , warnings = [] , paste = []})
+  end definition
+end law
+
+function watchedPaths (u :: Unit) -> List Text is
+  ["dist-newstyle/build/x86_64-linux/ghc-9.8.1/p-0.1/build/autogen/Paths_p.hs", "A.hs", "dist/build/autogen/B.hs", ".stack-work/dist/C.hs",
+   "src/dist/D.hs", "src/E.hs", "src/dist-newstyle/F.hs", "distant/G.hs", "src/.hidden/H.hs"]
+end function
+
+function readPaths (ps :: List Text) -> List Bool is
+  first matching case of ps : when Nil then [] when Cons p rest then [!(hx.skippedPath p)] ++ readPaths rest end case
+end function
+
+law "|haskell: ax watch and ax serve start a pass for a changed Haskell file exactly when the extractor reads it| for dir :: TemporaryDirectory, out :: TemporaryDirectory is
+  id: "HSX-45"
+  description :
+    "Review 9, N3. `.hs` was added to the watched files in cycle 6, and
+    the watcher's list of directories it skips is its own: every `cabal
+    build` rewrites `dist-newstyle/.../autogen/Paths_*.hs`, and each
+    rewrite started a pass that read nothing new. The watcher and the
+    extractor now have one answer to 'is this file read': for each path
+    in turn, a new module written there is followed by a pass exactly
+    when the extractor's walk does not skip the path
+    (`hx.skippedPath`: a dot-directory, `dist-newstyle/`, `dist/`). The
+    list holds both kinds, and a directory whose name only starts like
+    `dist`. `ax serve` waits for changes with the same function (an ax
+    test holds that the two commands share it)."
+  end description
+  definition :
+    (flagTree (directoryPath dir); watchPasses (directoryPath dir) (directoryPath out) (watchedPaths unitValue))
+      = [false, true, false, false, false, true, false, true, false]
+    && readPaths (watchedPaths unitValue) = [false, true, false, false, false, true, false, true, false]
+  end definition
+end law
+
+law "|haskell: a root that is a symbolic link to a directory is read as that directory| for dir :: TemporaryDirectory is
+  id: "HSX-46"
+  description :
+    "Review 9, N4. Rule D1 says a symbolic link to a directory is a
+    directory, and the decisions file was looked for through it; the
+    walk did not follow the link, and the run printed no symbol. For
+    the Haskell extractor the root is resolved before it is walked: the
+    run on the link is the run on the directory, decisions file
+    included. Only the root: links inside the tree are not followed, as
+    before. (The other languages' walks have the same gap, and are not
+    this contribution's: decision O108.)"
+  end description
+  definition :
+    (flagDecided (directoryPath dir ++ "/real") ["undef FLAG1"]; linkTo (directoryPath dir ++ "/link") (directoryPath dir ++ "/real");
+     assayWith (directoryPath dir ++ "/link") [])
+      = assayWith (directoryPath dir ++ "/real") []
+    && prelude.length (assayWith (directoryPath dir ++ "/link") []).packages = 1
+    && (assayWith (directoryPath dir ++ "/link") []).warnings = []
+    && assayWith (directoryPath dir ++ "/link") ["--when-no-discovery"] = assayWith (directoryPath dir ++ "/real") ["--when-no-discovery"]
+    && (assayWith (directoryPath dir ++ "/link") ["--when-no-discovery"]).warnings = flagWarnings unitValue
+  end definition
+end law
+
+function firstOf (ts :: List Text) -> Text is prelude.join "" (prelude.take 1 ts) end function
+
+function secondOf (ts :: List Text) -> Text is prelude.join "" (prelude.take 1 (prelude.drop 1 ts)) end function
+
+function commentSource (u :: Unit) -> Text is "{-# LANGUAGE CPP #-}\nmodule M where\n#if A /* the new\n   api */\nf = 1\n#else\ng = 2\n#endif\n" end function
+
+law "|haskell: review 9's sources: the binary prints the build where the file defines the name, for #elifdef, and for a comment over two lines| for dir :: TemporaryDirectory is
+  id: "HSX-47"
+  description :
+    "Review 9, B2, S2 and N1, on the binary. (B2) The review's run:
+    `--when 'package base=4.18.0' --when-complete` on the source that
+    defines HAS_VOID under the version test printed `g` alone, as
+    certain; the preprocessor keeps the import and `f`. The run is the
+    extraction of that text, nothing warned; and without
+    `--when-complete` too, as the file's own name is not asked for. A
+    default behind `#ifndef`, with nothing given. A directive the file
+    reaches and does not decide is named in a warning, and its facts
+    stay. (S2) With A=0 and B defined, `g`. (N1) With A=1, `f`, and no
+    symbol made of the comment's second line. The texts are written
+    out, or are the copies HCP-6 and HCP-7 list."
+  end description
+  definition :
+    sameRun (sourceRun (directoryPath dir) (cpp.sourceOf (cpp.reproDefine unitValue)) ["--when", "package base=4.18.0", "--when-complete"])
+            (builtRun (directoryPath dir) (firstOf (cpp.reproDefineCopies unitValue)))
+    && sameRun (sourceRun (directoryPath dir) (cpp.sourceOf (cpp.reproDefine unitValue)) ["--when", "package base=4.18.0"])
+               (builtRun (directoryPath dir) (firstOf (cpp.reproDefineCopies unitValue)))
+    && firstOf (cpp.reproDefineCopies unitValue) = "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\nimport Data.Void (absurd)\nf = absurd\n\ng :: Int\ng = 1\n"
+    && sameRun (sourceRun (directoryPath dir) (cpp.sourceOf (cpp.reproGuard unitValue)) ["--when-complete"])
+               (builtRun (directoryPath dir) (firstOf (cpp.reproGuardCopies unitValue)))
+    && sameRun (sourceRun (directoryPath dir) (cpp.sourceOf (cpp.reproGuard unitValue)) ["--when", "LIMIT=0"])
+               (builtRun (directoryPath dir) (secondOf (cpp.reproGuardCopies unitValue)))
+    && (sourceRun (directoryPath dir) (cpp.sourceOf (cpp.reproUndecided unitValue)) ["--when", "package base=4.18.0", "--when", "FOO=1"]).warnings
+         = ["when: cannot evaluate: (" ++ wp.fileDefinedTerm 4 ++ ")", "when: cannot evaluate: (" ++ wp.fileDefinedTerm 8 ++ ")"]
+    && sameRun (sourceRun (directoryPath dir) (cpp.sourceOf (cpp.reproElifdef unitValue)) ["--when", "A=0", "--when", "B=1", "--when", "C=0", "--when-complete"])
+               (builtRun (directoryPath dir) (secondOf (cpp.reproElifdefCopies unitValue)))
+    && secondOf (cpp.reproElifdefCopies unitValue) = "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\ng = 2\n\n\n\n\n\n"
+    && sameRun (sourceRun (directoryPath dir) (commentSource unitValue) ["--when", "A=1", "--when-complete"])
+               (builtRun (directoryPath dir) "{-# LANGUAGE CPP #-}\nmodule M where\n\n\nf = 1\n\n\n\n")
+    && sameRun (sourceRun (directoryPath dir) (commentSource unitValue) ["--when", "A=0"])
+               (builtRun (directoryPath dir) "{-# LANGUAGE CPP #-}\nmodule M where\n\n\n\n\ng = 2\n\n")
+  end definition
+end law
 
 law "|haskell: parser gap, the extended grammar: conforms on the fixtures| for dir :: TemporaryDirectory is
   id: "HSX-GAP-GEXT"
@@ -1522,6 +1757,21 @@ timeout 10 min
 use fileSeeds for seed
 cover 50% "lines to paste" when prelude.length (pureRunWith (fileLinesOf seed) [] false).paste > 0
 cover 10% "a listed name is missing" when prelude.length (wp.unlisted (wn.applyWhen (readOr (fileLinesOf seed)) [fixtureCppPackage unitValue]).missing (wn.listedNames (fileLinesOf seed))) < prelude.length (wn.applyWhen (readOr (fileLinesOf seed)) [fixtureCppPackage unitValue]).missing
+end for law
+
+-- Next cycle 7 (review 9, N5): floors on the drawn modules of HSX-42 (the
+-- shares measured are in next-cycle-7/design.md, section 9).
+for law "|haskell: on free nesting the binary, given every name, prints the build|
+classify (cpp.weaveNew seed) as "with definitions and #elifdef"
+cover 60% "a term read on two paths" when cpp.readOnTwoPaths (cpp.weave seed)
+cover 40% "cycle 4's rule gives other copies" when cpp.oldRuleDiffers (cpp.weave seed)
+cover 15% "the file decides a directive" when cpp.fileDecidesSome (cpp.weave seed)
+end for law
+
+-- Next cycle 7: each row of the watch law waits on a running command (a
+-- pass, or four seconds with none).
+for law "|haskell: ax watch and ax serve start a pass for a changed Haskell file exactly when the extractor reads it|
+timeout 10 min
 end for law
 
 for law "|haskell: parser gap, the extended grammar: conforms on the fixtures|

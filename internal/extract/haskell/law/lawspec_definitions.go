@@ -17,7 +17,7 @@ func (lawSpecDefinitions) AfterCols(
 	return lsfToNativeKeyValIntegerInteger(lsfAfterCols(lsfFromNativeListSyntax(hs), lsfFromNativeKeyValIntegerInteger(acc)))
 }
 
-// allDocumented — laws/haskell_extract.lawspec:4313.
+// allDocumented — laws/haskell_extract.lawspec:4693.
 func (lawSpecDefinitions) AllDocumented(
 	symbols map[string]*LawSpecSymbol,
 	ps []Package,
@@ -97,7 +97,7 @@ func (lawSpecDefinitions) AsTypeData(symbols map[string]*LawSpecSymbol, ds []Dec
 	return lsfToNativeListDecl(lsfAsTypeData(lsfFromNativeListDecl(ds)))
 }
 
-// assayxportConditionsAllNeeds — laws/conditions.lawspec:719.
+// assayxportConditionsAllNeeds — laws/conditions.lawspec:760.
 func (lawSpecDefinitions) AssayxportConditionsAllNeeds(
 	symbols map[string]*LawSpecSymbol,
 	us []UseNote,
@@ -105,7 +105,7 @@ func (lawSpecDefinitions) AssayxportConditionsAllNeeds(
 	return lsfToNativeListText(lsfAllNeeds(lsfFromNativeListUseNote(us)))
 }
 
-// assayxportConditionsApplyWhen — laws/conditions.lawspec:572.
+// assayxportConditionsApplyWhen — laws/conditions.lawspec:613.
 func (lawSpecDefinitions) AssayxportConditionsApplyWhen(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -114,7 +114,7 @@ func (lawSpecDefinitions) AssayxportConditionsApplyWhen(
 	return lsfToNativeFiltered(lsfApplyWhen(lsfFromNativeEnv(env), lsfFromNativeListPackage(ps)))
 }
 
-// assayxportConditionsBarBarText — laws/conditions.lawspec:155.
+// assayxportConditionsBarBarText — laws/conditions.lawspec:180.
 func (lawSpecDefinitions) AssayxportConditionsBarBarText(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecUnit,
@@ -122,7 +122,7 @@ func (lawSpecDefinitions) AssayxportConditionsBarBarText(
 	return lsfToNativeText(lsfBarBarText(lsfFromNativeUnit(u)))
 }
 
-// assayxportConditionsBarText — laws/conditions.lawspec:154.
+// assayxportConditionsBarText — laws/conditions.lawspec:179.
 func (lawSpecDefinitions) AssayxportConditionsBarText(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecUnit,
@@ -130,7 +130,7 @@ func (lawSpecDefinitions) AssayxportConditionsBarText(
 	return lsfToNativeText(lsfBarText(lsfFromNativeUnit(u)))
 }
 
-// assayxportConditionsBinLevel — laws/conditions.lawspec:157.
+// assayxportConditionsBinLevel — laws/conditions.lawspec:182.
 func (lawSpecDefinitions) AssayxportConditionsBinLevel(
 	symbols map[string]*LawSpecSymbol,
 	s string,
@@ -138,7 +138,7 @@ func (lawSpecDefinitions) AssayxportConditionsBinLevel(
 	return lsfToNativeInteger(lsfBinLevel(lsfFromNativeText(s)))
 }
 
-// assayxportConditionsBinOpFor — laws/conditions.lawspec:170.
+// assayxportConditionsBinOpFor — laws/conditions.lawspec:195.
 func (lawSpecDefinitions) AssayxportConditionsBinOpFor(
 	symbols map[string]*LawSpecSymbol,
 	s string,
@@ -146,7 +146,7 @@ func (lawSpecDefinitions) AssayxportConditionsBinOpFor(
 	return lsfToNativeBinOp(lsfBinOpFor(lsfFromNativeText(s)))
 }
 
-// assayxportConditionsBlocksFor — laws/conditions.lawspec:730.
+// assayxportConditionsBlocksFor — laws/conditions.lawspec:771.
 func (lawSpecDefinitions) AssayxportConditionsBlocksFor(
 	symbols map[string]*LawSpecSymbol,
 	names []string,
@@ -155,7 +155,7 @@ func (lawSpecDefinitions) AssayxportConditionsBlocksFor(
 	return lsfToNativeListText(lsfBlocksFor(lsfFromNativeListText(names), lsfFromNativeListUseNote(us)))
 }
 
-// assayxportConditionsChAt — laws/conditions.lawspec:42.
+// assayxportConditionsChAt — laws/conditions.lawspec:46.
 func (lawSpecDefinitions) AssayxportConditionsChAt(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -164,7 +164,23 @@ func (lawSpecDefinitions) AssayxportConditionsChAt(
 	return lsfToNativeText(lsfChAt(lsfFromNativeText(t_), lsfFromNativeInteger(i)))
 }
 
-// assayxportConditionsCloseCall — laws/conditions.lawspec:198.
+// assayxportConditionsCharCode — laws/conditions.lawspec:116.
+func (lawSpecDefinitions) AssayxportConditionsCharCode(
+	symbols map[string]*LawSpecSymbol,
+	content string,
+) LawSpecMaybe[*LawSpecBigInt] {
+	return lsfToNativeMaybeInteger(lsfCharCode(lsfFromNativeText(content)))
+}
+
+// assayxportConditionsCharTok — laws/conditions.lawspec:128.
+func (lawSpecDefinitions) AssayxportConditionsCharTok(
+	symbols map[string]*LawSpecSymbol,
+	content string,
+) Tok {
+	return lsfToNativeTok(lsfCharTok(lsfFromNativeText(content)))
+}
+
+// assayxportConditionsCloseCall — laws/conditions.lawspec:223.
 func (lawSpecDefinitions) AssayxportConditionsCloseCall(
 	symbols map[string]*LawSpecSymbol,
 	name string,
@@ -177,7 +193,7 @@ func (lawSpecDefinitions) AssayxportConditionsCloseCall(
 	return lsfToNativeMaybeParsed(lsfCloseCall(lsfFromNativeText(name), lsfFromNativeCExpr(a1), lsfFromNativeCExpr(a2), lsfFromNativeCExpr(a3), lsfFromNativeCExpr(a4), lsfFromNativeListTok(rest)))
 }
 
-// assayxportConditionsCommentEnd — laws/conditions.lawspec:64.
+// assayxportConditionsCommentEnd — laws/conditions.lawspec:68.
 func (lawSpecDefinitions) AssayxportConditionsCommentEnd(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -187,7 +203,7 @@ func (lawSpecDefinitions) AssayxportConditionsCommentEnd(
 	return lsfToNativeInteger(lsfCommentEnd(lsfFromNativeText(t_), lsfFromNativeInteger(j), lsfFromNativeInteger(n)))
 }
 
-// assayxportConditionsCondOutcome — laws/conditions.lawspec:468.
+// assayxportConditionsCondOutcome — laws/conditions.lawspec:509.
 func (lawSpecDefinitions) AssayxportConditionsCondOutcome(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -196,7 +212,7 @@ func (lawSpecDefinitions) AssayxportConditionsCondOutcome(
 	return lsfToNativeOutcome(lsfCondOutcome(lsfFromNativeEnv(env), lsfFromNativeText(cond)))
 }
 
-// assayxportConditionsDecisionLines — laws/conditions.lawspec:734.
+// assayxportConditionsDecisionLines — laws/conditions.lawspec:775.
 func (lawSpecDefinitions) AssayxportConditionsDecisionLines(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -206,7 +222,7 @@ func (lawSpecDefinitions) AssayxportConditionsDecisionLines(
 	return lsfToNativeListText(lsfDecisionLines(lsfFromNativeEnv(env), lsfFromNativeListText(listed), lsfFromNativeListPackage(ps)))
 }
 
-// assayxportConditionsDeclKept — laws/conditions.lawspec:527.
+// assayxportConditionsDeclKept — laws/conditions.lawspec:568.
 func (lawSpecDefinitions) AssayxportConditionsDeclKept(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -215,7 +231,7 @@ func (lawSpecDefinitions) AssayxportConditionsDeclKept(
 	return lsfToNativeListDecl(lsfDeclKept(lsfFromNativeEnv(env), lsfFromNativeDecl(d)))
 }
 
-// assayxportConditionsDeclNotes — laws/conditions.lawspec:539.
+// assayxportConditionsDeclNotes — laws/conditions.lawspec:580.
 func (lawSpecDefinitions) AssayxportConditionsDeclNotes(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -224,7 +240,7 @@ func (lawSpecDefinitions) AssayxportConditionsDeclNotes(
 	return lsfToNativeListNote(lsfDeclNotes(lsfFromNativeEnv(env), lsfFromNativeDecl(d)))
 }
 
-// assayxportConditionsDeclUses — laws/conditions.lawspec:701.
+// assayxportConditionsDeclUses — laws/conditions.lawspec:742.
 func (lawSpecDefinitions) AssayxportConditionsDeclUses(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -233,7 +249,7 @@ func (lawSpecDefinitions) AssayxportConditionsDeclUses(
 	return lsfToNativeListUseNote(lsfDeclUses(lsfFromNativeEnv(env), lsfFromNativeDecl(d)))
 }
 
-// assayxportConditionsDeclsKept — laws/conditions.lawspec:535.
+// assayxportConditionsDeclsKept — laws/conditions.lawspec:576.
 func (lawSpecDefinitions) AssayxportConditionsDeclsKept(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -242,7 +258,7 @@ func (lawSpecDefinitions) AssayxportConditionsDeclsKept(
 	return lsfToNativeListDecl(lsfDeclsKept(lsfFromNativeEnv(env), lsfFromNativeListDecl(ds)))
 }
 
-// assayxportConditionsDeclsNotes — laws/conditions.lawspec:549.
+// assayxportConditionsDeclsNotes — laws/conditions.lawspec:590.
 func (lawSpecDefinitions) AssayxportConditionsDeclsNotes(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -251,7 +267,7 @@ func (lawSpecDefinitions) AssayxportConditionsDeclsNotes(
 	return lsfToNativeListNote(lsfDeclsNotes(lsfFromNativeEnv(env), lsfFromNativeListDecl(ds)))
 }
 
-// assayxportConditionsDeclsUses — laws/conditions.lawspec:711.
+// assayxportConditionsDeclsUses — laws/conditions.lawspec:752.
 func (lawSpecDefinitions) AssayxportConditionsDeclsUses(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -260,7 +276,7 @@ func (lawSpecDefinitions) AssayxportConditionsDeclsUses(
 	return lsfToNativeListUseNote(lsfDeclsUses(lsfFromNativeEnv(env), lsfFromNativeListDecl(ds)))
 }
 
-// assayxportConditionsDigitRun — laws/conditions.lawspec:92.
+// assayxportConditionsDigitRun — laws/conditions.lawspec:96.
 func (lawSpecDefinitions) AssayxportConditionsDigitRun(
 	symbols map[string]*LawSpecSymbol,
 	s string,
@@ -271,7 +287,7 @@ func (lawSpecDefinitions) AssayxportConditionsDigitRun(
 	return lsfToNativeInteger(lsfDigitRun(lsfFromNativeText(s), lsfFromNativeInteger(i), lsfFromNativeInteger(n), lsfFromNativeBool(hex)))
 }
 
-// assayxportConditionsDigitVal — laws/conditions.lawspec:82.
+// assayxportConditionsDigitVal — laws/conditions.lawspec:86.
 func (lawSpecDefinitions) AssayxportConditionsDigitVal(
 	symbols map[string]*LawSpecSymbol,
 	ch string,
@@ -279,7 +295,7 @@ func (lawSpecDefinitions) AssayxportConditionsDigitVal(
 	return lsfToNativeInteger(lsfDigitVal(lsfFromNativeText(ch)))
 }
 
-// assayxportConditionsDotIndex — laws/conditions.lawspec:365.
+// assayxportConditionsDotIndex — laws/conditions.lawspec:406.
 func (lawSpecDefinitions) AssayxportConditionsDotIndex(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -289,7 +305,7 @@ func (lawSpecDefinitions) AssayxportConditionsDotIndex(
 	return lsfToNativeInteger(lsfDotIndex(lsfFromNativeText(t_), lsfFromNativeInteger(i), lsfFromNativeInteger(n)))
 }
 
-// assayxportConditionsEcCloses — laws/conditions.lawspec:628.
+// assayxportConditionsEcCloses — laws/conditions.lawspec:669.
 func (lawSpecDefinitions) AssayxportConditionsEcCloses(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -300,7 +316,7 @@ func (lawSpecDefinitions) AssayxportConditionsEcCloses(
 	return lsfToNativeInteger(lsfEcCloses(lsfFromNativeText(t_), lsfFromNativeInteger(i), lsfFromNativeInteger(n), lsfFromNativeInteger(d)))
 }
 
-// assayxportConditionsEcCube — laws/conditions.lawspec:642.
+// assayxportConditionsEcCube — laws/conditions.lawspec:683.
 func (lawSpecDefinitions) AssayxportConditionsEcCube(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -310,7 +326,7 @@ func (lawSpecDefinitions) AssayxportConditionsEcCube(
 	return lsfToNativeOutcome(lsfEcCube(lsfFromNativeEnv(env), lsfFromNativeListText(parts), lsfFromNativeOutcome(acc)))
 }
 
-// assayxportConditionsEcCubes — laws/conditions.lawspec:649.
+// assayxportConditionsEcCubes — laws/conditions.lawspec:690.
 func (lawSpecDefinitions) AssayxportConditionsEcCubes(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -320,7 +336,7 @@ func (lawSpecDefinitions) AssayxportConditionsEcCubes(
 	return lsfToNativeOutcome(lsfEcCubes(lsfFromNativeEnv(env), lsfFromNativeListText(cubes), lsfFromNativeOutcome(acc)))
 }
 
-// assayxportConditionsEcCut — laws/conditions.lawspec:621.
+// assayxportConditionsEcCut — laws/conditions.lawspec:662.
 func (lawSpecDefinitions) AssayxportConditionsEcCut(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -334,7 +350,7 @@ func (lawSpecDefinitions) AssayxportConditionsEcCut(
 	return lsfToNativeListText(lsfEcCut(lsfFromNativeText(t_), lsfFromNativeInteger(i), lsfFromNativeInteger(n), lsfFromNativeInteger(d), lsfFromNativeInteger(start), lsfFromNativeText(op), lsfFromNativeInteger(fuel)))
 }
 
-// assayxportConditionsEcLit — laws/conditions.lawspec:634.
+// assayxportConditionsEcLit — laws/conditions.lawspec:675.
 func (lawSpecDefinitions) AssayxportConditionsEcLit(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -343,7 +359,7 @@ func (lawSpecDefinitions) AssayxportConditionsEcLit(
 	return lsfToNativeOutcome(lsfEcLit(lsfFromNativeEnv(env), lsfFromNativeText(part)))
 }
 
-// assayxportConditionsEdgeNotes — laws/conditions.lawspec:492.
+// assayxportConditionsEdgeNotes — laws/conditions.lawspec:533.
 func (lawSpecDefinitions) AssayxportConditionsEdgeNotes(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -352,7 +368,7 @@ func (lawSpecDefinitions) AssayxportConditionsEdgeNotes(
 	return lsfToNativeListNote(lsfEdgeNotes(lsfFromNativeEnv(env), lsfFromNativeListCallEdge(es)))
 }
 
-// assayxportConditionsEdgeUses — laws/conditions.lawspec:691.
+// assayxportConditionsEdgeUses — laws/conditions.lawspec:732.
 func (lawSpecDefinitions) AssayxportConditionsEdgeUses(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -363,7 +379,7 @@ func (lawSpecDefinitions) AssayxportConditionsEdgeUses(
 	return lsfToNativeListUseNote(lsfEdgeUses(lsfFromNativeEnv(env), lsfFromNativeText(file), lsfFromNativeInteger(line), lsfFromNativeListCallEdge(es)))
 }
 
-// assayxportConditionsEdgesKept — laws/conditions.lawspec:480.
+// assayxportConditionsEdgesKept — laws/conditions.lawspec:521.
 func (lawSpecDefinitions) AssayxportConditionsEdgesKept(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -372,7 +388,7 @@ func (lawSpecDefinitions) AssayxportConditionsEdgesKept(
 	return lsfToNativeListCallEdge(lsfEdgesKept(lsfFromNativeEnv(env), lsfFromNativeListCallEdge(es)))
 }
 
-// assayxportConditionsEqIndex — laws/conditions.lawspec:361.
+// assayxportConditionsEqIndex — laws/conditions.lawspec:402.
 func (lawSpecDefinitions) AssayxportConditionsEqIndex(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -382,7 +398,7 @@ func (lawSpecDefinitions) AssayxportConditionsEqIndex(
 	return lsfToNativeInteger(lsfEqIndex(lsfFromNativeText(t_), lsfFromNativeInteger(i), lsfFromNativeInteger(n)))
 }
 
-// assayxportConditionsEvalCondition — laws/conditions.lawspec:658.
+// assayxportConditionsEvalCondition — laws/conditions.lawspec:699.
 func (lawSpecDefinitions) AssayxportConditionsEvalCondition(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -391,7 +407,7 @@ func (lawSpecDefinitions) AssayxportConditionsEvalCondition(
 	return lsfToNativeOutcome(lsfEvalCondition(lsfFromNativeEnv(env), lsfFromNativeText(text)))
 }
 
-// assayxportConditionsEvalWhen — laws/conditions.lawspec:340.
+// assayxportConditionsEvalWhen — laws/conditions.lawspec:381.
 func (lawSpecDefinitions) AssayxportConditionsEvalWhen(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -400,7 +416,7 @@ func (lawSpecDefinitions) AssayxportConditionsEvalWhen(
 	return lsfToNativeOutcome(lsfEvalWhen(lsfFromNativeEnv(env), lsfFromNativeText(text)))
 }
 
-// assayxportConditionsExpectOp — laws/conditions.lawspec:190.
+// assayxportConditionsExpectOp — laws/conditions.lawspec:215.
 func (lawSpecDefinitions) AssayxportConditionsExpectOp(
 	symbols map[string]*LawSpecSymbol,
 	toks []Tok,
@@ -409,7 +425,7 @@ func (lawSpecDefinitions) AssayxportConditionsExpectOp(
 	return lsfToNativeMaybeListTok(lsfExpectOp(lsfFromNativeListTok(toks), lsfFromNativeText(s)))
 }
 
-// assayxportConditionsFromTallies — laws/conditions.lawspec:517.
+// assayxportConditionsFromTallies — laws/conditions.lawspec:558.
 func (lawSpecDefinitions) AssayxportConditionsFromTallies(
 	symbols map[string]*LawSpecSymbol,
 	ts []Entry[EdgeKey, AssayxportConditionsTally],
@@ -417,7 +433,7 @@ func (lawSpecDefinitions) AssayxportConditionsFromTallies(
 	return lsfToNativeListCallEdge(lsfFromTallies(lsfFromNativeListEntryEdgeKeyTally(ts)))
 }
 
-// assayxportConditionsIdLen — laws/conditions.lawspec:49.
+// assayxportConditionsIdLen — laws/conditions.lawspec:53.
 func (lawSpecDefinitions) AssayxportConditionsIdLen(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -427,7 +443,7 @@ func (lawSpecDefinitions) AssayxportConditionsIdLen(
 	return lsfToNativeInteger(lsfIdLen(lsfFromNativeText(t_), lsfFromNativeInteger(i), lsfFromNativeInteger(n)))
 }
 
-// assayxportConditionsIdxIn — laws/conditions.lawspec:78.
+// assayxportConditionsIdxIn — laws/conditions.lawspec:82.
 func (lawSpecDefinitions) AssayxportConditionsIdxIn(
 	symbols map[string]*LawSpecSymbol,
 	s string,
@@ -438,7 +454,7 @@ func (lawSpecDefinitions) AssayxportConditionsIdxIn(
 	return lsfToNativeInteger(lsfIdxIn(lsfFromNativeText(s), lsfFromNativeText(ch), lsfFromNativeInteger(i), lsfFromNativeInteger(n)))
 }
 
-// assayxportConditionsIsBlankCh — laws/conditions.lawspec:47.
+// assayxportConditionsIsBlankCh — laws/conditions.lawspec:51.
 func (lawSpecDefinitions) AssayxportConditionsIsBlankCh(
 	symbols map[string]*LawSpecSymbol,
 	ch string,
@@ -446,7 +462,7 @@ func (lawSpecDefinitions) AssayxportConditionsIsBlankCh(
 	return lsfToNativeBool(lsfIsBlankCh(lsfFromNativeText(ch)))
 }
 
-// assayxportConditionsIsDigitCh — laws/conditions.lawspec:44.
+// assayxportConditionsIsDigitCh — laws/conditions.lawspec:48.
 func (lawSpecDefinitions) AssayxportConditionsIsDigitCh(
 	symbols map[string]*LawSpecSymbol,
 	ch string,
@@ -454,7 +470,7 @@ func (lawSpecDefinitions) AssayxportConditionsIsDigitCh(
 	return lsfToNativeBool(lsfIsDigitCh(lsfFromNativeText(ch)))
 }
 
-// assayxportConditionsIsIdCh — laws/conditions.lawspec:46.
+// assayxportConditionsIsIdCh — laws/conditions.lawspec:50.
 func (lawSpecDefinitions) AssayxportConditionsIsIdCh(
 	symbols map[string]*LawSpecSymbol,
 	ch string,
@@ -462,7 +478,7 @@ func (lawSpecDefinitions) AssayxportConditionsIsIdCh(
 	return lsfToNativeBool(lsfIsIdCh(lsfFromNativeText(ch)))
 }
 
-// assayxportConditionsIsIdStart — laws/conditions.lawspec:45.
+// assayxportConditionsIsIdStart — laws/conditions.lawspec:49.
 func (lawSpecDefinitions) AssayxportConditionsIsIdStart(
 	symbols map[string]*LawSpecSymbol,
 	ch string,
@@ -470,7 +486,7 @@ func (lawSpecDefinitions) AssayxportConditionsIsIdStart(
 	return lsfToNativeBool(lsfIsIdStart(lsfFromNativeText(ch)))
 }
 
-// assayxportConditionsIsMinVersionName — laws/conditions.lawspec:194.
+// assayxportConditionsIsMinVersionName — laws/conditions.lawspec:219.
 func (lawSpecDefinitions) AssayxportConditionsIsMinVersionName(
 	symbols map[string]*LawSpecSymbol,
 	name string,
@@ -478,7 +494,7 @@ func (lawSpecDefinitions) AssayxportConditionsIsMinVersionName(
 	return lsfToNativeBool(lsfIsMinVersionName(lsfFromNativeText(name)))
 }
 
-// assayxportConditionsIsName — laws/conditions.lawspec:380.
+// assayxportConditionsIsName — laws/conditions.lawspec:421.
 func (lawSpecDefinitions) AssayxportConditionsIsName(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -486,7 +502,7 @@ func (lawSpecDefinitions) AssayxportConditionsIsName(
 	return lsfToNativeBool(lsfIsName(lsfFromNativeText(t_)))
 }
 
-// assayxportConditionsJudged — laws/conditions.lawspec:472.
+// assayxportConditionsJudged — laws/conditions.lawspec:513.
 func (lawSpecDefinitions) AssayxportConditionsJudged(
 	symbols map[string]*LawSpecSymbol,
 	o Outcome,
@@ -494,7 +510,7 @@ func (lawSpecDefinitions) AssayxportConditionsJudged(
 	return lsfToNativeInteger(lsfJudged(lsfFromNativeOutcome(o)))
 }
 
-// assayxportConditionsLexT — laws/conditions.lawspec:122.
+// assayxportConditionsLexT — laws/conditions.lawspec:147.
 func (lawSpecDefinitions) AssayxportConditionsLexT(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -504,7 +520,7 @@ func (lawSpecDefinitions) AssayxportConditionsLexT(
 	return lsfToNativeMaybeListTok(lsfLexT(lsfFromNativeText(t_), lsfFromNativeListTok(acc), lsfFromNativeInteger(fuel)))
 }
 
-// assayxportConditionsListedAll — laws/conditions.lawspec:680.
+// assayxportConditionsListedAll — laws/conditions.lawspec:721.
 func (lawSpecDefinitions) AssayxportConditionsListedAll(
 	symbols map[string]*LawSpecSymbol,
 	lines []string,
@@ -512,7 +528,7 @@ func (lawSpecDefinitions) AssayxportConditionsListedAll(
 	return lsfToNativeListText(lsfListedAll(lsfFromNativeListText(lines)))
 }
 
-// assayxportConditionsListedNames — laws/conditions.lawspec:684.
+// assayxportConditionsListedNames — laws/conditions.lawspec:725.
 func (lawSpecDefinitions) AssayxportConditionsListedNames(
 	symbols map[string]*LawSpecSymbol,
 	lines []string,
@@ -528,7 +544,7 @@ func (lawSpecDefinitions) AssayxportConditionsListedNames(
 	})
 }
 
-// assayxportConditionsListedOne — laws/conditions.lawspec:669.
+// assayxportConditionsListedOne — laws/conditions.lawspec:710.
 func (lawSpecDefinitions) AssayxportConditionsListedOne(
 	symbols map[string]*LawSpecSymbol,
 	raw string,
@@ -536,7 +552,7 @@ func (lawSpecDefinitions) AssayxportConditionsListedOne(
 	return lsfToNativeListText(lsfListedOne(lsfFromNativeText(raw)))
 }
 
-// assayxportConditionsNotesBad — laws/conditions.lawspec:565.
+// assayxportConditionsNotesBad — laws/conditions.lawspec:606.
 func (lawSpecDefinitions) AssayxportConditionsNotesBad(
 	symbols map[string]*LawSpecSymbol,
 	ns []Note,
@@ -544,7 +560,7 @@ func (lawSpecDefinitions) AssayxportConditionsNotesBad(
 	return lsfToNativeListText(lsfNotesBad(lsfFromNativeListNote(ns)))
 }
 
-// assayxportConditionsNotesMissing — laws/conditions.lawspec:561.
+// assayxportConditionsNotesMissing — laws/conditions.lawspec:602.
 func (lawSpecDefinitions) AssayxportConditionsNotesMissing(
 	symbols map[string]*LawSpecSymbol,
 	ns []Note,
@@ -552,7 +568,7 @@ func (lawSpecDefinitions) AssayxportConditionsNotesMissing(
 	return lsfToNativeListText(lsfNotesMissing(lsfFromNativeListNote(ns)))
 }
 
-// assayxportConditionsNumLen — laws/conditions.lawspec:55.
+// assayxportConditionsNumLen — laws/conditions.lawspec:59.
 func (lawSpecDefinitions) AssayxportConditionsNumLen(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -562,7 +578,7 @@ func (lawSpecDefinitions) AssayxportConditionsNumLen(
 	return lsfToNativeInteger(lsfNumLen(lsfFromNativeText(t_), lsfFromNativeInteger(i), lsfFromNativeInteger(n)))
 }
 
-// assayxportConditionsNumValue — laws/conditions.lawspec:87.
+// assayxportConditionsNumValue — laws/conditions.lawspec:91.
 func (lawSpecDefinitions) AssayxportConditionsNumValue(
 	symbols map[string]*LawSpecSymbol,
 	s string,
@@ -574,7 +590,7 @@ func (lawSpecDefinitions) AssayxportConditionsNumValue(
 	return lsfToNativeInteger(lsfNumValue(lsfFromNativeText(s), lsfFromNativeInteger(base), lsfFromNativeInteger(i), lsfFromNativeInteger(n), lsfFromNativeInteger(acc)))
 }
 
-// assayxportConditionsNumberTok — laws/conditions.lawspec:110.
+// assayxportConditionsNumberTok — laws/conditions.lawspec:135.
 func (lawSpecDefinitions) AssayxportConditionsNumberTok(
 	symbols map[string]*LawSpecSymbol,
 	s string,
@@ -582,7 +598,7 @@ func (lawSpecDefinitions) AssayxportConditionsNumberTok(
 	return lsfToNativeMaybeTok(lsfNumberTok(lsfFromNativeText(s)))
 }
 
-// assayxportConditionsPackageName — laws/conditions.lawspec:408.
+// assayxportConditionsPackageName — laws/conditions.lawspec:449.
 func (lawSpecDefinitions) AssayxportConditionsPackageName(
 	symbols map[string]*LawSpecSymbol,
 	p string,
@@ -590,7 +606,7 @@ func (lawSpecDefinitions) AssayxportConditionsPackageName(
 	return lsfToNativeBool(lsfPackageName(lsfFromNativeText(p)))
 }
 
-// assayxportConditionsPackagesKept — laws/conditions.lawspec:553.
+// assayxportConditionsPackagesKept — laws/conditions.lawspec:594.
 func (lawSpecDefinitions) AssayxportConditionsPackagesKept(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -599,7 +615,7 @@ func (lawSpecDefinitions) AssayxportConditionsPackagesKept(
 	return lsfToNativeListPackage(lsfPackagesKept(lsfFromNativeEnv(env), lsfFromNativeListPackage(ps)))
 }
 
-// assayxportConditionsPackagesNotes — laws/conditions.lawspec:557.
+// assayxportConditionsPackagesNotes — laws/conditions.lawspec:598.
 func (lawSpecDefinitions) AssayxportConditionsPackagesNotes(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -608,7 +624,7 @@ func (lawSpecDefinitions) AssayxportConditionsPackagesNotes(
 	return lsfToNativeListNote(lsfPackagesNotes(lsfFromNativeEnv(env), lsfFromNativeListPackage(ps)))
 }
 
-// assayxportConditionsPackagesUses — laws/conditions.lawspec:715.
+// assayxportConditionsPackagesUses — laws/conditions.lawspec:756.
 func (lawSpecDefinitions) AssayxportConditionsPackagesUses(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -617,7 +633,7 @@ func (lawSpecDefinitions) AssayxportConditionsPackagesUses(
 	return lsfToNativeListUseNote(lsfPackagesUses(lsfFromNativeEnv(env), lsfFromNativeListPackage(ps)))
 }
 
-// assayxportConditionsParseLevel — laws/conditions.lawspec:209.
+// assayxportConditionsParseLevel — laws/conditions.lawspec:234.
 func (lawSpecDefinitions) AssayxportConditionsParseLevel(
 	symbols map[string]*LawSpecSymbol,
 	lvl *LawSpecBigInt,
@@ -628,7 +644,7 @@ func (lawSpecDefinitions) AssayxportConditionsParseLevel(
 	return lsfToNativeMaybeParsed(lsfParseLevel(lsfFromNativeInteger(lvl), lsfFromNativeMaybeCExpr(acc), lsfFromNativeListTok(toks), lsfFromNativeInteger(fuel)))
 }
 
-// assayxportConditionsParseWhen — laws/conditions.lawspec:329.
+// assayxportConditionsParseWhen — laws/conditions.lawspec:370.
 func (lawSpecDefinitions) AssayxportConditionsParseWhen(
 	symbols map[string]*LawSpecSymbol,
 	text string,
@@ -636,7 +652,15 @@ func (lawSpecDefinitions) AssayxportConditionsParseWhen(
 	return lsfToNativeMaybeCExpr(lsfParseWhen(lsfFromNativeText(text)))
 }
 
-// assayxportConditionsPolicyAsTruth — laws/conditions_policy.lawspec:474.
+// assayxportConditionsPlainCodes — laws/conditions.lawspec:114.
+func (lawSpecDefinitions) AssayxportConditionsPlainCodes(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecUnit,
+) string {
+	return lsfToNativeText(lsfPlainCodes(lsfFromNativeUnit(u)))
+}
+
+// assayxportConditionsPolicyAsTruth — laws/conditions_policy.lawspec:570.
 func (lawSpecDefinitions) AssayxportConditionsPolicyAsTruth(
 	symbols map[string]*LawSpecSymbol,
 	o Outcome,
@@ -644,7 +668,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyAsTruth(
 	return lsfToNativeOutcome(lsfAssayxportConditionsPolicyAsTruth(lsfFromNativeOutcome(o)))
 }
 
-// assayxportConditionsPolicyBinary — laws/conditions_policy.lawspec:197.
+// assayxportConditionsPolicyBinary — laws/conditions_policy.lawspec:243.
 func (lawSpecDefinitions) AssayxportConditionsPolicyBinary(
 	symbols map[string]*LawSpecSymbol,
 	op BinOp,
@@ -654,7 +678,19 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyBinary(
 	return lsfToNativeOutcome(lsfAssayxportConditionsPolicyBinary(lsfFromNativeBinOp(op), lsfFromNativeOutcome(l), lsfFromNativeOutcome(r)))
 }
 
-// assayxportConditionsPolicyBindingErrorText — laws/conditions_policy.lawspec:1040.
+// assayxportConditionsPolicyBinaryAs — laws/conditions_policy.lawspec:263.
+func (lawSpecDefinitions) AssayxportConditionsPolicyBinaryAs(
+	symbols map[string]*LawSpecSymbol,
+	lu bool,
+	ru bool,
+	op BinOp,
+	l Outcome,
+	r Outcome,
+) Outcome {
+	return lsfToNativeOutcome(lsfAssayxportConditionsPolicyBinaryAs(lsfFromNativeBool(lu), lsfFromNativeBool(ru), lsfFromNativeBinOp(op), lsfFromNativeOutcome(l), lsfFromNativeOutcome(r)))
+}
+
+// assayxportConditionsPolicyBindingErrorText — laws/conditions_policy.lawspec:1224.
 func (lawSpecDefinitions) AssayxportConditionsPolicyBindingErrorText(
 	symbols map[string]*LawSpecSymbol,
 	origin string,
@@ -663,7 +699,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyBindingErrorText(
 	return lsfToNativeText(lsfBindingErrorText(lsfFromNativeText(origin), lsfFromNativeBindingError(e)))
 }
 
-// assayxportConditionsPolicyBitsOf — laws/conditions_policy.lawspec:101.
+// assayxportConditionsPolicyBitsOf — laws/conditions_policy.lawspec:116.
 func (lawSpecDefinitions) AssayxportConditionsPolicyBitsOf(
 	symbols map[string]*LawSpecSymbol,
 	which *LawSpecBigInt,
@@ -674,7 +710,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyBitsOf(
 	return lsfToNativeInteger(lsfAssayxportConditionsPolicyBitsOf(lsfFromNativeInteger(which), lsfFromNativeInteger(a), lsfFromNativeInteger(b), lsfFromNativeInteger(n)))
 }
 
-// assayxportConditionsPolicyBitwise — laws/conditions_policy.lawspec:111.
+// assayxportConditionsPolicyBitwise — laws/conditions_policy.lawspec:126.
 func (lawSpecDefinitions) AssayxportConditionsPolicyBitwise(
 	symbols map[string]*LawSpecSymbol,
 	which *LawSpecBigInt,
@@ -684,7 +720,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyBitwise(
 	return lsfToNativeInteger(lsfAssayxportConditionsPolicyBitwise(lsfFromNativeInteger(which), lsfFromNativeInteger(a), lsfFromNativeInteger(b)))
 }
 
-// assayxportConditionsPolicyBlockOf — laws/conditions_policy.lawspec:1406.
+// assayxportConditionsPolicyBlockOf — laws/conditions_policy.lawspec:1596.
 func (lawSpecDefinitions) AssayxportConditionsPolicyBlockOf(
 	symbols map[string]*LawSpecSymbol,
 	name string,
@@ -693,7 +729,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyBlockOf(
 	return lsfToNativeListText(lsfAssayxportConditionsPolicyBlockOf(lsfFromNativeText(name), lsfFromNativeListUsePlace(uses)))
 }
 
-// assayxportConditionsPolicyBound — laws/conditions_policy.lawspec:1085.
+// assayxportConditionsPolicyBound — laws/conditions_policy.lawspec:1269.
 func (lawSpecDefinitions) AssayxportConditionsPolicyBound(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -702,7 +738,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyBound(
 	return lsfToNativeEnv(lsfAssayxportConditionsPolicyBound(lsfFromNativeEnv(env), lsfFromNativeBindingLine(b)))
 }
 
-// assayxportConditionsPolicyBroken — laws/conditions_policy.lawspec:371.
+// assayxportConditionsPolicyBroken — laws/conditions_policy.lawspec:465.
 func (lawSpecDefinitions) AssayxportConditionsPolicyBroken(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -711,7 +747,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyBroken(
 	return lsfToNativeBool(lsfAssayxportConditionsPolicyBroken(lsfFromNativeEnv(env), lsfFromNativeCExpr(e)))
 }
 
-// assayxportConditionsPolicyBuildCap — laws/conditions_policy.lawspec:503.
+// assayxportConditionsPolicyBuildCap — laws/conditions_policy.lawspec:599.
 func (lawSpecDefinitions) AssayxportConditionsPolicyBuildCap(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecUnit,
@@ -719,7 +755,16 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyBuildCap(
 	return lsfToNativeInteger(lsfAssayxportConditionsPolicyBuildCap(lsfFromNativeUnit(u)))
 }
 
-// assayxportConditionsPolicyCompleted — laws/conditions_policy.lawspec:778.
+// assayxportConditionsPolicyComma — laws/conditions_policy.lawspec:249.
+func (lawSpecDefinitions) AssayxportConditionsPolicyComma(
+	symbols map[string]*LawSpecSymbol,
+	l Outcome,
+	r Outcome,
+) Outcome {
+	return lsfToNativeOutcome(lsfAssayxportConditionsPolicyComma(lsfFromNativeOutcome(l), lsfFromNativeOutcome(r)))
+}
+
+// assayxportConditionsPolicyCompleted — laws/conditions_policy.lawspec:898.
 func (lawSpecDefinitions) AssayxportConditionsPolicyCompleted(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -727,7 +772,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyCompleted(
 	return lsfToNativeEnv(lsfAssayxportConditionsPolicyCompleted(lsfFromNativeEnv(env)))
 }
 
-// assayxportConditionsPolicyComponent — laws/conditions_policy.lawspec:308.
+// assayxportConditionsPolicyComponent — laws/conditions_policy.lawspec:375.
 func (lawSpecDefinitions) AssayxportConditionsPolicyComponent(
 	symbols map[string]*LawSpecSymbol,
 	v []*LawSpecBigInt,
@@ -736,17 +781,19 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyComponent(
 	return lsfToNativeInteger(lsfAssayxportConditionsPolicyComponent(lsfFromNativeListInteger(v), lsfFromNativeInteger(i)))
 }
 
-// assayxportConditionsPolicyCompute — laws/conditions_policy.lawspec:131.
-func (lawSpecDefinitions) AssayxportConditionsPolicyCompute(
+// assayxportConditionsPolicyComputeAs — laws/conditions_policy.lawspec:174.
+func (lawSpecDefinitions) AssayxportConditionsPolicyComputeAs(
 	symbols map[string]*LawSpecSymbol,
+	lu bool,
+	ru bool,
 	op BinOp,
 	a *LawSpecBigInt,
 	b *LawSpecBigInt,
 ) Outcome {
-	return lsfToNativeOutcome(lsfAssayxportConditionsPolicyCompute(lsfFromNativeBinOp(op), lsfFromNativeInteger(a), lsfFromNativeInteger(b)))
+	return lsfToNativeOutcome(lsfAssayxportConditionsPolicyComputeAs(lsfFromNativeBool(lu), lsfFromNativeBool(ru), lsfFromNativeBinOp(op), lsfFromNativeInteger(a), lsfFromNativeInteger(b)))
 }
 
-// assayxportConditionsPolicyConditionText — laws/conditions_policy.lawspec:469.
+// assayxportConditionsPolicyConditionText — laws/conditions_policy.lawspec:565.
 func (lawSpecDefinitions) AssayxportConditionsPolicyConditionText(
 	symbols map[string]*LawSpecSymbol,
 	cs [][]Literal,
@@ -754,7 +801,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyConditionText(
 	return lsfToNativeText(lsfAssayxportConditionsPolicyConditionText(lsfFromNativeListListLiteral(cs)))
 }
 
-// assayxportConditionsPolicyConditional — laws/conditions_policy.lawspec:234.
+// assayxportConditionsPolicyConditional — laws/conditions_policy.lawspec:301.
 func (lawSpecDefinitions) AssayxportConditionsPolicyConditional(
 	symbols map[string]*LawSpecSymbol,
 	t_ Outcome,
@@ -764,7 +811,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyConditional(
 	return lsfToNativeOutcome(lsfAssayxportConditionsPolicyConditional(lsfFromNativeOutcome(t_), lsfFromNativeOutcome(y), lsfFromNativeOutcome(n)))
 }
 
-// assayxportConditionsPolicyCubeText — laws/conditions_policy.lawspec:451.
+// assayxportConditionsPolicyCubeText — laws/conditions_policy.lawspec:547.
 func (lawSpecDefinitions) AssayxportConditionsPolicyCubeText(
 	symbols map[string]*LawSpecSymbol,
 	ls []Literal,
@@ -772,7 +819,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyCubeText(
 	return lsfToNativeText(lsfAssayxportConditionsPolicyCubeText(lsfFromNativeListLiteral(ls)))
 }
 
-// assayxportConditionsPolicyCubesText — laws/conditions_policy.lawspec:458.
+// assayxportConditionsPolicyCubesText — laws/conditions_policy.lawspec:554.
 func (lawSpecDefinitions) AssayxportConditionsPolicyCubesText(
 	symbols map[string]*LawSpecSymbol,
 	cs [][]Literal,
@@ -780,7 +827,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyCubesText(
 	return lsfToNativeText(lsfAssayxportConditionsPolicyCubesText(lsfFromNativeListListLiteral(cs)))
 }
 
-// assayxportConditionsPolicyDecisionsHeader — laws/conditions_policy.lawspec:1365.
+// assayxportConditionsPolicyDecisionsHeader — laws/conditions_policy.lawspec:1555.
 func (lawSpecDefinitions) AssayxportConditionsPolicyDecisionsHeader(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecUnit,
@@ -788,7 +835,15 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyDecisionsHeader(
 	return lsfToNativeListText(lsfAssayxportConditionsPolicyDecisionsHeader(lsfFromNativeUnit(u)))
 }
 
-// assayxportConditionsPolicyDefinedAs — laws/conditions_policy.lawspec:1082.
+// assayxportConditionsPolicyDecisionsPath — laws/conditions_policy.lawspec:1553.
+func (lawSpecDefinitions) AssayxportConditionsPolicyDecisionsPath(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecUnit,
+) string {
+	return lsfToNativeText(lsfAssayxportConditionsPolicyDecisionsPath(lsfFromNativeUnit(u)))
+}
+
+// assayxportConditionsPolicyDefinedAs — laws/conditions_policy.lawspec:1266.
 func (lawSpecDefinitions) AssayxportConditionsPolicyDefinedAs(
 	symbols map[string]*LawSpecSymbol,
 	v *LawSpecBigInt,
@@ -796,7 +851,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyDefinedAs(
 	return lsfToNativeBinding(lsfAssayxportConditionsPolicyDefinedAs(lsfFromNativeInteger(v)))
 }
 
-// assayxportConditionsPolicyDefinedOf — laws/conditions_policy.lawspec:286.
+// assayxportConditionsPolicyDefinedOf — laws/conditions_policy.lawspec:353.
 func (lawSpecDefinitions) AssayxportConditionsPolicyDefinedOf(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -805,7 +860,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyDefinedOf(
 	return lsfToNativeOutcome(lsfAssayxportConditionsPolicyDefinedOf(lsfFromNativeEnv(env), lsfFromNativeText(n)))
 }
 
-// assayxportConditionsPolicyDefinedOf2 — laws/conditions_policy.lawspec:299.
+// assayxportConditionsPolicyDefinedOf2 — laws/conditions_policy.lawspec:366.
 func (lawSpecDefinitions) AssayxportConditionsPolicyDefinedOf2(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -814,7 +869,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyDefinedOf2(
 	return lsfToNativeOutcome(lsfAssayxportConditionsPolicyDefinedOf2(lsfFromNativeEnv(env), lsfFromNativeText(n)))
 }
 
-// assayxportConditionsPolicyDepthAfter — laws/conditions_policy.lawspec:511.
+// assayxportConditionsPolicyDepthAfter — laws/conditions_policy.lawspec:615.
 func (lawSpecDefinitions) AssayxportConditionsPolicyDepthAfter(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -825,7 +880,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyDepthAfter(
 	return lsfToNativeInteger(lsfDepthAfter(lsfFromNativeText(t_), lsfFromNativeInteger(i), lsfFromNativeInteger(n), lsfFromNativeInteger(d)))
 }
 
-// assayxportConditionsPolicyEmptyCube — laws/conditions_policy.lawspec:465.
+// assayxportConditionsPolicyEmptyCube — laws/conditions_policy.lawspec:561.
 func (lawSpecDefinitions) AssayxportConditionsPolicyEmptyCube(
 	symbols map[string]*LawSpecSymbol,
 	ls []Literal,
@@ -833,7 +888,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyEmptyCube(
 	return lsfToNativeBool(lsfAssayxportConditionsPolicyEmptyCube(lsfFromNativeListLiteral(ls)))
 }
 
-// assayxportConditionsPolicyEmptyEnv — laws/conditions_policy.lawspec:780.
+// assayxportConditionsPolicyEmptyEnv — laws/conditions_policy.lawspec:900.
 func (lawSpecDefinitions) AssayxportConditionsPolicyEmptyEnv(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecUnit,
@@ -841,7 +896,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyEmptyEnv(
 	return lsfToNativeEnv(lsfAssayxportConditionsPolicyEmptyEnv(lsfFromNativeUnit(u)))
 }
 
-// assayxportConditionsPolicyEnvFrom — laws/conditions_policy.lawspec:1099.
+// assayxportConditionsPolicyEnvFrom — laws/conditions_policy.lawspec:1283.
 func (lawSpecDefinitions) AssayxportConditionsPolicyEnvFrom(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -850,7 +905,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyEnvFrom(
 	return lsfToNativeEnv(lsfAssayxportConditionsPolicyEnvFrom(lsfFromNativeEnv(env), lsfFromNativeListBindingLine(bs)))
 }
 
-// assayxportConditionsPolicyEvalIn — laws/conditions_policy.lawspec:390.
+// assayxportConditionsPolicyEvalIn — laws/conditions_policy.lawspec:485.
 func (lawSpecDefinitions) AssayxportConditionsPolicyEvalIn(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -859,7 +914,15 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyEvalIn(
 	return lsfToNativeOutcome(lsfAssayxportConditionsPolicyEvalIn(lsfFromNativeEnv(env), lsfFromNativeCExpr(e)))
 }
 
-// assayxportConditionsPolicyFromInt64 — laws/conditions_policy.lawspec:90.
+// assayxportConditionsPolicyFileDefinedTerm — laws/conditions_policy.lawspec:613.
+func (lawSpecDefinitions) AssayxportConditionsPolicyFileDefinedTerm(
+	symbols map[string]*LawSpecSymbol,
+	line *LawSpecBigInt,
+) string {
+	return lsfToNativeText(lsfFileDefinedTerm(lsfFromNativeInteger(line)))
+}
+
+// assayxportConditionsPolicyFromInt64 — laws/conditions_policy.lawspec:104.
 func (lawSpecDefinitions) AssayxportConditionsPolicyFromInt64(
 	symbols map[string]*LawSpecSymbol,
 	x int64,
@@ -867,7 +930,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyFromInt64(
 	return lsfToNativeInteger(lsfAssayxportConditionsPolicyFromInt64(lsfFromNativeInt64(x)))
 }
 
-// assayxportConditionsPolicyGhcName — laws/conditions_policy.lawspec:278.
+// assayxportConditionsPolicyGhcName — laws/conditions_policy.lawspec:345.
 func (lawSpecDefinitions) AssayxportConditionsPolicyGhcName(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecUnit,
@@ -875,7 +938,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyGhcName(
 	return lsfToNativeText(lsfAssayxportConditionsPolicyGhcName(lsfFromNativeUnit(u)))
 }
 
-// assayxportConditionsPolicyHalved — laws/conditions_policy.lawspec:119.
+// assayxportConditionsPolicyHalved — laws/conditions_policy.lawspec:134.
 func (lawSpecDefinitions) AssayxportConditionsPolicyHalved(
 	symbols map[string]*LawSpecSymbol,
 	a *LawSpecBigInt,
@@ -884,7 +947,16 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyHalved(
 	return lsfToNativeInteger(lsfAssayxportConditionsPolicyHalved(lsfFromNativeInteger(a), lsfFromNativeInteger(n)))
 }
 
-// assayxportConditionsPolicyInitNothingText — laws/conditions_policy.lawspec:1525.
+// assayxportConditionsPolicyHalvedU — laws/conditions_policy.lawspec:158.
+func (lawSpecDefinitions) AssayxportConditionsPolicyHalvedU(
+	symbols map[string]*LawSpecSymbol,
+	a *LawSpecBigInt,
+	n *LawSpecBigInt,
+) *LawSpecBigInt {
+	return lsfToNativeInteger(lsfAssayxportConditionsPolicyHalvedU(lsfFromNativeInteger(a), lsfFromNativeInteger(n)))
+}
+
+// assayxportConditionsPolicyInitNothingText — laws/conditions_policy.lawspec:1715.
 func (lawSpecDefinitions) AssayxportConditionsPolicyInitNothingText(
 	symbols map[string]*LawSpecSymbol,
 	root string,
@@ -893,7 +965,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyInitNothingText(
 	return lsfToNativeText(lsfInitNothingText(lsfFromNativeText(root), lsfFromNativeFiltered(f)))
 }
 
-// assayxportConditionsPolicyInitWarnings — laws/conditions_policy.lawspec:1522.
+// assayxportConditionsPolicyInitWarnings — laws/conditions_policy.lawspec:1712.
 func (lawSpecDefinitions) AssayxportConditionsPolicyInitWarnings(
 	symbols map[string]*LawSpecSymbol,
 	f Filtered,
@@ -901,7 +973,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyInitWarnings(
 	return lsfToNativeListText(lsfInitWarnings(lsfFromNativeFiltered(f)))
 }
 
-// assayxportConditionsPolicyIsBad — laws/conditions_policy.lawspec:170.
+// assayxportConditionsPolicyIsBad — laws/conditions_policy.lawspec:216.
 func (lawSpecDefinitions) AssayxportConditionsPolicyIsBad(
 	symbols map[string]*LawSpecSymbol,
 	o Outcome,
@@ -909,7 +981,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyIsBad(
 	return lsfToNativeBool(lsfAssayxportConditionsPolicyIsBad(lsfFromNativeOutcome(o)))
 }
 
-// assayxportConditionsPolicyIsDivision — laws/conditions_policy.lawspec:195.
+// assayxportConditionsPolicyIsDivision — laws/conditions_policy.lawspec:241.
 func (lawSpecDefinitions) AssayxportConditionsPolicyIsDivision(
 	symbols map[string]*LawSpecSymbol,
 	op BinOp,
@@ -917,7 +989,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyIsDivision(
 	return lsfToNativeBool(lsfAssayxportConditionsPolicyIsDivision(lsfFromNativeBinOp(op)))
 }
 
-// assayxportConditionsPolicyIsVersionName — laws/conditions_policy.lawspec:276.
+// assayxportConditionsPolicyIsVersionName — laws/conditions_policy.lawspec:343.
 func (lawSpecDefinitions) AssayxportConditionsPolicyIsVersionName(
 	symbols map[string]*LawSpecSymbol,
 	n string,
@@ -925,7 +997,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyIsVersionName(
 	return lsfToNativeBool(lsfAssayxportConditionsPolicyIsVersionName(lsfFromNativeText(n)))
 }
 
-// assayxportConditionsPolicyLessOr — laws/conditions_policy.lawspec:312.
+// assayxportConditionsPolicyLessOr — laws/conditions_policy.lawspec:379.
 func (lawSpecDefinitions) AssayxportConditionsPolicyLessOr(
 	symbols map[string]*LawSpecSymbol,
 	a Outcome,
@@ -934,7 +1006,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyLessOr(
 	return lsfToNativeOutcome(lsfAssayxportConditionsPolicyLessOr(lsfFromNativeOutcome(a), lsfFromNativeInteger(x)))
 }
 
-// assayxportConditionsPolicyLitText — laws/conditions_policy.lawspec:447.
+// assayxportConditionsPolicyLitText — laws/conditions_policy.lawspec:543.
 func (lawSpecDefinitions) AssayxportConditionsPolicyLitText(
 	symbols map[string]*LawSpecSymbol,
 	l Literal,
@@ -942,7 +1014,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyLitText(
 	return lsfToNativeText(lsfAssayxportConditionsPolicyLitText(lsfFromNativeLiteral(l)))
 }
 
-// assayxportConditionsPolicyLogical — laws/conditions_policy.lawspec:176.
+// assayxportConditionsPolicyLogical — laws/conditions_policy.lawspec:222.
 func (lawSpecDefinitions) AssayxportConditionsPolicyLogical(
 	symbols map[string]*LawSpecSymbol,
 	isAnd bool,
@@ -952,7 +1024,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyLogical(
 	return lsfToNativeOutcome(lsfAssayxportConditionsPolicyLogical(lsfFromNativeBool(isAnd), lsfFromNativeOutcome(l), lsfFromNativeOutcome(r)))
 }
 
-// assayxportConditionsPolicyMacroName — laws/conditions_policy.lawspec:1073.
+// assayxportConditionsPolicyMacroName — laws/conditions_policy.lawspec:1257.
 func (lawSpecDefinitions) AssayxportConditionsPolicyMacroName(
 	symbols map[string]*LawSpecSymbol,
 	p string,
@@ -961,15 +1033,15 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyMacroName(
 	return lsfToNativeText(lsfAssayxportConditionsPolicyMacroName(lsfFromNativeText(p), lsfFromNativeInteger(fuel)))
 }
 
-// assayxportConditionsPolicyMaxLit — laws/conditions_policy.lawspec:95.
-func (lawSpecDefinitions) AssayxportConditionsPolicyMaxLit(
+// assayxportConditionsPolicyMaxULit — laws/conditions_policy.lawspec:110.
+func (lawSpecDefinitions) AssayxportConditionsPolicyMaxULit(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecUnit,
 ) *LawSpecBigInt {
-	return lsfToNativeInteger(lsfAssayxportConditionsPolicyMaxLit(lsfFromNativeUnit(u)))
+	return lsfToNativeInteger(lsfAssayxportConditionsPolicyMaxULit(lsfFromNativeUnit(u)))
 }
 
-// assayxportConditionsPolicyMinGhc — laws/conditions_policy.lawspec:330.
+// assayxportConditionsPolicyMinGhc — laws/conditions_policy.lawspec:397.
 func (lawSpecDefinitions) AssayxportConditionsPolicyMinGhc(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -981,7 +1053,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyMinGhc(
 	return lsfToNativeOutcome(lsfAssayxportConditionsPolicyMinGhc(lsfFromNativeEnv(env), lsfFromNativeOutcome(ma), lsfFromNativeOutcome(mi), lsfFromNativeOutcome(p1), lsfFromNativeOutcome(p2)))
 }
 
-// assayxportConditionsPolicyMinVersion — laws/conditions_policy.lawspec:318.
+// assayxportConditionsPolicyMinVersion — laws/conditions_policy.lawspec:385.
 func (lawSpecDefinitions) AssayxportConditionsPolicyMinVersion(
 	symbols map[string]*LawSpecSymbol,
 	v []*LawSpecBigInt,
@@ -992,7 +1064,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyMinVersion(
 	return lsfToNativeOutcome(lsfAssayxportConditionsPolicyMinVersion(lsfFromNativeListInteger(v), lsfFromNativeOutcome(a), lsfFromNativeOutcome(b), lsfFromNativeOutcome(m_)))
 }
 
-// assayxportConditionsPolicyMissingAll — laws/conditions_policy.lawspec:346.
+// assayxportConditionsPolicyMissingAll — laws/conditions_policy.lawspec:413.
 func (lawSpecDefinitions) AssayxportConditionsPolicyMissingAll(
 	symbols map[string]*LawSpecSymbol,
 	os_ []Outcome,
@@ -1000,7 +1072,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyMissingAll(
 	return lsfToNativeListText(lsfAssayxportConditionsPolicyMissingAll(lsfFromNativeListOutcome(os_)))
 }
 
-// assayxportConditionsPolicyMissingOf — laws/conditions_policy.lawspec:161.
+// assayxportConditionsPolicyMissingOf — laws/conditions_policy.lawspec:207.
 func (lawSpecDefinitions) AssayxportConditionsPolicyMissingOf(
 	symbols map[string]*LawSpecSymbol,
 	o Outcome,
@@ -1008,7 +1080,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyMissingOf(
 	return lsfToNativeListText(lsfAssayxportConditionsPolicyMissingOf(lsfFromNativeOutcome(o)))
 }
 
-// assayxportConditionsPolicyMix — laws/conditions_policy.lawspec:641.
+// assayxportConditionsPolicyMix — laws/conditions_policy.lawspec:751.
 func (lawSpecDefinitions) AssayxportConditionsPolicyMix(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -1017,7 +1089,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyMix(
 	return lsfToNativeInteger(lsfAssayxportConditionsPolicyMix(lsfFromNativeInteger(seed_), lsfFromNativeInteger(k)))
 }
 
-// assayxportConditionsPolicyNotDefined — laws/conditions_policy.lawspec:1083.
+// assayxportConditionsPolicyNotDefined — laws/conditions_policy.lawspec:1267.
 func (lawSpecDefinitions) AssayxportConditionsPolicyNotDefined(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecUnit,
@@ -1025,7 +1097,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyNotDefined(
 	return lsfToNativeBinding(lsfAssayxportConditionsPolicyNotDefined(lsfFromNativeUnit(u)))
 }
 
-// assayxportConditionsPolicyPackageOf — laws/conditions_policy.lawspec:1375.
+// assayxportConditionsPolicyPackageOf — laws/conditions_policy.lawspec:1565.
 func (lawSpecDefinitions) AssayxportConditionsPolicyPackageOf(
 	symbols map[string]*LawSpecSymbol,
 	m_ string,
@@ -1034,7 +1106,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyPackageOf(
 	return lsfToNativeText(lsfAssayxportConditionsPolicyPackageOf(lsfFromNativeText(m_), lsfFromNativeInteger(fuel)))
 }
 
-// assayxportConditionsPolicyPackageState — laws/conditions_policy.lawspec:271.
+// assayxportConditionsPolicyPackageState — laws/conditions_policy.lawspec:338.
 func (lawSpecDefinitions) AssayxportConditionsPolicyPackageState(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -1043,7 +1115,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyPackageState(
 	return lsfToNativeInteger(lsfAssayxportConditionsPolicyPackageState(lsfFromNativeEnv(env), lsfFromNativeText(p)))
 }
 
-// assayxportConditionsPolicyPaired — laws/conditions_policy.lawspec:519.
+// assayxportConditionsPolicyPaired — laws/conditions_policy.lawspec:623.
 func (lawSpecDefinitions) AssayxportConditionsPolicyPaired(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -1051,7 +1123,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyPaired(
 	return lsfToNativeBool(lsfPaired(lsfFromNativeText(t_)))
 }
 
-// assayxportConditionsPolicyPick — laws/conditions_policy.lawspec:645.
+// assayxportConditionsPolicyPick — laws/conditions_policy.lawspec:755.
 func (lawSpecDefinitions) AssayxportConditionsPolicyPick(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -1061,7 +1133,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyPick(
 	return lsfToNativeInteger(lsfAssayxportConditionsPolicyPick(lsfFromNativeInteger(seed_), lsfFromNativeInteger(k), lsfFromNativeInteger(n)))
 }
 
-// assayxportConditionsPolicyPow2 — laws/conditions_policy.lawspec:93.
+// assayxportConditionsPolicyPow2 — laws/conditions_policy.lawspec:107.
 func (lawSpecDefinitions) AssayxportConditionsPolicyPow2(
 	symbols map[string]*LawSpecSymbol,
 	n *LawSpecBigInt,
@@ -1069,7 +1141,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyPow2(
 	return lsfToNativeInteger(lsfAssayxportConditionsPolicyPow2(lsfFromNativeInteger(n)))
 }
 
-// assayxportConditionsPolicyRefEval — laws/conditions_policy.lawspec:412.
+// assayxportConditionsPolicyRefEval — laws/conditions_policy.lawspec:508.
 func (lawSpecDefinitions) AssayxportConditionsPolicyRefEval(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -1078,7 +1150,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyRefEval(
 	return lsfToNativeOutcome(lsfAssayxportConditionsPolicyRefEval(lsfFromNativeEnv(env), lsfFromNativeCExpr(e)))
 }
 
-// assayxportConditionsPolicyRiskyOf — laws/conditions_policy.lawspec:166.
+// assayxportConditionsPolicyRiskyOf — laws/conditions_policy.lawspec:212.
 func (lawSpecDefinitions) AssayxportConditionsPolicyRiskyOf(
 	symbols map[string]*LawSpecSymbol,
 	o Outcome,
@@ -1086,7 +1158,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyRiskyOf(
 	return lsfToNativeBool(lsfAssayxportConditionsPolicyRiskyOf(lsfFromNativeOutcome(o)))
 }
 
-// assayxportConditionsPolicySame — laws/conditions_policy.lawspec:313.
+// assayxportConditionsPolicySame — laws/conditions_policy.lawspec:380.
 func (lawSpecDefinitions) AssayxportConditionsPolicySame(
 	symbols map[string]*LawSpecSymbol,
 	a Outcome,
@@ -1095,7 +1167,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicySame(
 	return lsfToNativeOutcome(lsfAssayxportConditionsPolicySame(lsfFromNativeOutcome(a), lsfFromNativeInteger(x)))
 }
 
-// assayxportConditionsPolicyShiftLeft — laws/conditions_policy.lawspec:116.
+// assayxportConditionsPolicyShiftLeft — laws/conditions_policy.lawspec:131.
 func (lawSpecDefinitions) AssayxportConditionsPolicyShiftLeft(
 	symbols map[string]*LawSpecSymbol,
 	a *LawSpecBigInt,
@@ -1104,7 +1176,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyShiftLeft(
 	return lsfToNativeInteger(lsfAssayxportConditionsPolicyShiftLeft(lsfFromNativeInteger(a), lsfFromNativeInteger(n)))
 }
 
-// assayxportConditionsPolicyShiftRight — laws/conditions_policy.lawspec:123.
+// assayxportConditionsPolicyShiftRight — laws/conditions_policy.lawspec:138.
 func (lawSpecDefinitions) AssayxportConditionsPolicyShiftRight(
 	symbols map[string]*LawSpecSymbol,
 	a *LawSpecBigInt,
@@ -1113,7 +1185,26 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyShiftRight(
 	return lsfToNativeInteger(lsfAssayxportConditionsPolicyShiftRight(lsfFromNativeInteger(a), lsfFromNativeInteger(n)))
 }
 
-// assayxportConditionsPolicyShownLine — laws/conditions_policy.lawspec:1033.
+// assayxportConditionsPolicyShiftRightAs — laws/conditions_policy.lawspec:166.
+func (lawSpecDefinitions) AssayxportConditionsPolicyShiftRightAs(
+	symbols map[string]*LawSpecSymbol,
+	lu bool,
+	a *LawSpecBigInt,
+	n *LawSpecBigInt,
+) *LawSpecBigInt {
+	return lsfToNativeInteger(lsfAssayxportConditionsPolicyShiftRightAs(lsfFromNativeBool(lu), lsfFromNativeInteger(a), lsfFromNativeInteger(n)))
+}
+
+// assayxportConditionsPolicyShiftRightU — laws/conditions_policy.lawspec:162.
+func (lawSpecDefinitions) AssayxportConditionsPolicyShiftRightU(
+	symbols map[string]*LawSpecSymbol,
+	a *LawSpecBigInt,
+	n *LawSpecBigInt,
+) *LawSpecBigInt {
+	return lsfToNativeInteger(lsfAssayxportConditionsPolicyShiftRightU(lsfFromNativeInteger(a), lsfFromNativeInteger(n)))
+}
+
+// assayxportConditionsPolicyShownLine — laws/conditions_policy.lawspec:1217.
 func (lawSpecDefinitions) AssayxportConditionsPolicyShownLine(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -1122,7 +1213,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyShownLine(
 	return lsfToNativeText(lsfShownLine(lsfFromNativeText(t_), lsfFromNativeInteger(fuel)))
 }
 
-// assayxportConditionsPolicySimple — laws/conditions_policy.lawspec:445.
+// assayxportConditionsPolicySimple — laws/conditions_policy.lawspec:541.
 func (lawSpecDefinitions) AssayxportConditionsPolicySimple(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -1130,7 +1221,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicySimple(
 	return lsfToNativeBool(lsfAssayxportConditionsPolicySimple(lsfFromNativeText(t_)))
 }
 
-// assayxportConditionsPolicySorted — laws/conditions_policy.lawspec:157.
+// assayxportConditionsPolicySorted — laws/conditions_policy.lawspec:203.
 func (lawSpecDefinitions) AssayxportConditionsPolicySorted(
 	symbols map[string]*LawSpecSymbol,
 	ns []string,
@@ -1138,7 +1229,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicySorted(
 	return lsfToNativeListText(lsfAssayxportConditionsPolicySorted(lsfFromNativeListText(ns)))
 }
 
-// assayxportConditionsPolicyToInt64 — laws/conditions_policy.lawspec:89.
+// assayxportConditionsPolicyToInt64 — laws/conditions_policy.lawspec:103.
 func (lawSpecDefinitions) AssayxportConditionsPolicyToInt64(
 	symbols map[string]*LawSpecSymbol,
 	x *LawSpecBigInt,
@@ -1146,7 +1237,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyToInt64(
 	return lsfToNativeInt64(lsfAssayxportConditionsPolicyToInt64(lsfFromNativeInteger(x)))
 }
 
-// assayxportConditionsPolicyTruth — laws/conditions_policy.lawspec:127.
+// assayxportConditionsPolicyTruth — laws/conditions_policy.lawspec:142.
 func (lawSpecDefinitions) AssayxportConditionsPolicyTruth(
 	symbols map[string]*LawSpecSymbol,
 	b bool,
@@ -1154,7 +1245,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyTruth(
 	return lsfToNativeInteger(lsfAssayxportConditionsPolicyTruth(lsfFromNativeBool(b)))
 }
 
-// assayxportConditionsPolicyUnary — laws/conditions_policy.lawspec:218.
+// assayxportConditionsPolicyUnary — laws/conditions_policy.lawspec:285.
 func (lawSpecDefinitions) AssayxportConditionsPolicyUnary(
 	symbols map[string]*LawSpecSymbol,
 	op UnOp,
@@ -1163,7 +1254,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyUnary(
 	return lsfToNativeOutcome(lsfAssayxportConditionsPolicyUnary(lsfFromNativeUnOp(op), lsfFromNativeOutcome(o)))
 }
 
-// assayxportConditionsPolicyUndecidedLine — laws/conditions_policy.lawspec:1381.
+// assayxportConditionsPolicyUndecidedLine — laws/conditions_policy.lawspec:1571.
 func (lawSpecDefinitions) AssayxportConditionsPolicyUndecidedLine(
 	symbols map[string]*LawSpecSymbol,
 	name string,
@@ -1171,7 +1262,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyUndecidedLine(
 	return lsfToNativeText(lsfAssayxportConditionsPolicyUndecidedLine(lsfFromNativeText(name)))
 }
 
-// assayxportConditionsPolicyUnknown — laws/conditions_policy.lawspec:159.
+// assayxportConditionsPolicyUnknown — laws/conditions_policy.lawspec:205.
 func (lawSpecDefinitions) AssayxportConditionsPolicyUnknown(
 	symbols map[string]*LawSpecSymbol,
 	ns []string,
@@ -1180,7 +1271,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyUnknown(
 	return lsfToNativeOutcome(lsfAssayxportConditionsPolicyUnknown(lsfFromNativeListText(ns), lsfFromNativeBool(risky)))
 }
 
-// assayxportConditionsPolicyUnknownCall — laws/conditions_policy.lawspec:342.
+// assayxportConditionsPolicyUnknownCall — laws/conditions_policy.lawspec:409.
 func (lawSpecDefinitions) AssayxportConditionsPolicyUnknownCall(
 	symbols map[string]*LawSpecSymbol,
 	name string,
@@ -1189,7 +1280,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyUnknownCall(
 	return lsfToNativeOutcome(lsfAssayxportConditionsPolicyUnknownCall(lsfFromNativeText(name), lsfFromNativeListOutcome(args)))
 }
 
-// assayxportConditionsPolicyUnlisted — laws/conditions_policy.lawspec:1149.
+// assayxportConditionsPolicyUnlisted — laws/conditions_policy.lawspec:1333.
 func (lawSpecDefinitions) AssayxportConditionsPolicyUnlisted(
 	symbols map[string]*LawSpecSymbol,
 	missing []string,
@@ -1198,7 +1289,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyUnlisted(
 	return lsfToNativeListText(lsfAssayxportConditionsPolicyUnlisted(lsfFromNativeListText(missing), lsfFromNativeListText(listed)))
 }
 
-// assayxportConditionsPolicyUnreadDecl — laws/conditions_policy.lawspec:1184.
+// assayxportConditionsPolicyUnreadDecl — laws/conditions_policy.lawspec:1368.
 func (lawSpecDefinitions) AssayxportConditionsPolicyUnreadDecl(
 	symbols map[string]*LawSpecSymbol,
 	d Decl,
@@ -1206,7 +1297,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyUnreadDecl(
 	return lsfToNativeBool(lsfAssayxportConditionsPolicyUnreadDecl(lsfFromNativeDecl(d)))
 }
 
-// assayxportConditionsPolicyUnreadEdge — laws/conditions_policy.lawspec:1182.
+// assayxportConditionsPolicyUnreadEdge — laws/conditions_policy.lawspec:1366.
 func (lawSpecDefinitions) AssayxportConditionsPolicyUnreadEdge(
 	symbols map[string]*LawSpecSymbol,
 	e CallEdge,
@@ -1214,7 +1305,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyUnreadEdge(
 	return lsfToNativeBool(lsfAssayxportConditionsPolicyUnreadEdge(lsfFromNativeCallEdge(e)))
 }
 
-// assayxportConditionsPolicyUnreadLine — laws/conditions_policy.lawspec:1174.
+// assayxportConditionsPolicyUnreadLine — laws/conditions_policy.lawspec:1358.
 func (lawSpecDefinitions) AssayxportConditionsPolicyUnreadLine(
 	symbols map[string]*LawSpecSymbol,
 	path string,
@@ -1222,7 +1313,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyUnreadLine(
 	return lsfToNativeText(lsfAssayxportConditionsPolicyUnreadLine(lsfFromNativeText(path)))
 }
 
-// assayxportConditionsPolicyUnreadLines — laws/conditions_policy.lawspec:1178.
+// assayxportConditionsPolicyUnreadLines — laws/conditions_policy.lawspec:1362.
 func (lawSpecDefinitions) AssayxportConditionsPolicyUnreadLines(
 	symbols map[string]*LawSpecSymbol,
 	paths []string,
@@ -1230,7 +1321,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyUnreadLines(
 	return lsfToNativeListText(lsfAssayxportConditionsPolicyUnreadLines(lsfFromNativeListText(paths)))
 }
 
-// assayxportConditionsPolicyUnreadPaths — laws/conditions_policy.lawspec:1187.
+// assayxportConditionsPolicyUnreadPaths — laws/conditions_policy.lawspec:1371.
 func (lawSpecDefinitions) AssayxportConditionsPolicyUnreadPaths(
 	symbols map[string]*LawSpecSymbol,
 	ps []Package,
@@ -1238,7 +1329,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyUnreadPaths(
 	return lsfToNativeListText(lsfAssayxportConditionsPolicyUnreadPaths(lsfFromNativeListPackage(ps)))
 }
 
-// assayxportConditionsPolicyUnreadText — laws/conditions_policy.lawspec:504.
+// assayxportConditionsPolicyUnreadText — laws/conditions_policy.lawspec:600.
 func (lawSpecDefinitions) AssayxportConditionsPolicyUnreadText(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecUnit,
@@ -1246,7 +1337,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyUnreadText(
 	return lsfToNativeText(lsfAssayxportConditionsPolicyUnreadText(lsfFromNativeUnit(u)))
 }
 
-// assayxportConditionsPolicyUnreadableLines — laws/conditions_policy.lawspec:1167.
+// assayxportConditionsPolicyUnreadableLines — laws/conditions_policy.lawspec:1351.
 func (lawSpecDefinitions) AssayxportConditionsPolicyUnreadableLines(
 	symbols map[string]*LawSpecSymbol,
 	ts []string,
@@ -1254,7 +1345,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyUnreadableLines(
 	return lsfToNativeListText(lsfAssayxportConditionsPolicyUnreadableLines(lsfFromNativeListText(ts)))
 }
 
-// assayxportConditionsPolicyUnreadableTerm — laws/conditions_policy.lawspec:509.
+// assayxportConditionsPolicyUnreadableTerm — laws/conditions_policy.lawspec:605.
 func (lawSpecDefinitions) AssayxportConditionsPolicyUnreadableTerm(
 	symbols map[string]*LawSpecSymbol,
 	line *LawSpecBigInt,
@@ -1262,7 +1353,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyUnreadableTerm(
 	return lsfToNativeText(lsfUnreadableTerm(lsfFromNativeInteger(line)))
 }
 
-// assayxportConditionsPolicyUnsigned64 — laws/conditions_policy.lawspec:98.
+// assayxportConditionsPolicyUnsigned64 — laws/conditions_policy.lawspec:113.
 func (lawSpecDefinitions) AssayxportConditionsPolicyUnsigned64(
 	symbols map[string]*LawSpecSymbol,
 	a *LawSpecBigInt,
@@ -1270,7 +1361,15 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyUnsigned64(
 	return lsfToNativeInteger(lsfAssayxportConditionsPolicyUnsigned64(lsfFromNativeInteger(a)))
 }
 
-// assayxportConditionsPolicyUseAt — laws/conditions_policy.lawspec:1394.
+// assayxportConditionsPolicyUnsignedOf — laws/conditions_policy.lawspec:447.
+func (lawSpecDefinitions) AssayxportConditionsPolicyUnsignedOf(
+	symbols map[string]*LawSpecSymbol,
+	e CExpr,
+) bool {
+	return lsfToNativeBool(lsfAssayxportConditionsPolicyUnsignedOf(lsfFromNativeCExpr(e)))
+}
+
+// assayxportConditionsPolicyUseAt — laws/conditions_policy.lawspec:1584.
 func (lawSpecDefinitions) AssayxportConditionsPolicyUseAt(
 	symbols map[string]*LawSpecSymbol,
 	file string,
@@ -1280,7 +1379,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyUseAt(
 	return lsfToNativeUsePlace(lsfAssayxportConditionsPolicyUseAt(lsfFromNativeText(file), lsfFromNativeInteger(line), lsfFromNativeText(cond)))
 }
 
-// assayxportConditionsPolicyUseLine — laws/conditions_policy.lawspec:1396.
+// assayxportConditionsPolicyUseLine — laws/conditions_policy.lawspec:1586.
 func (lawSpecDefinitions) AssayxportConditionsPolicyUseLine(
 	symbols map[string]*LawSpecSymbol,
 	u UsePlace,
@@ -1288,7 +1387,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyUseLine(
 	return lsfToNativeText(lsfAssayxportConditionsPolicyUseLine(lsfFromNativeUsePlace(u)))
 }
 
-// assayxportConditionsPolicyUseLines — laws/conditions_policy.lawspec:1400.
+// assayxportConditionsPolicyUseLines — laws/conditions_policy.lawspec:1590.
 func (lawSpecDefinitions) AssayxportConditionsPolicyUseLines(
 	symbols map[string]*LawSpecSymbol,
 	us []UsePlace,
@@ -1296,7 +1395,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyUseLines(
 	return lsfToNativeListText(lsfAssayxportConditionsPolicyUseLines(lsfFromNativeListUsePlace(us)))
 }
 
-// assayxportConditionsPolicyValueOf — laws/conditions_policy.lawspec:256.
+// assayxportConditionsPolicyValueOf — laws/conditions_policy.lawspec:323.
 func (lawSpecDefinitions) AssayxportConditionsPolicyValueOf(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -1305,7 +1404,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyValueOf(
 	return lsfToNativeOutcome(lsfAssayxportConditionsPolicyValueOf(lsfFromNativeEnv(env), lsfFromNativeText(n)))
 }
 
-// assayxportConditionsPolicyWarningsOf — laws/conditions_policy.lawspec:1162.
+// assayxportConditionsPolicyWarningsOf — laws/conditions_policy.lawspec:1346.
 func (lawSpecDefinitions) AssayxportConditionsPolicyWarningsOf(
 	symbols map[string]*LawSpecSymbol,
 	f Filtered,
@@ -1313,7 +1412,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyWarningsOf(
 	return lsfToNativeListText(lsfAssayxportConditionsPolicyWarningsOf(lsfFromNativeFiltered(f)))
 }
 
-// assayxportConditionsPolicyWarningsWith — laws/conditions_policy.lawspec:1153.
+// assayxportConditionsPolicyWarningsWith — laws/conditions_policy.lawspec:1337.
 func (lawSpecDefinitions) AssayxportConditionsPolicyWarningsWith(
 	symbols map[string]*LawSpecSymbol,
 	f Filtered,
@@ -1322,7 +1421,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyWarningsWith(
 	return lsfToNativeListText(lsfAssayxportConditionsPolicyWarningsWith(lsfFromNativeFiltered(f), lsfFromNativeListText(listed)))
 }
 
-// assayxportConditionsPolicyWrap — laws/conditions_policy.lawspec:91.
+// assayxportConditionsPolicyWrap — laws/conditions_policy.lawspec:105.
 func (lawSpecDefinitions) AssayxportConditionsPolicyWrap(
 	symbols map[string]*LawSpecSymbol,
 	x *LawSpecBigInt,
@@ -1330,7 +1429,7 @@ func (lawSpecDefinitions) AssayxportConditionsPolicyWrap(
 	return lsfToNativeInteger(lsfAssayxportConditionsPolicyWrap(lsfFromNativeInteger(x)))
 }
 
-// assayxportConditionsQuoteEnd — laws/conditions.lawspec:68.
+// assayxportConditionsQuoteEnd — laws/conditions.lawspec:72.
 func (lawSpecDefinitions) AssayxportConditionsQuoteEnd(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -1341,7 +1440,7 @@ func (lawSpecDefinitions) AssayxportConditionsQuoteEnd(
 	return lsfToNativeInteger(lsfQuoteEnd(lsfFromNativeText(t_), lsfFromNativeInteger(j), lsfFromNativeInteger(n), lsfFromNativeBool(esc)))
 }
 
-// assayxportConditionsReadBindings — laws/conditions.lawspec:455.
+// assayxportConditionsReadBindings — laws/conditions.lawspec:496.
 func (lawSpecDefinitions) AssayxportConditionsReadBindings(
 	symbols map[string]*LawSpecSymbol,
 	lines []string,
@@ -1349,7 +1448,7 @@ func (lawSpecDefinitions) AssayxportConditionsReadBindings(
 	return lsfToNativeEitherBindingErrorEnv(lsfReadBindings(lsfFromNativeListText(lines)))
 }
 
-// assayxportConditionsReadFrom — laws/conditions.lawspec:444.
+// assayxportConditionsReadFrom — laws/conditions.lawspec:485.
 func (lawSpecDefinitions) AssayxportConditionsReadFrom(
 	symbols map[string]*LawSpecSymbol,
 	lines []string,
@@ -1359,7 +1458,7 @@ func (lawSpecDefinitions) AssayxportConditionsReadFrom(
 	return lsfToNativeEitherBindingErrorListBindingLine(lsfReadFrom(lsfFromNativeListText(lines), lsfFromNativeInteger(k), lsfFromNativeListBindingLine(acc)))
 }
 
-// assayxportConditionsReadLine — laws/conditions.lawspec:412.
+// assayxportConditionsReadLine — laws/conditions.lawspec:453.
 func (lawSpecDefinitions) AssayxportConditionsReadLine(
 	symbols map[string]*LawSpecSymbol,
 	raw string,
@@ -1367,7 +1466,7 @@ func (lawSpecDefinitions) AssayxportConditionsReadLine(
 	return lsfToNativeMaybeBindingLine(lsfReadLine(lsfFromNativeText(raw)))
 }
 
-// assayxportConditionsStripCr — laws/conditions.lawspec:385.
+// assayxportConditionsStripCr — laws/conditions.lawspec:426.
 func (lawSpecDefinitions) AssayxportConditionsStripCr(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -1376,7 +1475,7 @@ func (lawSpecDefinitions) AssayxportConditionsStripCr(
 	return lsfToNativeText(lsfStripCr(lsfFromNativeText(t_), lsfFromNativeInteger(fuel)))
 }
 
-// assayxportConditionsSummedEdges — laws/conditions.lawspec:525.
+// assayxportConditionsSummedEdges — laws/conditions.lawspec:566.
 func (lawSpecDefinitions) AssayxportConditionsSummedEdges(
 	symbols map[string]*LawSpecSymbol,
 	es []CallEdge,
@@ -1384,7 +1483,7 @@ func (lawSpecDefinitions) AssayxportConditionsSummedEdges(
 	return lsfToNativeListCallEdge(lsfSummedEdges(lsfFromNativeListCallEdge(es)))
 }
 
-// assayxportConditionsTallied — laws/conditions.lawspec:506.
+// assayxportConditionsTallied — laws/conditions.lawspec:547.
 func (lawSpecDefinitions) AssayxportConditionsTallied(
 	symbols map[string]*LawSpecSymbol,
 	es []CallEdge,
@@ -1393,7 +1492,7 @@ func (lawSpecDefinitions) AssayxportConditionsTallied(
 	return lsfToNativeKeyValEdgeKeyTally(lsfTallied(lsfFromNativeListCallEdge(es), lsfFromNativeKeyValEdgeKeyTally(acc)))
 }
 
-// assayxportConditionsTokOfNumber — laws/conditions.lawspec:103.
+// assayxportConditionsTokOfNumber — laws/conditions.lawspec:107.
 func (lawSpecDefinitions) AssayxportConditionsTokOfNumber(
 	symbols map[string]*LawSpecSymbol,
 	v *LawSpecBigInt,
@@ -1402,7 +1501,7 @@ func (lawSpecDefinitions) AssayxportConditionsTokOfNumber(
 	return lsfToNativeMaybeTok(lsfTokOfNumber(lsfFromNativeInteger(v), lsfFromNativeBool(unsigned)))
 }
 
-// assayxportConditionsTokOp — laws/conditions.lawspec:183.
+// assayxportConditionsTokOp — laws/conditions.lawspec:208.
 func (lawSpecDefinitions) AssayxportConditionsTokOp(
 	symbols map[string]*LawSpecSymbol,
 	toks []Tok,
@@ -1410,7 +1509,7 @@ func (lawSpecDefinitions) AssayxportConditionsTokOp(
 	return lsfToNativeText(lsfTokOp(lsfFromNativeListTok(toks)))
 }
 
-// assayxportConditionsTrimFrom — laws/conditions.lawspec:349.
+// assayxportConditionsTrimFrom — laws/conditions.lawspec:390.
 func (lawSpecDefinitions) AssayxportConditionsTrimFrom(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -1419,7 +1518,7 @@ func (lawSpecDefinitions) AssayxportConditionsTrimFrom(
 	return lsfToNativeText(lsfTrimFrom(lsfFromNativeText(t_), lsfFromNativeInteger(fuel)))
 }
 
-// assayxportConditionsTrimTo — laws/conditions.lawspec:354.
+// assayxportConditionsTrimTo — laws/conditions.lawspec:395.
 func (lawSpecDefinitions) AssayxportConditionsTrimTo(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -1428,7 +1527,7 @@ func (lawSpecDefinitions) AssayxportConditionsTrimTo(
 	return lsfToNativeText(lsfTrimTo(lsfFromNativeText(t_), lsfFromNativeInteger(fuel)))
 }
 
-// assayxportConditionsTrimmed — laws/conditions.lawspec:359.
+// assayxportConditionsTrimmed — laws/conditions.lawspec:400.
 func (lawSpecDefinitions) AssayxportConditionsTrimmed(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -1436,7 +1535,7 @@ func (lawSpecDefinitions) AssayxportConditionsTrimmed(
 	return lsfToNativeText(lsfTrimmed(lsfFromNativeText(t_)))
 }
 
-// assayxportConditionsUnOpFor — laws/conditions.lawspec:179.
+// assayxportConditionsUnOpFor — laws/conditions.lawspec:204.
 func (lawSpecDefinitions) AssayxportConditionsUnOpFor(
 	symbols map[string]*LawSpecSymbol,
 	s string,
@@ -1444,7 +1543,7 @@ func (lawSpecDefinitions) AssayxportConditionsUnOpFor(
 	return lsfToNativeUnOp(lsfUnOpFor(lsfFromNativeText(s)))
 }
 
-// assayxportConditionsUnsignedOf — laws/conditions.lawspec:101.
+// assayxportConditionsUnsignedOf — laws/conditions.lawspec:105.
 func (lawSpecDefinitions) AssayxportConditionsUnsignedOf(
 	symbols map[string]*LawSpecSymbol,
 	suffix string,
@@ -1452,7 +1551,7 @@ func (lawSpecDefinitions) AssayxportConditionsUnsignedOf(
 	return lsfToNativeBool(lsfUnsignedOf(lsfFromNativeText(suffix)))
 }
 
-// assayxportConditionsUsesFor — laws/conditions.lawspec:723.
+// assayxportConditionsUsesFor — laws/conditions.lawspec:764.
 func (lawSpecDefinitions) AssayxportConditionsUsesFor(
 	symbols map[string]*LawSpecSymbol,
 	name string,
@@ -1461,7 +1560,7 @@ func (lawSpecDefinitions) AssayxportConditionsUsesFor(
 	return lsfToNativeListUsePlace(lsfUsesFor(lsfFromNativeText(name), lsfFromNativeListUseNote(us)))
 }
 
-// assayxportConditionsValueIn — laws/conditions.lawspec:392.
+// assayxportConditionsValueIn — laws/conditions.lawspec:433.
 func (lawSpecDefinitions) AssayxportConditionsValueIn(
 	symbols map[string]*LawSpecSymbol,
 	v string,
@@ -1469,7 +1568,7 @@ func (lawSpecDefinitions) AssayxportConditionsValueIn(
 	return lsfToNativeMaybeInteger(lsfValueIn(lsfFromNativeText(v)))
 }
 
-// assayxportConditionsVersionParts — laws/conditions.lawspec:370.
+// assayxportConditionsVersionParts — laws/conditions.lawspec:411.
 func (lawSpecDefinitions) AssayxportConditionsVersionParts(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -1768,7 +1867,26 @@ func (lawSpecDefinitions) AssayxportContractWithCounts(
 	return lsfToNativeListCallEdge(lsfWithCounts(lsfFromNativeListEntryEdgeKeyCounted(es)))
 }
 
-// assayxportHaskellCppAllArms — laws/haskell_cpp.lawspec:189.
+// assayxportHaskellCppAddTerm — laws/haskell_cpp.lawspec:583.
+func (lawSpecDefinitions) AssayxportHaskellCppAddTerm(
+	symbols map[string]*LawSpecSymbol,
+	t_ string,
+	seen []string,
+) []string {
+	return lsfToNativeListText(lsfAssayxportHaskellCppAddTerm(lsfFromNativeText(t_), lsfFromNativeListText(seen)))
+}
+
+// assayxportHaskellCppAfter — laws/haskell_cpp.lawspec:301.
+func (lawSpecDefinitions) AssayxportHaskellCppAfter(
+	symbols map[string]*LawSpecSymbol,
+	w Walk,
+	r Row,
+	v bool,
+) Walk {
+	return lsfToNativeWalk(lsfAssayxportHaskellCppAfter(lsfFromNativeWalk(w), lsfFromNativeRow(r), lsfFromNativeBool(v)))
+}
+
+// assayxportHaskellCppAllArms — laws/haskell_cpp.lawspec:223.
 func (lawSpecDefinitions) AssayxportHaskellCppAllArms(
 	symbols map[string]*LawSpecSymbol,
 	ss []Section,
@@ -1776,7 +1894,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppAllArms(
 	return lsfToNativeText(lsfAllArms(lsfFromNativeListSection(ss)))
 }
 
-// assayxportHaskellCppAllArmsText — laws/haskell_cpp.lawspec:185.
+// assayxportHaskellCppAllArmsText — laws/haskell_cpp.lawspec:219.
 func (lawSpecDefinitions) AssayxportHaskellCppAllArmsText(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
@@ -1784,16 +1902,16 @@ func (lawSpecDefinitions) AssayxportHaskellCppAllArmsText(
 	return lsfToNativeText(lsfAllArmsText(lsfFromNativeListRow(rs)))
 }
 
-// assayxportHaskellCppAllHold — laws/haskell_cpp.lawspec:217.
+// assayxportHaskellCppAllHold — laws/haskell_cpp.lawspec:677.
 func (lawSpecDefinitions) AssayxportHaskellCppAllHold(
 	symbols map[string]*LawSpecSymbol,
 	asg []Entry[string, *LawSpecBigInt],
 	ls []Literal,
 ) bool {
-	return lsfToNativeBool(lsfAllHold(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeListLiteral(ls)))
+	return lsfToNativeBool(lsfAssayxportHaskellCppAllHold(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeListLiteral(ls)))
 }
 
-// assayxportHaskellCppArmsOf — laws/haskell_cpp.lawspec:472.
+// assayxportHaskellCppArmsOf — laws/haskell_cpp.lawspec:831.
 func (lawSpecDefinitions) AssayxportHaskellCppArmsOf(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -1802,7 +1920,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppArmsOf(
 	return lsfToNativeListArm(lsfArmsOf(lsfFromNativeInteger(seed_), lsfFromNativeInteger(n)))
 }
 
-// assayxportHaskellCppArmsRows — laws/haskell_cpp.lawspec:142.
+// assayxportHaskellCppArmsRows — laws/haskell_cpp.lawspec:176.
 func (lawSpecDefinitions) AssayxportHaskellCppArmsRows(
 	symbols map[string]*LawSpecSymbol,
 	group *LawSpecBigInt,
@@ -1815,7 +1933,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppArmsRows(
 	return lsfToNativeListRow(lsfArmsRows(lsfFromNativeInteger(group), lsfFromNativeListArm(arms), lsfFromNativeInteger(k), lsfFromNativeListLiteral(before), lsfFromNativeBool(hasElse), lsfFromNativeListInner(elseBody)))
 }
 
-// assayxportHaskellCppAssignments — laws/haskell_cpp.lawspec:332.
+// assayxportHaskellCppAssignments — laws/haskell_cpp.lawspec:551.
 func (lawSpecDefinitions) AssayxportHaskellCppAssignments(
 	symbols map[string]*LawSpecSymbol,
 	ts []string,
@@ -1823,7 +1941,15 @@ func (lawSpecDefinitions) AssayxportHaskellCppAssignments(
 	return lsfToNativeListKeyValTextInteger(lsfAssignments(lsfFromNativeListText(ts)))
 }
 
-// assayxportHaskellCppBindRows — laws/haskell_cpp.lawspec:487.
+// assayxportHaskellCppBaseAtLeast48 — laws/haskell_cpp.lawspec:1141.
+func (lawSpecDefinitions) AssayxportHaskellCppBaseAtLeast48(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecUnit,
+) Literal {
+	return lsfToNativeLiteral(lsfAssayxportHaskellCppBaseAtLeast48(lsfFromNativeUnit(u)))
+}
+
+// assayxportHaskellCppBindRows — laws/haskell_cpp.lawspec:846.
 func (lawSpecDefinitions) AssayxportHaskellCppBindRows(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -1834,7 +1960,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppBindRows(
 	return lsfToNativeKeyValTextBinding(lsfBindRows(lsfFromNativeInteger(seed_), lsfFromNativeListRow(rs), lsfFromNativeInteger(k), lsfFromNativeKeyValTextBinding(acc)))
 }
 
-// assayxportHaskellCppBlankIf — laws/haskell_cpp.lawspec:181.
+// assayxportHaskellCppBlankIf — laws/haskell_cpp.lawspec:215.
 func (lawSpecDefinitions) AssayxportHaskellCppBlankIf(
 	symbols map[string]*LawSpecSymbol,
 	b bool,
@@ -1843,7 +1969,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppBlankIf(
 	return lsfToNativeText(lsfAssayxportHaskellCppBlankIf(lsfFromNativeBool(b), lsfFromNativeRow(r)))
 }
 
-// assayxportHaskellCppBlockRows — laws/haskell_cpp.lawspec:107.
+// assayxportHaskellCppBlockRows — laws/haskell_cpp.lawspec:141.
 func (lawSpecDefinitions) AssayxportHaskellCppBlockRows(
 	symbols map[string]*LawSpecSymbol,
 	id *LawSpecBigInt,
@@ -1852,15 +1978,25 @@ func (lawSpecDefinitions) AssayxportHaskellCppBlockRows(
 	return lsfToNativeListRow(lsfBlockRows(lsfFromNativeInteger(id), lsfFromNativeListLiteral(terms)))
 }
 
-// assayxportHaskellCppBuildCount — laws/haskell_cpp.lawspec:290.
+// assayxportHaskellCppBlocks — laws/haskell_cpp.lawspec:358.
+func (lawSpecDefinitions) AssayxportHaskellCppBlocks(
+	symbols map[string]*LawSpecSymbol,
+	sets []Entry[string, Sets],
+	vals []string,
+	n string,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppBlocks(lsfFromNativeKeyValTextSets(sets), lsfFromNativeListText(vals), lsfFromNativeText(n)))
+}
+
+// assayxportHaskellCppBuildCount — laws/haskell_cpp.lawspec:502.
 func (lawSpecDefinitions) AssayxportHaskellCppBuildCount(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
 ) *LawSpecBigInt {
-	return lsfToNativeInteger(lsfBuildCount(lsfFromNativeListRow(rs)))
+	return lsfToNativeInteger(lsfAssayxportHaskellCppBuildCount(lsfFromNativeListRow(rs)))
 }
 
-// assayxportHaskellCppBuildEnv — laws/haskell_cpp.lawspec:505.
+// assayxportHaskellCppBuildEnv — laws/haskell_cpp.lawspec:864.
 func (lawSpecDefinitions) AssayxportHaskellCppBuildEnv(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -1869,7 +2005,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppBuildEnv(
 	return lsfToNativeEnv(lsfBuildEnv(lsfFromNativeInteger(seed_), lsfFromNativeListSection(ss)))
 }
 
-// assayxportHaskellCppBuildOf — laws/haskell_cpp.lawspec:459.
+// assayxportHaskellCppBuildOf — laws/haskell_cpp.lawspec:818.
 func (lawSpecDefinitions) AssayxportHaskellCppBuildOf(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -1878,7 +2014,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppBuildOf(
 	return lsfToNativeText(lsfBuildOf(lsfFromNativeEnv(env), lsfFromNativeListSection(ss)))
 }
 
-// assayxportHaskellCppBuildText — laws/haskell_cpp.lawspec:450.
+// assayxportHaskellCppBuildText — laws/haskell_cpp.lawspec:814.
 func (lawSpecDefinitions) AssayxportHaskellCppBuildText(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -1887,25 +2023,18 @@ func (lawSpecDefinitions) AssayxportHaskellCppBuildText(
 	return lsfToNativeText(lsfAssayxportHaskellCppBuildText(lsfFromNativeEnv(env), lsfFromNativeListRow(rs)))
 }
 
-// assayxportHaskellCppBuildsFrom — laws/haskell_cpp.lawspec:256.
+// assayxportHaskellCppBuildsFrom — laws/haskell_cpp.lawspec:452.
 func (lawSpecDefinitions) AssayxportHaskellCppBuildsFrom(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
+	w Walk,
 	asg []Entry[string, *LawSpecBigInt],
+	line *LawSpecBigInt,
 ) [][]Entry[string, *LawSpecBigInt] {
-	return lsfToNativeListKeyValTextInteger(lsfBuildsFrom(lsfFromNativeListRow(rs), lsfFromNativeKeyValTextInteger(asg)))
+	return lsfToNativeListKeyValTextInteger(lsfAssayxportHaskellCppBuildsFrom(lsfFromNativeListRow(rs), lsfFromNativeWalk(w), lsfFromNativeKeyValTextInteger(asg), lsfFromNativeInteger(line)))
 }
 
-// assayxportHaskellCppChoiceAt — laws/haskell_cpp.lawspec:233.
-func (lawSpecDefinitions) AssayxportHaskellCppChoiceAt(
-	symbols map[string]*LawSpecSymbol,
-	asg []Entry[string, *LawSpecBigInt],
-	r Row,
-) bool {
-	return lsfToNativeBool(lsfChoiceAt(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeRow(r)))
-}
-
-// assayxportHaskellCppCodeRows — laws/haskell_cpp.lawspec:562.
+// assayxportHaskellCppCodeRows — laws/haskell_cpp.lawspec:921.
 func (lawSpecDefinitions) AssayxportHaskellCppCodeRows(
 	symbols map[string]*LawSpecSymbol,
 	lines []string,
@@ -1914,7 +2043,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppCodeRows(
 	return lsfToNativeListRow(lsfAssayxportHaskellCppCodeRows(lsfFromNativeListText(lines), lsfFromNativeListLiteral(terms)))
 }
 
-// assayxportHaskellCppConditionAt — laws/haskell_cpp.lawspec:401.
+// assayxportHaskellCppConditionAt — laws/haskell_cpp.lawspec:721.
 func (lawSpecDefinitions) AssayxportHaskellCppConditionAt(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
@@ -1923,15 +2052,15 @@ func (lawSpecDefinitions) AssayxportHaskellCppConditionAt(
 	return lsfToNativeText(lsfConditionAt(lsfFromNativeListRow(rs), lsfFromNativeInteger(line)))
 }
 
-// assayxportHaskellCppConditionText — laws/haskell_cpp.lawspec:399.
+// assayxportHaskellCppConditionText — laws/haskell_cpp.lawspec:719.
 func (lawSpecDefinitions) AssayxportHaskellCppConditionText(
 	symbols map[string]*LawSpecSymbol,
 	ts []Literal,
 ) string {
-	return lsfToNativeText(lsfConditionText(lsfFromNativeListLiteral(ts)))
+	return lsfToNativeText(lsfAssayxportHaskellCppConditionText(lsfFromNativeListLiteral(ts)))
 }
 
-// assayxportHaskellCppConditioned — laws/haskell_cpp.lawspec:424.
+// assayxportHaskellCppConditioned — laws/haskell_cpp.lawspec:744.
 func (lawSpecDefinitions) AssayxportHaskellCppConditioned(
 	symbols map[string]*LawSpecSymbol,
 	ss []Section,
@@ -1940,7 +2069,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppConditioned(
 	return lsfToNativeListPackage(lsfConditioned(lsfFromNativeListSection(ss), lsfFromNativeListPackage(ps)))
 }
 
-// assayxportHaskellCppCopies — laws/haskell_cpp.lawspec:307.
+// assayxportHaskellCppCopies — laws/haskell_cpp.lawspec:519.
 func (lawSpecDefinitions) AssayxportHaskellCppCopies(
 	symbols map[string]*LawSpecSymbol,
 	ss []Section,
@@ -1948,24 +2077,24 @@ func (lawSpecDefinitions) AssayxportHaskellCppCopies(
 	return lsfToNativeListText(lsfCopies(lsfFromNativeListSection(ss)))
 }
 
-// assayxportHaskellCppCopiesOf — laws/haskell_cpp.lawspec:282.
+// assayxportHaskellCppCopiesOf — laws/haskell_cpp.lawspec:494.
 func (lawSpecDefinitions) AssayxportHaskellCppCopiesOf(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
 	builds [][]Entry[string, *LawSpecBigInt],
 ) []string {
-	return lsfToNativeListText(lsfCopiesOf(lsfFromNativeListRow(rs), lsfFromNativeListKeyValTextInteger(builds)))
+	return lsfToNativeListText(lsfAssayxportHaskellCppCopiesOf(lsfFromNativeListRow(rs), lsfFromNativeListKeyValTextInteger(builds)))
 }
 
-// assayxportHaskellCppCopiesOfRows — laws/haskell_cpp.lawspec:298.
+// assayxportHaskellCppCopiesOfRows — laws/haskell_cpp.lawspec:510.
 func (lawSpecDefinitions) AssayxportHaskellCppCopiesOfRows(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
 ) []string {
-	return lsfToNativeListText(lsfCopiesOfRows(lsfFromNativeListRow(rs)))
+	return lsfToNativeListText(lsfAssayxportHaskellCppCopiesOfRows(lsfFromNativeListRow(rs)))
 }
 
-// assayxportHaskellCppCopiesOfWalked — laws/haskell_cpp.lawspec:386.
+// assayxportHaskellCppCopiesOfWalked — laws/haskell_cpp.lawspec:654.
 func (lawSpecDefinitions) AssayxportHaskellCppCopiesOfWalked(
 	symbols map[string]*LawSpecSymbol,
 	ws []Walked,
@@ -1973,26 +2102,49 @@ func (lawSpecDefinitions) AssayxportHaskellCppCopiesOfWalked(
 	return lsfToNativeListText(lsfCopiesOfWalked(lsfFromNativeListWalked(ws)))
 }
 
-// assayxportHaskellCppCopyOf — laws/haskell_cpp.lawspec:275.
+// assayxportHaskellCppCopyFrom — laws/haskell_cpp.lawspec:485.
+func (lawSpecDefinitions) AssayxportHaskellCppCopyFrom(
+	symbols map[string]*LawSpecSymbol,
+	rs []Row,
+	w Walk,
+	asg []Entry[string, *LawSpecBigInt],
+	line *LawSpecBigInt,
+) string {
+	return lsfToNativeText(lsfAssayxportHaskellCppCopyFrom(lsfFromNativeListRow(rs), lsfFromNativeWalk(w), lsfFromNativeKeyValTextInteger(asg), lsfFromNativeInteger(line)))
+}
+
+// assayxportHaskellCppCopyOf — laws/haskell_cpp.lawspec:492.
 func (lawSpecDefinitions) AssayxportHaskellCppCopyOf(
 	symbols map[string]*LawSpecSymbol,
 	asg []Entry[string, *LawSpecBigInt],
 	rs []Row,
 ) string {
-	return lsfToNativeText(lsfCopyOf(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeListRow(rs)))
+	return lsfToNativeText(lsfAssayxportHaskellCppCopyOf(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeListRow(rs)))
 }
 
-// assayxportHaskellCppCountBuilds — laws/haskell_cpp.lawspec:245.
+// assayxportHaskellCppCountBuilds — laws/haskell_cpp.lawspec:435.
 func (lawSpecDefinitions) AssayxportHaskellCppCountBuilds(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
+	w Walk,
 	asg []Entry[string, *LawSpecBigInt],
+	line *LawSpecBigInt,
 	budget *LawSpecBigInt,
 ) *LawSpecBigInt {
-	return lsfToNativeInteger(lsfCountBuilds(lsfFromNativeListRow(rs), lsfFromNativeKeyValTextInteger(asg), lsfFromNativeInteger(budget)))
+	return lsfToNativeInteger(lsfAssayxportHaskellCppCountBuilds(lsfFromNativeListRow(rs), lsfFromNativeWalk(w), lsfFromNativeKeyValTextInteger(asg), lsfFromNativeInteger(line), lsfFromNativeInteger(budget)))
 }
 
-// assayxportHaskellCppDeclRows — laws/haskell_cpp.lawspec:578.
+// assayxportHaskellCppDecidedBy — laws/haskell_cpp.lawspec:394.
+func (lawSpecDefinitions) AssayxportHaskellCppDecidedBy(
+	symbols map[string]*LawSpecSymbol,
+	sets []Entry[string, Sets],
+	l Literal,
+	line *LawSpecBigInt,
+) Reading {
+	return lsfToNativeReading(lsfAssayxportHaskellCppDecidedBy(lsfFromNativeKeyValTextSets(sets), lsfFromNativeLiteral(l), lsfFromNativeInteger(line)))
+}
+
+// assayxportHaskellCppDeclRows — laws/haskell_cpp.lawspec:937.
 func (lawSpecDefinitions) AssayxportHaskellCppDeclRows(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2001,7 +2153,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppDeclRows(
 	return lsfToNativeListRow(lsfDeclRows(lsfFromNativeInteger(seed_), lsfFromNativeInteger(j)))
 }
 
-// assayxportHaskellCppDeclsAt — laws/haskell_cpp.lawspec:409.
+// assayxportHaskellCppDeclsAt — laws/haskell_cpp.lawspec:729.
 func (lawSpecDefinitions) AssayxportHaskellCppDeclsAt(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
@@ -2010,7 +2162,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppDeclsAt(
 	return lsfToNativeListDecl(lsfDeclsAt(lsfFromNativeListRow(rs), lsfFromNativeListDecl(ds)))
 }
 
-// assayxportHaskellCppDefinedAnd — laws/haskell_cpp.lawspec:73.
+// assayxportHaskellCppDefinedAnd — laws/haskell_cpp.lawspec:97.
 func (lawSpecDefinitions) AssayxportHaskellCppDefinedAnd(
 	symbols map[string]*LawSpecSymbol,
 	n string,
@@ -2018,7 +2170,27 @@ func (lawSpecDefinitions) AssayxportHaskellCppDefinedAnd(
 	return lsfToNativeCExpr(lsfAssayxportHaskellCppDefinedAnd(lsfFromNativeText(n)))
 }
 
-// assayxportHaskellCppDirectiveOf — laws/haskell_cpp.lawspec:86.
+// assayxportHaskellCppDefiner — laws/haskell_cpp.lawspec:135.
+func (lawSpecDefinitions) AssayxportHaskellCppDefiner(
+	symbols map[string]*LawSpecSymbol,
+	text string,
+	terms []Literal,
+	name string,
+	sets Sets,
+) Row {
+	return lsfToNativeRow(lsfAssayxportHaskellCppDefiner(lsfFromNativeText(text), lsfFromNativeListLiteral(terms), lsfFromNativeText(name), lsfFromNativeSets(sets)))
+}
+
+// assayxportHaskellCppDiffersFrom — laws/haskell_cpp.lawspec:1272.
+func (lawSpecDefinitions) AssayxportHaskellCppDiffersFrom(
+	symbols map[string]*LawSpecSymbol,
+	a string,
+	b string,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppDiffersFrom(lsfFromNativeText(a), lsfFromNativeText(b)))
+}
+
+// assayxportHaskellCppDirectiveOf — laws/haskell_cpp.lawspec:115.
 func (lawSpecDefinitions) AssayxportHaskellCppDirectiveOf(
 	symbols map[string]*LawSpecSymbol,
 	first bool,
@@ -2028,7 +2200,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppDirectiveOf(
 	return lsfToNativeText(lsfAssayxportHaskellCppDirectiveOf(lsfFromNativeBool(first), lsfFromNativeInteger(form), lsfFromNativeText(n)))
 }
 
-// assayxportHaskellCppEdgesAt — laws/haskell_cpp.lawspec:405.
+// assayxportHaskellCppEdgesAt — laws/haskell_cpp.lawspec:725.
 func (lawSpecDefinitions) AssayxportHaskellCppEdgesAt(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -2037,7 +2209,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppEdgesAt(
 	return lsfToNativeListCallEdge(lsfEdgesAt(lsfFromNativeText(t_), lsfFromNativeListCallEdge(es)))
 }
 
-// assayxportHaskellCppEnvOfRows — laws/haskell_cpp.lawspec:499.
+// assayxportHaskellCppEnvOfRows — laws/haskell_cpp.lawspec:858.
 func (lawSpecDefinitions) AssayxportHaskellCppEnvOfRows(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2046,7 +2218,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppEnvOfRows(
 	return lsfToNativeEnv(lsfEnvOfRows(lsfFromNativeInteger(seed_), lsfFromNativeListRow(rs)))
 }
 
-// assayxportHaskellCppEveryCopies — laws/haskell_cpp.lawspec:391.
+// assayxportHaskellCppEveryCopies — laws/haskell_cpp.lawspec:659.
 func (lawSpecDefinitions) AssayxportHaskellCppEveryCopies(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
@@ -2054,7 +2226,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppEveryCopies(
 	return lsfToNativeListText(lsfEveryCopies(lsfFromNativeListRow(rs)))
 }
 
-// assayxportHaskellCppExportRows — laws/haskell_cpp.lawspec:596.
+// assayxportHaskellCppExportRows — laws/haskell_cpp.lawspec:955.
 func (lawSpecDefinitions) AssayxportHaskellCppExportRows(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2062,16 +2234,56 @@ func (lawSpecDefinitions) AssayxportHaskellCppExportRows(
 	return lsfToNativeListRow(lsfExportRows(lsfFromNativeInteger(seed_)))
 }
 
-// assayxportHaskellCppFirstBuild — laws/haskell_cpp.lawspec:266.
+// assayxportHaskellCppFileDecides — laws/haskell_cpp.lawspec:1284.
+func (lawSpecDefinitions) AssayxportHaskellCppFileDecides(
+	symbols map[string]*LawSpecSymbol,
+	rs []Row,
+	w Walk,
+	asg []Entry[string, *LawSpecBigInt],
+	line *LawSpecBigInt,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppFileDecides(lsfFromNativeListRow(rs), lsfFromNativeWalk(w), lsfFromNativeKeyValTextInteger(asg), lsfFromNativeInteger(line)))
+}
+
+// assayxportHaskellCppFileDecidesSome — laws/haskell_cpp.lawspec:1299.
+func (lawSpecDefinitions) AssayxportHaskellCppFileDecidesSome(
+	symbols map[string]*LawSpecSymbol,
+	rs []Row,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppFileDecidesSome(lsfFromNativeListRow(rs)))
+}
+
+// assayxportHaskellCppFileNames — laws/haskell_cpp.lawspec:366.
+func (lawSpecDefinitions) AssayxportHaskellCppFileNames(
+	symbols map[string]*LawSpecSymbol,
+	sets []Entry[string, Sets],
+	ns []string,
+	acc []Entry[string, Binding],
+) []Entry[string, Binding] {
+	return lsfToNativeKeyValTextBinding(lsfAssayxportHaskellCppFileNames(lsfFromNativeKeyValTextSets(sets), lsfFromNativeListText(ns), lsfFromNativeKeyValTextBinding(acc)))
+}
+
+// assayxportHaskellCppFileTerm — laws/haskell_cpp.lawspec:384.
+func (lawSpecDefinitions) AssayxportHaskellCppFileTerm(
+	symbols map[string]*LawSpecSymbol,
+	line *LawSpecBigInt,
+	l Literal,
+) Literal {
+	return lsfToNativeLiteral(lsfAssayxportHaskellCppFileTerm(lsfFromNativeInteger(line), lsfFromNativeLiteral(l)))
+}
+
+// assayxportHaskellCppFirstBuild — laws/haskell_cpp.lawspec:468.
 func (lawSpecDefinitions) AssayxportHaskellCppFirstBuild(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
+	w Walk,
 	asg []Entry[string, *LawSpecBigInt],
+	line *LawSpecBigInt,
 ) []Entry[string, *LawSpecBigInt] {
-	return lsfToNativeKeyValTextInteger(lsfFirstBuild(lsfFromNativeListRow(rs), lsfFromNativeKeyValTextInteger(asg)))
+	return lsfToNativeKeyValTextInteger(lsfAssayxportHaskellCppFirstBuild(lsfFromNativeListRow(rs), lsfFromNativeWalk(w), lsfFromNativeKeyValTextInteger(asg), lsfFromNativeInteger(line)))
 }
 
-// assayxportHaskellCppFirstCopy — laws/haskell_cpp.lawspec:311.
+// assayxportHaskellCppFirstCopy — laws/haskell_cpp.lawspec:523.
 func (lawSpecDefinitions) AssayxportHaskellCppFirstCopy(
 	symbols map[string]*LawSpecSymbol,
 	ss []Section,
@@ -2079,15 +2291,15 @@ func (lawSpecDefinitions) AssayxportHaskellCppFirstCopy(
 	return lsfToNativeText(lsfFirstCopy(lsfFromNativeListSection(ss)))
 }
 
-// assayxportHaskellCppFirstCopyOfRows — laws/haskell_cpp.lawspec:305.
+// assayxportHaskellCppFirstCopyOfRows — laws/haskell_cpp.lawspec:517.
 func (lawSpecDefinitions) AssayxportHaskellCppFirstCopyOfRows(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
 ) string {
-	return lsfToNativeText(lsfFirstCopyOfRows(lsfFromNativeListRow(rs)))
+	return lsfToNativeText(lsfAssayxportHaskellCppFirstCopyOfRows(lsfFromNativeListRow(rs)))
 }
 
-// assayxportHaskellCppFooOf — laws/haskell_cpp.lawspec:576.
+// assayxportHaskellCppFooOf — laws/haskell_cpp.lawspec:935.
 func (lawSpecDefinitions) AssayxportHaskellCppFooOf(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2096,15 +2308,31 @@ func (lawSpecDefinitions) AssayxportHaskellCppFooOf(
 	return lsfToNativeText(lsfFooOf(lsfFromNativeInteger(seed_), lsfFromNativeInteger(k)))
 }
 
-// assayxportHaskellCppHasGroup — laws/haskell_cpp.lawspec:286.
+// assayxportHaskellCppHasAndFoo — laws/haskell_cpp.lawspec:1189.
+func (lawSpecDefinitions) AssayxportHaskellCppHasAndFoo(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecUnit,
+) Literal {
+	return lsfToNativeLiteral(lsfAssayxportHaskellCppHasAndFoo(lsfFromNativeUnit(u)))
+}
+
+// assayxportHaskellCppHasElifdef — laws/haskell_cpp.lawspec:1301.
+func (lawSpecDefinitions) AssayxportHaskellCppHasElifdef(
+	symbols map[string]*LawSpecSymbol,
+	rs []Row,
+) bool {
+	return lsfToNativeBool(lsfHasElifdef(lsfFromNativeListRow(rs)))
+}
+
+// assayxportHaskellCppHasGroup — laws/haskell_cpp.lawspec:498.
 func (lawSpecDefinitions) AssayxportHaskellCppHasGroup(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
 ) bool {
-	return lsfToNativeBool(lsfHasGroup(lsfFromNativeListRow(rs)))
+	return lsfToNativeBool(lsfAssayxportHaskellCppHasGroup(lsfFromNativeListRow(rs)))
 }
 
-// assayxportHaskellCppImportRows — laws/haskell_cpp.lawspec:569.
+// assayxportHaskellCppImportRows — laws/haskell_cpp.lawspec:928.
 func (lawSpecDefinitions) AssayxportHaskellCppImportRows(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2113,7 +2341,16 @@ func (lawSpecDefinitions) AssayxportHaskellCppImportRows(
 	return lsfToNativeListRow(lsfAssayxportHaskellCppImportRows(lsfFromNativeInteger(seed_), lsfFromNativeInteger(i)))
 }
 
-// assayxportHaskellCppInnerRows — laws/haskell_cpp.lawspec:131.
+// assayxportHaskellCppInNames — laws/haskell_cpp.lawspec:572.
+func (lawSpecDefinitions) AssayxportHaskellCppInNames(
+	symbols map[string]*LawSpecSymbol,
+	ns []string,
+	n string,
+) bool {
+	return lsfToNativeBool(lsfInList(lsfFromNativeListText(ns), lsfFromNativeText(n)))
+}
+
+// assayxportHaskellCppInnerRows — laws/haskell_cpp.lawspec:165.
 func (lawSpecDefinitions) AssayxportHaskellCppInnerRows(
 	symbols map[string]*LawSpecSymbol,
 	base *LawSpecBigInt,
@@ -2124,7 +2361,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppInnerRows(
 	return lsfToNativeListRow(lsfInnerRows(lsfFromNativeInteger(base), lsfFromNativeListLiteral(terms), lsfFromNativeListInner(items), lsfFromNativeInteger(i)))
 }
 
-// assayxportHaskellCppInnersOf — laws/haskell_cpp.lawspec:468.
+// assayxportHaskellCppInnersOf — laws/haskell_cpp.lawspec:827.
 func (lawSpecDefinitions) AssayxportHaskellCppInnersOf(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2133,7 +2370,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppInnersOf(
 	return lsfToNativeListInner(lsfInnersOf(lsfFromNativeInteger(seed_), lsfFromNativeInteger(n)))
 }
 
-// assayxportHaskellCppInsertWalked — laws/haskell_cpp.lawspec:371.
+// assayxportHaskellCppInsertWalked — laws/haskell_cpp.lawspec:638.
 func (lawSpecDefinitions) AssayxportHaskellCppInsertWalked(
 	symbols map[string]*LawSpecSymbol,
 	w Walked,
@@ -2142,7 +2379,45 @@ func (lawSpecDefinitions) AssayxportHaskellCppInsertWalked(
 	return lsfToNativeListWalked(lsfInsertWalked(lsfFromNativeWalked(w), lsfFromNativeListWalked(ws)))
 }
 
-// assayxportHaskellCppLeafLines — laws/haskell_cpp.lawspec:665.
+// assayxportHaskellCppIsElif — laws/haskell_cpp.lawspec:271.
+func (lawSpecDefinitions) AssayxportHaskellCppIsElif(
+	symbols map[string]*LawSpecSymbol,
+	r Row,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppIsElif(lsfFromNativeRow(r)))
+}
+
+// assayxportHaskellCppIsElse — laws/haskell_cpp.lawspec:273.
+func (lawSpecDefinitions) AssayxportHaskellCppIsElse(
+	symbols map[string]*LawSpecSymbol,
+	r Row,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppIsElse(lsfFromNativeRow(r)))
+}
+
+// assayxportHaskellCppIsEndif — laws/haskell_cpp.lawspec:274.
+func (lawSpecDefinitions) AssayxportHaskellCppIsEndif(
+	symbols map[string]*LawSpecSymbol,
+	r Row,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppIsEndif(lsfFromNativeRow(r)))
+}
+
+// assayxportHaskellCppIsIf — laws/haskell_cpp.lawspec:272.
+func (lawSpecDefinitions) AssayxportHaskellCppIsIf(symbols map[string]*LawSpecSymbol, r Row) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppIsIf(lsfFromNativeRow(r)))
+}
+
+// assayxportHaskellCppIsSet — laws/haskell_cpp.lawspec:353.
+func (lawSpecDefinitions) AssayxportHaskellCppIsSet(
+	symbols map[string]*LawSpecSymbol,
+	sets []Entry[string, Sets],
+	n string,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppIsSet(lsfFromNativeKeyValTextSets(sets), lsfFromNativeText(n)))
+}
+
+// assayxportHaskellCppLeafLines — laws/haskell_cpp.lawspec:1055.
 func (lawSpecDefinitions) AssayxportHaskellCppLeafLines(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2152,7 +2427,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppLeafLines(
 	return lsfToNativeListText(lsfAssayxportHaskellCppLeafLines(lsfFromNativeInteger(seed_), lsfFromNativeBool(tail), lsfFromNativeInteger(place)))
 }
 
-// assayxportHaskellCppLeafOf — laws/haskell_cpp.lawspec:464.
+// assayxportHaskellCppLeafOf — laws/haskell_cpp.lawspec:823.
 func (lawSpecDefinitions) AssayxportHaskellCppLeafOf(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2160,7 +2435,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppLeafOf(
 	return lsfToNativeLeaf(lsfLeafOf(lsfFromNativeInteger(seed_)))
 }
 
-// assayxportHaskellCppLeafRows — laws/haskell_cpp.lawspec:118.
+// assayxportHaskellCppLeafRows — laws/haskell_cpp.lawspec:152.
 func (lawSpecDefinitions) AssayxportHaskellCppLeafRows(
 	symbols map[string]*LawSpecSymbol,
 	group *LawSpecBigInt,
@@ -2173,16 +2448,43 @@ func (lawSpecDefinitions) AssayxportHaskellCppLeafRows(
 	return lsfToNativeListRow(lsfLeafRows(lsfFromNativeInteger(group), lsfFromNativeListLiteral(terms), lsfFromNativeListInteger(forms), lsfFromNativeInteger(k), lsfFromNativeListLiteral(before), lsfFromNativeBool(hasElse)))
 }
 
-// assayxportHaskellCppLitHolds — laws/haskell_cpp.lawspec:210.
+// assayxportHaskellCppLitHolds — laws/haskell_cpp.lawspec:670.
 func (lawSpecDefinitions) AssayxportHaskellCppLitHolds(
 	symbols map[string]*LawSpecSymbol,
 	asg []Entry[string, *LawSpecBigInt],
 	l Literal,
 ) bool {
-	return lsfToNativeBool(lsfLitHolds(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeLiteral(l)))
+	return lsfToNativeBool(lsfAssayxportHaskellCppLitHolds(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeLiteral(l)))
 }
 
-// assayxportHaskellCppModuleOf — laws/haskell_cpp.lawspec:485.
+// assayxportHaskellCppLitTrue — laws/haskell_cpp.lawspec:418.
+func (lawSpecDefinitions) AssayxportHaskellCppLitTrue(
+	symbols map[string]*LawSpecSymbol,
+	asg []Entry[string, *LawSpecBigInt],
+	l Literal,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppLitTrue(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeLiteral(l)))
+}
+
+// assayxportHaskellCppLiveOf — laws/haskell_cpp.lawspec:266.
+func (lawSpecDefinitions) AssayxportHaskellCppLiveOf(
+	symbols map[string]*LawSpecSymbol,
+	stack []Frame,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppLiveOf(lsfFromNativeListFrame(stack)))
+}
+
+// assayxportHaskellCppMayStayOpen — laws/haskell_cpp.lawspec:574.
+func (lawSpecDefinitions) AssayxportHaskellCppMayStayOpen(
+	symbols map[string]*LawSpecSymbol,
+	setBy []string,
+	otherBy []string,
+	l Literal,
+) bool {
+	return lsfToNativeBool(lsfMayStayOpen(lsfFromNativeListText(setBy), lsfFromNativeListText(otherBy), lsfFromNativeLiteral(l)))
+}
+
+// assayxportHaskellCppModuleOf — laws/haskell_cpp.lawspec:844.
 func (lawSpecDefinitions) AssayxportHaskellCppModuleOf(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2190,7 +2492,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppModuleOf(
 	return lsfToNativeListSection(lsfModuleOf(lsfFromNativeInteger(seed_)))
 }
 
-// assayxportHaskellCppNameOf — laws/haskell_cpp.lawspec:71.
+// assayxportHaskellCppNameOf — laws/haskell_cpp.lawspec:95.
 func (lawSpecDefinitions) AssayxportHaskellCppNameOf(
 	symbols map[string]*LawSpecSymbol,
 	group *LawSpecBigInt,
@@ -2199,7 +2501,15 @@ func (lawSpecDefinitions) AssayxportHaskellCppNameOf(
 	return lsfToNativeText(lsfNameOf(lsfFromNativeInteger(group), lsfFromNativeInteger(arm)))
 }
 
-// assayxportHaskellCppNegate — laws/haskell_cpp.lawspec:93.
+// assayxportHaskellCppNamesOf — laws/haskell_cpp.lawspec:313.
+func (lawSpecDefinitions) AssayxportHaskellCppNamesOf(
+	symbols map[string]*LawSpecSymbol,
+	e CExpr,
+) []string {
+	return lsfToNativeListText(lsfAssayxportHaskellCppNamesOf(lsfFromNativeCExpr(e)))
+}
+
+// assayxportHaskellCppNegate — laws/haskell_cpp.lawspec:122.
 func (lawSpecDefinitions) AssayxportHaskellCppNegate(
 	symbols map[string]*LawSpecSymbol,
 	t_ Literal,
@@ -2207,7 +2517,72 @@ func (lawSpecDefinitions) AssayxportHaskellCppNegate(
 	return lsfToNativeLiteral(lsfAssayxportHaskellCppNegate(lsfFromNativeLiteral(t_)))
 }
 
-// assayxportHaskellCppOneGroup — laws/haskell_cpp.lawspec:554.
+// assayxportHaskellCppOldBuilds — laws/haskell_cpp.lawspec:686.
+func (lawSpecDefinitions) AssayxportHaskellCppOldBuilds(
+	symbols map[string]*LawSpecSymbol,
+	rs []Row,
+	ts []string,
+	asg []Entry[string, *LawSpecBigInt],
+) [][]Entry[string, *LawSpecBigInt] {
+	return lsfToNativeListKeyValTextInteger(lsfAssayxportHaskellCppOldBuilds(lsfFromNativeListRow(rs), lsfFromNativeListText(ts), lsfFromNativeKeyValTextInteger(asg)))
+}
+
+// assayxportHaskellCppOldCopies — laws/haskell_cpp.lawspec:713.
+func (lawSpecDefinitions) AssayxportHaskellCppOldCopies(
+	symbols map[string]*LawSpecSymbol,
+	rs []Row,
+) []string {
+	return lsfToNativeListText(lsfAssayxportHaskellCppOldCopies(lsfFromNativeListRow(rs)))
+}
+
+// assayxportHaskellCppOldCopiesOf — laws/haskell_cpp.lawspec:702.
+func (lawSpecDefinitions) AssayxportHaskellCppOldCopiesOf(
+	symbols map[string]*LawSpecSymbol,
+	rs []Row,
+	builds [][]Entry[string, *LawSpecBigInt],
+) []string {
+	return lsfToNativeListText(lsfAssayxportHaskellCppOldCopiesOf(lsfFromNativeListRow(rs), lsfFromNativeListKeyValTextInteger(builds)))
+}
+
+// assayxportHaskellCppOldCopy — laws/haskell_cpp.lawspec:695.
+func (lawSpecDefinitions) AssayxportHaskellCppOldCopy(
+	symbols map[string]*LawSpecSymbol,
+	asg []Entry[string, *LawSpecBigInt],
+	rs []Row,
+) string {
+	return lsfToNativeText(lsfAssayxportHaskellCppOldCopy(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeListRow(rs)))
+}
+
+// assayxportHaskellCppOldReadAt — laws/haskell_cpp.lawspec:679.
+func (lawSpecDefinitions) AssayxportHaskellCppOldReadAt(
+	symbols map[string]*LawSpecSymbol,
+	rs []Row,
+	asg []Entry[string, *LawSpecBigInt],
+	t_ string,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppOldReadAt(lsfFromNativeListRow(rs), lsfFromNativeKeyValTextInteger(asg), lsfFromNativeText(t_)))
+}
+
+// assayxportHaskellCppOldRuleDiffers — laws/haskell_cpp.lawspec:1281.
+func (lawSpecDefinitions) AssayxportHaskellCppOldRuleDiffers(
+	symbols map[string]*LawSpecSymbol,
+	rs []Row,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppOldRuleDiffers(lsfFromNativeListRow(rs)))
+}
+
+// assayxportHaskellCppOneArm — laws/haskell_cpp.lawspec:1137.
+func (lawSpecDefinitions) AssayxportHaskellCppOneArm(
+	symbols map[string]*LawSpecSymbol,
+	own Literal,
+	directive string,
+	name string,
+	yes []string,
+) []Row {
+	return lsfToNativeListRow(lsfAssayxportHaskellCppOneArm(lsfFromNativeLiteral(own), lsfFromNativeText(directive), lsfFromNativeText(name), lsfFromNativeListText(yes)))
+}
+
+// assayxportHaskellCppOneGroup — laws/haskell_cpp.lawspec:913.
 func (lawSpecDefinitions) AssayxportHaskellCppOneGroup(
 	symbols map[string]*LawSpecSymbol,
 	outer []Literal,
@@ -2220,7 +2595,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppOneGroup(
 	return lsfToNativeListRow(lsfAssayxportHaskellCppOneGroup(lsfFromNativeListLiteral(outer), lsfFromNativeInteger(form), lsfFromNativeText(n), lsfFromNativeListText(yes), lsfFromNativeBool(hasElse), lsfFromNativeListText(no)))
 }
 
-// assayxportHaskellCppOpener — laws/haskell_cpp.lawspec:101.
+// assayxportHaskellCppOpener — laws/haskell_cpp.lawspec:130.
 func (lawSpecDefinitions) AssayxportHaskellCppOpener(
 	symbols map[string]*LawSpecSymbol,
 	text string,
@@ -2230,7 +2605,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppOpener(
 	return lsfToNativeRow(lsfAssayxportHaskellCppOpener(lsfFromNativeText(text), lsfFromNativeListLiteral(terms), lsfFromNativeText(name)))
 }
 
-// assayxportHaskellCppOverCap — laws/haskell_cpp.lawspec:309.
+// assayxportHaskellCppOverCap — laws/haskell_cpp.lawspec:521.
 func (lawSpecDefinitions) AssayxportHaskellCppOverCap(
 	symbols map[string]*LawSpecSymbol,
 	ss []Section,
@@ -2238,23 +2613,49 @@ func (lawSpecDefinitions) AssayxportHaskellCppOverCap(
 	return lsfToNativeBool(lsfOverCap(lsfFromNativeListSection(ss)))
 }
 
-// assayxportHaskellCppOverCapRows — laws/haskell_cpp.lawspec:293.
+// assayxportHaskellCppOverCapRows — laws/haskell_cpp.lawspec:505.
 func (lawSpecDefinitions) AssayxportHaskellCppOverCapRows(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
 ) bool {
-	return lsfToNativeBool(lsfOverCapRows(lsfFromNativeListRow(rs)))
+	return lsfToNativeBool(lsfAssayxportHaskellCppOverCapRows(lsfFromNativeListRow(rs)))
 }
 
-// assayxportHaskellCppOwnText — laws/haskell_cpp.lawspec:219.
+// assayxportHaskellCppOwnHolds — laws/haskell_cpp.lawspec:801.
+func (lawSpecDefinitions) AssayxportHaskellCppOwnHolds(
+	symbols map[string]*LawSpecSymbol,
+	env Env,
+	r Row,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppOwnHolds(lsfFromNativeEnv(env), lsfFromNativeRow(r)))
+}
+
+// assayxportHaskellCppOwnLit — laws/haskell_cpp.lawspec:306.
+func (lawSpecDefinitions) AssayxportHaskellCppOwnLit(
+	symbols map[string]*LawSpecSymbol,
+	r Row,
+) LawSpecMaybe[Literal] {
+	return lsfToNativeMaybeLiteral(lsfAssayxportHaskellCppOwnLit(lsfFromNativeRow(r)))
+}
+
+// assayxportHaskellCppOwnText — laws/haskell_cpp.lawspec:430.
 func (lawSpecDefinitions) AssayxportHaskellCppOwnText(
 	symbols map[string]*LawSpecSymbol,
 	ls []Literal,
 ) string {
-	return lsfToNativeText(lsfOwnText(lsfFromNativeListLiteral(ls)))
+	return lsfToNativeText(lsfAssayxportHaskellCppOwnText(lsfFromNativeListLiteral(ls)))
 }
 
-// assayxportHaskellCppPackagesAt — laws/haskell_cpp.lawspec:417.
+// assayxportHaskellCppOwnTexts — laws/haskell_cpp.lawspec:706.
+func (lawSpecDefinitions) AssayxportHaskellCppOwnTexts(
+	symbols map[string]*LawSpecSymbol,
+	rs []Row,
+	seen []string,
+) []string {
+	return lsfToNativeListText(lsfAssayxportHaskellCppOwnTexts(lsfFromNativeListRow(rs), lsfFromNativeListText(seen)))
+}
+
+// assayxportHaskellCppPackagesAt — laws/haskell_cpp.lawspec:737.
 func (lawSpecDefinitions) AssayxportHaskellCppPackagesAt(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
@@ -2263,7 +2664,16 @@ func (lawSpecDefinitions) AssayxportHaskellCppPackagesAt(
 	return lsfToNativeListPackage(lsfPackagesAt(lsfFromNativeListRow(rs), lsfFromNativeListPackage(ps)))
 }
 
-// assayxportHaskellCppPoolBinding — laws/haskell_cpp.lawspec:608.
+// assayxportHaskellCppPathTexts — laws/haskell_cpp.lawspec:1260.
+func (lawSpecDefinitions) AssayxportHaskellCppPathTexts(
+	symbols map[string]*LawSpecSymbol,
+	rs []Row,
+	t_ string,
+) []string {
+	return lsfToNativeListText(lsfAssayxportHaskellCppPathTexts(lsfFromNativeListRow(rs), lsfFromNativeText(t_)))
+}
+
+// assayxportHaskellCppPoolBinding — laws/haskell_cpp.lawspec:967.
 func (lawSpecDefinitions) AssayxportHaskellCppPoolBinding(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2273,7 +2683,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppPoolBinding(
 	return lsfToNativeKeyValTextBinding(lsfPoolBinding(lsfFromNativeInteger(seed_), lsfFromNativeInteger(k), lsfFromNativeKeyValTextBinding(acc)))
 }
 
-// assayxportHaskellCppPoolEnvAt — laws/haskell_cpp.lawspec:624.
+// assayxportHaskellCppPoolEnvAt — laws/haskell_cpp.lawspec:983.
 func (lawSpecDefinitions) AssayxportHaskellCppPoolEnvAt(
 	symbols map[string]*LawSpecSymbol,
 	i *LawSpecBigInt,
@@ -2281,7 +2691,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppPoolEnvAt(
 	return lsfToNativeEnv(lsfAssayxportHaskellCppPoolEnvAt(lsfFromNativeInteger(i)))
 }
 
-// assayxportHaskellCppPoolForm — laws/haskell_cpp.lawspec:548.
+// assayxportHaskellCppPoolForm — laws/haskell_cpp.lawspec:907.
 func (lawSpecDefinitions) AssayxportHaskellCppPoolForm(
 	symbols map[string]*LawSpecSymbol,
 	i *LawSpecBigInt,
@@ -2289,7 +2699,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppPoolForm(
 	return lsfToNativeInteger(lsfAssayxportHaskellCppPoolForm(lsfFromNativeInteger(i)))
 }
 
-// assayxportHaskellCppPoolName — laws/haskell_cpp.lawspec:543.
+// assayxportHaskellCppPoolName — laws/haskell_cpp.lawspec:902.
 func (lawSpecDefinitions) AssayxportHaskellCppPoolName(
 	symbols map[string]*LawSpecSymbol,
 	i *LawSpecBigInt,
@@ -2297,7 +2707,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppPoolName(
 	return lsfToNativeText(lsfAssayxportHaskellCppPoolName(lsfFromNativeInteger(i)))
 }
 
-// assayxportHaskellCppPoolState — laws/haskell_cpp.lawspec:620.
+// assayxportHaskellCppPoolState — laws/haskell_cpp.lawspec:979.
 func (lawSpecDefinitions) AssayxportHaskellCppPoolState(
 	symbols map[string]*LawSpecSymbol,
 	n string,
@@ -2307,16 +2717,34 @@ func (lawSpecDefinitions) AssayxportHaskellCppPoolState(
 	return lsfToNativeKeyValTextBinding(lsfAssayxportHaskellCppPoolState(lsfFromNativeText(n), lsfFromNativeInteger(c0), lsfFromNativeKeyValTextBinding(acc)))
 }
 
-// assayxportHaskellCppReached — laws/haskell_cpp.lawspec:224.
-func (lawSpecDefinitions) AssayxportHaskellCppReached(
+// assayxportHaskellCppReachedIn — laws/haskell_cpp.lawspec:277.
+func (lawSpecDefinitions) AssayxportHaskellCppReachedIn(
 	symbols map[string]*LawSpecSymbol,
-	asg []Entry[string, *LawSpecBigInt],
+	stack []Frame,
 	r Row,
 ) bool {
-	return lsfToNativeBool(lsfReached(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeRow(r)))
+	return lsfToNativeBool(lsfAssayxportHaskellCppReachedIn(lsfFromNativeListFrame(stack), lsfFromNativeRow(r)))
 }
 
-// assayxportHaskellCppRender — laws/haskell_cpp.lawspec:179.
+// assayxportHaskellCppReadOnTwoPaths — laws/haskell_cpp.lawspec:1278.
+func (lawSpecDefinitions) AssayxportHaskellCppReadOnTwoPaths(
+	symbols map[string]*LawSpecSymbol,
+	rs []Row,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppReadOnTwoPaths(lsfFromNativeListRow(rs)))
+}
+
+// assayxportHaskellCppReadingAt — laws/haskell_cpp.lawspec:408.
+func (lawSpecDefinitions) AssayxportHaskellCppReadingAt(
+	symbols map[string]*LawSpecSymbol,
+	w Walk,
+	r Row,
+	line *LawSpecBigInt,
+) Reading {
+	return lsfToNativeReading(lsfAssayxportHaskellCppReadingAt(lsfFromNativeWalk(w), lsfFromNativeRow(r), lsfFromNativeInteger(line)))
+}
+
+// assayxportHaskellCppRender — laws/haskell_cpp.lawspec:213.
 func (lawSpecDefinitions) AssayxportHaskellCppRender(
 	symbols map[string]*LawSpecSymbol,
 	ss []Section,
@@ -2324,7 +2752,23 @@ func (lawSpecDefinitions) AssayxportHaskellCppRender(
 	return lsfToNativeText(lsfRender(lsfFromNativeListSection(ss)))
 }
 
-// assayxportHaskellCppReproElif — laws/haskell_cpp.lawspec:718.
+// assayxportHaskellCppReproDefineCopies — laws/haskell_cpp.lawspec:1222.
+func (lawSpecDefinitions) AssayxportHaskellCppReproDefineCopies(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecUnit,
+) []string {
+	return lsfToNativeListText(lsfAssayxportHaskellCppReproDefineCopies(lsfFromNativeUnit(u)))
+}
+
+// assayxportHaskellCppReproDefsCopies — laws/haskell_cpp.lawspec:1234.
+func (lawSpecDefinitions) AssayxportHaskellCppReproDefsCopies(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecUnit,
+) []string {
+	return lsfToNativeListText(lsfReproDefsCopies(lsfFromNativeUnit(u)))
+}
+
+// assayxportHaskellCppReproElif — laws/haskell_cpp.lawspec:1110.
 func (lawSpecDefinitions) AssayxportHaskellCppReproElif(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecUnit,
@@ -2332,7 +2776,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppReproElif(
 	return lsfToNativeListRow(lsfAssayxportHaskellCppReproElif(lsfFromNativeUnit(u)))
 }
 
-// assayxportHaskellCppReproElifCopies — laws/haskell_cpp.lawspec:868.
+// assayxportHaskellCppReproElifCopies — laws/haskell_cpp.lawspec:1525.
 func (lawSpecDefinitions) AssayxportHaskellCppReproElifCopies(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecUnit,
@@ -2340,7 +2784,23 @@ func (lawSpecDefinitions) AssayxportHaskellCppReproElifCopies(
 	return lsfToNativeListText(lsfReproElifCopies(lsfFromNativeUnit(u)))
 }
 
-// assayxportHaskellCppReproLost — laws/haskell_cpp.lawspec:729.
+// assayxportHaskellCppReproElifdefCopies — laws/haskell_cpp.lawspec:1241.
+func (lawSpecDefinitions) AssayxportHaskellCppReproElifdefCopies(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecUnit,
+) []string {
+	return lsfToNativeListText(lsfAssayxportHaskellCppReproElifdefCopies(lsfFromNativeUnit(u)))
+}
+
+// assayxportHaskellCppReproGuardCopies — laws/haskell_cpp.lawspec:1228.
+func (lawSpecDefinitions) AssayxportHaskellCppReproGuardCopies(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecUnit,
+) []string {
+	return lsfToNativeListText(lsfAssayxportHaskellCppReproGuardCopies(lsfFromNativeUnit(u)))
+}
+
+// assayxportHaskellCppReproLost — laws/haskell_cpp.lawspec:1121.
 func (lawSpecDefinitions) AssayxportHaskellCppReproLost(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecUnit,
@@ -2348,7 +2808,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppReproLost(
 	return lsfToNativeListRow(lsfAssayxportHaskellCppReproLost(lsfFromNativeUnit(u)))
 }
 
-// assayxportHaskellCppReproLostCopies — laws/haskell_cpp.lawspec:876.
+// assayxportHaskellCppReproLostCopies — laws/haskell_cpp.lawspec:1533.
 func (lawSpecDefinitions) AssayxportHaskellCppReproLostCopies(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecUnit,
@@ -2356,7 +2816,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppReproLostCopies(
 	return lsfToNativeListText(lsfReproLostCopies(lsfFromNativeUnit(u)))
 }
 
-// assayxportHaskellCppReproTail — laws/haskell_cpp.lawspec:734.
+// assayxportHaskellCppReproTail — laws/haskell_cpp.lawspec:1126.
 func (lawSpecDefinitions) AssayxportHaskellCppReproTail(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecUnit,
@@ -2364,7 +2824,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppReproTail(
 	return lsfToNativeListRow(lsfAssayxportHaskellCppReproTail(lsfFromNativeUnit(u)))
 }
 
-// assayxportHaskellCppReproTailCopies — laws/haskell_cpp.lawspec:886.
+// assayxportHaskellCppReproTailCopies — laws/haskell_cpp.lawspec:1543.
 func (lawSpecDefinitions) AssayxportHaskellCppReproTailCopies(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecUnit,
@@ -2372,7 +2832,15 @@ func (lawSpecDefinitions) AssayxportHaskellCppReproTailCopies(
 	return lsfToNativeListText(lsfReproTailCopies(lsfFromNativeUnit(u)))
 }
 
-// assayxportHaskellCppRow — laws/haskell_cpp.lawspec:96.
+// assayxportHaskellCppReproUndecided — laws/haskell_cpp.lawspec:1197.
+func (lawSpecDefinitions) AssayxportHaskellCppReproUndecided(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecUnit,
+) []Row {
+	return lsfToNativeListRow(lsfAssayxportHaskellCppReproUndecided(lsfFromNativeUnit(u)))
+}
+
+// assayxportHaskellCppRow — laws/haskell_cpp.lawspec:125.
 func (lawSpecDefinitions) AssayxportHaskellCppRow(
 	symbols map[string]*LawSpecSymbol,
 	text string,
@@ -2382,7 +2850,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppRow(
 	return lsfToNativeRow(lsfAssayxportHaskellCppRow(lsfFromNativeText(text), lsfFromNativeListLiteral(terms), lsfFromNativeBool(directive)))
 }
 
-// assayxportHaskellCppRowsOf — laws/haskell_cpp.lawspec:167.
+// assayxportHaskellCppRowsOf — laws/haskell_cpp.lawspec:201.
 func (lawSpecDefinitions) AssayxportHaskellCppRowsOf(
 	symbols map[string]*LawSpecSymbol,
 	ss []Section,
@@ -2390,7 +2858,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppRowsOf(
 	return lsfToNativeListRow(lsfRowsOf(lsfFromNativeListSection(ss)))
 }
 
-// assayxportHaskellCppSectionRows — laws/haskell_cpp.lawspec:155.
+// assayxportHaskellCppSectionRows — laws/haskell_cpp.lawspec:189.
 func (lawSpecDefinitions) AssayxportHaskellCppSectionRows(
 	symbols map[string]*LawSpecSymbol,
 	ss []Section,
@@ -2399,7 +2867,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppSectionRows(
 	return lsfToNativeListRow(lsfSectionRows(lsfFromNativeListSection(ss), lsfFromNativeInteger(i)))
 }
 
-// assayxportHaskellCppSectionsOf — laws/haskell_cpp.lawspec:476.
+// assayxportHaskellCppSectionsOf — laws/haskell_cpp.lawspec:835.
 func (lawSpecDefinitions) AssayxportHaskellCppSectionsOf(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2408,7 +2876,59 @@ func (lawSpecDefinitions) AssayxportHaskellCppSectionsOf(
 	return lsfToNativeListSection(lsfSectionsOf(lsfFromNativeInteger(seed_), lsfFromNativeInteger(n)))
 }
 
-// assayxportHaskellCppSourceOf — laws/haskell_cpp.lawspec:174.
+// assayxportHaskellCppSetKind — laws/haskell_cpp.lawspec:1034.
+func (lawSpecDefinitions) AssayxportHaskellCppSetKind(
+	symbols map[string]*LawSpecSymbol,
+	k *LawSpecBigInt,
+) Sets {
+	return lsfToNativeSets(lsfAssayxportHaskellCppSetKind(lsfFromNativeInteger(k)))
+}
+
+// assayxportHaskellCppSetNames — laws/haskell_cpp.lawspec:564.
+func (lawSpecDefinitions) AssayxportHaskellCppSetNames(
+	symbols map[string]*LawSpecSymbol,
+	rs []Row,
+	onlyOther bool,
+) []string {
+	return lsfToNativeListText(lsfSetNames(lsfFromNativeListRow(rs), lsfFromNativeBool(onlyOther)))
+}
+
+// assayxportHaskellCppSetText — laws/haskell_cpp.lawspec:1030.
+func (lawSpecDefinitions) AssayxportHaskellCppSetText(
+	symbols map[string]*LawSpecSymbol,
+	n string,
+	k *LawSpecBigInt,
+) string {
+	return lsfToNativeText(lsfAssayxportHaskellCppSetText(lsfFromNativeText(n), lsfFromNativeInteger(k)))
+}
+
+// assayxportHaskellCppSeveralBuilds — laws/haskell_cpp.lawspec:1305.
+func (lawSpecDefinitions) AssayxportHaskellCppSeveralBuilds(
+	symbols map[string]*LawSpecSymbol,
+	rs []Row,
+) bool {
+	return lsfToNativeBool(lsfSeveralBuilds(lsfFromNativeListRow(rs)))
+}
+
+// assayxportHaskellCppSeveralIn — laws/haskell_cpp.lawspec:1268.
+func (lawSpecDefinitions) AssayxportHaskellCppSeveralIn(
+	symbols map[string]*LawSpecSymbol,
+	ts []string,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppSeveralIn(lsfFromNativeListText(ts)))
+}
+
+// assayxportHaskellCppSimulated — laws/haskell_cpp.lawspec:805.
+func (lawSpecDefinitions) AssayxportHaskellCppSimulated(
+	symbols map[string]*LawSpecSymbol,
+	env Env,
+	stack []Frame,
+	rs []Row,
+) string {
+	return lsfToNativeText(lsfAssayxportHaskellCppSimulated(lsfFromNativeEnv(env), lsfFromNativeListFrame(stack), lsfFromNativeListRow(rs)))
+}
+
+// assayxportHaskellCppSourceOf — laws/haskell_cpp.lawspec:208.
 func (lawSpecDefinitions) AssayxportHaskellCppSourceOf(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
@@ -2416,7 +2936,42 @@ func (lawSpecDefinitions) AssayxportHaskellCppSourceOf(
 	return lsfToNativeText(lsfAssayxportHaskellCppSourceOf(lsfFromNativeListRow(rs)))
 }
 
-// assayxportHaskellCppTangle — laws/haskell_cpp.lawspec:603.
+// assayxportHaskellCppSpecial — laws/haskell_cpp.lawspec:349.
+func (lawSpecDefinitions) AssayxportHaskellCppSpecial(
+	symbols map[string]*LawSpecSymbol,
+	n string,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppSpecial(lsfFromNativeText(n)))
+}
+
+// assayxportHaskellCppStartWalk — laws/haskell_cpp.lawspec:264.
+func (lawSpecDefinitions) AssayxportHaskellCppStartWalk(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecUnit,
+) Walk {
+	return lsfToNativeWalk(lsfAssayxportHaskellCppStartWalk(lsfFromNativeUnit(u)))
+}
+
+// assayxportHaskellCppStepped — laws/haskell_cpp.lawspec:286.
+func (lawSpecDefinitions) AssayxportHaskellCppStepped(
+	symbols map[string]*LawSpecSymbol,
+	stack []Frame,
+	r Row,
+	v bool,
+) []Frame {
+	return lsfToNativeListFrame(lsfAssayxportHaskellCppStepped(lsfFromNativeListFrame(stack), lsfFromNativeRow(r), lsfFromNativeBool(v)))
+}
+
+// assayxportHaskellCppTableAfter — laws/haskell_cpp.lawspec:792.
+func (lawSpecDefinitions) AssayxportHaskellCppTableAfter(
+	symbols map[string]*LawSpecSymbol,
+	env Env,
+	r Row,
+) Env {
+	return lsfToNativeEnv(lsfAssayxportHaskellCppTableAfter(lsfFromNativeEnv(env), lsfFromNativeRow(r)))
+}
+
+// assayxportHaskellCppTangle — laws/haskell_cpp.lawspec:962.
 func (lawSpecDefinitions) AssayxportHaskellCppTangle(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2424,7 +2979,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppTangle(
 	return lsfToNativeListRow(lsfTangle(lsfFromNativeInteger(seed_)))
 }
 
-// assayxportHaskellCppTangleEnv — laws/haskell_cpp.lawspec:614.
+// assayxportHaskellCppTangleEnv — laws/haskell_cpp.lawspec:973.
 func (lawSpecDefinitions) AssayxportHaskellCppTangleEnv(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2432,7 +2987,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppTangleEnv(
 	return lsfToNativeEnv(lsfTangleEnv(lsfFromNativeInteger(seed_)))
 }
 
-// assayxportHaskellCppTangleForm — laws/haskell_cpp.lawspec:566.
+// assayxportHaskellCppTangleForm — laws/haskell_cpp.lawspec:925.
 func (lawSpecDefinitions) AssayxportHaskellCppTangleForm(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2441,7 +2996,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppTangleForm(
 	return lsfToNativeInteger(lsfAssayxportHaskellCppTangleForm(lsfFromNativeInteger(seed_), lsfFromNativeInteger(k)))
 }
 
-// assayxportHaskellCppTangleName — laws/haskell_cpp.lawspec:567.
+// assayxportHaskellCppTangleName — laws/haskell_cpp.lawspec:926.
 func (lawSpecDefinitions) AssayxportHaskellCppTangleName(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2450,7 +3005,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppTangleName(
 	return lsfToNativeText(lsfAssayxportHaskellCppTangleName(lsfFromNativeInteger(seed_), lsfFromNativeInteger(k)))
 }
 
-// assayxportHaskellCppTermHolds — laws/haskell_cpp.lawspec:442.
+// assayxportHaskellCppTermHolds — laws/haskell_cpp.lawspec:762.
 func (lawSpecDefinitions) AssayxportHaskellCppTermHolds(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -2459,7 +3014,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppTermHolds(
 	return lsfToNativeBool(lsfAssayxportHaskellCppTermHolds(lsfFromNativeEnv(env), lsfFromNativeLiteral(t_)))
 }
 
-// assayxportHaskellCppTermOf — laws/haskell_cpp.lawspec:77.
+// assayxportHaskellCppTermOf — laws/haskell_cpp.lawspec:104.
 func (lawSpecDefinitions) AssayxportHaskellCppTermOf(
 	symbols map[string]*LawSpecSymbol,
 	first bool,
@@ -2469,7 +3024,19 @@ func (lawSpecDefinitions) AssayxportHaskellCppTermOf(
 	return lsfToNativeLiteral(lsfAssayxportHaskellCppTermOf(lsfFromNativeBool(first), lsfFromNativeInteger(form), lsfFromNativeText(n)))
 }
 
-// assayxportHaskellCppTermsIn — laws/haskell_cpp.lawspec:237.
+// assayxportHaskellCppTermsFrom — laws/haskell_cpp.lawspec:587.
+func (lawSpecDefinitions) AssayxportHaskellCppTermsFrom(
+	symbols map[string]*LawSpecSymbol,
+	rs []Row,
+	setBy []string,
+	otherBy []string,
+	line *LawSpecBigInt,
+	seen []string,
+) []string {
+	return lsfToNativeListText(lsfTermsFrom(lsfFromNativeListRow(rs), lsfFromNativeListText(setBy), lsfFromNativeListText(otherBy), lsfFromNativeInteger(line), lsfFromNativeListText(seen)))
+}
+
+// assayxportHaskellCppTermsIn — laws/haskell_cpp.lawspec:602.
 func (lawSpecDefinitions) AssayxportHaskellCppTermsIn(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
@@ -2478,7 +3045,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppTermsIn(
 	return lsfToNativeListText(lsfTermsIn(lsfFromNativeListRow(rs), lsfFromNativeListText(seen)))
 }
 
-// assayxportHaskellCppTraceBefore — laws/haskell_cpp.lawspec:360.
+// assayxportHaskellCppTraceBefore — laws/haskell_cpp.lawspec:627.
 func (lawSpecDefinitions) AssayxportHaskellCppTraceBefore(
 	symbols map[string]*LawSpecSymbol,
 	a []*LawSpecBigInt,
@@ -2487,17 +3054,39 @@ func (lawSpecDefinitions) AssayxportHaskellCppTraceBefore(
 	return lsfToNativeBool(lsfTraceBefore(lsfFromNativeListInteger(a), lsfFromNativeListInteger(b)))
 }
 
-// assayxportHaskellCppTraceOf — laws/haskell_cpp.lawspec:345.
-func (lawSpecDefinitions) AssayxportHaskellCppTraceOf(
+// assayxportHaskellCppTraceFrom — laws/haskell_cpp.lawspec:607.
+func (lawSpecDefinitions) AssayxportHaskellCppTraceFrom(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
+	w Walk,
 	full []Entry[string, *LawSpecBigInt],
+	line *LawSpecBigInt,
 	seen []string,
 ) []*LawSpecBigInt {
-	return lsfToNativeListInteger(lsfTraceOf(lsfFromNativeListRow(rs), lsfFromNativeKeyValTextInteger(full), lsfFromNativeListText(seen)))
+	return lsfToNativeListInteger(lsfTraceFrom(lsfFromNativeListRow(rs), lsfFromNativeWalk(w), lsfFromNativeKeyValTextInteger(full), lsfFromNativeInteger(line), lsfFromNativeListText(seen)))
 }
 
-// assayxportHaskellCppUnder — laws/haskell_cpp.lawspec:711.
+// assayxportHaskellCppTruthAt — laws/haskell_cpp.lawspec:422.
+func (lawSpecDefinitions) AssayxportHaskellCppTruthAt(
+	symbols map[string]*LawSpecSymbol,
+	w Walk,
+	asg []Entry[string, *LawSpecBigInt],
+	r Row,
+	line *LawSpecBigInt,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppTruthAt(lsfFromNativeWalk(w), lsfFromNativeKeyValTextInteger(asg), lsfFromNativeRow(r), lsfFromNativeInteger(line)))
+}
+
+// assayxportHaskellCppTwoPathsOf — laws/haskell_cpp.lawspec:1274.
+func (lawSpecDefinitions) AssayxportHaskellCppTwoPathsOf(
+	symbols map[string]*LawSpecSymbol,
+	rs []Row,
+	t_ string,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppTwoPathsOf(lsfFromNativeListRow(rs), lsfFromNativeText(t_)))
+}
+
+// assayxportHaskellCppUnder — laws/haskell_cpp.lawspec:1103.
 func (lawSpecDefinitions) AssayxportHaskellCppUnder(
 	symbols map[string]*LawSpecSymbol,
 	n string,
@@ -2509,7 +3098,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppUnder(
 	return lsfToNativeListRow(lsfAssayxportHaskellCppUnder(lsfFromNativeText(n), lsfFromNativeInteger(form), lsfFromNativeListText(yes), lsfFromNativeBool(hasElse), lsfFromNativeListText(no)))
 }
 
-// assayxportHaskellCppUnread — laws/haskell_cpp.lawspec:435.
+// assayxportHaskellCppUnread — laws/haskell_cpp.lawspec:755.
 func (lawSpecDefinitions) AssayxportHaskellCppUnread(
 	symbols map[string]*LawSpecSymbol,
 	ps []Package,
@@ -2517,7 +3106,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppUnread(
 	return lsfToNativeListPackage(lsfUnread(lsfFromNativeListPackage(ps)))
 }
 
-// assayxportHaskellCppUnreadDecls — laws/haskell_cpp.lawspec:426.
+// assayxportHaskellCppUnreadDecls — laws/haskell_cpp.lawspec:746.
 func (lawSpecDefinitions) AssayxportHaskellCppUnreadDecls(
 	symbols map[string]*LawSpecSymbol,
 	ds []Decl,
@@ -2525,7 +3114,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppUnreadDecls(
 	return lsfToNativeListDecl(lsfUnreadDecls(lsfFromNativeListDecl(ds)))
 }
 
-// assayxportHaskellCppValueIn — laws/haskell_cpp.lawspec:339.
+// assayxportHaskellCppValueIn — laws/haskell_cpp.lawspec:558.
 func (lawSpecDefinitions) AssayxportHaskellCppValueIn(
 	symbols map[string]*LawSpecSymbol,
 	full []Entry[string, *LawSpecBigInt],
@@ -2534,16 +3123,24 @@ func (lawSpecDefinitions) AssayxportHaskellCppValueIn(
 	return lsfToNativeInteger(lsfValueIn_2(lsfFromNativeKeyValTextInteger(full), lsfFromNativeText(t_)))
 }
 
-// assayxportHaskellCppValued — laws/haskell_cpp.lawspec:228.
+// assayxportHaskellCppValueNames — laws/haskell_cpp.lawspec:331.
+func (lawSpecDefinitions) AssayxportHaskellCppValueNames(
+	symbols map[string]*LawSpecSymbol,
+	e CExpr,
+) []string {
+	return lsfToNativeListText(lsfAssayxportHaskellCppValueNames(lsfFromNativeCExpr(e)))
+}
+
+// assayxportHaskellCppValued — laws/haskell_cpp.lawspec:413.
 func (lawSpecDefinitions) AssayxportHaskellCppValued(
 	symbols map[string]*LawSpecSymbol,
 	asg []Entry[string, *LawSpecBigInt],
 	t_ string,
 ) bool {
-	return lsfToNativeBool(lsfValued(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeText(t_)))
+	return lsfToNativeBool(lsfAssayxportHaskellCppValued(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeText(t_)))
 }
 
-// assayxportHaskellCppWalkedAll — laws/haskell_cpp.lawspec:379.
+// assayxportHaskellCppWalkedAll — laws/haskell_cpp.lawspec:646.
 func (lawSpecDefinitions) AssayxportHaskellCppWalkedAll(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
@@ -2553,7 +3150,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppWalkedAll(
 	return lsfToNativeListWalked(lsfWalkedAll(lsfFromNativeListRow(rs), lsfFromNativeListKeyValTextInteger(fulls), lsfFromNativeListWalked(acc)))
 }
 
-// assayxportHaskellCppWeave — laws/haskell_cpp.lawspec:702.
+// assayxportHaskellCppWeave — laws/haskell_cpp.lawspec:1094.
 func (lawSpecDefinitions) AssayxportHaskellCppWeave(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2561,7 +3158,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppWeave(
 	return lsfToNativeListRow(lsfAssayxportHaskellCppWeave(lsfFromNativeInteger(seed_)))
 }
 
-// assayxportHaskellCppWeaveArms — laws/haskell_cpp.lawspec:676.
+// assayxportHaskellCppWeaveArms — laws/haskell_cpp.lawspec:1066.
 func (lawSpecDefinitions) AssayxportHaskellCppWeaveArms(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2577,7 +3174,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppWeaveArms(
 	return lsfToNativeListRow(lsfAssayxportHaskellCppWeaveArms(lsfFromNativeInteger(seed_), lsfFromNativeInteger(group), lsfFromNativeListLiteral(outer), lsfFromNativeListLiteral(before), lsfFromNativeInteger(k), lsfFromNativeInteger(left), lsfFromNativeInteger(depth), lsfFromNativeBool(tail), lsfFromNativeInteger(fuel)))
 }
 
-// assayxportHaskellCppWeaveForm — laws/haskell_cpp.lawspec:661.
+// assayxportHaskellCppWeaveForm — laws/haskell_cpp.lawspec:1049.
 func (lawSpecDefinitions) AssayxportHaskellCppWeaveForm(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2587,7 +3184,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppWeaveForm(
 	return lsfToNativeInteger(lsfAssayxportHaskellCppWeaveForm(lsfFromNativeInteger(seed_), lsfFromNativeInteger(place), lsfFromNativeBool(first)))
 }
 
-// assayxportHaskellCppWeaveName — laws/haskell_cpp.lawspec:657.
+// assayxportHaskellCppWeaveName — laws/haskell_cpp.lawspec:1045.
 func (lawSpecDefinitions) AssayxportHaskellCppWeaveName(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2596,7 +3193,15 @@ func (lawSpecDefinitions) AssayxportHaskellCppWeaveName(
 	return lsfToNativeText(lsfAssayxportHaskellCppWeaveName(lsfFromNativeInteger(seed_), lsfFromNativeInteger(place)))
 }
 
-// assayxportHaskellCppWeaveSection — laws/haskell_cpp.lawspec:694.
+// assayxportHaskellCppWeaveNew — laws/haskell_cpp.lawspec:1028.
+func (lawSpecDefinitions) AssayxportHaskellCppWeaveNew(
+	symbols map[string]*LawSpecSymbol,
+	seed_ *LawSpecBigInt,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppWeaveNew(lsfFromNativeInteger(seed_)))
+}
+
+// assayxportHaskellCppWeaveSection — laws/haskell_cpp.lawspec:1085.
 func (lawSpecDefinitions) AssayxportHaskellCppWeaveSection(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -2605,7 +3210,18 @@ func (lawSpecDefinitions) AssayxportHaskellCppWeaveSection(
 	return lsfToNativeListRow(lsfAssayxportHaskellCppWeaveSection(lsfFromNativeInteger(seed_), lsfFromNativeInteger(i)))
 }
 
-// assayxportHaskellCppWideRows — laws/haskell_cpp.lawspec:904.
+// assayxportHaskellCppWeaveSets — laws/haskell_cpp.lawspec:1039.
+func (lawSpecDefinitions) AssayxportHaskellCppWeaveSets(
+	symbols map[string]*LawSpecSymbol,
+	seed_ *LawSpecBigInt,
+	place *LawSpecBigInt,
+	odds *LawSpecBigInt,
+	path []Literal,
+) []Row {
+	return lsfToNativeListRow(lsfAssayxportHaskellCppWeaveSets(lsfFromNativeInteger(seed_), lsfFromNativeInteger(place), lsfFromNativeInteger(odds), lsfFromNativeListLiteral(path)))
+}
+
+// assayxportHaskellCppWideRows — laws/haskell_cpp.lawspec:1561.
 func (lawSpecDefinitions) AssayxportHaskellCppWideRows(
 	symbols map[string]*LawSpecSymbol,
 	n *LawSpecBigInt,
@@ -2613,7 +3229,7 @@ func (lawSpecDefinitions) AssayxportHaskellCppWideRows(
 	return lsfToNativeListRow(lsfAssayxportHaskellCppWideRows(lsfFromNativeInteger(n)))
 }
 
-// assayxportHaskellCppWithValue — laws/haskell_cpp.lawspec:327.
+// assayxportHaskellCppWithValue — laws/haskell_cpp.lawspec:546.
 func (lawSpecDefinitions) AssayxportHaskellCppWithValue(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -4940,6 +5556,14 @@ func (lawSpecDefinitions) BadChar(symbols map[string]*LawSpecSymbol, ch Syntax) 
 	return lsfToNativeBool(lsfBadChar(lsfFromNativeSyntax(ch)))
 }
 
+// basePackage — laws/haskell_extract.lawspec:4573.
+func (lawSpecDefinitions) BasePackage(
+	symbols map[string]*LawSpecSymbol,
+	v []*LawSpecBigInt,
+) BindingLine {
+	return lsfToNativeBindingLine(lsfBasePackage(lsfFromNativeListInteger(v)))
+}
+
 // before — laws/haskell_extract.lawspec:71.
 func (lawSpecDefinitions) Before(symbols map[string]*LawSpecSymbol, a Point, b Point) bool {
 	return lsfToNativeBool(lsfAssayxportHaskellExtractBefore(lsfFromNativePoint(a), lsfFromNativePoint(b)))
@@ -4955,17 +5579,17 @@ func (lawSpecDefinitions) BeforeProc(
 	return lsfToNativeListText(lsfBeforeProc(lsfFromNativeListText(ls), lsfFromNativeListText(cur), lsfFromNativeListText(best)))
 }
 
-// bigDecl — laws/haskell_extract.lawspec:4303.
+// bigDecl — laws/haskell_extract.lawspec:4683.
 func (lawSpecDefinitions) BigDecl(symbols map[string]*LawSpecSymbol, i *LawSpecBigInt) string {
 	return lsfToNativeText(lsfBigDecl(lsfFromNativeInteger(i)))
 }
 
-// bigDecls — laws/haskell_extract.lawspec:4307.
+// bigDecls — laws/haskell_extract.lawspec:4687.
 func (lawSpecDefinitions) BigDecls(symbols map[string]*LawSpecSymbol, n *LawSpecBigInt) []string {
 	return lsfToNativeListText(lsfBigDecls(lsfFromNativeInteger(n)))
 }
 
-// bigModule — laws/haskell_extract.lawspec:4309.
+// bigModule — laws/haskell_extract.lawspec:4689.
 func (lawSpecDefinitions) BigModule(symbols map[string]*LawSpecSymbol, n *LawSpecBigInt) string {
 	return lsfToNativeText(lsfBigModule(lsfFromNativeInteger(n)))
 }
@@ -4993,7 +5617,7 @@ func (lawSpecDefinitions) BlanksOf(symbols map[string]*LawSpecSymbol, l string) 
 	return lsfToNativeInteger(lsfBlanksOf(lsfFromNativeText(l)))
 }
 
-// blockDocIs — laws/haskell_extract.lawspec:3615.
+// blockDocIs — laws/haskell_extract.lawspec:3877.
 func (lawSpecDefinitions) BlockDocIs(symbols map[string]*LawSpecSymbol, raw string, d Decl) bool {
 	return lsfToNativeBool(lsfBlockDocIs(lsfFromNativeText(raw), lsfFromNativeDecl(d)))
 }
@@ -5033,7 +5657,7 @@ func (lawSpecDefinitions) Brings(symbols map[string]*LawSpecSymbol, i Import, n 
 	return lsfToNativeBool(lsfBrings(lsfFromNativeImport(i), lsfFromNativeText(n)))
 }
 
-// buildTexts — laws/haskell_extract.lawspec:3992.
+// buildTexts — laws/haskell_extract.lawspec:4278.
 func (lawSpecDefinitions) BuildTexts(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
@@ -5051,12 +5675,12 @@ func (lawSpecDefinitions) Bundled(
 	return lsfToNativeListText(lsfBundled(lsfFromNativeKeyValTextListText(loose), lsfFromNativeListSyntax(cs)))
 }
 
-// byteOrderMark — laws/haskell_extract.lawspec:2954.
+// byteOrderMark — laws/haskell_extract.lawspec:3216.
 func (lawSpecDefinitions) ByteOrderMark(symbols map[string]*LawSpecSymbol, u LawSpecUnit) string {
 	return lsfToNativeText(lsfByteOrderMark(lsfFromNativeUnit(u)))
 }
 
-// callsAre — laws/haskell_extract.lawspec:2872.
+// callsAre — laws/haskell_extract.lawspec:3134.
 func (lawSpecDefinitions) CallsAre(
 	symbols map[string]*LawSpecSymbol,
 	id string,
@@ -5066,7 +5690,7 @@ func (lawSpecDefinitions) CallsAre(
 	return lsfToNativeBool(lsfCallsAre(lsfFromNativeText(id), lsfFromNativeListCallEdge(es), lsfFromNativeDecl(d)))
 }
 
-// charModule — laws/haskell_extract.lawspec:2854.
+// charModule — laws/haskell_extract.lawspec:3116.
 func (lawSpecDefinitions) CharModule(symbols map[string]*LawSpecSymbol, token string) Syntax {
 	return lsfToNativeSyntax(lsfCharModule(lsfFromNativeText(token)))
 }
@@ -5103,7 +5727,7 @@ func (lawSpecDefinitions) ChildrenOrdered(
 	return lsfToNativeBool(lsfAssayxportHaskellExtractChildrenOrdered(lsfFromNativeSyntax(parent), lsfFromNativeListSyntax(cs)))
 }
 
-// chosen — laws/haskell_extract.lawspec:3151.
+// chosen — laws/haskell_extract.lawspec:3413.
 func (lawSpecDefinitions) Chosen(
 	symbols map[string]*LawSpecSymbol,
 	n *LawSpecBigInt,
@@ -5113,7 +5737,7 @@ func (lawSpecDefinitions) Chosen(
 	return lsfToNativeText(lsfChosen(lsfFromNativeInteger(n), lsfFromNativeListText(ts), lsfFromNativeText(none)))
 }
 
-// classColumn — laws/haskell_extract.lawspec:3605.
+// classColumn — laws/haskell_extract.lawspec:3867.
 func (lawSpecDefinitions) ClassColumn(
 	symbols map[string]*LawSpecSymbol,
 	ds []Decl,
@@ -5147,7 +5771,7 @@ func (lawSpecDefinitions) ClassMethods(symbols map[string]*LawSpecSymbol, d Synt
 	return lsfToNativeListSyntax(lsfClassMethods(lsfFromNativeSyntax(d)))
 }
 
-// classicHeader — laws/haskell_extract.lawspec:3006.
+// classicHeader — laws/haskell_extract.lawspec:3268.
 func (lawSpecDefinitions) ClassicHeader(symbols map[string]*LawSpecSymbol, u LawSpecUnit) string {
 	return lsfToNativeText(lsfClassicHeader(lsfFromNativeUnit(u)))
 }
@@ -5222,7 +5846,7 @@ func (lawSpecDefinitions) ConNameOf(symbols map[string]*LawSpecSymbol, shape Syn
 	return lsfToNativeText(lsfConNameOf(lsfFromNativeSyntax(shape)))
 }
 
-// condHolds — laws/haskell_extract.lawspec:4096.
+// condHolds — laws/haskell_extract.lawspec:4390.
 func (lawSpecDefinitions) CondHolds(symbols map[string]*LawSpecSymbol, env Env, cond string) bool {
 	return lsfToNativeBool(lsfCondHolds(lsfFromNativeEnv(env), lsfFromNativeText(cond)))
 }
@@ -5289,7 +5913,7 @@ func (lawSpecDefinitions) ContextOf(
 	return lsfToNativeCtx(lsfContextOf(lsfFromNativeSyntax(root), lsfFromNativeListDecl(base)))
 }
 
-// copyEnv — laws/haskell_extract.lawspec:3847.
+// copyEnv — laws/haskell_extract.lawspec:4133.
 func (lawSpecDefinitions) CopyEnv(symbols map[string]*LawSpecSymbol, i *LawSpecBigInt) Env {
 	return lsfToNativeEnv(lsfCopyEnv(lsfFromNativeInteger(i)))
 }
@@ -5307,7 +5931,7 @@ func (lawSpecDefinitions) CoreType(symbols map[string]*LawSpecSymbol, t_ Syntax)
 	return lsfToNativeSyntax(lsfCoreType(lsfFromNativeSyntax(t_)))
 }
 
-// cpp2BuildHolds — laws/haskell_extract.lawspec:3898.
+// cpp2BuildHolds — laws/haskell_extract.lawspec:4184.
 func (lawSpecDefinitions) Cpp2BuildHolds(
 	symbols map[string]*LawSpecSymbol,
 	haskellParser HaskellParser,
@@ -5325,7 +5949,7 @@ func (lawSpecDefinitions) Cpp2BuildHolds(
 	})
 }
 
-// cpp2BuildsHold — laws/haskell_extract.lawspec:3908.
+// cpp2BuildsHold — laws/haskell_extract.lawspec:4194.
 func (lawSpecDefinitions) Cpp2BuildsHold(
 	symbols map[string]*LawSpecSymbol,
 	haskellParser HaskellParser,
@@ -5343,7 +5967,7 @@ func (lawSpecDefinitions) Cpp2BuildsHold(
 	})
 }
 
-// cpp2Filtered — laws/haskell_extract.lawspec:3956.
+// cpp2Filtered — laws/haskell_extract.lawspec:4242.
 func (lawSpecDefinitions) Cpp2Filtered(
 	symbols map[string]*LawSpecSymbol,
 	haskellParser HaskellParser,
@@ -5361,7 +5985,7 @@ func (lawSpecDefinitions) Cpp2Filtered(
 	})
 }
 
-// cpp2Lines — laws/haskell_extract.lawspec:3887.
+// cpp2Lines — laws/haskell_extract.lawspec:4173.
 func (lawSpecDefinitions) Cpp2Lines(
 	symbols map[string]*LawSpecSymbol,
 	i *LawSpecBigInt,
@@ -5369,17 +5993,17 @@ func (lawSpecDefinitions) Cpp2Lines(
 	return lsfToNativeListBindingLine(lsfCpp2Lines(lsfFromNativeInteger(i)))
 }
 
-// cppCopies — laws/haskell_extract.lawspec:2552.
+// cppCopies — laws/haskell_extract.lawspec:2808.
 func (lawSpecDefinitions) CppCopies(symbols map[string]*LawSpecSymbol, source string) []string {
 	return lsfToNativeListText(lsfCppCopies(lsfFromNativeText(source)))
 }
 
-// cppPlan — laws/haskell_extract.lawspec:2538.
+// cppPlan — laws/haskell_extract.lawspec:2794.
 func (lawSpecDefinitions) CppPlan(symbols map[string]*LawSpecSymbol, source string) CxPlan {
 	return lsfToNativeCxPlan(lsfCppPlan(lsfFromNativeText(source)))
 }
 
-// cxAddDecl — laws/haskell_extract.lawspec:2645.
+// cxAddDecl — laws/haskell_extract.lawspec:2907.
 func (lawSpecDefinitions) CxAddDecl(
 	symbols map[string]*LawSpecSymbol,
 	d Decl,
@@ -5389,7 +6013,7 @@ func (lawSpecDefinitions) CxAddDecl(
 	return lsfToNativeCxBook(lsfCxAddDecl(lsfFromNativeDecl(d), lsfFromNativeInteger(i), lsfFromNativeCxBook(book)))
 }
 
-// cxAddDecls — laws/haskell_extract.lawspec:2654.
+// cxAddDecls — laws/haskell_extract.lawspec:2916.
 func (lawSpecDefinitions) CxAddDecls(
 	symbols map[string]*LawSpecSymbol,
 	ds []Decl,
@@ -5399,7 +6023,7 @@ func (lawSpecDefinitions) CxAddDecls(
 	return lsfToNativeCxBook(lsfCxAddDecls(lsfFromNativeListDecl(ds), lsfFromNativeInteger(i), lsfFromNativeCxBook(book)))
 }
 
-// cxAddEdge — laws/haskell_extract.lawspec:2624.
+// cxAddEdge — laws/haskell_extract.lawspec:2886.
 func (lawSpecDefinitions) CxAddEdge(
 	symbols map[string]*LawSpecSymbol,
 	e CallEdge,
@@ -5409,7 +6033,7 @@ func (lawSpecDefinitions) CxAddEdge(
 	return lsfToNativeListCxEdge(lsfCxAddEdge(lsfFromNativeCallEdge(e), lsfFromNativeInteger(i), lsfFromNativeListCxEdge(es)))
 }
 
-// cxAddEdges — laws/haskell_extract.lawspec:2632.
+// cxAddEdges — laws/haskell_extract.lawspec:2894.
 func (lawSpecDefinitions) CxAddEdges(
 	symbols map[string]*LawSpecSymbol,
 	es []CallEdge,
@@ -5419,7 +6043,7 @@ func (lawSpecDefinitions) CxAddEdges(
 	return lsfToNativeListCxEdge(lsfCxAddEdges(lsfFromNativeListCallEdge(es), lsfFromNativeInteger(i), lsfFromNativeListCxEdge(acc)))
 }
 
-// cxAddSym — laws/haskell_extract.lawspec:2636.
+// cxAddSym — laws/haskell_extract.lawspec:2898.
 func (lawSpecDefinitions) CxAddSym(
 	symbols map[string]*LawSpecSymbol,
 	form Decl,
@@ -5430,26 +6054,42 @@ func (lawSpecDefinitions) CxAddSym(
 	return lsfToNativeListCxSym(lsfCxAddSym(lsfFromNativeDecl(form), lsfFromNativeListCallEdge(es), lsfFromNativeInteger(i), lsfFromNativeListCxSym(syms)))
 }
 
-// cxAllHold — laws/haskell_extract.lawspec:2461.
-func (lawSpecDefinitions) CxAllHold(
+// cxAfter — laws/haskell_extract.lawspec:2640.
+func (lawSpecDefinitions) CxAfter(
 	symbols map[string]*LawSpecSymbol,
-	asg []Entry[string, *LawSpecBigInt],
-	ls []CxTerm,
-) bool {
-	return lsfToNativeBool(lsfCxAllHold(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeListCxTerm(ls)))
+	w CxPass,
+	r CxRow,
+	v bool,
+) CxPass {
+	return lsfToNativeCxPass(lsfCxAfter(lsfFromNativeCxPass(w), lsfFromNativeCxRow(r), lsfFromNativeBool(v)))
 }
 
-// cxBlanks — laws/haskell_extract.lawspec:2510.
+// cxBlanks — laws/haskell_extract.lawspec:2766.
 func (lawSpecDefinitions) CxBlanks(symbols map[string]*LawSpecSymbol, n *LawSpecBigInt) []string {
 	return lsfToNativeListText(lsfCxBlanks(lsfFromNativeInteger(n)))
 }
 
-// cxBodyOf — laws/haskell_extract.lawspec:2341.
+// cxBlocks — laws/haskell_extract.lawspec:2655.
+func (lawSpecDefinitions) CxBlocks(
+	symbols map[string]*LawSpecSymbol,
+	sets []Entry[string, CxSets],
+	vals []string,
+	n string,
+) bool {
+	return lsfToNativeBool(lsfCxBlocks(lsfFromNativeKeyValTextCxSets(sets), lsfFromNativeListText(vals), lsfFromNativeText(n)))
+}
+
+// cxBodyOf — laws/haskell_extract.lawspec:2351.
 func (lawSpecDefinitions) CxBodyOf(symbols map[string]*LawSpecSymbol, joined string) string {
 	return lsfToNativeText(lsfCxBodyOf(lsfFromNativeText(joined)))
 }
 
-// cxBookOf — laws/haskell_extract.lawspec:2682.
+// cxBodySets — laws/haskell_extract.lawspec:2452.
+func (lawSpecDefinitions) CxBodySets(symbols map[string]*LawSpecSymbol, rest string) CxSets {
+	return lsfToNativeCxSets(lsfCxBodySets(lsfFromNativeText(rest)))
+}
+
+// cxBookOf — laws/haskell_extract.lawspec:2944.
 func (lawSpecDefinitions) CxBookOf(
 	symbols map[string]*LawSpecSymbol,
 	live []CxCopyPkg,
@@ -5458,25 +6098,29 @@ func (lawSpecDefinitions) CxBookOf(
 	return lsfToNativeCxBook(lsfCxBookOf(lsfFromNativeListCxCopyPkg(live), lsfFromNativeCxBook(book)))
 }
 
-// cxBuilds — laws/haskell_extract.lawspec:2493.
+// cxBuilds — laws/haskell_extract.lawspec:2736.
 func (lawSpecDefinitions) CxBuilds(
 	symbols map[string]*LawSpecSymbol,
 	rs []CxRow,
+	w CxPass,
 	asg []Entry[string, *LawSpecBigInt],
 ) [][]Entry[string, *LawSpecBigInt] {
-	return lsfToNativeListKeyValTextInteger(lsfCxBuilds(lsfFromNativeListCxRow(rs), lsfFromNativeKeyValTextInteger(asg)))
+	return lsfToNativeListKeyValTextInteger(lsfCxBuilds(lsfFromNativeListCxRow(rs), lsfFromNativeCxPass(w), lsfFromNativeKeyValTextInteger(asg)))
 }
 
-// cxChoiceAt — laws/haskell_extract.lawspec:2478.
-func (lawSpecDefinitions) CxChoiceAt(
+// cxCommentOpen — laws/haskell_extract.lawspec:2363.
+func (lawSpecDefinitions) CxCommentOpen(
 	symbols map[string]*LawSpecSymbol,
-	asg []Entry[string, *LawSpecBigInt],
-	r CxRow,
+	t_ string,
+	i *LawSpecBigInt,
+	n *LawSpecBigInt,
+	inside bool,
+	fuel *LawSpecBigInt,
 ) bool {
-	return lsfToNativeBool(lsfCxChoiceAt(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeCxRow(r)))
+	return lsfToNativeBool(lsfCxCommentOpen(lsfFromNativeText(t_), lsfFromNativeInteger(i), lsfFromNativeInteger(n), lsfFromNativeBool(inside), lsfFromNativeInteger(fuel)))
 }
 
-// cxCondText — laws/haskell_extract.lawspec:2599.
+// cxCondText — laws/haskell_extract.lawspec:2861.
 func (lawSpecDefinitions) CxCondText(
 	symbols map[string]*LawSpecSymbol,
 	plan CxPlan,
@@ -5485,7 +6129,7 @@ func (lawSpecDefinitions) CxCondText(
 	return lsfToNativeText(lsfCxCondText(lsfFromNativeCxPlan(plan), lsfFromNativeListInteger(j)))
 }
 
-// cxCopiesOf — laws/haskell_extract.lawspec:2525.
+// cxCopiesOf — laws/haskell_extract.lawspec:2781.
 func (lawSpecDefinitions) CxCopiesOf(
 	symbols map[string]*LawSpecSymbol,
 	rows []CxRow,
@@ -5494,16 +6138,17 @@ func (lawSpecDefinitions) CxCopiesOf(
 	return lsfToNativeListText(lsfCxCopiesOf(lsfFromNativeListCxRow(rows), lsfFromNativeListKeyValTextInteger(builds)))
 }
 
-// cxCopyLines — laws/haskell_extract.lawspec:2514.
+// cxCopyLines — laws/haskell_extract.lawspec:2770.
 func (lawSpecDefinitions) CxCopyLines(
 	symbols map[string]*LawSpecSymbol,
+	w CxPass,
 	asg []Entry[string, *LawSpecBigInt],
 	rows []CxRow,
 ) []string {
-	return lsfToNativeListText(lsfCxCopyLines(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeListCxRow(rows)))
+	return lsfToNativeListText(lsfCxCopyLines(lsfFromNativeCxPass(w), lsfFromNativeKeyValTextInteger(asg), lsfFromNativeListCxRow(rows)))
 }
 
-// cxCopyOf — laws/haskell_extract.lawspec:2523.
+// cxCopyOf — laws/haskell_extract.lawspec:2779.
 func (lawSpecDefinitions) CxCopyOf(
 	symbols map[string]*LawSpecSymbol,
 	asg []Entry[string, *LawSpecBigInt],
@@ -5512,37 +6157,41 @@ func (lawSpecDefinitions) CxCopyOf(
 	return lsfToNativeText(lsfCxCopyOf(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeListCxRow(rows)))
 }
 
-// cxCount — laws/haskell_extract.lawspec:2482.
+// cxCount — laws/haskell_extract.lawspec:2719.
 func (lawSpecDefinitions) CxCount(
 	symbols map[string]*LawSpecSymbol,
 	rs []CxRow,
+	w CxPass,
 	asg []Entry[string, *LawSpecBigInt],
 	budget *LawSpecBigInt,
 ) *LawSpecBigInt {
-	return lsfToNativeInteger(lsfCxCount(lsfFromNativeListCxRow(rs), lsfFromNativeKeyValTextInteger(asg), lsfFromNativeInteger(budget)))
+	return lsfToNativeInteger(lsfCxCount(lsfFromNativeListCxRow(rs), lsfFromNativeCxPass(w), lsfFromNativeKeyValTextInteger(asg), lsfFromNativeInteger(budget)))
 }
 
-// cxCubeLits — laws/haskell_extract.lawspec:2593.
+// cxCubeLits — laws/haskell_extract.lawspec:2855.
 func (lawSpecDefinitions) CxCubeLits(symbols map[string]*LawSpecSymbol, cs [][]CxTerm) [][]Literal {
 	return lsfToNativeListListLiteral(lsfCxCubeLits(lsfFromNativeListListCxTerm(cs)))
 }
 
-// cxDeadOf — laws/haskell_extract.lawspec:2404.
-func (lawSpecDefinitions) CxDeadOf(symbols map[string]*LawSpecSymbol, stack []CxOpen) bool {
-	return lsfToNativeBool(lsfCxDeadOf(lsfFromNativeListCxOpen(stack)))
+// cxDecidedBy — laws/haskell_extract.lawspec:2685.
+func (lawSpecDefinitions) CxDecidedBy(
+	symbols map[string]*LawSpecSymbol,
+	sets []Entry[string, CxSets],
+	r CxRow,
+) CxReading {
+	return lsfToNativeCxReading(lsfCxDecidedBy(lsfFromNativeKeyValTextCxSets(sets), lsfFromNativeCxRow(r)))
 }
 
-// cxDirective — laws/haskell_extract.lawspec:2420.
-func (lawSpecDefinitions) CxDirective(
+// cxDefinition — laws/haskell_extract.lawspec:2464.
+func (lawSpecDefinitions) CxDefinition(
 	symbols map[string]*LawSpecSymbol,
 	word string,
 	body string,
-	st CxState,
-) CxEffect {
-	return lsfToNativeCxEffect(lsfCxDirective(lsfFromNativeText(word), lsfFromNativeText(body), lsfFromNativeCxState(st)))
+) CxDef {
+	return lsfToNativeCxDef(lsfCxDefinition(lsfFromNativeText(word), lsfFromNativeText(body)))
 }
 
-// cxEdgesCond — laws/haskell_extract.lawspec:2692.
+// cxEdgesCond — laws/haskell_extract.lawspec:2954.
 func (lawSpecDefinitions) CxEdgesCond(
 	symbols map[string]*LawSpecSymbol,
 	plan CxPlan,
@@ -5551,7 +6200,7 @@ func (lawSpecDefinitions) CxEdgesCond(
 	return lsfToNativeListCallEdge(lsfCxEdgesCond(lsfFromNativeCxPlan(plan), lsfFromNativeListCxEdge(es)))
 }
 
-// cxEmit — laws/haskell_extract.lawspec:2707.
+// cxEmit — laws/haskell_extract.lawspec:2969.
 func (lawSpecDefinitions) CxEmit(
 	symbols map[string]*LawSpecSymbol,
 	plan CxPlan,
@@ -5561,7 +6210,7 @@ func (lawSpecDefinitions) CxEmit(
 	return lsfToNativeListDecl(lsfCxEmit(lsfFromNativeCxPlan(plan), lsfFromNativeCxBook(book), lsfFromNativeListText(ids)))
 }
 
-// cxEmitSyms — laws/haskell_extract.lawspec:2699.
+// cxEmitSyms — laws/haskell_extract.lawspec:2961.
 func (lawSpecDefinitions) CxEmitSyms(
 	symbols map[string]*LawSpecSymbol,
 	plan CxPlan,
@@ -5570,16 +6219,54 @@ func (lawSpecDefinitions) CxEmitSyms(
 	return lsfToNativeListDecl(lsfCxEmitSyms(lsfFromNativeCxPlan(plan), lsfFromNativeListCxSym(syms)))
 }
 
-// cxFirstBuild — laws/haskell_extract.lawspec:2503.
+// cxExprOf — laws/haskell_extract.lawspec:2493.
+func (lawSpecDefinitions) CxExprOf(
+	symbols map[string]*LawSpecSymbol,
+	text string,
+) LawSpecMaybe[CExpr] {
+	return lsfToNativeMaybeCExpr(lsfCxExprOf(lsfFromNativeText(text)))
+}
+
+// cxFileNames — laws/haskell_extract.lawspec:2663.
+func (lawSpecDefinitions) CxFileNames(
+	symbols map[string]*LawSpecSymbol,
+	sets []Entry[string, CxSets],
+	ns []string,
+	acc []Entry[string, Binding],
+) []Entry[string, Binding] {
+	return lsfToNativeKeyValTextBinding(lsfCxFileNames(lsfFromNativeKeyValTextCxSets(sets), lsfFromNativeListText(ns), lsfFromNativeKeyValTextBinding(acc)))
+}
+
+// cxFileTerm — laws/haskell_extract.lawspec:2680.
+func (lawSpecDefinitions) CxFileTerm(
+	symbols map[string]*LawSpecSymbol,
+	line *LawSpecBigInt,
+	l Literal,
+) Literal {
+	return lsfToNativeLiteral(lsfCxFileTerm(lsfFromNativeInteger(line), lsfFromNativeLiteral(l)))
+}
+
+// cxFindOpen — laws/haskell_extract.lawspec:2423.
+func (lawSpecDefinitions) CxFindOpen(
+	symbols map[string]*LawSpecSymbol,
+	t_ string,
+	i *LawSpecBigInt,
+	n *LawSpecBigInt,
+) *LawSpecBigInt {
+	return lsfToNativeInteger(lsfCxFindOpen(lsfFromNativeText(t_), lsfFromNativeInteger(i), lsfFromNativeInteger(n)))
+}
+
+// cxFirstBuild — laws/haskell_extract.lawspec:2752.
 func (lawSpecDefinitions) CxFirstBuild(
 	symbols map[string]*LawSpecSymbol,
 	rs []CxRow,
+	w CxPass,
 	asg []Entry[string, *LawSpecBigInt],
 ) []Entry[string, *LawSpecBigInt] {
-	return lsfToNativeKeyValTextInteger(lsfCxFirstBuild(lsfFromNativeListCxRow(rs), lsfFromNativeKeyValTextInteger(asg)))
+	return lsfToNativeKeyValTextInteger(lsfCxFirstBuild(lsfFromNativeListCxRow(rs), lsfFromNativeCxPass(w), lsfFromNativeKeyValTextInteger(asg)))
 }
 
-// cxFirstId — laws/haskell_extract.lawspec:2675.
+// cxFirstId — laws/haskell_extract.lawspec:2937.
 func (lawSpecDefinitions) CxFirstId(
 	symbols map[string]*LawSpecSymbol,
 	pks [][]Package,
@@ -5587,41 +6274,93 @@ func (lawSpecDefinitions) CxFirstId(
 	return lsfToNativeMaybePackage(lsfCxFirstId(lsfFromNativeListListPackage(pks)))
 }
 
-// cxHasGroup — laws/haskell_extract.lawspec:2532.
+// cxHasGroup — laws/haskell_extract.lawspec:2788.
 func (lawSpecDefinitions) CxHasGroup(symbols map[string]*LawSpecSymbol, rs []CxRow) bool {
 	return lsfToNativeBool(lsfCxHasGroup(lsfFromNativeListCxRow(rs)))
 }
 
-// cxIdent — laws/haskell_extract.lawspec:2382.
+// cxIdent — laws/haskell_extract.lawspec:2418.
 func (lawSpecDefinitions) CxIdent(symbols map[string]*LawSpecSymbol, t_ string) string {
 	return lsfToNativeText(lsfCxIdent(lsfFromNativeText(t_)))
 }
 
-// cxIsBlank — laws/haskell_extract.lawspec:2311.
+// cxIdents — laws/haskell_extract.lawspec:2542.
+func (lawSpecDefinitions) CxIdents(
+	symbols map[string]*LawSpecSymbol,
+	t_ string,
+	fuel *LawSpecBigInt,
+) []string {
+	return lsfToNativeListText(lsfCxIdents(lsfFromNativeText(t_), lsfFromNativeInteger(fuel)))
+}
+
+// cxIsBlank — laws/haskell_extract.lawspec:2321.
 func (lawSpecDefinitions) CxIsBlank(symbols map[string]*LawSpecSymbol, ch string) bool {
 	return lsfToNativeBool(lsfCxIsBlank(lsfFromNativeText(ch)))
 }
 
-// cxJoin — laws/haskell_extract.lawspec:2354.
+// cxIsDefForm — laws/haskell_extract.lawspec:2485.
+func (lawSpecDefinitions) CxIsDefForm(symbols map[string]*LawSpecSymbol, word string) bool {
+	return lsfToNativeBool(lsfCxIsDefForm(lsfFromNativeText(word)))
+}
+
+// cxIsElifWord — laws/haskell_extract.lawspec:2476.
+func (lawSpecDefinitions) CxIsElifWord(symbols map[string]*LawSpecSymbol, w string) bool {
+	return lsfToNativeBool(lsfCxIsElifWord(lsfFromNativeText(w)))
+}
+
+// cxIsIfWord — laws/haskell_extract.lawspec:2475.
+func (lawSpecDefinitions) CxIsIfWord(symbols map[string]*LawSpecSymbol, w string) bool {
+	return lsfToNativeBool(lsfCxIsIfWord(lsfFromNativeText(w)))
+}
+
+// cxIsSet — laws/haskell_extract.lawspec:2645.
+func (lawSpecDefinitions) CxIsSet(
+	symbols map[string]*LawSpecSymbol,
+	sets []Entry[string, CxSets],
+	n string,
+) bool {
+	return lsfToNativeBool(lsfCxIsSet(lsfFromNativeKeyValTextCxSets(sets), lsfFromNativeText(n)))
+}
+
+// cxJoin — laws/haskell_extract.lawspec:2395.
 func (lawSpecDefinitions) CxJoin(symbols map[string]*LawSpecSymbol, ls []string) CxJoin {
 	return lsfToNativeCxJoin(lsfCxJoin_2(lsfFromNativeListText(ls)))
 }
 
-// cxLitHolds — laws/haskell_extract.lawspec:2454.
-func (lawSpecDefinitions) CxLitHolds(
+// cxJoinMore — laws/haskell_extract.lawspec:2382.
+func (lawSpecDefinitions) CxJoinMore(
 	symbols map[string]*LawSpecSymbol,
-	asg []Entry[string, *LawSpecBigInt],
-	l CxTerm,
-) bool {
-	return lsfToNativeBool(lsfCxLitHolds(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeCxTerm(l)))
+	acc string,
+	n *LawSpecBigInt,
+	rest []string,
+	fuel *LawSpecBigInt,
+) CxJoin {
+	return lsfToNativeCxJoin(lsfCxJoinMore(lsfFromNativeText(acc), lsfFromNativeInteger(n), lsfFromNativeListText(rest), lsfFromNativeInteger(fuel)))
 }
 
-// cxLits — laws/haskell_extract.lawspec:2586.
+// cxLitTrue — laws/haskell_extract.lawspec:2706.
+func (lawSpecDefinitions) CxLitTrue(
+	symbols map[string]*LawSpecSymbol,
+	asg []Entry[string, *LawSpecBigInt],
+	l Literal,
+) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppLitTrue(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeLiteral(l)))
+}
+
+// cxLitValue — laws/haskell_extract.lawspec:2441.
+func (lawSpecDefinitions) CxLitValue(
+	symbols map[string]*LawSpecSymbol,
+	s string,
+) LawSpecMaybe[*LawSpecBigInt] {
+	return lsfToNativeMaybeInteger(lsfCxLitValue(lsfFromNativeText(s)))
+}
+
+// cxLits — laws/haskell_extract.lawspec:2848.
 func (lawSpecDefinitions) CxLits(symbols map[string]*LawSpecSymbol, ts []CxTerm) []Literal {
 	return lsfToNativeListLiteral(lsfCxLits(lsfFromNativeListCxTerm(ts)))
 }
 
-// cxLive — laws/haskell_extract.lawspec:2664.
+// cxLive — laws/haskell_extract.lawspec:2926.
 func (lawSpecDefinitions) CxLive(
 	symbols map[string]*LawSpecSymbol,
 	pks [][]Package,
@@ -5631,22 +6370,22 @@ func (lawSpecDefinitions) CxLive(
 	return lsfToNativeListCxCopyPkg(lsfCxLive(lsfFromNativeListListPackage(pks), lsfFromNativeInteger(i), lsfFromNativeText(id)))
 }
 
-// cxNegate — laws/haskell_extract.lawspec:2379.
-func (lawSpecDefinitions) CxNegate(symbols map[string]*LawSpecSymbol, t_ CxTerm) CxTerm {
-	return lsfToNativeCxTerm(lsfCxNegate(lsfFromNativeCxTerm(t_)))
+// cxLiveOf — laws/haskell_extract.lawspec:2611.
+func (lawSpecDefinitions) CxLiveOf(symbols map[string]*LawSpecSymbol, stack []CxFrame) bool {
+	return lsfToNativeBool(lsfCxLiveOf(lsfFromNativeListCxFrame(stack)))
 }
 
-// cxOwnText — laws/haskell_extract.lawspec:2463.
-func (lawSpecDefinitions) CxOwnText(symbols map[string]*LawSpecSymbol, ls []CxTerm) string {
-	return lsfToNativeText(lsfCxOwnText(lsfFromNativeListCxTerm(ls)))
+// cxNamesOf — laws/haskell_extract.lawspec:2506.
+func (lawSpecDefinitions) CxNamesOf(symbols map[string]*LawSpecSymbol, e CExpr) []string {
+	return lsfToNativeListText(lsfAssayxportHaskellCppNamesOf(lsfFromNativeCExpr(e)))
 }
 
-// cxPathOf — laws/haskell_extract.lawspec:2397.
-func (lawSpecDefinitions) CxPathOf(symbols map[string]*LawSpecSymbol, stack []CxOpen) []CxTerm {
-	return lsfToNativeListCxTerm(lsfCxPathOf(lsfFromNativeListCxOpen(stack)))
+// cxNoTerm — laws/haskell_extract.lawspec:2560.
+func (lawSpecDefinitions) CxNoTerm(symbols map[string]*LawSpecSymbol, u LawSpecUnit) Literal {
+	return lsfToNativeLiteral(lsfCxNoTerm(lsfFromNativeUnit(u)))
 }
 
-// cxPrefixed — laws/haskell_extract.lawspec:2566.
+// cxPrefixed — laws/haskell_extract.lawspec:2823.
 func (lawSpecDefinitions) CxPrefixed(
 	symbols map[string]*LawSpecSymbol,
 	l CxTerm,
@@ -5655,25 +6394,48 @@ func (lawSpecDefinitions) CxPrefixed(
 	return lsfToNativeListListCxTerm(lsfCxPrefixed(lsfFromNativeCxTerm(l), lsfFromNativeListListCxTerm(cs)))
 }
 
-// cxReached — laws/haskell_extract.lawspec:2469.
-func (lawSpecDefinitions) CxReached(
+// cxReachedIn — laws/haskell_extract.lawspec:2616.
+func (lawSpecDefinitions) CxReachedIn(
 	symbols map[string]*LawSpecSymbol,
-	asg []Entry[string, *LawSpecBigInt],
+	stack []CxFrame,
 	r CxRow,
 ) bool {
-	return lsfToNativeBool(lsfCxReached(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeCxRow(r)))
+	return lsfToNativeBool(lsfCxReachedIn(lsfFromNativeListCxFrame(stack), lsfFromNativeCxRow(r)))
 }
 
-// cxScan — laws/haskell_extract.lawspec:2437.
+// cxReadingAt — laws/haskell_extract.lawspec:2697.
+func (lawSpecDefinitions) CxReadingAt(
+	symbols map[string]*LawSpecSymbol,
+	w CxPass,
+	r CxRow,
+) CxReading {
+	return lsfToNativeCxReading(lsfCxReadingAt(lsfFromNativeCxPass(w), lsfFromNativeCxRow(r)))
+}
+
+// cxReadsWord — laws/haskell_extract.lawspec:2477.
+func (lawSpecDefinitions) CxReadsWord(symbols map[string]*LawSpecSymbol, w string) bool {
+	return lsfToNativeBool(lsfCxReadsWord(lsfFromNativeText(w)))
+}
+
+// cxRowOf — laws/haskell_extract.lawspec:2562.
+func (lawSpecDefinitions) CxRowOf(
+	symbols map[string]*LawSpecSymbol,
+	u CxUnit,
+	line *LawSpecBigInt,
+) CxRow {
+	return lsfToNativeCxRow(lsfCxRowOf(lsfFromNativeCxUnit(u), lsfFromNativeInteger(line)))
+}
+
+// cxScan — laws/haskell_extract.lawspec:2585.
 func (lawSpecDefinitions) CxScan(
 	symbols map[string]*LawSpecSymbol,
 	us []CxUnit,
-	st CxState,
+	line *LawSpecBigInt,
 ) []CxRow {
-	return lsfToNativeListCxRow(lsfCxScan(lsfFromNativeListCxUnit(us), lsfFromNativeCxState(st)))
+	return lsfToNativeListCxRow(lsfCxScan(lsfFromNativeListCxUnit(us), lsfFromNativeInteger(line)))
 }
 
-// cxSkipBlanks — laws/haskell_extract.lawspec:2313.
+// cxSkipBlanks — laws/haskell_extract.lawspec:2323.
 func (lawSpecDefinitions) CxSkipBlanks(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -5682,32 +6444,65 @@ func (lawSpecDefinitions) CxSkipBlanks(
 	return lsfToNativeText(lsfCxSkipBlanks(lsfFromNativeText(t_), lsfFromNativeInteger(fuel)))
 }
 
-// cxTermOf — laws/haskell_extract.lawspec:2390.
+// cxSpecial — laws/haskell_extract.lawspec:2648.
+func (lawSpecDefinitions) CxSpecial(symbols map[string]*LawSpecSymbol, n string) bool {
+	return lsfToNativeBool(lsfAssayxportHaskellCppSpecial(lsfFromNativeText(n)))
+}
+
+// cxSpliced — laws/haskell_extract.lawspec:2371.
+func (lawSpecDefinitions) CxSpliced(symbols map[string]*LawSpecSymbol, t_ string) bool {
+	return lsfToNativeBool(lsfCxSpliced(lsfFromNativeText(t_)))
+}
+
+// cxStart — laws/haskell_extract.lawspec:2609.
+func (lawSpecDefinitions) CxStart(symbols map[string]*LawSpecSymbol, u LawSpecUnit) CxPass {
+	return lsfToNativeCxPass(lsfCxStart(lsfFromNativeUnit(u)))
+}
+
+// cxStepped — laws/haskell_extract.lawspec:2625.
+func (lawSpecDefinitions) CxStepped(
+	symbols map[string]*LawSpecSymbol,
+	stack []CxFrame,
+	r CxRow,
+	v bool,
+) []CxFrame {
+	return lsfToNativeListCxFrame(lsfCxStepped(lsfFromNativeListCxFrame(stack), lsfFromNativeCxRow(r), lsfFromNativeBool(v)))
+}
+
+// cxStrip — laws/haskell_extract.lawspec:2427.
+func (lawSpecDefinitions) CxStrip(
+	symbols map[string]*LawSpecSymbol,
+	t_ string,
+	fuel *LawSpecBigInt,
+) string {
+	return lsfToNativeText(lsfCxStrip(lsfFromNativeText(t_), lsfFromNativeInteger(fuel)))
+}
+
+// cxTermOf — laws/haskell_extract.lawspec:2495.
 func (lawSpecDefinitions) CxTermOf(
 	symbols map[string]*LawSpecSymbol,
 	word string,
 	body string,
 	line *LawSpecBigInt,
-) CxTerm {
-	return lsfToNativeCxTerm(lsfCxTermOf(lsfFromNativeText(word), lsfFromNativeText(body), lsfFromNativeInteger(line)))
+) Literal {
+	return lsfToNativeLiteral(lsfCxTermOf(lsfFromNativeText(word), lsfFromNativeText(body), lsfFromNativeInteger(line)))
 }
 
-// cxTopEffect — laws/haskell_extract.lawspec:2416.
-func (lawSpecDefinitions) CxTopEffect(
+// cxTextOf — laws/haskell_extract.lawspec:2487.
+func (lawSpecDefinitions) CxTextOf(
 	symbols map[string]*LawSpecSymbol,
-	top CxOpen,
-	rest []CxOpen,
-	reads bool,
-) CxEffect {
-	return lsfToNativeCxEffect(lsfCxTopEffect(lsfFromNativeCxOpen(top), lsfFromNativeListCxOpen(rest), lsfFromNativeBool(reads)))
+	word string,
+	body string,
+) string {
+	return lsfToNativeText(lsfCxTextOf(lsfFromNativeText(word), lsfFromNativeText(body)))
 }
 
-// cxTrim — laws/haskell_extract.lawspec:2322.
+// cxTrim — laws/haskell_extract.lawspec:2332.
 func (lawSpecDefinitions) CxTrim(symbols map[string]*LawSpecSymbol, t_ string) string {
 	return lsfToNativeText(lsfCxTrim(lsfFromNativeText(t_)))
 }
 
-// cxTrimEnd — laws/haskell_extract.lawspec:2317.
+// cxTrimEnd — laws/haskell_extract.lawspec:2327.
 func (lawSpecDefinitions) CxTrimEnd(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -5716,7 +6511,17 @@ func (lawSpecDefinitions) CxTrimEnd(
 	return lsfToNativeText(lsfCxTrimEnd(lsfFromNativeText(t_), lsfFromNativeInteger(fuel)))
 }
 
-// cxUnits — laws/haskell_extract.lawspec:2364.
+// cxTruthAt — laws/haskell_extract.lawspec:2710.
+func (lawSpecDefinitions) CxTruthAt(
+	symbols map[string]*LawSpecSymbol,
+	w CxPass,
+	asg []Entry[string, *LawSpecBigInt],
+	r CxRow,
+) bool {
+	return lsfToNativeBool(lsfCxTruthAt(lsfFromNativeCxPass(w), lsfFromNativeKeyValTextInteger(asg), lsfFromNativeCxRow(r)))
+}
+
+// cxUnits — laws/haskell_extract.lawspec:2402.
 func (lawSpecDefinitions) CxUnits(
 	symbols map[string]*LawSpecSymbol,
 	ls []string,
@@ -5725,12 +6530,12 @@ func (lawSpecDefinitions) CxUnits(
 	return lsfToNativeListCxUnit(lsfCxUnits(lsfFromNativeListText(ls), lsfFromNativeInteger(fuel)))
 }
 
-// cxUnreadDecls — laws/haskell_extract.lawspec:2724.
+// cxUnreadDecls — laws/haskell_extract.lawspec:2986.
 func (lawSpecDefinitions) CxUnreadDecls(symbols map[string]*LawSpecSymbol, ds []Decl) []Decl {
 	return lsfToNativeListDecl(lsfCxUnreadDecls(lsfFromNativeListDecl(ds)))
 }
 
-// cxUnreadEdges — laws/haskell_extract.lawspec:2720.
+// cxUnreadEdges — laws/haskell_extract.lawspec:2982.
 func (lawSpecDefinitions) CxUnreadEdges(
 	symbols map[string]*LawSpecSymbol,
 	es []CallEdge,
@@ -5738,32 +6543,43 @@ func (lawSpecDefinitions) CxUnreadEdges(
 	return lsfToNativeListCallEdge(lsfCxUnreadEdges(lsfFromNativeListCallEdge(es)))
 }
 
-// cxUnreadPkgs — laws/haskell_extract.lawspec:2731.
+// cxUnreadPkgs — laws/haskell_extract.lawspec:2993.
 func (lawSpecDefinitions) CxUnreadPkgs(symbols map[string]*LawSpecSymbol, ps []Package) []Package {
 	return lsfToNativeListPackage(lsfCxUnreadPkgs(lsfFromNativeListPackage(ps)))
 }
 
-// cxValued — laws/haskell_extract.lawspec:2473.
+// cxUnsplice — laws/haskell_extract.lawspec:2373.
+func (lawSpecDefinitions) CxUnsplice(symbols map[string]*LawSpecSymbol, t_ string) string {
+	return lsfToNativeText(lsfCxUnsplice(lsfFromNativeText(t_)))
+}
+
+// cxValueNames — laws/haskell_extract.lawspec:2524.
+func (lawSpecDefinitions) CxValueNames(symbols map[string]*LawSpecSymbol, e CExpr) []string {
+	return lsfToNativeListText(lsfAssayxportHaskellCppValueNames(lsfFromNativeCExpr(e)))
+}
+
+// cxValued — laws/haskell_extract.lawspec:2701.
 func (lawSpecDefinitions) CxValued(
 	symbols map[string]*LawSpecSymbol,
 	asg []Entry[string, *LawSpecBigInt],
 	t_ string,
 ) bool {
-	return lsfToNativeBool(lsfValued(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeText(t_)))
+	return lsfToNativeBool(lsfAssayxportHaskellCppValued(lsfFromNativeKeyValTextInteger(asg), lsfFromNativeText(t_)))
 }
 
-// cxWalk — laws/haskell_extract.lawspec:2570.
+// cxWalk — laws/haskell_extract.lawspec:2827.
 func (lawSpecDefinitions) CxWalk(
 	symbols map[string]*LawSpecSymbol,
 	rs []CxRow,
+	w CxPass,
 	asg []Entry[string, *LawSpecBigInt],
 	k *LawSpecBigInt,
 	j []*LawSpecBigInt,
 ) CxWalk {
-	return lsfToNativeCxWalk(lsfCxWalk_2(lsfFromNativeListCxRow(rs), lsfFromNativeKeyValTextInteger(asg), lsfFromNativeInteger(k), lsfFromNativeListInteger(j)))
+	return lsfToNativeCxWalk(lsfCxWalk_2(lsfFromNativeListCxRow(rs), lsfFromNativeCxPass(w), lsfFromNativeKeyValTextInteger(asg), lsfFromNativeInteger(k), lsfFromNativeListInteger(j)))
 }
 
-// cxWordLen — laws/haskell_extract.lawspec:2324.
+// cxWordLen — laws/haskell_extract.lawspec:2334.
 func (lawSpecDefinitions) CxWordLen(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -5773,12 +6589,12 @@ func (lawSpecDefinitions) CxWordLen(
 	return lsfToNativeInteger(lsfCxWordLen(lsfFromNativeText(t_), lsfFromNativeInteger(i), lsfFromNativeInteger(n)))
 }
 
-// cxWordOf — laws/haskell_extract.lawspec:2331.
+// cxWordOf — laws/haskell_extract.lawspec:2341.
 func (lawSpecDefinitions) CxWordOf(symbols map[string]*LawSpecSymbol, l string) string {
 	return lsfToNativeText(lsfCxWordOf(lsfFromNativeText(l)))
 }
 
-// damaged — laws/haskell_extract.lawspec:3509.
+// damaged — laws/haskell_extract.lawspec:3771.
 func (lawSpecDefinitions) Damaged(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -5787,7 +6603,7 @@ func (lawSpecDefinitions) Damaged(
 	return lsfToNativeListSyntax(lsfDamaged(lsfFromNativeInteger(seed_), lsfFromNativeListSyntax(cs)))
 }
 
-// damagedFixturesWellFormed — laws/haskell_extract.lawspec:3525.
+// damagedFixturesWellFormed — laws/haskell_extract.lawspec:3787.
 func (lawSpecDefinitions) DamagedFixturesWellFormed(
 	symbols map[string]*LawSpecSymbol,
 	haskellParser HaskellParser,
@@ -5808,7 +6624,7 @@ func (lawSpecDefinitions) DamagedFixturesWellFormed(
 	})
 }
 
-// damagedTree — laws/haskell_extract.lawspec:3523.
+// damagedTree — laws/haskell_extract.lawspec:3785.
 func (lawSpecDefinitions) DamagedTree(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -5865,12 +6681,12 @@ func (lawSpecDefinitions) DataWild(symbols map[string]*LawSpecSymbol, items []Sy
 	return lsfToNativeBool(lsfDataWild(lsfFromNativeListSyntax(items)))
 }
 
-// declFacts — laws/haskell_extract.lawspec:4132.
+// declFacts — laws/haskell_extract.lawspec:4426.
 func (lawSpecDefinitions) DeclFacts(symbols map[string]*LawSpecSymbol, ds []Decl) []string {
 	return lsfToNativeListText(lsfDeclFacts(lsfFromNativeListDecl(ds)))
 }
 
-// declImplies — laws/haskell_extract.lawspec:4100.
+// declImplies — laws/haskell_extract.lawspec:4394.
 func (lawSpecDefinitions) DeclImplies(symbols map[string]*LawSpecSymbol, env Env, d Decl) bool {
 	return lsfToNativeBool(lsfDeclImplies(lsfFromNativeEnv(env), lsfFromNativeDecl(d)))
 }
@@ -5909,7 +6725,7 @@ func (lawSpecDefinitions) DirectName(symbols map[string]*LawSpecSymbol, s Syntax
 	return lsfToNativeText(lsfDirectName(lsfFromNativeSyntax(s)))
 }
 
-// distinctTexts — laws/haskell_extract.lawspec:3996.
+// distinctTexts — laws/haskell_extract.lawspec:4282.
 func (lawSpecDefinitions) DistinctTexts(
 	symbols map[string]*LawSpecSymbol,
 	ts []string,
@@ -5948,7 +6764,7 @@ func (lawSpecDefinitions) DocBetweenAt(
 	return lsfToNativeDocText(lsfDocBetweenAt(lsfFromNativeIx(ix), lsfFromNativeInteger(from), lsfFromNativeInteger(until), lsfFromNativeInteger(col)))
 }
 
-// docIs — laws/haskell_extract.lawspec:3004.
+// docIs — laws/haskell_extract.lawspec:3266.
 func (lawSpecDefinitions) DocIs(
 	symbols map[string]*LawSpecSymbol,
 	id string,
@@ -5996,7 +6812,7 @@ func (lawSpecDefinitions) DocsOf(
 	return lsfToNativeDocs(lsfDocsOf(lsfFromNativeListSyntax(hs), lsfFromNativeKeyValIntegerBool(code_), lsfFromNativeInteger(fuel), lsfFromNativeDocs(d)))
 }
 
-// documented — laws/haskell_extract.lawspec:4311.
+// documented — laws/haskell_extract.lawspec:4691.
 func (lawSpecDefinitions) Documented(symbols map[string]*LawSpecSymbol, d Decl) bool {
 	return lsfToNativeBool(lsfDocumented(lsfFromNativeDecl(d)))
 }
@@ -6020,7 +6836,7 @@ func (lawSpecDefinitions) DropLead(
 	return lsfToNativeText(lsfDropLead(lsfFromNativeText(t_), lsfFromNativeInteger(n)))
 }
 
-// edgeFacts — laws/haskell_extract.lawspec:4128.
+// edgeFacts — laws/haskell_extract.lawspec:4422.
 func (lawSpecDefinitions) EdgeFacts(
 	symbols map[string]*LawSpecSymbol,
 	id string,
@@ -6029,7 +6845,7 @@ func (lawSpecDefinitions) EdgeFacts(
 	return lsfToNativeListText(lsfEdgeFacts(lsfFromNativeText(id), lsfFromNativeListCallEdge(es)))
 }
 
-// edgeImplies — laws/haskell_extract.lawspec:4098.
+// edgeImplies — laws/haskell_extract.lawspec:4392.
 func (lawSpecDefinitions) EdgeImplies(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -6141,7 +6957,7 @@ func (lawSpecDefinitions) ExportedOf(
 	return lsfToNativeMaybeKeyValTextBool(lsfExportedOf(lsfFromNativeSyntax(root), lsfFromNativeListDecl(decls)))
 }
 
-// extractEach — laws/haskell_extract.lawspec:4003.
+// extractEach — laws/haskell_extract.lawspec:4289.
 func (lawSpecDefinitions) ExtractEach(
 	symbols map[string]*LawSpecSymbol,
 	haskellParser HaskellParser,
@@ -6159,7 +6975,7 @@ func (lawSpecDefinitions) ExtractEach(
 	})
 }
 
-// extractFiles — laws/haskell_extract.lawspec:2769.
+// extractFiles — laws/haskell_extract.lawspec:3031.
 func (lawSpecDefinitions) ExtractFiles(
 	symbols map[string]*LawSpecSymbol,
 	haskellParser HaskellParser,
@@ -6186,7 +7002,7 @@ func (lawSpecDefinitions) ExtractModule(
 	return lsfToNativePackage(lsfExtractModule(lsfFromNativeText(path), lsfFromNativeSyntax(root)))
 }
 
-// factsOf — laws/haskell_extract.lawspec:4146.
+// factsOf — laws/haskell_extract.lawspec:4440.
 func (lawSpecDefinitions) FactsOf(
 	symbols map[string]*LawSpecSymbol,
 	haskellParser HaskellParser,
@@ -6204,7 +7020,7 @@ func (lawSpecDefinitions) FactsOf(
 	})
 }
 
-// factsWith — laws/haskell_extract.lawspec:4150.
+// factsWith — laws/haskell_extract.lawspec:4444.
 func (lawSpecDefinitions) FactsWith(
 	symbols map[string]*LawSpecSymbol,
 	haskellParser HaskellParser,
@@ -6225,7 +7041,7 @@ func (lawSpecDefinitions) FactsWith(
 	})
 }
 
-// failingEnv — laws/haskell_extract.lawspec:4026.
+// failingEnv — laws/haskell_extract.lawspec:4312.
 func (lawSpecDefinitions) FailingEnv(
 	symbols map[string]*LawSpecSymbol,
 	rs []Row,
@@ -6257,7 +7073,7 @@ func (lawSpecDefinitions) FamsIn(
 	return lsfToNativeListDecl(lsfFamsIn(lsfFromNativeIx(ix), lsfFromNativeText(owner), lsfFromNativeListSyntax(cs)))
 }
 
-// farTree — laws/haskell_extract.lawspec:3562.
+// farTree — laws/haskell_extract.lawspec:3824.
 func (lawSpecDefinitions) FarTree(symbols map[string]*LawSpecSymbol, last *LawSpecBigInt) Syntax {
 	return lsfToNativeSyntax(lsfFarTree(lsfFromNativeInteger(last)))
 }
@@ -6307,7 +7123,7 @@ func (lawSpecDefinitions) FieldPatNames(symbols map[string]*LawSpecSymbol, fps [
 	return lsfToNativeListText(lsfFieldPatNames(lsfFromNativeListSyntax(fps)))
 }
 
-// fieldsIn — laws/haskell_extract.lawspec:3252.
+// fieldsIn — laws/haskell_extract.lawspec:3514.
 func (lawSpecDefinitions) FieldsIn(symbols map[string]*LawSpecSymbol, cs []Syntax) []string {
 	return lsfToNativeListText(lsfFieldsIn(lsfFromNativeListSyntax(cs)))
 }
@@ -6326,7 +7142,7 @@ func (lawSpecDefinitions) FindAll(
 	return lsfToNativeListSyntax(lsfFindAll(lsfFromNativeText(k), lsfFromNativeListSyntax(cs)))
 }
 
-// firstArms — laws/haskell_extract.lawspec:3827.
+// firstArms — laws/haskell_extract.lawspec:4113.
 func (lawSpecDefinitions) FirstArms(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecUnit,
@@ -6348,7 +7164,7 @@ func (lawSpecDefinitions) FirstOp(symbols map[string]*LawSpecSymbol, cs []Syntax
 	return lsfToNativeListSyntax(lsfFirstOp(lsfFromNativeListSyntax(cs)))
 }
 
-// fixtureBuildHolds — laws/haskell_extract.lawspec:3849.
+// fixtureBuildHolds — laws/haskell_extract.lawspec:4135.
 func (lawSpecDefinitions) FixtureBuildHolds(
 	symbols map[string]*LawSpecSymbol,
 	haskellParser HaskellParser,
@@ -6366,7 +7182,7 @@ func (lawSpecDefinitions) FixtureBuildHolds(
 	})
 }
 
-// fixtureFiltered — laws/haskell_extract.lawspec:3935.
+// fixtureFiltered — laws/haskell_extract.lawspec:4221.
 func (lawSpecDefinitions) FixtureFiltered(
 	symbols map[string]*LawSpecSymbol,
 	haskellParser HaskellParser,
@@ -6384,7 +7200,7 @@ func (lawSpecDefinitions) FixtureFiltered(
 	})
 }
 
-// fixtureLine — laws/haskell_extract.lawspec:3824.
+// fixtureLine — laws/haskell_extract.lawspec:4110.
 func (lawSpecDefinitions) FixtureLine(
 	symbols map[string]*LawSpecSymbol,
 	name string,
@@ -6393,7 +7209,7 @@ func (lawSpecDefinitions) FixtureLine(
 	return lsfToNativeBindingLine(lsfSetName(lsfFromNativeText(name), lsfFromNativeInteger(v)))
 }
 
-// fixtureMoreHolds — laws/haskell_extract.lawspec:3873.
+// fixtureMoreHolds — laws/haskell_extract.lawspec:4159.
 func (lawSpecDefinitions) FixtureMoreHolds(
 	symbols map[string]*LawSpecSymbol,
 	haskellParser HaskellParser,
@@ -6411,7 +7227,7 @@ func (lawSpecDefinitions) FixtureMoreHolds(
 	})
 }
 
-// focusForest — laws/haskell_extract.lawspec:3291.
+// focusForest — laws/haskell_extract.lawspec:3553.
 func (lawSpecDefinitions) FocusForest(
 	symbols map[string]*LawSpecSymbol,
 	n *LawSpecBigInt,
@@ -6419,7 +7235,7 @@ func (lawSpecDefinitions) FocusForest(
 	return lsfToNativeListSyntax(lsfFocusForest(lsfFromNativeInteger(n)))
 }
 
-// focusKind — laws/haskell_extract.lawspec:3267.
+// focusKind — laws/haskell_extract.lawspec:3529.
 func (lawSpecDefinitions) FocusKind(
 	symbols map[string]*LawSpecSymbol,
 	g Grammar,
@@ -6428,7 +7244,7 @@ func (lawSpecDefinitions) FocusKind(
 	return lsfToNativeText(lsfFocusKind(lsfFromNativeGrammar(g), lsfFromNativeInteger(s)))
 }
 
-// focusModule — laws/haskell_extract.lawspec:3283.
+// focusModule — laws/haskell_extract.lawspec:3545.
 func (lawSpecDefinitions) FocusModule(
 	symbols map[string]*LawSpecSymbol,
 	source string,
@@ -6442,7 +7258,7 @@ func (lawSpecDefinitions) FocusModule(
 	return lsfToNativeSyntax(lsfFocusModule(lsfFromNativeText(source), lsfFromNativeText(name), lsfFromNativePoint(p), lsfFromNativePoint(q), lsfFromNativeSyntax(asDecl), lsfFromNativeSyntax(asPattern), lsfFromNativeSyntax(asBody)))
 }
 
-// focusTree — laws/haskell_extract.lawspec:3272.
+// focusTree — laws/haskell_extract.lawspec:3534.
 func (lawSpecDefinitions) FocusTree(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -6457,7 +7273,7 @@ func (lawSpecDefinitions) ForeignDecls(symbols map[string]*LawSpecSymbol, ix Ix,
 	return lsfToNativeListDecl(lsfForeignDecls(lsfFromNativeIx(ix), lsfFromNativeSyntax(d)))
 }
 
-// furtherArms — laws/haskell_extract.lawspec:3833.
+// furtherArms — laws/haskell_extract.lawspec:4119.
 func (lawSpecDefinitions) FurtherArms(
 	symbols map[string]*LawSpecSymbol,
 	i *LawSpecBigInt,
@@ -6495,7 +7311,7 @@ func (lawSpecDefinitions) GadtsOf(symbols map[string]*LawSpecSymbol, d Syntax) [
 	return lsfToNativeListSyntax(lsfGadtsOf(lsfFromNativeSyntax(d)))
 }
 
-// grammarForest — laws/haskell_extract.lawspec:3257.
+// grammarForest — laws/haskell_extract.lawspec:3519.
 func (lawSpecDefinitions) GrammarForest(
 	symbols map[string]*LawSpecSymbol,
 	n *LawSpecBigInt,
@@ -6503,22 +7319,22 @@ func (lawSpecDefinitions) GrammarForest(
 	return lsfToNativeListSyntax(lsfGrammarForest(lsfFromNativeInteger(n)))
 }
 
-// grammarGroups — laws/haskell_extract.lawspec:3444.
+// grammarGroups — laws/haskell_extract.lawspec:3706.
 func (lawSpecDefinitions) GrammarGroups(symbols map[string]*LawSpecSymbol, u LawSpecUnit) []Slot {
 	return lsfToNativeListSlot(lsfGrammarGroups(lsfFromNativeUnit(u)))
 }
 
-// grammarProds — laws/haskell_extract.lawspec:3297.
+// grammarProds — laws/haskell_extract.lawspec:3559.
 func (lawSpecDefinitions) GrammarProds(symbols map[string]*LawSpecSymbol, u LawSpecUnit) []Prod {
 	return lsfToNativeListProd(lsfGrammarProds(lsfFromNativeUnit(u)))
 }
 
-// grammarTexts — laws/haskell_extract.lawspec:3117.
+// grammarTexts — laws/haskell_extract.lawspec:3379.
 func (lawSpecDefinitions) GrammarTexts(symbols map[string]*LawSpecSymbol, u LawSpecUnit) []Slot {
 	return lsfToNativeListSlot(lsfGrammarTexts(lsfFromNativeUnit(u)))
 }
 
-// grammarTree — laws/haskell_extract.lawspec:3241.
+// grammarTree — laws/haskell_extract.lawspec:3503.
 func (lawSpecDefinitions) GrammarTree(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -6528,7 +7344,7 @@ func (lawSpecDefinitions) GrammarTree(
 	return lsfToNativeSyntax(lsfGrammarTree(lsfFromNativeInteger(seed_), lsfFromNativePoint(p), lsfFromNativePoint(q)))
 }
 
-// grow — laws/haskell_extract.lawspec:3225.
+// grow — laws/haskell_extract.lawspec:3487.
 func (lawSpecDefinitions) Grow(
 	symbols map[string]*LawSpecSymbol,
 	g Grammar,
@@ -6554,12 +7370,12 @@ func (lawSpecDefinitions) HaddockText(symbols map[string]*LawSpecSymbol, h Synta
 	return lsfToNativeText(lsfHaddockText(lsfFromNativeSyntax(h)))
 }
 
-// handledFields — laws/haskell_extract.lawspec:3477.
+// handledFields — laws/haskell_extract.lawspec:3739.
 func (lawSpecDefinitions) HandledFields(symbols map[string]*LawSpecSymbol, u LawSpecUnit) []string {
 	return lsfToNativeListText(lsfHandledFields(lsfFromNativeUnit(u)))
 }
 
-// handledKinds — laws/haskell_extract.lawspec:3465.
+// handledKinds — laws/haskell_extract.lawspec:3727.
 func (lawSpecDefinitions) HandledKinds(symbols map[string]*LawSpecSymbol, u LawSpecUnit) []string {
 	return lsfToNativeListText(lsfHandledKinds(lsfFromNativeUnit(u)))
 }
@@ -6612,7 +7428,7 @@ func (lawSpecDefinitions) HeaderOf(
 	return lsfToNativeMaybeSyntax(lsfHeaderOf(lsfFromNativeSyntax(root)))
 }
 
-// headerlessTree — laws/haskell_extract.lawspec:2956.
+// headerlessTree — laws/haskell_extract.lawspec:3218.
 func (lawSpecDefinitions) HeaderlessTree(symbols map[string]*LawSpecSymbol, source string) Syntax {
 	return lsfToNativeSyntax(lsfHeaderlessTree(lsfFromNativeText(source)))
 }
@@ -6654,7 +7470,7 @@ func (lawSpecDefinitions) ImportsWithPrelude(
 	return lsfToNativeListImport(lsfImportsWithPrelude(lsfFromNativeCtx(x)))
 }
 
-// inTexts — laws/haskell_extract.lawspec:3726.
+// inTexts — laws/haskell_extract.lawspec:3994.
 func (lawSpecDefinitions) InTexts(symbols map[string]*LawSpecSymbol, ts []string, t_ string) bool {
 	return lsfToNativeBool(lsfInList(lsfFromNativeListText(ts), lsfFromNativeText(t_)))
 }
@@ -6741,7 +7557,7 @@ func (lawSpecDefinitions) IsEqualsHead(
 	return lsfToNativeBool(lsfIsEqualsHead(lsfFromNativeText(whole), lsfFromNativeText(pat)))
 }
 
-// isMainEntry — laws/haskell_extract.lawspec:2922.
+// isMainEntry — laws/haskell_extract.lawspec:3184.
 func (lawSpecDefinitions) IsMainEntry(symbols map[string]*LawSpecSymbol, d Decl) bool {
 	return lsfToNativeBool(lsfIsMainEntry(lsfFromNativeDecl(d)))
 }
@@ -6751,7 +7567,7 @@ func (lawSpecDefinitions) IsNameNode(symbols map[string]*LawSpecSymbol, nd Synta
 	return lsfToNativeBool(lsfIsNameNode(lsfFromNativeSyntax(nd)))
 }
 
-// isOtherEntry — laws/haskell_extract.lawspec:2923.
+// isOtherEntry — laws/haskell_extract.lawspec:3185.
 func (lawSpecDefinitions) IsOtherEntry(symbols map[string]*LawSpecSymbol, d Decl) bool {
 	return lsfToNativeBool(lsfIsOtherEntry(lsfFromNativeDecl(d)))
 }
@@ -6800,7 +7616,7 @@ func (lawSpecDefinitions) ItemNames(symbols map[string]*LawSpecSymbol, items []S
 	return lsfToNativeListText(lsfItemNames(lsfFromNativeListSyntax(items)))
 }
 
-// kidsOf — laws/haskell_extract.lawspec:3210.
+// kidsOf — laws/haskell_extract.lawspec:3472.
 func (lawSpecDefinitions) KidsOf(
 	symbols map[string]*LawSpecSymbol,
 	g Grammar,
@@ -6811,7 +7627,7 @@ func (lawSpecDefinitions) KidsOf(
 	return lsfToNativeListPick(lsfKidsOf(lsfFromNativeGrammar(g), lsfFromNativeText(kind_2), lsfFromNativeInteger(seed_), lsfFromNativeInteger(fuel)))
 }
 
-// kindFor — laws/haskell_extract.lawspec:3169.
+// kindFor — laws/haskell_extract.lawspec:3431.
 func (lawSpecDefinitions) KindFor(
 	symbols map[string]*LawSpecSymbol,
 	g Grammar,
@@ -6821,12 +7637,12 @@ func (lawSpecDefinitions) KindFor(
 	return lsfToNativeText(lsfKindFor(lsfFromNativeGrammar(g), lsfFromNativeSlot(s), lsfFromNativeInteger(seed_)))
 }
 
-// kindsIn — laws/haskell_extract.lawspec:3248.
+// kindsIn — laws/haskell_extract.lawspec:3510.
 func (lawSpecDefinitions) KindsIn(symbols map[string]*LawSpecSymbol, cs []Syntax) []string {
 	return lsfToNativeListText(lsfKindsIn(lsfFromNativeListSyntax(cs)))
 }
 
-// kindsNamed — laws/haskell_extract.lawspec:3160.
+// kindsNamed — laws/haskell_extract.lawspec:3422.
 func (lawSpecDefinitions) KindsNamed(
 	symbols map[string]*LawSpecSymbol,
 	name string,
@@ -7277,7 +8093,7 @@ func (lawSpecDefinitions) LawspecResilienceCeilingQuotient(
 		bCodec := lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer")
 		bValue := bCodec.fromNative(b)
 		resultCodec := lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer")
-		result := lawSpecEvaluateLawspecResilienceCeilingQuotient_4(symbols, aValue, bValue)
+		result := lawSpecEvaluateLawspecResilienceCeilingQuotient_5(symbols, aValue, bValue)
 		return resultCodec.toNative(result)
 	})
 }
@@ -7302,7 +8118,7 @@ func (lawSpecDefinitions) LawspecResilienceFixedWindowAdmit(
 		nowCodec := lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer")
 		nowValue := nowCodec.fromNative(now)
 		resultCodec := lawSpecStepCodec(schema, bits, lawSpecFixedWindowCodec(schema, bits, symbols), symbols)
-		result := lawSpecEvaluateLawspecResilienceFixedWindowAdmit_4(symbols, nValue, periodValue, stateValue, nowValue)
+		result := lawSpecEvaluateLawspecResilienceFixedWindowAdmit_5(symbols, nValue, periodValue, stateValue, nowValue)
 		return resultCodec.toNative(result)
 	})
 }
@@ -7349,7 +8165,7 @@ func (lawSpecDefinitions) LawspecResilienceLeakyBucketAdmit(
 		nowCodec := lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer")
 		nowValue := nowCodec.fromNative(now)
 		resultCodec := lawSpecStepCodec(schema, bits, lawSpecLeakyBucketCodec(schema, bits, symbols), symbols)
-		result := lawSpecEvaluateLawspecResilienceLeakyBucketAdmit_4(symbols, nValue, periodValue, stateValue, nowValue)
+		result := lawSpecEvaluateLawspecResilienceLeakyBucketAdmit_5(symbols, nValue, periodValue, stateValue, nowValue)
 		return resultCodec.toNative(result)
 	})
 }
@@ -7445,7 +8261,7 @@ func (lawSpecDefinitions) LawspecResilienceTokenBucketAdmit(
 		nowCodec := lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer")
 		nowValue := nowCodec.fromNative(now)
 		resultCodec := lawSpecStepCodec(schema, bits, lawSpecTokenBucketCodec(schema, bits, symbols), symbols)
-		result := lawSpecEvaluateLawspecResilienceTokenBucketAdmit_4(symbols, nValue, periodValue, stateValue, nowValue)
+		result := lawSpecEvaluateLawspecResilienceTokenBucketAdmit_5(symbols, nValue, periodValue, stateValue, nowValue)
 		return resultCodec.toNative(result)
 	})
 }
@@ -7470,7 +8286,7 @@ func (lawSpecDefinitions) LawspecResilienceTokenBucketDecide(
 		nowCodec := lsScalarCodec[*LawSpecBigInt](schema, bits, "Integer")
 		nowValue := nowCodec.fromNative(now)
 		resultCodec := lawSpecStepCodec(schema, bits, lawSpecTokenBucketCodec(schema, bits, symbols), symbols)
-		result := lawSpecEvaluateLawspecResilienceTokenBucketDecide_4(symbols, nValue, periodValue, levelValue, nowValue)
+		result := lawSpecEvaluateLawspecResilienceTokenBucketDecide_5(symbols, nValue, periodValue, levelValue, nowValue)
 		return resultCodec.toNative(result)
 	})
 }
@@ -7723,6 +8539,24 @@ func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValEntries_1cf551213b39b2
 }
 
 // keyValFromItems — <lawspec.collections>:281.
+func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValFromItems_0886402fa73e452bb0b3c2d7205fe0bffe6498ad038fca0fbdef846b408e623077bada1fcf19(
+	symbols map[string]*LawSpecSymbol,
+	es []Entry[string, Sets],
+	acc []Entry[string, Sets],
+) []Entry[string, Sets] {
+	return lsfToNativeListEntryTextSets(lsfLawspecCollectionsKeyValFromItemsListEntryTextSetsListEntryTextSets(lsfFromNativeListEntryTextSets(es), lsfFromNativeListEntryTextSets(acc)))
+}
+
+// keyValFromItems — <lawspec.collections>:281.
+func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValFromItems_0886402fa73e452bb0b3c2d7205fe0bffe6498ad038fca0fbdef846b408e6230875adb63c7ee(
+	symbols map[string]*LawSpecSymbol,
+	es []Entry[string, CxSets],
+	acc []Entry[string, CxSets],
+) []Entry[string, CxSets] {
+	return lsfToNativeListEntryTextCxSets(lsfLawspecCollectionsKeyValFromItemsListEntryTextCxSetsListEntryTextCxSets(lsfFromNativeListEntryTextCxSets(es), lsfFromNativeListEntryTextCxSets(acc)))
+}
+
+// keyValFromItems — <lawspec.collections>:281.
 func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValFromItems_0c402d8ae6423b806a09c1d280e9fa62819a1008f4af8218938f8d1ddffd5d9a241fc1ebc916(
 	symbols map[string]*LawSpecSymbol,
 	es []Entry[EdgeKey, Counted],
@@ -7890,6 +8724,24 @@ func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValLookupItems_1293bdeb17
 }
 
 // keyValLookupItems — <lawspec.collections>:268.
+func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValLookupItems_15659c02069bd4bfa3e596086c509fd6ec15b84aab84a61578972c4adae959d40767e03b7f53(
+	symbols map[string]*LawSpecSymbol,
+	k string,
+	es []Entry[string, Sets],
+) LawSpecMaybe[Sets] {
+	return lsfToNativeMaybeSets(lsfLawspecCollectionsKeyValLookupItemsTextListEntryTextSets(lsfFromNativeText(k), lsfFromNativeListEntryTextSets(es)))
+}
+
+// keyValLookupItems — <lawspec.collections>:268.
+func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValLookupItems_15659c02069bd4bfa3e596086c509fd6ec15b84aab84a61578972c4adae959d4763d4adbd9ef(
+	symbols map[string]*LawSpecSymbol,
+	k string,
+	es []Entry[string, CxSets],
+) LawSpecMaybe[CxSets] {
+	return lsfToNativeMaybeCxSets(lsfLawspecCollectionsKeyValLookupItemsTextListEntryTextCxSets(lsfFromNativeText(k), lsfFromNativeListEntryTextCxSets(es)))
+}
+
+// keyValLookupItems — <lawspec.collections>:268.
 func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValLookupItems_263adfe2e6a9af5fd84329ef050fd489deb3610f4d602198dffdf4faf10ca5f2(
 	symbols map[string]*LawSpecSymbol,
 	k string,
@@ -8004,6 +8856,24 @@ func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValLookup_219432a8de6891b
 	m_ []Entry[*LawSpecBigInt, *LawSpecBigInt],
 ) LawSpecMaybe[*LawSpecBigInt] {
 	return lsfToNativeMaybeInteger(lsfLawspecCollectionsKeyValLookupIntegerKeyValIntegerInteger(lsfFromNativeInteger(k), lsfFromNativeKeyValIntegerInteger(m_)))
+}
+
+// keyValLookup — <lawspec.collections>:308.
+func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValLookup_28193249e910d6919ce6e34d06b8af2ddc88c46b37bc0c9e00a088ecf53f1f49ab59a6a54af2(
+	symbols map[string]*LawSpecSymbol,
+	k string,
+	m_ []Entry[string, CxSets],
+) LawSpecMaybe[CxSets] {
+	return lsfToNativeMaybeCxSets(lsfLawspecCollectionsKeyValLookupTextKeyValTextCxSets(lsfFromNativeText(k), lsfFromNativeKeyValTextCxSets(m_)))
+}
+
+// keyValLookup — <lawspec.collections>:308.
+func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValLookup_28193249e910d6919ce6e34d06b8af2ddc88c46b37bc0c9e00a088ecf53f1f49faf771d9edff(
+	symbols map[string]*LawSpecSymbol,
+	k string,
+	m_ []Entry[string, Sets],
+) LawSpecMaybe[Sets] {
+	return lsfToNativeMaybeSets(lsfLawspecCollectionsKeyValLookupTextKeyValTextSets(lsfFromNativeText(k), lsfFromNativeKeyValTextSets(m_)))
 }
 
 // keyValLookup — <lawspec.collections>:308.
@@ -8147,6 +9017,22 @@ func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValOf_681054727bd4ff2c7e8
 }
 
 // keyValOf — <lawspec.collections>:304.
+func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValOf_68bad019b2817374d2fa0d9e1ef539fabfc316af767623e4a6dd256a8c1b940b7371526013bd(
+	symbols map[string]*LawSpecSymbol,
+	es []Entry[string, CxSets],
+) []Entry[string, CxSets] {
+	return lsfToNativeKeyValTextCxSets(lsfLawspecCollectionsKeyValOfListEntryTextCxSets(lsfFromNativeListEntryTextCxSets(es)))
+}
+
+// keyValOf — <lawspec.collections>:304.
+func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValOf_68bad019b2817374d2fa0d9e1ef539fabfc316af767623e4a6dd256a8c1b940bbdd4073c4b5c(
+	symbols map[string]*LawSpecSymbol,
+	es []Entry[string, Sets],
+) []Entry[string, Sets] {
+	return lsfToNativeKeyValTextSets(lsfLawspecCollectionsKeyValOfListEntryTextSets(lsfFromNativeListEntryTextSets(es)))
+}
+
+// keyValOf — <lawspec.collections>:304.
 func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValOf_9ec8fdc701e62c5a9d64d0b7c22a86c12734fe3d4fa39dc891a6da9776b625e2(
 	symbols map[string]*LawSpecSymbol,
 	es []Entry[string, bool],
@@ -8287,6 +9173,26 @@ func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValPutItems_4a8f22dcca756
 }
 
 // keyValPutItems — <lawspec.collections>:242.
+func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValPutItems_4bef068f1e341798d003f8739529932edc51050deea3cf0c2f057e927f2a68ba4301eff3d168(
+	symbols map[string]*LawSpecSymbol,
+	k string,
+	v CxSets,
+	es []Entry[string, CxSets],
+) []Entry[string, CxSets] {
+	return lsfToNativeListEntryTextCxSets(lsfLawspecCollectionsKeyValPutItemsTextCxSetsListEntryTextCxSets(lsfFromNativeText(k), lsfFromNativeCxSets(v), lsfFromNativeListEntryTextCxSets(es)))
+}
+
+// keyValPutItems — <lawspec.collections>:242.
+func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValPutItems_4bef068f1e341798d003f8739529932edc51050deea3cf0c2f057e927f2a68ba7c5f282db5d6(
+	symbols map[string]*LawSpecSymbol,
+	k string,
+	v Sets,
+	es []Entry[string, Sets],
+) []Entry[string, Sets] {
+	return lsfToNativeListEntryTextSets(lsfLawspecCollectionsKeyValPutItemsTextSetsListEntryTextSets(lsfFromNativeText(k), lsfFromNativeSets(v), lsfFromNativeListEntryTextSets(es)))
+}
+
+// keyValPutItems — <lawspec.collections>:242.
 func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValPutItems_6be284e3e3d53bdbf83ca809518445b51ff5595841bc4739e4692787f71379ef(
 	symbols map[string]*LawSpecSymbol,
 	k string,
@@ -8364,6 +9270,26 @@ func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValPutItems_fe4a8835dadba
 	es []Entry[string, Syntax],
 ) []Entry[string, Syntax] {
 	return lsfToNativeListEntryTextSyntax(lsfLawspecCollectionsKeyValPutItemsTextSyntaxListEntryTextSyntax(lsfFromNativeText(k), lsfFromNativeSyntax(v), lsfFromNativeListEntryTextSyntax(es)))
+}
+
+// keyValPut — <lawspec.collections>:312.
+func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValPut_0250de0ddb7878cf715b75f2150278310e4bc47010999cd1f601bb908463fb70617cb03d8a7b(
+	symbols map[string]*LawSpecSymbol,
+	k string,
+	v Sets,
+	m_ []Entry[string, Sets],
+) []Entry[string, Sets] {
+	return lsfToNativeKeyValTextSets(lsfLawspecCollectionsKeyValPutTextSetsKeyValTextSets(lsfFromNativeText(k), lsfFromNativeSets(v), lsfFromNativeKeyValTextSets(m_)))
+}
+
+// keyValPut — <lawspec.collections>:312.
+func (lawSpecDefinitions) Lawspec_lawspecCollectionsKeyValPut_0250de0ddb7878cf715b75f2150278310e4bc47010999cd1f601bb908463fb708d0e6340df12(
+	symbols map[string]*LawSpecSymbol,
+	k string,
+	v CxSets,
+	m_ []Entry[string, CxSets],
+) []Entry[string, CxSets] {
+	return lsfToNativeKeyValTextCxSets(lsfLawspecCollectionsKeyValPutTextCxSetsKeyValTextCxSets(lsfFromNativeText(k), lsfFromNativeCxSets(v), lsfFromNativeKeyValTextCxSets(m_)))
 }
 
 // keyValPut — <lawspec.collections>:312.
@@ -8665,7 +9591,7 @@ func (lawSpecDefinitions) LeadBlanks(
 	return lsfToNativeInteger(lsfLeadBlanks(lsfFromNativeText(t_), lsfFromNativeInteger(i), lsfFromNativeInteger(n)))
 }
 
-// leaf — laws/haskell_extract.lawspec:3040.
+// leaf — laws/haskell_extract.lawspec:3302.
 func (lawSpecDefinitions) Leaf(
 	symbols map[string]*LawSpecSymbol,
 	kind_2 string,
@@ -8774,7 +9700,7 @@ func (lawSpecDefinitions) MemberIndex(
 	return lsfToNativeKeyValTextListText(lsfMemberIndex(lsfFromNativeListDecl(decls), lsfFromNativeKeyValTextListText(acc)))
 }
 
-// memberRight — laws/haskell_extract.lawspec:3612.
+// memberRight — laws/haskell_extract.lawspec:3874.
 func (lawSpecDefinitions) MemberRight(
 	symbols map[string]*LawSpecSymbol,
 	every []Decl,
@@ -8796,7 +9722,7 @@ func (lawSpecDefinitions) MemberTexts(symbols map[string]*LawSpecSymbol, cs []Sy
 	return lsfToNativeListText(lsfMemberTexts(lsfFromNativeListSyntax(cs)))
 }
 
-// membersRight — laws/haskell_extract.lawspec:3616.
+// membersRight — laws/haskell_extract.lawspec:3878.
 func (lawSpecDefinitions) MembersRight(
 	symbols map[string]*LawSpecSymbol,
 	ds []Decl,
@@ -8841,7 +9767,28 @@ func (lawSpecDefinitions) MethodNames(
 	return lsfToNativeListDecl(lsfMethodNames(lsfFromNativeIx(ix), lsfFromNativeText(owner), lsfFromNativeSyntax(s), lsfFromNativeListText(ns), lsfFromNativeListSyntax(defaults), lsfFromNativeInteger(until)))
 }
 
-// mix — laws/haskell_extract.lawspec:3147.
+// missingWith — laws/haskell_extract.lawspec:4575.
+func (lawSpecDefinitions) MissingWith(
+	symbols map[string]*LawSpecSymbol,
+	haskellParser HaskellParser,
+	lines []BindingLine,
+	source string,
+) []string {
+	return lsNativeContext("assayxport.haskell.extract::missingWith", func() []string {
+		schema := _lawSpecDefinitionSchema
+		bits := 64
+		lsInstallHandlers(symbols, map[string]any{"assayxport.haskell.extract::ability::HaskellParser": haskellParser})
+		linesCodec := lsListCodec(schema, bits, lawSpecBindingLineCodec(schema, bits, symbols), symbols)
+		linesValue := linesCodec.fromNative(lines)
+		sourceCodec := lsScalarCodec[string](schema, bits, "Text")
+		sourceValue := sourceCodec.fromNative(source)
+		resultCodec := lsListCodec(schema, bits, lsScalarCodec[string](schema, bits, "Text"), symbols)
+		result := lawSpecEvaluateMissingWith(symbols, linesValue, sourceValue)
+		return resultCodec.toNative(result)
+	})
+}
+
+// mix — laws/haskell_extract.lawspec:3409.
 func (lawSpecDefinitions) Mix(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -8912,7 +9859,7 @@ func (lawSpecDefinitions) ModuleText(
 	return lsfToNativeText(lsfModuleText(lsfFromNativeMaybeSyntax(m_)))
 }
 
-// modulesOfRoots — laws/haskell_extract.lawspec:2755.
+// modulesOfRoots — laws/haskell_extract.lawspec:3017.
 func (lawSpecDefinitions) ModulesOfRoots(
 	symbols map[string]*LawSpecSymbol,
 	path string,
@@ -8921,7 +9868,7 @@ func (lawSpecDefinitions) ModulesOfRoots(
 	return lsfToNativeListListPackage(lsfModulesOfRoots(lsfFromNativeText(path), lsfFromNativeListSyntax(roots)))
 }
 
-// moreEnv — laws/haskell_extract.lawspec:3861.
+// moreEnv — laws/haskell_extract.lawspec:4147.
 func (lawSpecDefinitions) MoreEnv(symbols map[string]*LawSpecSymbol, i *LawSpecBigInt) Env {
 	return lsfToNativeEnv(lsfMoreEnv(lsfFromNativeInteger(i)))
 }
@@ -8936,7 +9883,7 @@ func (lawSpecDefinitions) NameEdges(
 	return lsfToNativeListCallEdge(lsfNameEdges(lsfFromNativeCtx(x), lsfFromNativeListText(locals), lsfFromNativeListSyntax(os_)))
 }
 
-// nameIs — laws/haskell_extract.lawspec:2924.
+// nameIs — laws/haskell_extract.lawspec:3186.
 func (lawSpecDefinitions) NameIs(symbols map[string]*LawSpecSymbol, n string, d Decl) bool {
 	return lsfToNativeBool(lsfNameIs(lsfFromNativeText(n), lsfFromNativeDecl(d)))
 }
@@ -9011,7 +9958,7 @@ func (lawSpecDefinitions) NoPreludePragma(symbols map[string]*LawSpecSymbol, p S
 	return lsfToNativeBool(lsfNoPreludePragma(lsfFromNativeSyntax(p)))
 }
 
-// node — laws/haskell_extract.lawspec:3044.
+// node — laws/haskell_extract.lawspec:3306.
 func (lawSpecDefinitions) Node(
 	symbols map[string]*LawSpecSymbol,
 	kind_2 string,
@@ -9039,7 +9986,7 @@ func (lawSpecDefinitions) Normalized(symbols map[string]*LawSpecSymbol, t_ strin
 	return lsfToNativeText(lsfNormalized(lsfFromNativeText(t_)))
 }
 
-// oneFile — laws/haskell_extract.lawspec:4341.
+// oneFile — laws/haskell_extract.lawspec:4721.
 func (lawSpecDefinitions) OneFile(
 	symbols map[string]*LawSpecSymbol,
 	path string,
@@ -9093,12 +10040,12 @@ func (lawSpecDefinitions) OwnerHas(symbols map[string]*LawSpecSymbol, n string, 
 	return lsfToNativeBool(lsfOwnerHas(lsfFromNativeText(n), lsfFromNativeText(owner)))
 }
 
-// packageFacts — laws/haskell_extract.lawspec:4142.
+// packageFacts — laws/haskell_extract.lawspec:4436.
 func (lawSpecDefinitions) PackageFacts(symbols map[string]*LawSpecSymbol, ps []Package) []string {
 	return lsfToNativeListText(lsfPackageFacts(lsfFromNativeListPackage(ps)))
 }
 
-// packageImplies — laws/haskell_extract.lawspec:4102.
+// packageImplies — laws/haskell_extract.lawspec:4396.
 func (lawSpecDefinitions) PackageImplies(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -9118,7 +10065,7 @@ func (lawSpecDefinitions) PackageOf(
 	return lsfToNativePackage(lsfPackageOf(lsfFromNativeText(path), lsfFromNativeSyntax(root), lsfFromNativeIx(ix), lsfFromNativeListDecl(decls)))
 }
 
-// packagesOfCopies — laws/haskell_extract.lawspec:2739.
+// packagesOfCopies — laws/haskell_extract.lawspec:3001.
 func (lawSpecDefinitions) PackagesOfCopies(
 	symbols map[string]*LawSpecSymbol,
 	plan CxPlan,
@@ -9137,7 +10084,7 @@ func (lawSpecDefinitions) ParenHead(symbols map[string]*LawSpecSymbol, d Syntax)
 	return lsfToNativeText(lsfParenHead(lsfFromNativeSyntax(d)))
 }
 
-// parseAll — laws/haskell_extract.lawspec:2762.
+// parseAll — laws/haskell_extract.lawspec:3024.
 func (lawSpecDefinitions) ParseAll(
 	symbols map[string]*LawSpecSymbol,
 	haskellParser HaskellParser,
@@ -9184,7 +10131,7 @@ func (lawSpecDefinitions) PatternVars(
 	return lsfToNativeListText(lsfPatternVars(lsfFromNativeCtx(x), lsfFromNativeMaybeSyntax(m_)))
 }
 
-// picksOf — laws/haskell_extract.lawspec:3194.
+// picksOf — laws/haskell_extract.lawspec:3456.
 func (lawSpecDefinitions) PicksOf(
 	symbols map[string]*LawSpecSymbol,
 	g Grammar,
@@ -9195,7 +10142,7 @@ func (lawSpecDefinitions) PicksOf(
 	return lsfToNativeListPick(lsfPicksOf(lsfFromNativeGrammar(g), lsfFromNativeListSlot(ss), lsfFromNativeInteger(seed_), lsfFromNativeInteger(fuel)))
 }
 
-// pointFor — laws/haskell_extract.lawspec:3218.
+// pointFor — laws/haskell_extract.lawspec:3480.
 func (lawSpecDefinitions) PointFor(
 	symbols map[string]*LawSpecSymbol,
 	seed_ *LawSpecBigInt,
@@ -9205,7 +10152,7 @@ func (lawSpecDefinitions) PointFor(
 	return lsfToNativePoint(lsfPointFor(lsfFromNativeInteger(seed_), lsfFromNativePoint(p), lsfFromNativePoint(q)))
 }
 
-// poolFailure — laws/haskell_extract.lawspec:4033.
+// poolFailure — laws/haskell_extract.lawspec:4319.
 func (lawSpecDefinitions) PoolFailure(
 	symbols map[string]*LawSpecSymbol,
 	haskellParser HaskellParser,
@@ -9228,7 +10175,7 @@ func (lawSpecDefinitions) PositionsOrdered(symbols map[string]*LawSpecSymbol, s 
 	return lsfToNativeBool(lsfAssayxportHaskellExtractPositionsOrdered(lsfFromNativeSyntax(s)))
 }
 
-// pr — laws/haskell_extract.lawspec:3108.
+// pr — laws/haskell_extract.lawspec:3370.
 func (lawSpecDefinitions) Pr(symbols map[string]*LawSpecSymbol, kind_2 string, slots []Slot) Prod {
 	return lsfToNativeProd(lsfPr(lsfFromNativeText(kind_2), lsfFromNativeListSlot(slots)))
 }
@@ -9355,12 +10302,12 @@ func (lawSpecDefinitions) QualsBound(
 	return lsfToNativeListText(lsfQualsBound(lsfFromNativeCtx(x), lsfFromNativeListSyntax(cs)))
 }
 
-// reachForest — laws/haskell_extract.lawspec:3484.
+// reachForest — laws/haskell_extract.lawspec:3746.
 func (lawSpecDefinitions) ReachForest(symbols map[string]*LawSpecSymbol, u LawSpecUnit) []Syntax {
 	return lsfToNativeListSyntax(lsfReachForest(lsfFromNativeUnit(u)))
 }
 
-// readOf — laws/haskell_extract.lawspec:4011.
+// readOf — laws/haskell_extract.lawspec:4297.
 func (lawSpecDefinitions) ReadOf(
 	symbols map[string]*LawSpecSymbol,
 	t_ string,
@@ -9406,7 +10353,7 @@ func (lawSpecDefinitions) RenderedParses(
 	})
 }
 
-// repeats — laws/haskell_extract.lawspec:3185.
+// repeats — laws/haskell_extract.lawspec:3447.
 func (lawSpecDefinitions) Repeats(
 	symbols map[string]*LawSpecSymbol,
 	s Slot,
@@ -9416,17 +10363,17 @@ func (lawSpecDefinitions) Repeats(
 	return lsfToNativeInteger(lsfRepeats(lsfFromNativeSlot(s), lsfFromNativeInteger(seed_), lsfFromNativeInteger(fuel)))
 }
 
-// reproEither — laws/haskell_extract.lawspec:4164.
+// reproEither — laws/haskell_extract.lawspec:4458.
 func (lawSpecDefinitions) ReproEither(symbols map[string]*LawSpecSymbol, u LawSpecUnit) string {
 	return lsfToNativeText(lsfReproEither(lsfFromNativeUnit(u)))
 }
 
-// reproSpan — laws/haskell_extract.lawspec:4159.
+// reproSpan — laws/haskell_extract.lawspec:4453.
 func (lawSpecDefinitions) ReproSpan(symbols map[string]*LawSpecSymbol, u LawSpecUnit) string {
 	return lsfToNativeText(lsfReproSource(lsfFromNativeUnit(u)))
 }
 
-// reproUnreadable — laws/haskell_extract.lawspec:4169.
+// reproUnreadable — laws/haskell_extract.lawspec:4463.
 func (lawSpecDefinitions) ReproUnreadable(symbols map[string]*LawSpecSymbol, u LawSpecUnit) string {
 	return lsfToNativeText(lsfReproUnreadable(lsfFromNativeUnit(u)))
 }
@@ -9532,10 +10479,10 @@ func (lawSpecDefinitions) Single(
 
 // skippedPath — laws/haskell_extract.lawspec:2247.
 func (lawSpecDefinitions) SkippedPath(symbols map[string]*LawSpecSymbol, p string) bool {
-	return lsfToNativeBool(lsfSkippedPath(lsfFromNativeText(p)))
+	return lsfToNativeBool(lsfAssayxportHaskellExtractSkippedPath(lsfFromNativeText(p)))
 }
 
-// sl — laws/haskell_extract.lawspec:3104.
+// sl — laws/haskell_extract.lawspec:3366.
 func (lawSpecDefinitions) Sl(
 	symbols map[string]*LawSpecSymbol,
 	field string,
@@ -9546,7 +10493,7 @@ func (lawSpecDefinitions) Sl(
 	return lsfToNativeSlot(lsfSl(lsfFromNativeText(field), lsfFromNativeBool(many), lsfFromNativeBool(needed), lsfFromNativeListText(kinds)))
 }
 
-// slotPicks — laws/haskell_extract.lawspec:3190.
+// slotPicks — laws/haskell_extract.lawspec:3452.
 func (lawSpecDefinitions) SlotPicks(
 	symbols map[string]*LawSpecSymbol,
 	g Grammar,
@@ -9557,7 +10504,7 @@ func (lawSpecDefinitions) SlotPicks(
 	return lsfToNativeListPick(lsfSlotPicks(lsfFromNativeGrammar(g), lsfFromNativeSlot(s), lsfFromNativeInteger(n), lsfFromNativeInteger(seed_)))
 }
 
-// slotsOf — laws/haskell_extract.lawspec:3156.
+// slotsOf — laws/haskell_extract.lawspec:3418.
 func (lawSpecDefinitions) SlotsOf(symbols map[string]*LawSpecSymbol, k string, ps []Prod) []Slot {
 	return lsfToNativeListSlot(lsfSlotsOf(lsfFromNativeText(k), lsfFromNativeListProd(ps)))
 }
@@ -9648,7 +10595,7 @@ func (lawSpecDefinitions) SynonymOf(
 	return lsfToNativeMaybeSyntax(lsfSynonymOf(lsfFromNativeSyntax(ps)))
 }
 
-// textFor — laws/haskell_extract.lawspec:3164.
+// textFor — laws/haskell_extract.lawspec:3426.
 func (lawSpecDefinitions) TextFor(
 	symbols map[string]*LawSpecSymbol,
 	g Grammar,
@@ -9671,7 +10618,7 @@ func (lawSpecDefinitions) TextsOf(symbols map[string]*LawSpecSymbol, cs []Syntax
 	return lsfToNativeListText(lsfTextsOf(lsfFromNativeListSyntax(cs)))
 }
 
-// theGrammar — laws/haskell_extract.lawspec:3140.
+// theGrammar — laws/haskell_extract.lawspec:3402.
 func (lawSpecDefinitions) TheGrammar(symbols map[string]*LawSpecSymbol, u LawSpecUnit) Grammar {
 	return lsfToNativeGrammar(lsfTheGrammar(lsfFromNativeUnit(u)))
 }
@@ -9699,7 +10646,7 @@ func (lawSpecDefinitions) TrimEnd(
 	return lsfToNativeText(lsfTrimEnd(lsfFromNativeText(t_), lsfFromNativeInteger(n)))
 }
 
-// turned — laws/haskell_extract.lawspec:3203.
+// turned — laws/haskell_extract.lawspec:3465.
 func (lawSpecDefinitions) Turned(
 	symbols map[string]*LawSpecSymbol,
 	n *LawSpecBigInt,
@@ -9743,12 +10690,12 @@ func (lawSpecDefinitions) TypeNode(symbols map[string]*LawSpecSymbol, nd Syntax)
 	return lsfToNativeBool(lsfTypeNode(lsfFromNativeSyntax(nd)))
 }
 
-// unreadableAt3 — laws/haskell_extract.lawspec:4173.
+// unreadableAt3 — laws/haskell_extract.lawspec:4467.
 func (lawSpecDefinitions) UnreadableAt3(symbols map[string]*LawSpecSymbol, u LawSpecUnit) string {
 	return lsfToNativeText(lsfUnreadableAt3(lsfFromNativeUnit(u)))
 }
 
-// unreadableWith — laws/haskell_extract.lawspec:4154.
+// unreadableWith — laws/haskell_extract.lawspec:4448.
 func (lawSpecDefinitions) UnreadableWith(
 	symbols map[string]*LawSpecSymbol,
 	haskellParser HaskellParser,
@@ -9812,10 +10759,10 @@ func (lawSpecDefinitions) Walk(
 	w Where,
 	cs []Syntax,
 ) []CallEdge {
-	return lsfToNativeListCallEdge(lsfWalk(lsfFromNativeCtx(x), lsfFromNativeListText(locals), lsfFromNativeWhere(w), lsfFromNativeListSyntax(cs)))
+	return lsfToNativeListCallEdge(lsfWalk_2(lsfFromNativeCtx(x), lsfFromNativeListText(locals), lsfFromNativeWhere(w), lsfFromNativeListSyntax(cs)))
 }
 
-// whenEnv — laws/haskell_extract.lawspec:2784.
+// whenEnv — laws/haskell_extract.lawspec:3046.
 func (lawSpecDefinitions) WhenEnv(
 	symbols map[string]*LawSpecSymbol,
 	origin string,
@@ -9824,12 +10771,12 @@ func (lawSpecDefinitions) WhenEnv(
 	return lsfToNativeEitherTextEnv(lsfWhenEnv(lsfFromNativeText(origin), lsfFromNativeListText(lines)))
 }
 
-// whenHeader — laws/haskell_extract.lawspec:2800.
+// whenHeader — laws/haskell_extract.lawspec:3062.
 func (lawSpecDefinitions) WhenHeader(symbols map[string]*LawSpecSymbol, u LawSpecUnit) []string {
 	return lsfToNativeListText(lsfWhenHeader(lsfFromNativeUnit(u)))
 }
 
-// whenInitNothing — laws/haskell_extract.lawspec:2805.
+// whenInitNothing — laws/haskell_extract.lawspec:3067.
 func (lawSpecDefinitions) WhenInitNothing(
 	symbols map[string]*LawSpecSymbol,
 	root string,
@@ -9838,12 +10785,12 @@ func (lawSpecDefinitions) WhenInitNothing(
 	return lsfToNativeText(lsfWhenInitNothing(lsfFromNativeText(root), lsfFromNativeFiltered(f)))
 }
 
-// whenInitWarnings — laws/haskell_extract.lawspec:2804.
+// whenInitWarnings — laws/haskell_extract.lawspec:3066.
 func (lawSpecDefinitions) WhenInitWarnings(symbols map[string]*LawSpecSymbol, f Filtered) []string {
 	return lsfToNativeListText(lsfWhenInitWarnings(lsfFromNativeFiltered(f)))
 }
 
-// whenListed — laws/haskell_extract.lawspec:2799.
+// whenListed — laws/haskell_extract.lawspec:3061.
 func (lawSpecDefinitions) WhenListed(symbols map[string]*LawSpecSymbol, lines []string) []string {
 	return lsNativeContext("assayxport.haskell.extract::whenListed", func() []string {
 		schema := _lawSpecDefinitionSchema
@@ -9856,7 +10803,7 @@ func (lawSpecDefinitions) WhenListed(symbols map[string]*LawSpecSymbol, lines []
 	})
 }
 
-// whenPaste — laws/haskell_extract.lawspec:2798.
+// whenPaste — laws/haskell_extract.lawspec:3060.
 func (lawSpecDefinitions) WhenPaste(
 	symbols map[string]*LawSpecSymbol,
 	env Env,
@@ -9866,17 +10813,17 @@ func (lawSpecDefinitions) WhenPaste(
 	return lsfToNativeListText(lsfWhenPaste(lsfFromNativeEnv(env), lsfFromNativeListText(listed), lsfFromNativeListPackage(ps)))
 }
 
-// whenText — laws/haskell_extract.lawspec:4126.
+// whenText — laws/haskell_extract.lawspec:4420.
 func (lawSpecDefinitions) WhenText(symbols map[string]*LawSpecSymbol, cond string) string {
 	return lsfToNativeText(lsfWhenText(lsfFromNativeText(cond)))
 }
 
-// whenWarnings — laws/haskell_extract.lawspec:2791.
+// whenWarnings — laws/haskell_extract.lawspec:3053.
 func (lawSpecDefinitions) WhenWarnings(symbols map[string]*LawSpecSymbol, f Filtered) []string {
 	return lsfToNativeListText(lsfWhenWarnings(lsfFromNativeFiltered(f)))
 }
 
-// whenWarningsWith — laws/haskell_extract.lawspec:2797.
+// whenWarningsWith — laws/haskell_extract.lawspec:3059.
 func (lawSpecDefinitions) WhenWarningsWith(
 	symbols map[string]*LawSpecSymbol,
 	f Filtered,
@@ -9890,17 +10837,17 @@ func (lawSpecDefinitions) WhereOf(symbols map[string]*LawSpecSymbol, nd Syntax) 
 	return lsfToNativeWhere(lsfWhereOf(lsfFromNativeSyntax(nd)))
 }
 
-// wideEnv — laws/haskell_extract.lawspec:4269.
+// wideEnv — laws/haskell_extract.lawspec:4649.
 func (lawSpecDefinitions) WideEnv(symbols map[string]*LawSpecSymbol, n *LawSpecBigInt) Env {
 	return lsfToNativeEnv(lsfWideEnv(lsfFromNativeInteger(n)))
 }
 
-// wideFile — laws/haskell_extract.lawspec:4271.
+// wideFile — laws/haskell_extract.lawspec:4651.
 func (lawSpecDefinitions) WideFile(symbols map[string]*LawSpecSymbol, t_ string) []SourceFile {
 	return lsfToNativeListSourceFile(lsfWideFile(lsfFromNativeText(t_)))
 }
 
-// wideLines — laws/haskell_extract.lawspec:4265.
+// wideLines — laws/haskell_extract.lawspec:4645.
 func (lawSpecDefinitions) WideLines(
 	symbols map[string]*LawSpecSymbol,
 	n *LawSpecBigInt,
@@ -9950,7 +10897,7 @@ func (lawSpecDefinitions) WildKinds(symbols map[string]*LawSpecSymbol, ns string
 	return lsfToNativeBool(lsfWildKinds(lsfFromNativeText(ns), lsfFromNativeDecl(d)))
 }
 
-// wildModule — laws/haskell_extract.lawspec:3048.
+// wildModule — laws/haskell_extract.lawspec:3310.
 func (lawSpecDefinitions) WildModule(
 	symbols map[string]*LawSpecSymbol,
 	header string,
@@ -10006,7 +10953,7 @@ func lawSpecEvaluateAfterCols(
 	return lsfToValueKeyValIntegerInteger(lsfAfterCols(lsfFromValueListSyntax(hs), lsfFromValueKeyValIntegerInteger(acc)))
 }
 
-// allDocumented on logical values — laws/haskell_extract.lawspec:4313.
+// allDocumented on logical values — laws/haskell_extract.lawspec:4693.
 func lawSpecEvaluateAllDocumented(
 	symbols map[string]*LawSpecSymbol,
 	ps LawSpecValue,
@@ -10090,7 +11037,7 @@ func lawSpecEvaluateAsTypeData(symbols map[string]*LawSpecSymbol, ds LawSpecValu
 	return lsfToValueListDecl(lsfAsTypeData(lsfFromValueListDecl(ds)))
 }
 
-// assayxportConditionsAllNeeds on logical values — laws/conditions.lawspec:719.
+// assayxportConditionsAllNeeds on logical values — laws/conditions.lawspec:760.
 func lawSpecEvaluateAssayxportConditionsAllNeeds_2(
 	symbols map[string]*LawSpecSymbol,
 	us LawSpecValue,
@@ -10098,7 +11045,7 @@ func lawSpecEvaluateAssayxportConditionsAllNeeds_2(
 	return lsfToValueListText(lsfAllNeeds(lsfFromValueListUseNote(us)))
 }
 
-// assayxportConditionsApplyWhen on logical values — laws/conditions.lawspec:572.
+// assayxportConditionsApplyWhen on logical values — laws/conditions.lawspec:613.
 func lawSpecEvaluateAssayxportConditionsApplyWhen_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10107,7 +11054,7 @@ func lawSpecEvaluateAssayxportConditionsApplyWhen_2(
 	return lsfToValueFiltered(lsfApplyWhen(lsfFromValueEnv(env), lsfFromValueListPackage(ps)))
 }
 
-// assayxportConditionsBarBarText on logical values — laws/conditions.lawspec:155.
+// assayxportConditionsBarBarText on logical values — laws/conditions.lawspec:180.
 func lawSpecEvaluateAssayxportConditionsBarBarText_2(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecValue,
@@ -10115,7 +11062,7 @@ func lawSpecEvaluateAssayxportConditionsBarBarText_2(
 	return lsfToValueText(lsfBarBarText(lsfFromValueUnit(u)))
 }
 
-// assayxportConditionsBarText on logical values — laws/conditions.lawspec:154.
+// assayxportConditionsBarText on logical values — laws/conditions.lawspec:179.
 func lawSpecEvaluateAssayxportConditionsBarText_2(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecValue,
@@ -10123,7 +11070,7 @@ func lawSpecEvaluateAssayxportConditionsBarText_2(
 	return lsfToValueText(lsfBarText(lsfFromValueUnit(u)))
 }
 
-// assayxportConditionsBinLevel on logical values — laws/conditions.lawspec:157.
+// assayxportConditionsBinLevel on logical values — laws/conditions.lawspec:182.
 func lawSpecEvaluateAssayxportConditionsBinLevel_2(
 	symbols map[string]*LawSpecSymbol,
 	s LawSpecValue,
@@ -10131,7 +11078,7 @@ func lawSpecEvaluateAssayxportConditionsBinLevel_2(
 	return lsfToValueInteger(lsfBinLevel(lsfFromValueText(s)))
 }
 
-// assayxportConditionsBinOpFor on logical values — laws/conditions.lawspec:170.
+// assayxportConditionsBinOpFor on logical values — laws/conditions.lawspec:195.
 func lawSpecEvaluateAssayxportConditionsBinOpFor_2(
 	symbols map[string]*LawSpecSymbol,
 	s LawSpecValue,
@@ -10139,7 +11086,7 @@ func lawSpecEvaluateAssayxportConditionsBinOpFor_2(
 	return lsfToValueBinOp(lsfBinOpFor(lsfFromValueText(s)))
 }
 
-// assayxportConditionsBlocksFor on logical values — laws/conditions.lawspec:730.
+// assayxportConditionsBlocksFor on logical values — laws/conditions.lawspec:771.
 func lawSpecEvaluateAssayxportConditionsBlocksFor_2(
 	symbols map[string]*LawSpecSymbol,
 	names LawSpecValue,
@@ -10148,7 +11095,7 @@ func lawSpecEvaluateAssayxportConditionsBlocksFor_2(
 	return lsfToValueListText(lsfBlocksFor(lsfFromValueListText(names), lsfFromValueListUseNote(us)))
 }
 
-// assayxportConditionsChAt on logical values — laws/conditions.lawspec:42.
+// assayxportConditionsChAt on logical values — laws/conditions.lawspec:46.
 func lawSpecEvaluateAssayxportConditionsChAt_2(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -10157,7 +11104,23 @@ func lawSpecEvaluateAssayxportConditionsChAt_2(
 	return lsfToValueText(lsfChAt(lsfFromValueText(t_), lsfFromValueInteger(i)))
 }
 
-// assayxportConditionsCloseCall on logical values — laws/conditions.lawspec:198.
+// assayxportConditionsCharCode on logical values — laws/conditions.lawspec:116.
+func lawSpecEvaluateAssayxportConditionsCharCode_2(
+	symbols map[string]*LawSpecSymbol,
+	content LawSpecValue,
+) LawSpecValue {
+	return lsfToValueMaybeInteger(lsfCharCode(lsfFromValueText(content)))
+}
+
+// assayxportConditionsCharTok on logical values — laws/conditions.lawspec:128.
+func lawSpecEvaluateAssayxportConditionsCharTok_2(
+	symbols map[string]*LawSpecSymbol,
+	content LawSpecValue,
+) LawSpecValue {
+	return lsfToValueTok(lsfCharTok(lsfFromValueText(content)))
+}
+
+// assayxportConditionsCloseCall on logical values — laws/conditions.lawspec:223.
 func lawSpecEvaluateAssayxportConditionsCloseCall_2(
 	symbols map[string]*LawSpecSymbol,
 	name LawSpecValue,
@@ -10170,7 +11133,7 @@ func lawSpecEvaluateAssayxportConditionsCloseCall_2(
 	return lsfToValueMaybeParsed(lsfCloseCall(lsfFromValueText(name), lsfFromValueCExpr(a1), lsfFromValueCExpr(a2), lsfFromValueCExpr(a3), lsfFromValueCExpr(a4), lsfFromValueListTok(rest)))
 }
 
-// assayxportConditionsCommentEnd on logical values — laws/conditions.lawspec:64.
+// assayxportConditionsCommentEnd on logical values — laws/conditions.lawspec:68.
 func lawSpecEvaluateAssayxportConditionsCommentEnd_2(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -10180,7 +11143,7 @@ func lawSpecEvaluateAssayxportConditionsCommentEnd_2(
 	return lsfToValueInteger(lsfCommentEnd(lsfFromValueText(t_), lsfFromValueInteger(j), lsfFromValueInteger(n)))
 }
 
-// assayxportConditionsCondOutcome on logical values — laws/conditions.lawspec:468.
+// assayxportConditionsCondOutcome on logical values — laws/conditions.lawspec:509.
 func lawSpecEvaluateAssayxportConditionsCondOutcome_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10189,7 +11152,7 @@ func lawSpecEvaluateAssayxportConditionsCondOutcome_2(
 	return lsfToValueOutcome(lsfCondOutcome(lsfFromValueEnv(env), lsfFromValueText(cond)))
 }
 
-// assayxportConditionsDecisionLines on logical values — laws/conditions.lawspec:734.
+// assayxportConditionsDecisionLines on logical values — laws/conditions.lawspec:775.
 func lawSpecEvaluateAssayxportConditionsDecisionLines_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10199,7 +11162,7 @@ func lawSpecEvaluateAssayxportConditionsDecisionLines_2(
 	return lsfToValueListText(lsfDecisionLines(lsfFromValueEnv(env), lsfFromValueListText(listed), lsfFromValueListPackage(ps)))
 }
 
-// assayxportConditionsDeclKept on logical values — laws/conditions.lawspec:527.
+// assayxportConditionsDeclKept on logical values — laws/conditions.lawspec:568.
 func lawSpecEvaluateAssayxportConditionsDeclKept_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10208,7 +11171,7 @@ func lawSpecEvaluateAssayxportConditionsDeclKept_2(
 	return lsfToValueListDecl(lsfDeclKept(lsfFromValueEnv(env), lsfFromValueDecl(d)))
 }
 
-// assayxportConditionsDeclNotes on logical values — laws/conditions.lawspec:539.
+// assayxportConditionsDeclNotes on logical values — laws/conditions.lawspec:580.
 func lawSpecEvaluateAssayxportConditionsDeclNotes_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10217,7 +11180,7 @@ func lawSpecEvaluateAssayxportConditionsDeclNotes_2(
 	return lsfToValueListNote(lsfDeclNotes(lsfFromValueEnv(env), lsfFromValueDecl(d)))
 }
 
-// assayxportConditionsDeclUses on logical values — laws/conditions.lawspec:701.
+// assayxportConditionsDeclUses on logical values — laws/conditions.lawspec:742.
 func lawSpecEvaluateAssayxportConditionsDeclUses_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10226,7 +11189,7 @@ func lawSpecEvaluateAssayxportConditionsDeclUses_2(
 	return lsfToValueListUseNote(lsfDeclUses(lsfFromValueEnv(env), lsfFromValueDecl(d)))
 }
 
-// assayxportConditionsDeclsKept on logical values — laws/conditions.lawspec:535.
+// assayxportConditionsDeclsKept on logical values — laws/conditions.lawspec:576.
 func lawSpecEvaluateAssayxportConditionsDeclsKept_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10235,7 +11198,7 @@ func lawSpecEvaluateAssayxportConditionsDeclsKept_2(
 	return lsfToValueListDecl(lsfDeclsKept(lsfFromValueEnv(env), lsfFromValueListDecl(ds)))
 }
 
-// assayxportConditionsDeclsNotes on logical values — laws/conditions.lawspec:549.
+// assayxportConditionsDeclsNotes on logical values — laws/conditions.lawspec:590.
 func lawSpecEvaluateAssayxportConditionsDeclsNotes_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10244,7 +11207,7 @@ func lawSpecEvaluateAssayxportConditionsDeclsNotes_2(
 	return lsfToValueListNote(lsfDeclsNotes(lsfFromValueEnv(env), lsfFromValueListDecl(ds)))
 }
 
-// assayxportConditionsDeclsUses on logical values — laws/conditions.lawspec:711.
+// assayxportConditionsDeclsUses on logical values — laws/conditions.lawspec:752.
 func lawSpecEvaluateAssayxportConditionsDeclsUses_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10253,7 +11216,7 @@ func lawSpecEvaluateAssayxportConditionsDeclsUses_2(
 	return lsfToValueListUseNote(lsfDeclsUses(lsfFromValueEnv(env), lsfFromValueListDecl(ds)))
 }
 
-// assayxportConditionsDigitRun on logical values — laws/conditions.lawspec:92.
+// assayxportConditionsDigitRun on logical values — laws/conditions.lawspec:96.
 func lawSpecEvaluateAssayxportConditionsDigitRun_2(
 	symbols map[string]*LawSpecSymbol,
 	s LawSpecValue,
@@ -10264,7 +11227,7 @@ func lawSpecEvaluateAssayxportConditionsDigitRun_2(
 	return lsfToValueInteger(lsfDigitRun(lsfFromValueText(s), lsfFromValueInteger(i), lsfFromValueInteger(n), lsfFromValueBool(hex)))
 }
 
-// assayxportConditionsDigitVal on logical values — laws/conditions.lawspec:82.
+// assayxportConditionsDigitVal on logical values — laws/conditions.lawspec:86.
 func lawSpecEvaluateAssayxportConditionsDigitVal_2(
 	symbols map[string]*LawSpecSymbol,
 	ch LawSpecValue,
@@ -10272,7 +11235,7 @@ func lawSpecEvaluateAssayxportConditionsDigitVal_2(
 	return lsfToValueInteger(lsfDigitVal(lsfFromValueText(ch)))
 }
 
-// assayxportConditionsDotIndex on logical values — laws/conditions.lawspec:365.
+// assayxportConditionsDotIndex on logical values — laws/conditions.lawspec:406.
 func lawSpecEvaluateAssayxportConditionsDotIndex_2(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -10282,7 +11245,7 @@ func lawSpecEvaluateAssayxportConditionsDotIndex_2(
 	return lsfToValueInteger(lsfDotIndex(lsfFromValueText(t_), lsfFromValueInteger(i), lsfFromValueInteger(n)))
 }
 
-// assayxportConditionsEcCloses on logical values — laws/conditions.lawspec:628.
+// assayxportConditionsEcCloses on logical values — laws/conditions.lawspec:669.
 func lawSpecEvaluateAssayxportConditionsEcCloses_2(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -10293,7 +11256,7 @@ func lawSpecEvaluateAssayxportConditionsEcCloses_2(
 	return lsfToValueInteger(lsfEcCloses(lsfFromValueText(t_), lsfFromValueInteger(i), lsfFromValueInteger(n), lsfFromValueInteger(d)))
 }
 
-// assayxportConditionsEcCube on logical values — laws/conditions.lawspec:642.
+// assayxportConditionsEcCube on logical values — laws/conditions.lawspec:683.
 func lawSpecEvaluateAssayxportConditionsEcCube_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10303,7 +11266,7 @@ func lawSpecEvaluateAssayxportConditionsEcCube_2(
 	return lsfToValueOutcome(lsfEcCube(lsfFromValueEnv(env), lsfFromValueListText(parts), lsfFromValueOutcome(acc)))
 }
 
-// assayxportConditionsEcCubes on logical values — laws/conditions.lawspec:649.
+// assayxportConditionsEcCubes on logical values — laws/conditions.lawspec:690.
 func lawSpecEvaluateAssayxportConditionsEcCubes_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10313,7 +11276,7 @@ func lawSpecEvaluateAssayxportConditionsEcCubes_2(
 	return lsfToValueOutcome(lsfEcCubes(lsfFromValueEnv(env), lsfFromValueListText(cubes), lsfFromValueOutcome(acc)))
 }
 
-// assayxportConditionsEcCut on logical values — laws/conditions.lawspec:621.
+// assayxportConditionsEcCut on logical values — laws/conditions.lawspec:662.
 func lawSpecEvaluateAssayxportConditionsEcCut_2(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -10327,7 +11290,7 @@ func lawSpecEvaluateAssayxportConditionsEcCut_2(
 	return lsfToValueListText(lsfEcCut(lsfFromValueText(t_), lsfFromValueInteger(i), lsfFromValueInteger(n), lsfFromValueInteger(d), lsfFromValueInteger(start), lsfFromValueText(op), lsfFromValueInteger(fuel)))
 }
 
-// assayxportConditionsEcLit on logical values — laws/conditions.lawspec:634.
+// assayxportConditionsEcLit on logical values — laws/conditions.lawspec:675.
 func lawSpecEvaluateAssayxportConditionsEcLit_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10336,7 +11299,7 @@ func lawSpecEvaluateAssayxportConditionsEcLit_2(
 	return lsfToValueOutcome(lsfEcLit(lsfFromValueEnv(env), lsfFromValueText(part)))
 }
 
-// assayxportConditionsEdgeNotes on logical values — laws/conditions.lawspec:492.
+// assayxportConditionsEdgeNotes on logical values — laws/conditions.lawspec:533.
 func lawSpecEvaluateAssayxportConditionsEdgeNotes_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10345,7 +11308,7 @@ func lawSpecEvaluateAssayxportConditionsEdgeNotes_2(
 	return lsfToValueListNote(lsfEdgeNotes(lsfFromValueEnv(env), lsfFromValueListCallEdge(es)))
 }
 
-// assayxportConditionsEdgeUses on logical values — laws/conditions.lawspec:691.
+// assayxportConditionsEdgeUses on logical values — laws/conditions.lawspec:732.
 func lawSpecEvaluateAssayxportConditionsEdgeUses_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10356,7 +11319,7 @@ func lawSpecEvaluateAssayxportConditionsEdgeUses_2(
 	return lsfToValueListUseNote(lsfEdgeUses(lsfFromValueEnv(env), lsfFromValueText(file), lsfFromValueInteger(line), lsfFromValueListCallEdge(es)))
 }
 
-// assayxportConditionsEdgesKept on logical values — laws/conditions.lawspec:480.
+// assayxportConditionsEdgesKept on logical values — laws/conditions.lawspec:521.
 func lawSpecEvaluateAssayxportConditionsEdgesKept_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10365,7 +11328,7 @@ func lawSpecEvaluateAssayxportConditionsEdgesKept_2(
 	return lsfToValueListCallEdge(lsfEdgesKept(lsfFromValueEnv(env), lsfFromValueListCallEdge(es)))
 }
 
-// assayxportConditionsEqIndex on logical values — laws/conditions.lawspec:361.
+// assayxportConditionsEqIndex on logical values — laws/conditions.lawspec:402.
 func lawSpecEvaluateAssayxportConditionsEqIndex_2(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -10375,7 +11338,7 @@ func lawSpecEvaluateAssayxportConditionsEqIndex_2(
 	return lsfToValueInteger(lsfEqIndex(lsfFromValueText(t_), lsfFromValueInteger(i), lsfFromValueInteger(n)))
 }
 
-// assayxportConditionsEvalCondition on logical values — laws/conditions.lawspec:658.
+// assayxportConditionsEvalCondition on logical values — laws/conditions.lawspec:699.
 func lawSpecEvaluateAssayxportConditionsEvalCondition_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10384,7 +11347,7 @@ func lawSpecEvaluateAssayxportConditionsEvalCondition_2(
 	return lsfToValueOutcome(lsfEvalCondition(lsfFromValueEnv(env), lsfFromValueText(text)))
 }
 
-// assayxportConditionsEvalWhen on logical values — laws/conditions.lawspec:340.
+// assayxportConditionsEvalWhen on logical values — laws/conditions.lawspec:381.
 func lawSpecEvaluateAssayxportConditionsEvalWhen_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10393,7 +11356,7 @@ func lawSpecEvaluateAssayxportConditionsEvalWhen_2(
 	return lsfToValueOutcome(lsfEvalWhen(lsfFromValueEnv(env), lsfFromValueText(text)))
 }
 
-// assayxportConditionsExpectOp on logical values — laws/conditions.lawspec:190.
+// assayxportConditionsExpectOp on logical values — laws/conditions.lawspec:215.
 func lawSpecEvaluateAssayxportConditionsExpectOp_2(
 	symbols map[string]*LawSpecSymbol,
 	toks LawSpecValue,
@@ -10402,7 +11365,7 @@ func lawSpecEvaluateAssayxportConditionsExpectOp_2(
 	return lsfToValueMaybeListTok(lsfExpectOp(lsfFromValueListTok(toks), lsfFromValueText(s)))
 }
 
-// assayxportConditionsFromTallies on logical values — laws/conditions.lawspec:517.
+// assayxportConditionsFromTallies on logical values — laws/conditions.lawspec:558.
 func lawSpecEvaluateAssayxportConditionsFromTallies_2(
 	symbols map[string]*LawSpecSymbol,
 	ts LawSpecValue,
@@ -10410,7 +11373,7 @@ func lawSpecEvaluateAssayxportConditionsFromTallies_2(
 	return lsfToValueListCallEdge(lsfFromTallies(lsfFromValueListEntryEdgeKeyTally(ts)))
 }
 
-// assayxportConditionsIdLen on logical values — laws/conditions.lawspec:49.
+// assayxportConditionsIdLen on logical values — laws/conditions.lawspec:53.
 func lawSpecEvaluateAssayxportConditionsIdLen_2(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -10420,7 +11383,7 @@ func lawSpecEvaluateAssayxportConditionsIdLen_2(
 	return lsfToValueInteger(lsfIdLen(lsfFromValueText(t_), lsfFromValueInteger(i), lsfFromValueInteger(n)))
 }
 
-// assayxportConditionsIdxIn on logical values — laws/conditions.lawspec:78.
+// assayxportConditionsIdxIn on logical values — laws/conditions.lawspec:82.
 func lawSpecEvaluateAssayxportConditionsIdxIn_2(
 	symbols map[string]*LawSpecSymbol,
 	s LawSpecValue,
@@ -10431,7 +11394,7 @@ func lawSpecEvaluateAssayxportConditionsIdxIn_2(
 	return lsfToValueInteger(lsfIdxIn(lsfFromValueText(s), lsfFromValueText(ch), lsfFromValueInteger(i), lsfFromValueInteger(n)))
 }
 
-// assayxportConditionsIsBlankCh on logical values — laws/conditions.lawspec:47.
+// assayxportConditionsIsBlankCh on logical values — laws/conditions.lawspec:51.
 func lawSpecEvaluateAssayxportConditionsIsBlankCh_2(
 	symbols map[string]*LawSpecSymbol,
 	ch LawSpecValue,
@@ -10439,7 +11402,7 @@ func lawSpecEvaluateAssayxportConditionsIsBlankCh_2(
 	return lawSpecEvaluateIsSpace(symbols, ch)
 }
 
-// assayxportConditionsIsDigitCh on logical values — laws/conditions.lawspec:44.
+// assayxportConditionsIsDigitCh on logical values — laws/conditions.lawspec:48.
 func lawSpecEvaluateAssayxportConditionsIsDigitCh_2(
 	symbols map[string]*LawSpecSymbol,
 	ch LawSpecValue,
@@ -10447,7 +11410,7 @@ func lawSpecEvaluateAssayxportConditionsIsDigitCh_2(
 	return lsfToValueBool(lsfIsDigitCh(lsfFromValueText(ch)))
 }
 
-// assayxportConditionsIsIdCh on logical values — laws/conditions.lawspec:46.
+// assayxportConditionsIsIdCh on logical values — laws/conditions.lawspec:50.
 func lawSpecEvaluateAssayxportConditionsIsIdCh_2(
 	symbols map[string]*LawSpecSymbol,
 	ch LawSpecValue,
@@ -10455,7 +11418,7 @@ func lawSpecEvaluateAssayxportConditionsIsIdCh_2(
 	return lsfToValueBool(lsfIsIdCh(lsfFromValueText(ch)))
 }
 
-// assayxportConditionsIsIdStart on logical values — laws/conditions.lawspec:45.
+// assayxportConditionsIsIdStart on logical values — laws/conditions.lawspec:49.
 func lawSpecEvaluateAssayxportConditionsIsIdStart_2(
 	symbols map[string]*LawSpecSymbol,
 	ch LawSpecValue,
@@ -10463,7 +11426,7 @@ func lawSpecEvaluateAssayxportConditionsIsIdStart_2(
 	return lsfToValueBool(lsfIsIdStart(lsfFromValueText(ch)))
 }
 
-// assayxportConditionsIsMinVersionName on logical values — laws/conditions.lawspec:194.
+// assayxportConditionsIsMinVersionName on logical values — laws/conditions.lawspec:219.
 func lawSpecEvaluateAssayxportConditionsIsMinVersionName_2(
 	symbols map[string]*LawSpecSymbol,
 	name LawSpecValue,
@@ -10471,7 +11434,7 @@ func lawSpecEvaluateAssayxportConditionsIsMinVersionName_2(
 	return lsfToValueBool(lsfIsMinVersionName(lsfFromValueText(name)))
 }
 
-// assayxportConditionsIsName on logical values — laws/conditions.lawspec:380.
+// assayxportConditionsIsName on logical values — laws/conditions.lawspec:421.
 func lawSpecEvaluateAssayxportConditionsIsName_2(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -10479,7 +11442,7 @@ func lawSpecEvaluateAssayxportConditionsIsName_2(
 	return lsfToValueBool(lsfIsName(lsfFromValueText(t_)))
 }
 
-// assayxportConditionsJudged on logical values — laws/conditions.lawspec:472.
+// assayxportConditionsJudged on logical values — laws/conditions.lawspec:513.
 func lawSpecEvaluateAssayxportConditionsJudged_2(
 	symbols map[string]*LawSpecSymbol,
 	o LawSpecValue,
@@ -10487,7 +11450,7 @@ func lawSpecEvaluateAssayxportConditionsJudged_2(
 	return lsfToValueInteger(lsfJudged(lsfFromValueOutcome(o)))
 }
 
-// assayxportConditionsLexT on logical values — laws/conditions.lawspec:122.
+// assayxportConditionsLexT on logical values — laws/conditions.lawspec:147.
 func lawSpecEvaluateAssayxportConditionsLexT_2(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -10497,7 +11460,7 @@ func lawSpecEvaluateAssayxportConditionsLexT_2(
 	return lsfToValueMaybeListTok(lsfLexT(lsfFromValueText(t_), lsfFromValueListTok(acc), lsfFromValueInteger(fuel)))
 }
 
-// assayxportConditionsListedAll on logical values — laws/conditions.lawspec:680.
+// assayxportConditionsListedAll on logical values — laws/conditions.lawspec:721.
 func lawSpecEvaluateAssayxportConditionsListedAll_2(
 	symbols map[string]*LawSpecSymbol,
 	lines LawSpecValue,
@@ -10505,7 +11468,7 @@ func lawSpecEvaluateAssayxportConditionsListedAll_2(
 	return lsfToValueListText(lsfListedAll(lsfFromValueListText(lines)))
 }
 
-// assayxportConditionsListedNames on logical values — laws/conditions.lawspec:684.
+// assayxportConditionsListedNames on logical values — laws/conditions.lawspec:725.
 func lawSpecEvaluateAssayxportConditionsListedNames_2(
 	symbols map[string]*LawSpecSymbol,
 	lines LawSpecValue,
@@ -10526,7 +11489,7 @@ func lawSpecEvaluateAssayxportConditionsListedNames_2(
 	})
 }
 
-// assayxportConditionsListedOne on logical values — laws/conditions.lawspec:669.
+// assayxportConditionsListedOne on logical values — laws/conditions.lawspec:710.
 func lawSpecEvaluateAssayxportConditionsListedOne_2(
 	symbols map[string]*LawSpecSymbol,
 	raw LawSpecValue,
@@ -10534,7 +11497,7 @@ func lawSpecEvaluateAssayxportConditionsListedOne_2(
 	return lsfToValueListText(lsfListedOne(lsfFromValueText(raw)))
 }
 
-// assayxportConditionsNotesBad on logical values — laws/conditions.lawspec:565.
+// assayxportConditionsNotesBad on logical values — laws/conditions.lawspec:606.
 func lawSpecEvaluateAssayxportConditionsNotesBad_2(
 	symbols map[string]*LawSpecSymbol,
 	ns LawSpecValue,
@@ -10542,7 +11505,7 @@ func lawSpecEvaluateAssayxportConditionsNotesBad_2(
 	return lsfToValueListText(lsfNotesBad(lsfFromValueListNote(ns)))
 }
 
-// assayxportConditionsNotesMissing on logical values — laws/conditions.lawspec:561.
+// assayxportConditionsNotesMissing on logical values — laws/conditions.lawspec:602.
 func lawSpecEvaluateAssayxportConditionsNotesMissing_2(
 	symbols map[string]*LawSpecSymbol,
 	ns LawSpecValue,
@@ -10550,7 +11513,7 @@ func lawSpecEvaluateAssayxportConditionsNotesMissing_2(
 	return lsfToValueListText(lsfNotesMissing(lsfFromValueListNote(ns)))
 }
 
-// assayxportConditionsNumLen on logical values — laws/conditions.lawspec:55.
+// assayxportConditionsNumLen on logical values — laws/conditions.lawspec:59.
 func lawSpecEvaluateAssayxportConditionsNumLen_2(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -10560,7 +11523,7 @@ func lawSpecEvaluateAssayxportConditionsNumLen_2(
 	return lsfToValueInteger(lsfNumLen(lsfFromValueText(t_), lsfFromValueInteger(i), lsfFromValueInteger(n)))
 }
 
-// assayxportConditionsNumValue on logical values — laws/conditions.lawspec:87.
+// assayxportConditionsNumValue on logical values — laws/conditions.lawspec:91.
 func lawSpecEvaluateAssayxportConditionsNumValue_2(
 	symbols map[string]*LawSpecSymbol,
 	s LawSpecValue,
@@ -10572,7 +11535,7 @@ func lawSpecEvaluateAssayxportConditionsNumValue_2(
 	return lsfToValueInteger(lsfNumValue(lsfFromValueText(s), lsfFromValueInteger(base), lsfFromValueInteger(i), lsfFromValueInteger(n), lsfFromValueInteger(acc)))
 }
 
-// assayxportConditionsNumberTok on logical values — laws/conditions.lawspec:110.
+// assayxportConditionsNumberTok on logical values — laws/conditions.lawspec:135.
 func lawSpecEvaluateAssayxportConditionsNumberTok_2(
 	symbols map[string]*LawSpecSymbol,
 	s LawSpecValue,
@@ -10580,7 +11543,7 @@ func lawSpecEvaluateAssayxportConditionsNumberTok_2(
 	return lsfToValueMaybeTok(lsfNumberTok(lsfFromValueText(s)))
 }
 
-// assayxportConditionsPackageName on logical values — laws/conditions.lawspec:408.
+// assayxportConditionsPackageName on logical values — laws/conditions.lawspec:449.
 func lawSpecEvaluateAssayxportConditionsPackageName_2(
 	symbols map[string]*LawSpecSymbol,
 	p LawSpecValue,
@@ -10588,7 +11551,7 @@ func lawSpecEvaluateAssayxportConditionsPackageName_2(
 	return lsfToValueBool(lsfPackageName(lsfFromValueText(p)))
 }
 
-// assayxportConditionsPackagesKept on logical values — laws/conditions.lawspec:553.
+// assayxportConditionsPackagesKept on logical values — laws/conditions.lawspec:594.
 func lawSpecEvaluateAssayxportConditionsPackagesKept_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10597,7 +11560,7 @@ func lawSpecEvaluateAssayxportConditionsPackagesKept_2(
 	return lsfToValueListPackage(lsfPackagesKept(lsfFromValueEnv(env), lsfFromValueListPackage(ps)))
 }
 
-// assayxportConditionsPackagesNotes on logical values — laws/conditions.lawspec:557.
+// assayxportConditionsPackagesNotes on logical values — laws/conditions.lawspec:598.
 func lawSpecEvaluateAssayxportConditionsPackagesNotes_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10606,7 +11569,7 @@ func lawSpecEvaluateAssayxportConditionsPackagesNotes_2(
 	return lsfToValueListNote(lsfPackagesNotes(lsfFromValueEnv(env), lsfFromValueListPackage(ps)))
 }
 
-// assayxportConditionsPackagesUses on logical values — laws/conditions.lawspec:715.
+// assayxportConditionsPackagesUses on logical values — laws/conditions.lawspec:756.
 func lawSpecEvaluateAssayxportConditionsPackagesUses_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10615,7 +11578,7 @@ func lawSpecEvaluateAssayxportConditionsPackagesUses_2(
 	return lsfToValueListUseNote(lsfPackagesUses(lsfFromValueEnv(env), lsfFromValueListPackage(ps)))
 }
 
-// assayxportConditionsParseLevel on logical values — laws/conditions.lawspec:209.
+// assayxportConditionsParseLevel on logical values — laws/conditions.lawspec:234.
 func lawSpecEvaluateAssayxportConditionsParseLevel_2(
 	symbols map[string]*LawSpecSymbol,
 	lvl LawSpecValue,
@@ -10626,7 +11589,7 @@ func lawSpecEvaluateAssayxportConditionsParseLevel_2(
 	return lsfToValueMaybeParsed(lsfParseLevel(lsfFromValueInteger(lvl), lsfFromValueMaybeCExpr(acc), lsfFromValueListTok(toks), lsfFromValueInteger(fuel)))
 }
 
-// assayxportConditionsParseWhen on logical values — laws/conditions.lawspec:329.
+// assayxportConditionsParseWhen on logical values — laws/conditions.lawspec:370.
 func lawSpecEvaluateAssayxportConditionsParseWhen_2(
 	symbols map[string]*LawSpecSymbol,
 	text LawSpecValue,
@@ -10634,7 +11597,15 @@ func lawSpecEvaluateAssayxportConditionsParseWhen_2(
 	return lsfToValueMaybeCExpr(lsfParseWhen(lsfFromValueText(text)))
 }
 
-// assayxportConditionsPolicyAsTruth on logical values — laws/conditions_policy.lawspec:474.
+// assayxportConditionsPlainCodes on logical values — laws/conditions.lawspec:114.
+func lawSpecEvaluateAssayxportConditionsPlainCodes_2(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecValue,
+) LawSpecValue {
+	return lsfToValueText(lsfPlainCodes(lsfFromValueUnit(u)))
+}
+
+// assayxportConditionsPolicyAsTruth on logical values — laws/conditions_policy.lawspec:570.
 func lawSpecEvaluateAssayxportConditionsPolicyAsTruth_3(
 	symbols map[string]*LawSpecSymbol,
 	o LawSpecValue,
@@ -10642,7 +11613,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyAsTruth_3(
 	return lsfToValueOutcome(lsfAssayxportConditionsPolicyAsTruth(lsfFromValueOutcome(o)))
 }
 
-// assayxportConditionsPolicyBinary on logical values — laws/conditions_policy.lawspec:197.
+// assayxportConditionsPolicyBinary on logical values — laws/conditions_policy.lawspec:243.
 func lawSpecEvaluateAssayxportConditionsPolicyBinary_4(
 	symbols map[string]*LawSpecSymbol,
 	op LawSpecValue,
@@ -10652,7 +11623,19 @@ func lawSpecEvaluateAssayxportConditionsPolicyBinary_4(
 	return lsfToValueOutcome(lsfAssayxportConditionsPolicyBinary(lsfFromValueBinOp(op), lsfFromValueOutcome(l), lsfFromValueOutcome(r)))
 }
 
-// assayxportConditionsPolicyBindingErrorText on logical values — laws/conditions_policy.lawspec:1040.
+// assayxportConditionsPolicyBinaryAs on logical values — laws/conditions_policy.lawspec:263.
+func lawSpecEvaluateAssayxportConditionsPolicyBinaryAs_4(
+	symbols map[string]*LawSpecSymbol,
+	lu LawSpecValue,
+	ru LawSpecValue,
+	op LawSpecValue,
+	l LawSpecValue,
+	r LawSpecValue,
+) LawSpecValue {
+	return lsfToValueOutcome(lsfAssayxportConditionsPolicyBinaryAs(lsfFromValueBool(lu), lsfFromValueBool(ru), lsfFromValueBinOp(op), lsfFromValueOutcome(l), lsfFromValueOutcome(r)))
+}
+
+// assayxportConditionsPolicyBindingErrorText on logical values — laws/conditions_policy.lawspec:1224.
 func lawSpecEvaluateAssayxportConditionsPolicyBindingErrorText_2(
 	symbols map[string]*LawSpecSymbol,
 	origin LawSpecValue,
@@ -10661,7 +11644,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyBindingErrorText_2(
 	return lsfToValueText(lsfBindingErrorText(lsfFromValueText(origin), lsfFromValueBindingError(e)))
 }
 
-// assayxportConditionsPolicyBitsOf on logical values — laws/conditions_policy.lawspec:101.
+// assayxportConditionsPolicyBitsOf on logical values — laws/conditions_policy.lawspec:116.
 func lawSpecEvaluateAssayxportConditionsPolicyBitsOf_4(
 	symbols map[string]*LawSpecSymbol,
 	which LawSpecValue,
@@ -10672,7 +11655,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyBitsOf_4(
 	return lsfToValueInteger(lsfAssayxportConditionsPolicyBitsOf(lsfFromValueInteger(which), lsfFromValueInteger(a), lsfFromValueInteger(b), lsfFromValueInteger(n)))
 }
 
-// assayxportConditionsPolicyBitwise on logical values — laws/conditions_policy.lawspec:111.
+// assayxportConditionsPolicyBitwise on logical values — laws/conditions_policy.lawspec:126.
 func lawSpecEvaluateAssayxportConditionsPolicyBitwise_4(
 	symbols map[string]*LawSpecSymbol,
 	which LawSpecValue,
@@ -10682,7 +11665,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyBitwise_4(
 	return lsfToValueInteger(lsfAssayxportConditionsPolicyBitwise(lsfFromValueInteger(which), lsfFromValueInteger(a), lsfFromValueInteger(b)))
 }
 
-// assayxportConditionsPolicyBlockOf on logical values — laws/conditions_policy.lawspec:1406.
+// assayxportConditionsPolicyBlockOf on logical values — laws/conditions_policy.lawspec:1596.
 func lawSpecEvaluateAssayxportConditionsPolicyBlockOf_3(
 	symbols map[string]*LawSpecSymbol,
 	name LawSpecValue,
@@ -10691,7 +11674,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyBlockOf_3(
 	return lsfToValueListText(lsfAssayxportConditionsPolicyBlockOf(lsfFromValueText(name), lsfFromValueListUsePlace(uses)))
 }
 
-// assayxportConditionsPolicyBound on logical values — laws/conditions_policy.lawspec:1085.
+// assayxportConditionsPolicyBound on logical values — laws/conditions_policy.lawspec:1269.
 func lawSpecEvaluateAssayxportConditionsPolicyBound_3(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10700,7 +11683,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyBound_3(
 	return lsfToValueEnv(lsfAssayxportConditionsPolicyBound(lsfFromValueEnv(env), lsfFromValueBindingLine(b)))
 }
 
-// assayxportConditionsPolicyBroken on logical values — laws/conditions_policy.lawspec:371.
+// assayxportConditionsPolicyBroken on logical values — laws/conditions_policy.lawspec:465.
 func lawSpecEvaluateAssayxportConditionsPolicyBroken_4(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10709,7 +11692,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyBroken_4(
 	return lsfToValueBool(lsfAssayxportConditionsPolicyBroken(lsfFromValueEnv(env), lsfFromValueCExpr(e)))
 }
 
-// assayxportConditionsPolicyBuildCap on logical values — laws/conditions_policy.lawspec:503.
+// assayxportConditionsPolicyBuildCap on logical values — laws/conditions_policy.lawspec:599.
 func lawSpecEvaluateAssayxportConditionsPolicyBuildCap_4(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecValue,
@@ -10717,7 +11700,16 @@ func lawSpecEvaluateAssayxportConditionsPolicyBuildCap_4(
 	return lsfToValueInteger(lsfAssayxportConditionsPolicyBuildCap(lsfFromValueUnit(u)))
 }
 
-// assayxportConditionsPolicyCompleted on logical values — laws/conditions_policy.lawspec:778.
+// assayxportConditionsPolicyComma on logical values — laws/conditions_policy.lawspec:249.
+func lawSpecEvaluateAssayxportConditionsPolicyComma_4(
+	symbols map[string]*LawSpecSymbol,
+	l LawSpecValue,
+	r LawSpecValue,
+) LawSpecValue {
+	return lsfToValueOutcome(lsfAssayxportConditionsPolicyComma(lsfFromValueOutcome(l), lsfFromValueOutcome(r)))
+}
+
+// assayxportConditionsPolicyCompleted on logical values — laws/conditions_policy.lawspec:898.
 func lawSpecEvaluateAssayxportConditionsPolicyCompleted_4(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10725,7 +11717,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyCompleted_4(
 	return lsfToValueEnv(lsfAssayxportConditionsPolicyCompleted(lsfFromValueEnv(env)))
 }
 
-// assayxportConditionsPolicyComponent on logical values — laws/conditions_policy.lawspec:308.
+// assayxportConditionsPolicyComponent on logical values — laws/conditions_policy.lawspec:375.
 func lawSpecEvaluateAssayxportConditionsPolicyComponent_4(
 	symbols map[string]*LawSpecSymbol,
 	v LawSpecValue,
@@ -10734,25 +11726,27 @@ func lawSpecEvaluateAssayxportConditionsPolicyComponent_4(
 	return lsfToValueInteger(lsfAssayxportConditionsPolicyComponent(lsfFromValueListInteger(v), lsfFromValueInteger(i)))
 }
 
-// assayxportConditionsPolicyCompute on logical values — laws/conditions_policy.lawspec:131.
-func lawSpecEvaluateAssayxportConditionsPolicyCompute_4(
+// assayxportConditionsPolicyComputeAs on logical values — laws/conditions_policy.lawspec:174.
+func lawSpecEvaluateAssayxportConditionsPolicyComputeAs_4(
 	symbols map[string]*LawSpecSymbol,
+	lu LawSpecValue,
+	ru LawSpecValue,
 	op LawSpecValue,
 	a LawSpecValue,
 	b LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueOutcome(lsfAssayxportConditionsPolicyCompute(lsfFromValueBinOp(op), lsfFromValueInteger(a), lsfFromValueInteger(b)))
+	return lsfToValueOutcome(lsfAssayxportConditionsPolicyComputeAs(lsfFromValueBool(lu), lsfFromValueBool(ru), lsfFromValueBinOp(op), lsfFromValueInteger(a), lsfFromValueInteger(b)))
 }
 
-// assayxportConditionsPolicyConditionText on logical values — laws/conditions_policy.lawspec:469.
-func lawSpecEvaluateAssayxportConditionsPolicyConditionText_3(
+// assayxportConditionsPolicyConditionText on logical values — laws/conditions_policy.lawspec:565.
+func lawSpecEvaluateAssayxportConditionsPolicyConditionText_4(
 	symbols map[string]*LawSpecSymbol,
 	cs LawSpecValue,
 ) LawSpecValue {
 	return lsfToValueText(lsfAssayxportConditionsPolicyConditionText(lsfFromValueListListLiteral(cs)))
 }
 
-// assayxportConditionsPolicyConditional on logical values — laws/conditions_policy.lawspec:234.
+// assayxportConditionsPolicyConditional on logical values — laws/conditions_policy.lawspec:301.
 func lawSpecEvaluateAssayxportConditionsPolicyConditional_4(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -10762,23 +11756,23 @@ func lawSpecEvaluateAssayxportConditionsPolicyConditional_4(
 	return lsfToValueOutcome(lsfAssayxportConditionsPolicyConditional(lsfFromValueOutcome(t_), lsfFromValueOutcome(y), lsfFromValueOutcome(n)))
 }
 
-// assayxportConditionsPolicyCubeText on logical values — laws/conditions_policy.lawspec:451.
-func lawSpecEvaluateAssayxportConditionsPolicyCubeText_3(
+// assayxportConditionsPolicyCubeText on logical values — laws/conditions_policy.lawspec:547.
+func lawSpecEvaluateAssayxportConditionsPolicyCubeText_4(
 	symbols map[string]*LawSpecSymbol,
 	ls LawSpecValue,
 ) LawSpecValue {
 	return lsfToValueText(lsfAssayxportConditionsPolicyCubeText(lsfFromValueListLiteral(ls)))
 }
 
-// assayxportConditionsPolicyCubesText on logical values — laws/conditions_policy.lawspec:458.
-func lawSpecEvaluateAssayxportConditionsPolicyCubesText_3(
+// assayxportConditionsPolicyCubesText on logical values — laws/conditions_policy.lawspec:554.
+func lawSpecEvaluateAssayxportConditionsPolicyCubesText_4(
 	symbols map[string]*LawSpecSymbol,
 	cs LawSpecValue,
 ) LawSpecValue {
 	return lsfToValueText(lsfAssayxportConditionsPolicyCubesText(lsfFromValueListListLiteral(cs)))
 }
 
-// assayxportConditionsPolicyDecisionsHeader on logical values — laws/conditions_policy.lawspec:1365.
+// assayxportConditionsPolicyDecisionsHeader on logical values — laws/conditions_policy.lawspec:1555.
 func lawSpecEvaluateAssayxportConditionsPolicyDecisionsHeader_3(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecValue,
@@ -10786,7 +11780,15 @@ func lawSpecEvaluateAssayxportConditionsPolicyDecisionsHeader_3(
 	return lsfToValueListText(lsfAssayxportConditionsPolicyDecisionsHeader(lsfFromValueUnit(u)))
 }
 
-// assayxportConditionsPolicyDefinedAs on logical values — laws/conditions_policy.lawspec:1082.
+// assayxportConditionsPolicyDecisionsPath on logical values — laws/conditions_policy.lawspec:1553.
+func lawSpecEvaluateAssayxportConditionsPolicyDecisionsPath_3(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecValue,
+) LawSpecValue {
+	return lsfToValueText(lsfAssayxportConditionsPolicyDecisionsPath(lsfFromValueUnit(u)))
+}
+
+// assayxportConditionsPolicyDefinedAs on logical values — laws/conditions_policy.lawspec:1266.
 func lawSpecEvaluateAssayxportConditionsPolicyDefinedAs_4(
 	symbols map[string]*LawSpecSymbol,
 	v LawSpecValue,
@@ -10794,7 +11796,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyDefinedAs_4(
 	return lsfToValueBinding(lsfAssayxportConditionsPolicyDefinedAs(lsfFromValueInteger(v)))
 }
 
-// assayxportConditionsPolicyDefinedOf on logical values — laws/conditions_policy.lawspec:286.
+// assayxportConditionsPolicyDefinedOf on logical values — laws/conditions_policy.lawspec:353.
 func lawSpecEvaluateAssayxportConditionsPolicyDefinedOf_4(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10803,7 +11805,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyDefinedOf_4(
 	return lsfToValueOutcome(lsfAssayxportConditionsPolicyDefinedOf(lsfFromValueEnv(env), lsfFromValueText(n)))
 }
 
-// assayxportConditionsPolicyDefinedOf2 on logical values — laws/conditions_policy.lawspec:299.
+// assayxportConditionsPolicyDefinedOf2 on logical values — laws/conditions_policy.lawspec:366.
 func lawSpecEvaluateAssayxportConditionsPolicyDefinedOf2_4(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10812,7 +11814,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyDefinedOf2_4(
 	return lsfToValueOutcome(lsfAssayxportConditionsPolicyDefinedOf2(lsfFromValueEnv(env), lsfFromValueText(n)))
 }
 
-// assayxportConditionsPolicyDepthAfter on logical values — laws/conditions_policy.lawspec:511.
+// assayxportConditionsPolicyDepthAfter on logical values — laws/conditions_policy.lawspec:615.
 func lawSpecEvaluateAssayxportConditionsPolicyDepthAfter(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -10823,15 +11825,15 @@ func lawSpecEvaluateAssayxportConditionsPolicyDepthAfter(
 	return lsfToValueInteger(lsfDepthAfter(lsfFromValueText(t_), lsfFromValueInteger(i), lsfFromValueInteger(n), lsfFromValueInteger(d)))
 }
 
-// assayxportConditionsPolicyEmptyCube on logical values — laws/conditions_policy.lawspec:465.
-func lawSpecEvaluateAssayxportConditionsPolicyEmptyCube_3(
+// assayxportConditionsPolicyEmptyCube on logical values — laws/conditions_policy.lawspec:561.
+func lawSpecEvaluateAssayxportConditionsPolicyEmptyCube_4(
 	symbols map[string]*LawSpecSymbol,
 	ls LawSpecValue,
 ) LawSpecValue {
 	return lsfToValueBool(lsfAssayxportConditionsPolicyEmptyCube(lsfFromValueListLiteral(ls)))
 }
 
-// assayxportConditionsPolicyEmptyEnv on logical values — laws/conditions_policy.lawspec:780.
+// assayxportConditionsPolicyEmptyEnv on logical values — laws/conditions_policy.lawspec:900.
 func lawSpecEvaluateAssayxportConditionsPolicyEmptyEnv_4(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecValue,
@@ -10839,7 +11841,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyEmptyEnv_4(
 	return lsfToValueEnv(lsfAssayxportConditionsPolicyEmptyEnv(lsfFromValueUnit(u)))
 }
 
-// assayxportConditionsPolicyEnvFrom on logical values — laws/conditions_policy.lawspec:1099.
+// assayxportConditionsPolicyEnvFrom on logical values — laws/conditions_policy.lawspec:1283.
 func lawSpecEvaluateAssayxportConditionsPolicyEnvFrom_3(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10848,7 +11850,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyEnvFrom_3(
 	return lsfToValueEnv(lsfAssayxportConditionsPolicyEnvFrom(lsfFromValueEnv(env), lsfFromValueListBindingLine(bs)))
 }
 
-// assayxportConditionsPolicyEvalIn on logical values — laws/conditions_policy.lawspec:390.
+// assayxportConditionsPolicyEvalIn on logical values — laws/conditions_policy.lawspec:485.
 func lawSpecEvaluateAssayxportConditionsPolicyEvalIn_4(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10857,7 +11859,15 @@ func lawSpecEvaluateAssayxportConditionsPolicyEvalIn_4(
 	return lsfToValueOutcome(lsfAssayxportConditionsPolicyEvalIn(lsfFromValueEnv(env), lsfFromValueCExpr(e)))
 }
 
-// assayxportConditionsPolicyFromInt64 on logical values — laws/conditions_policy.lawspec:90.
+// assayxportConditionsPolicyFileDefinedTerm on logical values — laws/conditions_policy.lawspec:613.
+func lawSpecEvaluateAssayxportConditionsPolicyFileDefinedTerm_3(
+	symbols map[string]*LawSpecSymbol,
+	line LawSpecValue,
+) LawSpecValue {
+	return lsfToValueText(lsfFileDefinedTerm(lsfFromValueInteger(line)))
+}
+
+// assayxportConditionsPolicyFromInt64 on logical values — laws/conditions_policy.lawspec:104.
 func lawSpecEvaluateAssayxportConditionsPolicyFromInt64_4(
 	symbols map[string]*LawSpecSymbol,
 	x LawSpecValue,
@@ -10865,7 +11875,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyFromInt64_4(
 	return lsfToValueInteger(lsfAssayxportConditionsPolicyFromInt64(lsfFromValueInt64(x)))
 }
 
-// assayxportConditionsPolicyGhcName on logical values — laws/conditions_policy.lawspec:278.
+// assayxportConditionsPolicyGhcName on logical values — laws/conditions_policy.lawspec:345.
 func lawSpecEvaluateAssayxportConditionsPolicyGhcName_4(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecValue,
@@ -10873,7 +11883,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyGhcName_4(
 	return lsfToValueText(lsfAssayxportConditionsPolicyGhcName(lsfFromValueUnit(u)))
 }
 
-// assayxportConditionsPolicyHalved on logical values — laws/conditions_policy.lawspec:119.
+// assayxportConditionsPolicyHalved on logical values — laws/conditions_policy.lawspec:134.
 func lawSpecEvaluateAssayxportConditionsPolicyHalved_4(
 	symbols map[string]*LawSpecSymbol,
 	a LawSpecValue,
@@ -10882,7 +11892,16 @@ func lawSpecEvaluateAssayxportConditionsPolicyHalved_4(
 	return lsfToValueInteger(lsfAssayxportConditionsPolicyHalved(lsfFromValueInteger(a), lsfFromValueInteger(n)))
 }
 
-// assayxportConditionsPolicyInitNothingText on logical values — laws/conditions_policy.lawspec:1525.
+// assayxportConditionsPolicyHalvedU on logical values — laws/conditions_policy.lawspec:158.
+func lawSpecEvaluateAssayxportConditionsPolicyHalvedU_4(
+	symbols map[string]*LawSpecSymbol,
+	a LawSpecValue,
+	n LawSpecValue,
+) LawSpecValue {
+	return lsfToValueInteger(lsfAssayxportConditionsPolicyHalvedU(lsfFromValueInteger(a), lsfFromValueInteger(n)))
+}
+
+// assayxportConditionsPolicyInitNothingText on logical values — laws/conditions_policy.lawspec:1715.
 func lawSpecEvaluateAssayxportConditionsPolicyInitNothingText(
 	symbols map[string]*LawSpecSymbol,
 	root LawSpecValue,
@@ -10891,7 +11910,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyInitNothingText(
 	return lsfToValueText(lsfInitNothingText(lsfFromValueText(root), lsfFromValueFiltered(f)))
 }
 
-// assayxportConditionsPolicyInitWarnings on logical values — laws/conditions_policy.lawspec:1522.
+// assayxportConditionsPolicyInitWarnings on logical values — laws/conditions_policy.lawspec:1712.
 func lawSpecEvaluateAssayxportConditionsPolicyInitWarnings(
 	symbols map[string]*LawSpecSymbol,
 	f LawSpecValue,
@@ -10899,7 +11918,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyInitWarnings(
 	return lsfToValueListText(lsfInitWarnings(lsfFromValueFiltered(f)))
 }
 
-// assayxportConditionsPolicyIsBad on logical values — laws/conditions_policy.lawspec:170.
+// assayxportConditionsPolicyIsBad on logical values — laws/conditions_policy.lawspec:216.
 func lawSpecEvaluateAssayxportConditionsPolicyIsBad_4(
 	symbols map[string]*LawSpecSymbol,
 	o LawSpecValue,
@@ -10907,7 +11926,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyIsBad_4(
 	return lsfToValueBool(lsfAssayxportConditionsPolicyIsBad(lsfFromValueOutcome(o)))
 }
 
-// assayxportConditionsPolicyIsDivision on logical values — laws/conditions_policy.lawspec:195.
+// assayxportConditionsPolicyIsDivision on logical values — laws/conditions_policy.lawspec:241.
 func lawSpecEvaluateAssayxportConditionsPolicyIsDivision_4(
 	symbols map[string]*LawSpecSymbol,
 	op LawSpecValue,
@@ -10915,7 +11934,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyIsDivision_4(
 	return lsfToValueBool(lsfAssayxportConditionsPolicyIsDivision(lsfFromValueBinOp(op)))
 }
 
-// assayxportConditionsPolicyIsVersionName on logical values — laws/conditions_policy.lawspec:276.
+// assayxportConditionsPolicyIsVersionName on logical values — laws/conditions_policy.lawspec:343.
 func lawSpecEvaluateAssayxportConditionsPolicyIsVersionName_4(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
@@ -10923,7 +11942,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyIsVersionName_4(
 	return lsfToValueBool(lsfAssayxportConditionsPolicyIsVersionName(lsfFromValueText(n)))
 }
 
-// assayxportConditionsPolicyLessOr on logical values — laws/conditions_policy.lawspec:312.
+// assayxportConditionsPolicyLessOr on logical values — laws/conditions_policy.lawspec:379.
 func lawSpecEvaluateAssayxportConditionsPolicyLessOr_4(
 	symbols map[string]*LawSpecSymbol,
 	a LawSpecValue,
@@ -10932,15 +11951,15 @@ func lawSpecEvaluateAssayxportConditionsPolicyLessOr_4(
 	return lsfToValueOutcome(lsfAssayxportConditionsPolicyLessOr(lsfFromValueOutcome(a), lsfFromValueInteger(x)))
 }
 
-// assayxportConditionsPolicyLitText on logical values — laws/conditions_policy.lawspec:447.
-func lawSpecEvaluateAssayxportConditionsPolicyLitText_3(
+// assayxportConditionsPolicyLitText on logical values — laws/conditions_policy.lawspec:543.
+func lawSpecEvaluateAssayxportConditionsPolicyLitText_4(
 	symbols map[string]*LawSpecSymbol,
 	l LawSpecValue,
 ) LawSpecValue {
 	return lsfToValueText(lsfAssayxportConditionsPolicyLitText(lsfFromValueLiteral(l)))
 }
 
-// assayxportConditionsPolicyLogical on logical values — laws/conditions_policy.lawspec:176.
+// assayxportConditionsPolicyLogical on logical values — laws/conditions_policy.lawspec:222.
 func lawSpecEvaluateAssayxportConditionsPolicyLogical_4(
 	symbols map[string]*LawSpecSymbol,
 	isAnd LawSpecValue,
@@ -10950,7 +11969,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyLogical_4(
 	return lsfToValueOutcome(lsfAssayxportConditionsPolicyLogical(lsfFromValueBool(isAnd), lsfFromValueOutcome(l), lsfFromValueOutcome(r)))
 }
 
-// assayxportConditionsPolicyMacroName on logical values — laws/conditions_policy.lawspec:1073.
+// assayxportConditionsPolicyMacroName on logical values — laws/conditions_policy.lawspec:1257.
 func lawSpecEvaluateAssayxportConditionsPolicyMacroName_3(
 	symbols map[string]*LawSpecSymbol,
 	p LawSpecValue,
@@ -10959,15 +11978,15 @@ func lawSpecEvaluateAssayxportConditionsPolicyMacroName_3(
 	return lsfToValueText(lsfAssayxportConditionsPolicyMacroName(lsfFromValueText(p), lsfFromValueInteger(fuel)))
 }
 
-// assayxportConditionsPolicyMaxLit on logical values — laws/conditions_policy.lawspec:95.
-func lawSpecEvaluateAssayxportConditionsPolicyMaxLit_4(
+// assayxportConditionsPolicyMaxULit on logical values — laws/conditions_policy.lawspec:110.
+func lawSpecEvaluateAssayxportConditionsPolicyMaxULit_4(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueInteger(lsfAssayxportConditionsPolicyMaxLit(lsfFromValueUnit(u)))
+	return lsfToValueInteger(lsfAssayxportConditionsPolicyMaxULit(lsfFromValueUnit(u)))
 }
 
-// assayxportConditionsPolicyMinGhc on logical values — laws/conditions_policy.lawspec:330.
+// assayxportConditionsPolicyMinGhc on logical values — laws/conditions_policy.lawspec:397.
 func lawSpecEvaluateAssayxportConditionsPolicyMinGhc_4(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -10979,7 +11998,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyMinGhc_4(
 	return lsfToValueOutcome(lsfAssayxportConditionsPolicyMinGhc(lsfFromValueEnv(env), lsfFromValueOutcome(ma), lsfFromValueOutcome(mi), lsfFromValueOutcome(p1), lsfFromValueOutcome(p2)))
 }
 
-// assayxportConditionsPolicyMinVersion on logical values — laws/conditions_policy.lawspec:318.
+// assayxportConditionsPolicyMinVersion on logical values — laws/conditions_policy.lawspec:385.
 func lawSpecEvaluateAssayxportConditionsPolicyMinVersion_4(
 	symbols map[string]*LawSpecSymbol,
 	v LawSpecValue,
@@ -10990,7 +12009,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyMinVersion_4(
 	return lsfToValueOutcome(lsfAssayxportConditionsPolicyMinVersion(lsfFromValueListInteger(v), lsfFromValueOutcome(a), lsfFromValueOutcome(b), lsfFromValueOutcome(m_)))
 }
 
-// assayxportConditionsPolicyMissingAll on logical values — laws/conditions_policy.lawspec:346.
+// assayxportConditionsPolicyMissingAll on logical values — laws/conditions_policy.lawspec:413.
 func lawSpecEvaluateAssayxportConditionsPolicyMissingAll_4(
 	symbols map[string]*LawSpecSymbol,
 	os_ LawSpecValue,
@@ -10998,7 +12017,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyMissingAll_4(
 	return lsfToValueListText(lsfAssayxportConditionsPolicyMissingAll(lsfFromValueListOutcome(os_)))
 }
 
-// assayxportConditionsPolicyMissingOf on logical values — laws/conditions_policy.lawspec:161.
+// assayxportConditionsPolicyMissingOf on logical values — laws/conditions_policy.lawspec:207.
 func lawSpecEvaluateAssayxportConditionsPolicyMissingOf_4(
 	symbols map[string]*LawSpecSymbol,
 	o LawSpecValue,
@@ -11006,7 +12025,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyMissingOf_4(
 	return lsfToValueListText(lsfAssayxportConditionsPolicyMissingOf(lsfFromValueOutcome(o)))
 }
 
-// assayxportConditionsPolicyMix on logical values — laws/conditions_policy.lawspec:641.
+// assayxportConditionsPolicyMix on logical values — laws/conditions_policy.lawspec:751.
 func lawSpecEvaluateAssayxportConditionsPolicyMix_4(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -11015,15 +12034,15 @@ func lawSpecEvaluateAssayxportConditionsPolicyMix_4(
 	return lsfToValueInteger(lsfAssayxportConditionsPolicyMix(lsfFromValueInteger(seed_), lsfFromValueInteger(k)))
 }
 
-// assayxportConditionsPolicyNotDefined on logical values — laws/conditions_policy.lawspec:1083.
-func lawSpecEvaluateAssayxportConditionsPolicyNotDefined_3(
+// assayxportConditionsPolicyNotDefined on logical values — laws/conditions_policy.lawspec:1267.
+func lawSpecEvaluateAssayxportConditionsPolicyNotDefined_4(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecValue,
 ) LawSpecValue {
 	return lsfToValueBinding(lsfAssayxportConditionsPolicyNotDefined(lsfFromValueUnit(u)))
 }
 
-// assayxportConditionsPolicyPackageOf on logical values — laws/conditions_policy.lawspec:1375.
+// assayxportConditionsPolicyPackageOf on logical values — laws/conditions_policy.lawspec:1565.
 func lawSpecEvaluateAssayxportConditionsPolicyPackageOf_3(
 	symbols map[string]*LawSpecSymbol,
 	m_ LawSpecValue,
@@ -11032,7 +12051,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyPackageOf_3(
 	return lsfToValueText(lsfAssayxportConditionsPolicyPackageOf(lsfFromValueText(m_), lsfFromValueInteger(fuel)))
 }
 
-// assayxportConditionsPolicyPackageState on logical values — laws/conditions_policy.lawspec:271.
+// assayxportConditionsPolicyPackageState on logical values — laws/conditions_policy.lawspec:338.
 func lawSpecEvaluateAssayxportConditionsPolicyPackageState_4(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -11041,7 +12060,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyPackageState_4(
 	return lsfToValueInteger(lsfAssayxportConditionsPolicyPackageState(lsfFromValueEnv(env), lsfFromValueText(p)))
 }
 
-// assayxportConditionsPolicyPaired on logical values — laws/conditions_policy.lawspec:519.
+// assayxportConditionsPolicyPaired on logical values — laws/conditions_policy.lawspec:623.
 func lawSpecEvaluateAssayxportConditionsPolicyPaired(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -11049,7 +12068,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyPaired(
 	return lsfToValueBool(lsfPaired(lsfFromValueText(t_)))
 }
 
-// assayxportConditionsPolicyPick on logical values — laws/conditions_policy.lawspec:645.
+// assayxportConditionsPolicyPick on logical values — laws/conditions_policy.lawspec:755.
 func lawSpecEvaluateAssayxportConditionsPolicyPick_4(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -11059,7 +12078,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyPick_4(
 	return lsfToValueInteger(lsfAssayxportConditionsPolicyPick(lsfFromValueInteger(seed_), lsfFromValueInteger(k), lsfFromValueInteger(n)))
 }
 
-// assayxportConditionsPolicyPow2 on logical values — laws/conditions_policy.lawspec:93.
+// assayxportConditionsPolicyPow2 on logical values — laws/conditions_policy.lawspec:107.
 func lawSpecEvaluateAssayxportConditionsPolicyPow2_4(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
@@ -11067,7 +12086,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyPow2_4(
 	return lsfToValueInteger(lsfAssayxportConditionsPolicyPow2(lsfFromValueInteger(n)))
 }
 
-// assayxportConditionsPolicyRefEval on logical values — laws/conditions_policy.lawspec:412.
+// assayxportConditionsPolicyRefEval on logical values — laws/conditions_policy.lawspec:508.
 func lawSpecEvaluateAssayxportConditionsPolicyRefEval_4(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -11076,7 +12095,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyRefEval_4(
 	return lsfToValueOutcome(lsfAssayxportConditionsPolicyRefEval(lsfFromValueEnv(env), lsfFromValueCExpr(e)))
 }
 
-// assayxportConditionsPolicyRiskyOf on logical values — laws/conditions_policy.lawspec:166.
+// assayxportConditionsPolicyRiskyOf on logical values — laws/conditions_policy.lawspec:212.
 func lawSpecEvaluateAssayxportConditionsPolicyRiskyOf_4(
 	symbols map[string]*LawSpecSymbol,
 	o LawSpecValue,
@@ -11084,7 +12103,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyRiskyOf_4(
 	return lsfToValueBool(lsfAssayxportConditionsPolicyRiskyOf(lsfFromValueOutcome(o)))
 }
 
-// assayxportConditionsPolicySame on logical values — laws/conditions_policy.lawspec:313.
+// assayxportConditionsPolicySame on logical values — laws/conditions_policy.lawspec:380.
 func lawSpecEvaluateAssayxportConditionsPolicySame_4(
 	symbols map[string]*LawSpecSymbol,
 	a LawSpecValue,
@@ -11093,7 +12112,7 @@ func lawSpecEvaluateAssayxportConditionsPolicySame_4(
 	return lsfToValueOutcome(lsfAssayxportConditionsPolicySame(lsfFromValueOutcome(a), lsfFromValueInteger(x)))
 }
 
-// assayxportConditionsPolicyShiftLeft on logical values — laws/conditions_policy.lawspec:116.
+// assayxportConditionsPolicyShiftLeft on logical values — laws/conditions_policy.lawspec:131.
 func lawSpecEvaluateAssayxportConditionsPolicyShiftLeft_4(
 	symbols map[string]*LawSpecSymbol,
 	a LawSpecValue,
@@ -11102,7 +12121,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyShiftLeft_4(
 	return lsfToValueInteger(lsfAssayxportConditionsPolicyShiftLeft(lsfFromValueInteger(a), lsfFromValueInteger(n)))
 }
 
-// assayxportConditionsPolicyShiftRight on logical values — laws/conditions_policy.lawspec:123.
+// assayxportConditionsPolicyShiftRight on logical values — laws/conditions_policy.lawspec:138.
 func lawSpecEvaluateAssayxportConditionsPolicyShiftRight_4(
 	symbols map[string]*LawSpecSymbol,
 	a LawSpecValue,
@@ -11111,7 +12130,26 @@ func lawSpecEvaluateAssayxportConditionsPolicyShiftRight_4(
 	return lsfToValueInteger(lsfAssayxportConditionsPolicyShiftRight(lsfFromValueInteger(a), lsfFromValueInteger(n)))
 }
 
-// assayxportConditionsPolicyShownLine on logical values — laws/conditions_policy.lawspec:1033.
+// assayxportConditionsPolicyShiftRightAs on logical values — laws/conditions_policy.lawspec:166.
+func lawSpecEvaluateAssayxportConditionsPolicyShiftRightAs_4(
+	symbols map[string]*LawSpecSymbol,
+	lu LawSpecValue,
+	a LawSpecValue,
+	n LawSpecValue,
+) LawSpecValue {
+	return lsfToValueInteger(lsfAssayxportConditionsPolicyShiftRightAs(lsfFromValueBool(lu), lsfFromValueInteger(a), lsfFromValueInteger(n)))
+}
+
+// assayxportConditionsPolicyShiftRightU on logical values — laws/conditions_policy.lawspec:162.
+func lawSpecEvaluateAssayxportConditionsPolicyShiftRightU_4(
+	symbols map[string]*LawSpecSymbol,
+	a LawSpecValue,
+	n LawSpecValue,
+) LawSpecValue {
+	return lsfToValueInteger(lsfAssayxportConditionsPolicyShiftRightU(lsfFromValueInteger(a), lsfFromValueInteger(n)))
+}
+
+// assayxportConditionsPolicyShownLine on logical values — laws/conditions_policy.lawspec:1217.
 func lawSpecEvaluateAssayxportConditionsPolicyShownLine_2(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -11120,15 +12158,15 @@ func lawSpecEvaluateAssayxportConditionsPolicyShownLine_2(
 	return lsfToValueText(lsfShownLine(lsfFromValueText(t_), lsfFromValueInteger(fuel)))
 }
 
-// assayxportConditionsPolicySimple on logical values — laws/conditions_policy.lawspec:445.
-func lawSpecEvaluateAssayxportConditionsPolicySimple_3(
+// assayxportConditionsPolicySimple on logical values — laws/conditions_policy.lawspec:541.
+func lawSpecEvaluateAssayxportConditionsPolicySimple_4(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
 ) LawSpecValue {
 	return lsfToValueBool(lsfAssayxportConditionsPolicySimple(lsfFromValueText(t_)))
 }
 
-// assayxportConditionsPolicySorted on logical values — laws/conditions_policy.lawspec:157.
+// assayxportConditionsPolicySorted on logical values — laws/conditions_policy.lawspec:203.
 func lawSpecEvaluateAssayxportConditionsPolicySorted_4(
 	symbols map[string]*LawSpecSymbol,
 	ns LawSpecValue,
@@ -11136,7 +12174,7 @@ func lawSpecEvaluateAssayxportConditionsPolicySorted_4(
 	return lsfToValueListText(lsfAssayxportConditionsPolicySorted(lsfFromValueListText(ns)))
 }
 
-// assayxportConditionsPolicyToInt64 on logical values — laws/conditions_policy.lawspec:89.
+// assayxportConditionsPolicyToInt64 on logical values — laws/conditions_policy.lawspec:103.
 func lawSpecEvaluateAssayxportConditionsPolicyToInt64_4(
 	symbols map[string]*LawSpecSymbol,
 	x LawSpecValue,
@@ -11144,7 +12182,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyToInt64_4(
 	return lsfToValueInt64(lsfAssayxportConditionsPolicyToInt64(lsfFromValueInteger(x)))
 }
 
-// assayxportConditionsPolicyTruth on logical values — laws/conditions_policy.lawspec:127.
+// assayxportConditionsPolicyTruth on logical values — laws/conditions_policy.lawspec:142.
 func lawSpecEvaluateAssayxportConditionsPolicyTruth_4(
 	symbols map[string]*LawSpecSymbol,
 	b LawSpecValue,
@@ -11152,7 +12190,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyTruth_4(
 	return lsfToValueInteger(lsfAssayxportConditionsPolicyTruth(lsfFromValueBool(b)))
 }
 
-// assayxportConditionsPolicyUnary on logical values — laws/conditions_policy.lawspec:218.
+// assayxportConditionsPolicyUnary on logical values — laws/conditions_policy.lawspec:285.
 func lawSpecEvaluateAssayxportConditionsPolicyUnary_4(
 	symbols map[string]*LawSpecSymbol,
 	op LawSpecValue,
@@ -11161,7 +12199,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyUnary_4(
 	return lsfToValueOutcome(lsfAssayxportConditionsPolicyUnary(lsfFromValueUnOp(op), lsfFromValueOutcome(o)))
 }
 
-// assayxportConditionsPolicyUndecidedLine on logical values — laws/conditions_policy.lawspec:1381.
+// assayxportConditionsPolicyUndecidedLine on logical values — laws/conditions_policy.lawspec:1571.
 func lawSpecEvaluateAssayxportConditionsPolicyUndecidedLine_3(
 	symbols map[string]*LawSpecSymbol,
 	name LawSpecValue,
@@ -11169,7 +12207,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyUndecidedLine_3(
 	return lsfToValueText(lsfAssayxportConditionsPolicyUndecidedLine(lsfFromValueText(name)))
 }
 
-// assayxportConditionsPolicyUnknown on logical values — laws/conditions_policy.lawspec:159.
+// assayxportConditionsPolicyUnknown on logical values — laws/conditions_policy.lawspec:205.
 func lawSpecEvaluateAssayxportConditionsPolicyUnknown_4(
 	symbols map[string]*LawSpecSymbol,
 	ns LawSpecValue,
@@ -11178,7 +12216,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyUnknown_4(
 	return lsfToValueOutcome(lsfAssayxportConditionsPolicyUnknown(lsfFromValueListText(ns), lsfFromValueBool(risky)))
 }
 
-// assayxportConditionsPolicyUnknownCall on logical values — laws/conditions_policy.lawspec:342.
+// assayxportConditionsPolicyUnknownCall on logical values — laws/conditions_policy.lawspec:409.
 func lawSpecEvaluateAssayxportConditionsPolicyUnknownCall_4(
 	symbols map[string]*LawSpecSymbol,
 	name LawSpecValue,
@@ -11187,7 +12225,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyUnknownCall_4(
 	return lsfToValueOutcome(lsfAssayxportConditionsPolicyUnknownCall(lsfFromValueText(name), lsfFromValueListOutcome(args)))
 }
 
-// assayxportConditionsPolicyUnlisted on logical values — laws/conditions_policy.lawspec:1149.
+// assayxportConditionsPolicyUnlisted on logical values — laws/conditions_policy.lawspec:1333.
 func lawSpecEvaluateAssayxportConditionsPolicyUnlisted_3(
 	symbols map[string]*LawSpecSymbol,
 	missing LawSpecValue,
@@ -11196,7 +12234,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyUnlisted_3(
 	return lsfToValueListText(lsfAssayxportConditionsPolicyUnlisted(lsfFromValueListText(missing), lsfFromValueListText(listed)))
 }
 
-// assayxportConditionsPolicyUnreadDecl on logical values — laws/conditions_policy.lawspec:1184.
+// assayxportConditionsPolicyUnreadDecl on logical values — laws/conditions_policy.lawspec:1368.
 func lawSpecEvaluateAssayxportConditionsPolicyUnreadDecl_3(
 	symbols map[string]*LawSpecSymbol,
 	d LawSpecValue,
@@ -11204,7 +12242,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyUnreadDecl_3(
 	return lsfToValueBool(lsfAssayxportConditionsPolicyUnreadDecl(lsfFromValueDecl(d)))
 }
 
-// assayxportConditionsPolicyUnreadEdge on logical values — laws/conditions_policy.lawspec:1182.
+// assayxportConditionsPolicyUnreadEdge on logical values — laws/conditions_policy.lawspec:1366.
 func lawSpecEvaluateAssayxportConditionsPolicyUnreadEdge_3(
 	symbols map[string]*LawSpecSymbol,
 	e LawSpecValue,
@@ -11212,7 +12250,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyUnreadEdge_3(
 	return lsfToValueBool(lsfAssayxportConditionsPolicyUnreadEdge(lsfFromValueCallEdge(e)))
 }
 
-// assayxportConditionsPolicyUnreadLine on logical values — laws/conditions_policy.lawspec:1174.
+// assayxportConditionsPolicyUnreadLine on logical values — laws/conditions_policy.lawspec:1358.
 func lawSpecEvaluateAssayxportConditionsPolicyUnreadLine_3(
 	symbols map[string]*LawSpecSymbol,
 	path LawSpecValue,
@@ -11220,7 +12258,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyUnreadLine_3(
 	return lsfToValueText(lsfAssayxportConditionsPolicyUnreadLine(lsfFromValueText(path)))
 }
 
-// assayxportConditionsPolicyUnreadLines on logical values — laws/conditions_policy.lawspec:1178.
+// assayxportConditionsPolicyUnreadLines on logical values — laws/conditions_policy.lawspec:1362.
 func lawSpecEvaluateAssayxportConditionsPolicyUnreadLines_3(
 	symbols map[string]*LawSpecSymbol,
 	paths LawSpecValue,
@@ -11228,7 +12266,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyUnreadLines_3(
 	return lsfToValueListText(lsfAssayxportConditionsPolicyUnreadLines(lsfFromValueListText(paths)))
 }
 
-// assayxportConditionsPolicyUnreadPaths on logical values — laws/conditions_policy.lawspec:1187.
+// assayxportConditionsPolicyUnreadPaths on logical values — laws/conditions_policy.lawspec:1371.
 func lawSpecEvaluateAssayxportConditionsPolicyUnreadPaths_3(
 	symbols map[string]*LawSpecSymbol,
 	ps LawSpecValue,
@@ -11236,7 +12274,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyUnreadPaths_3(
 	return lsfToValueListText(lsfAssayxportConditionsPolicyUnreadPaths(lsfFromValueListPackage(ps)))
 }
 
-// assayxportConditionsPolicyUnreadText on logical values — laws/conditions_policy.lawspec:504.
+// assayxportConditionsPolicyUnreadText on logical values — laws/conditions_policy.lawspec:600.
 func lawSpecEvaluateAssayxportConditionsPolicyUnreadText_4(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecValue,
@@ -11244,7 +12282,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyUnreadText_4(
 	return lsfToValueText(lsfAssayxportConditionsPolicyUnreadText(lsfFromValueUnit(u)))
 }
 
-// assayxportConditionsPolicyUnreadableLines on logical values — laws/conditions_policy.lawspec:1167.
+// assayxportConditionsPolicyUnreadableLines on logical values — laws/conditions_policy.lawspec:1351.
 func lawSpecEvaluateAssayxportConditionsPolicyUnreadableLines_3(
 	symbols map[string]*LawSpecSymbol,
 	ts LawSpecValue,
@@ -11252,7 +12290,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyUnreadableLines_3(
 	return lsfToValueListText(lsfAssayxportConditionsPolicyUnreadableLines(lsfFromValueListText(ts)))
 }
 
-// assayxportConditionsPolicyUnreadableTerm on logical values — laws/conditions_policy.lawspec:509.
+// assayxportConditionsPolicyUnreadableTerm on logical values — laws/conditions_policy.lawspec:605.
 func lawSpecEvaluateAssayxportConditionsPolicyUnreadableTerm(
 	symbols map[string]*LawSpecSymbol,
 	line LawSpecValue,
@@ -11260,7 +12298,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyUnreadableTerm(
 	return lsfToValueText(lsfUnreadableTerm(lsfFromValueInteger(line)))
 }
 
-// assayxportConditionsPolicyUnsigned64 on logical values — laws/conditions_policy.lawspec:98.
+// assayxportConditionsPolicyUnsigned64 on logical values — laws/conditions_policy.lawspec:113.
 func lawSpecEvaluateAssayxportConditionsPolicyUnsigned64_4(
 	symbols map[string]*LawSpecSymbol,
 	a LawSpecValue,
@@ -11268,7 +12306,15 @@ func lawSpecEvaluateAssayxportConditionsPolicyUnsigned64_4(
 	return lsfToValueInteger(lsfAssayxportConditionsPolicyUnsigned64(lsfFromValueInteger(a)))
 }
 
-// assayxportConditionsPolicyUseAt on logical values — laws/conditions_policy.lawspec:1394.
+// assayxportConditionsPolicyUnsignedOf on logical values — laws/conditions_policy.lawspec:447.
+func lawSpecEvaluateAssayxportConditionsPolicyUnsignedOf_4(
+	symbols map[string]*LawSpecSymbol,
+	e LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportConditionsPolicyUnsignedOf(lsfFromValueCExpr(e)))
+}
+
+// assayxportConditionsPolicyUseAt on logical values — laws/conditions_policy.lawspec:1584.
 func lawSpecEvaluateAssayxportConditionsPolicyUseAt_3(
 	symbols map[string]*LawSpecSymbol,
 	file LawSpecValue,
@@ -11278,7 +12324,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyUseAt_3(
 	return lsfToValueUsePlace(lsfAssayxportConditionsPolicyUseAt(lsfFromValueText(file), lsfFromValueInteger(line), lsfFromValueText(cond)))
 }
 
-// assayxportConditionsPolicyUseLine on logical values — laws/conditions_policy.lawspec:1396.
+// assayxportConditionsPolicyUseLine on logical values — laws/conditions_policy.lawspec:1586.
 func lawSpecEvaluateAssayxportConditionsPolicyUseLine_3(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecValue,
@@ -11286,7 +12332,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyUseLine_3(
 	return lsfToValueText(lsfAssayxportConditionsPolicyUseLine(lsfFromValueUsePlace(u)))
 }
 
-// assayxportConditionsPolicyUseLines on logical values — laws/conditions_policy.lawspec:1400.
+// assayxportConditionsPolicyUseLines on logical values — laws/conditions_policy.lawspec:1590.
 func lawSpecEvaluateAssayxportConditionsPolicyUseLines_3(
 	symbols map[string]*LawSpecSymbol,
 	us LawSpecValue,
@@ -11294,7 +12340,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyUseLines_3(
 	return lsfToValueListText(lsfAssayxportConditionsPolicyUseLines(lsfFromValueListUsePlace(us)))
 }
 
-// assayxportConditionsPolicyValueOf on logical values — laws/conditions_policy.lawspec:256.
+// assayxportConditionsPolicyValueOf on logical values — laws/conditions_policy.lawspec:323.
 func lawSpecEvaluateAssayxportConditionsPolicyValueOf_4(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -11303,7 +12349,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyValueOf_4(
 	return lsfToValueOutcome(lsfAssayxportConditionsPolicyValueOf(lsfFromValueEnv(env), lsfFromValueText(n)))
 }
 
-// assayxportConditionsPolicyWarningsOf on logical values — laws/conditions_policy.lawspec:1162.
+// assayxportConditionsPolicyWarningsOf on logical values — laws/conditions_policy.lawspec:1346.
 func lawSpecEvaluateAssayxportConditionsPolicyWarningsOf_3(
 	symbols map[string]*LawSpecSymbol,
 	f LawSpecValue,
@@ -11311,7 +12357,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyWarningsOf_3(
 	return lsfToValueListText(lsfAssayxportConditionsPolicyWarningsOf(lsfFromValueFiltered(f)))
 }
 
-// assayxportConditionsPolicyWarningsWith on logical values — laws/conditions_policy.lawspec:1153.
+// assayxportConditionsPolicyWarningsWith on logical values — laws/conditions_policy.lawspec:1337.
 func lawSpecEvaluateAssayxportConditionsPolicyWarningsWith_3(
 	symbols map[string]*LawSpecSymbol,
 	f LawSpecValue,
@@ -11320,7 +12366,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyWarningsWith_3(
 	return lsfToValueListText(lsfAssayxportConditionsPolicyWarningsWith(lsfFromValueFiltered(f), lsfFromValueListText(listed)))
 }
 
-// assayxportConditionsPolicyWrap on logical values — laws/conditions_policy.lawspec:91.
+// assayxportConditionsPolicyWrap on logical values — laws/conditions_policy.lawspec:105.
 func lawSpecEvaluateAssayxportConditionsPolicyWrap_4(
 	symbols map[string]*LawSpecSymbol,
 	x LawSpecValue,
@@ -11328,7 +12374,7 @@ func lawSpecEvaluateAssayxportConditionsPolicyWrap_4(
 	return lsfToValueInteger(lsfAssayxportConditionsPolicyWrap(lsfFromValueInteger(x)))
 }
 
-// assayxportConditionsQuoteEnd on logical values — laws/conditions.lawspec:68.
+// assayxportConditionsQuoteEnd on logical values — laws/conditions.lawspec:72.
 func lawSpecEvaluateAssayxportConditionsQuoteEnd_2(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -11339,7 +12385,7 @@ func lawSpecEvaluateAssayxportConditionsQuoteEnd_2(
 	return lsfToValueInteger(lsfQuoteEnd(lsfFromValueText(t_), lsfFromValueInteger(j), lsfFromValueInteger(n), lsfFromValueBool(esc)))
 }
 
-// assayxportConditionsReadBindings on logical values — laws/conditions.lawspec:455.
+// assayxportConditionsReadBindings on logical values — laws/conditions.lawspec:496.
 func lawSpecEvaluateAssayxportConditionsReadBindings_2(
 	symbols map[string]*LawSpecSymbol,
 	lines LawSpecValue,
@@ -11347,7 +12393,7 @@ func lawSpecEvaluateAssayxportConditionsReadBindings_2(
 	return lsfToValueEitherBindingErrorEnv(lsfReadBindings(lsfFromValueListText(lines)))
 }
 
-// assayxportConditionsReadFrom on logical values — laws/conditions.lawspec:444.
+// assayxportConditionsReadFrom on logical values — laws/conditions.lawspec:485.
 func lawSpecEvaluateAssayxportConditionsReadFrom_2(
 	symbols map[string]*LawSpecSymbol,
 	lines LawSpecValue,
@@ -11357,7 +12403,7 @@ func lawSpecEvaluateAssayxportConditionsReadFrom_2(
 	return lsfToValueEitherBindingErrorListBindingLine(lsfReadFrom(lsfFromValueListText(lines), lsfFromValueInteger(k), lsfFromValueListBindingLine(acc)))
 }
 
-// assayxportConditionsReadLine on logical values — laws/conditions.lawspec:412.
+// assayxportConditionsReadLine on logical values — laws/conditions.lawspec:453.
 func lawSpecEvaluateAssayxportConditionsReadLine_2(
 	symbols map[string]*LawSpecSymbol,
 	raw LawSpecValue,
@@ -11365,7 +12411,7 @@ func lawSpecEvaluateAssayxportConditionsReadLine_2(
 	return lsfToValueMaybeBindingLine(lsfReadLine(lsfFromValueText(raw)))
 }
 
-// assayxportConditionsStripCr on logical values — laws/conditions.lawspec:385.
+// assayxportConditionsStripCr on logical values — laws/conditions.lawspec:426.
 func lawSpecEvaluateAssayxportConditionsStripCr_2(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -11374,7 +12420,7 @@ func lawSpecEvaluateAssayxportConditionsStripCr_2(
 	return lsfToValueText(lsfStripCr(lsfFromValueText(t_), lsfFromValueInteger(fuel)))
 }
 
-// assayxportConditionsSummedEdges on logical values — laws/conditions.lawspec:525.
+// assayxportConditionsSummedEdges on logical values — laws/conditions.lawspec:566.
 func lawSpecEvaluateAssayxportConditionsSummedEdges_2(
 	symbols map[string]*LawSpecSymbol,
 	es LawSpecValue,
@@ -11382,7 +12428,7 @@ func lawSpecEvaluateAssayxportConditionsSummedEdges_2(
 	return lsfToValueListCallEdge(lsfSummedEdges(lsfFromValueListCallEdge(es)))
 }
 
-// assayxportConditionsTallied on logical values — laws/conditions.lawspec:506.
+// assayxportConditionsTallied on logical values — laws/conditions.lawspec:547.
 func lawSpecEvaluateAssayxportConditionsTallied_2(
 	symbols map[string]*LawSpecSymbol,
 	es LawSpecValue,
@@ -11391,7 +12437,7 @@ func lawSpecEvaluateAssayxportConditionsTallied_2(
 	return lsfToValueKeyValEdgeKeyTally(lsfTallied(lsfFromValueListCallEdge(es), lsfFromValueKeyValEdgeKeyTally(acc)))
 }
 
-// assayxportConditionsTokOfNumber on logical values — laws/conditions.lawspec:103.
+// assayxportConditionsTokOfNumber on logical values — laws/conditions.lawspec:107.
 func lawSpecEvaluateAssayxportConditionsTokOfNumber_2(
 	symbols map[string]*LawSpecSymbol,
 	v LawSpecValue,
@@ -11400,7 +12446,7 @@ func lawSpecEvaluateAssayxportConditionsTokOfNumber_2(
 	return lsfToValueMaybeTok(lsfTokOfNumber(lsfFromValueInteger(v), lsfFromValueBool(unsigned)))
 }
 
-// assayxportConditionsTokOp on logical values — laws/conditions.lawspec:183.
+// assayxportConditionsTokOp on logical values — laws/conditions.lawspec:208.
 func lawSpecEvaluateAssayxportConditionsTokOp_2(
 	symbols map[string]*LawSpecSymbol,
 	toks LawSpecValue,
@@ -11408,7 +12454,7 @@ func lawSpecEvaluateAssayxportConditionsTokOp_2(
 	return lsfToValueText(lsfTokOp(lsfFromValueListTok(toks)))
 }
 
-// assayxportConditionsTrimFrom on logical values — laws/conditions.lawspec:349.
+// assayxportConditionsTrimFrom on logical values — laws/conditions.lawspec:390.
 func lawSpecEvaluateAssayxportConditionsTrimFrom_2(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -11417,7 +12463,7 @@ func lawSpecEvaluateAssayxportConditionsTrimFrom_2(
 	return lsfToValueText(lsfTrimFrom(lsfFromValueText(t_), lsfFromValueInteger(fuel)))
 }
 
-// assayxportConditionsTrimTo on logical values — laws/conditions.lawspec:354.
+// assayxportConditionsTrimTo on logical values — laws/conditions.lawspec:395.
 func lawSpecEvaluateAssayxportConditionsTrimTo_2(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -11426,7 +12472,7 @@ func lawSpecEvaluateAssayxportConditionsTrimTo_2(
 	return lsfToValueText(lsfTrimTo(lsfFromValueText(t_), lsfFromValueInteger(fuel)))
 }
 
-// assayxportConditionsTrimmed on logical values — laws/conditions.lawspec:359.
+// assayxportConditionsTrimmed on logical values — laws/conditions.lawspec:400.
 func lawSpecEvaluateAssayxportConditionsTrimmed_2(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -11434,7 +12480,7 @@ func lawSpecEvaluateAssayxportConditionsTrimmed_2(
 	return lsfToValueText(lsfTrimmed(lsfFromValueText(t_)))
 }
 
-// assayxportConditionsUnOpFor on logical values — laws/conditions.lawspec:179.
+// assayxportConditionsUnOpFor on logical values — laws/conditions.lawspec:204.
 func lawSpecEvaluateAssayxportConditionsUnOpFor_2(
 	symbols map[string]*LawSpecSymbol,
 	s LawSpecValue,
@@ -11442,7 +12488,7 @@ func lawSpecEvaluateAssayxportConditionsUnOpFor_2(
 	return lsfToValueUnOp(lsfUnOpFor(lsfFromValueText(s)))
 }
 
-// assayxportConditionsUnsignedOf on logical values — laws/conditions.lawspec:101.
+// assayxportConditionsUnsignedOf on logical values — laws/conditions.lawspec:105.
 func lawSpecEvaluateAssayxportConditionsUnsignedOf_2(
 	symbols map[string]*LawSpecSymbol,
 	suffix LawSpecValue,
@@ -11450,7 +12496,7 @@ func lawSpecEvaluateAssayxportConditionsUnsignedOf_2(
 	return lsfToValueBool(lsfUnsignedOf(lsfFromValueText(suffix)))
 }
 
-// assayxportConditionsUsesFor on logical values — laws/conditions.lawspec:723.
+// assayxportConditionsUsesFor on logical values — laws/conditions.lawspec:764.
 func lawSpecEvaluateAssayxportConditionsUsesFor_2(
 	symbols map[string]*LawSpecSymbol,
 	name LawSpecValue,
@@ -11459,7 +12505,7 @@ func lawSpecEvaluateAssayxportConditionsUsesFor_2(
 	return lsfToValueListUsePlace(lsfUsesFor(lsfFromValueText(name), lsfFromValueListUseNote(us)))
 }
 
-// assayxportConditionsValueIn on logical values — laws/conditions.lawspec:392.
+// assayxportConditionsValueIn on logical values — laws/conditions.lawspec:433.
 func lawSpecEvaluateAssayxportConditionsValueIn_2(
 	symbols map[string]*LawSpecSymbol,
 	v LawSpecValue,
@@ -11467,7 +12513,7 @@ func lawSpecEvaluateAssayxportConditionsValueIn_2(
 	return lsfToValueMaybeInteger(lsfValueIn(lsfFromValueText(v)))
 }
 
-// assayxportConditionsVersionParts on logical values — laws/conditions.lawspec:370.
+// assayxportConditionsVersionParts on logical values — laws/conditions.lawspec:411.
 func lawSpecEvaluateAssayxportConditionsVersionParts_2(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -11977,7 +13023,26 @@ func lawSpecEvaluateAssayxportContractWithCounts_2(
 	return lsfToValueListCallEdge(lsfWithCounts(lsfFromValueListEntryEdgeKeyCounted(es)))
 }
 
-// assayxportHaskellCppAllArms on logical values — laws/haskell_cpp.lawspec:189.
+// assayxportHaskellCppAddTerm on logical values — laws/haskell_cpp.lawspec:583.
+func lawSpecEvaluateAssayxportHaskellCppAddTerm_2(
+	symbols map[string]*LawSpecSymbol,
+	t_ LawSpecValue,
+	seen LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListText(lsfAssayxportHaskellCppAddTerm(lsfFromValueText(t_), lsfFromValueListText(seen)))
+}
+
+// assayxportHaskellCppAfter on logical values — laws/haskell_cpp.lawspec:301.
+func lawSpecEvaluateAssayxportHaskellCppAfter_2(
+	symbols map[string]*LawSpecSymbol,
+	w LawSpecValue,
+	r LawSpecValue,
+	v LawSpecValue,
+) LawSpecValue {
+	return lsfToValueWalk(lsfAssayxportHaskellCppAfter(lsfFromValueWalk(w), lsfFromValueRow(r), lsfFromValueBool(v)))
+}
+
+// assayxportHaskellCppAllArms on logical values — laws/haskell_cpp.lawspec:223.
 func lawSpecEvaluateAssayxportHaskellCppAllArms(
 	symbols map[string]*LawSpecSymbol,
 	ss LawSpecValue,
@@ -11985,7 +13050,7 @@ func lawSpecEvaluateAssayxportHaskellCppAllArms(
 	return lsfToValueText(lsfAllArms(lsfFromValueListSection(ss)))
 }
 
-// assayxportHaskellCppAllArmsText on logical values — laws/haskell_cpp.lawspec:185.
+// assayxportHaskellCppAllArmsText on logical values — laws/haskell_cpp.lawspec:219.
 func lawSpecEvaluateAssayxportHaskellCppAllArmsText(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
@@ -11993,16 +13058,16 @@ func lawSpecEvaluateAssayxportHaskellCppAllArmsText(
 	return lsfToValueText(lsfAllArmsText(lsfFromValueListRow(rs)))
 }
 
-// assayxportHaskellCppAllHold on logical values — laws/haskell_cpp.lawspec:217.
-func lawSpecEvaluateAssayxportHaskellCppAllHold(
+// assayxportHaskellCppAllHold on logical values — laws/haskell_cpp.lawspec:677.
+func lawSpecEvaluateAssayxportHaskellCppAllHold_2(
 	symbols map[string]*LawSpecSymbol,
 	asg LawSpecValue,
 	ls LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueBool(lsfAllHold(lsfFromValueKeyValTextInteger(asg), lsfFromValueListLiteral(ls)))
+	return lsfToValueBool(lsfAssayxportHaskellCppAllHold(lsfFromValueKeyValTextInteger(asg), lsfFromValueListLiteral(ls)))
 }
 
-// assayxportHaskellCppArmsOf on logical values — laws/haskell_cpp.lawspec:472.
+// assayxportHaskellCppArmsOf on logical values — laws/haskell_cpp.lawspec:831.
 func lawSpecEvaluateAssayxportHaskellCppArmsOf(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12011,7 +13076,7 @@ func lawSpecEvaluateAssayxportHaskellCppArmsOf(
 	return lsfToValueListArm(lsfArmsOf(lsfFromValueInteger(seed_), lsfFromValueInteger(n)))
 }
 
-// assayxportHaskellCppArmsRows on logical values — laws/haskell_cpp.lawspec:142.
+// assayxportHaskellCppArmsRows on logical values — laws/haskell_cpp.lawspec:176.
 func lawSpecEvaluateAssayxportHaskellCppArmsRows(
 	symbols map[string]*LawSpecSymbol,
 	group LawSpecValue,
@@ -12024,7 +13089,7 @@ func lawSpecEvaluateAssayxportHaskellCppArmsRows(
 	return lsfToValueListRow(lsfArmsRows(lsfFromValueInteger(group), lsfFromValueListArm(arms), lsfFromValueInteger(k), lsfFromValueListLiteral(before), lsfFromValueBool(hasElse), lsfFromValueListInner(elseBody)))
 }
 
-// assayxportHaskellCppAssignments on logical values — laws/haskell_cpp.lawspec:332.
+// assayxportHaskellCppAssignments on logical values — laws/haskell_cpp.lawspec:551.
 func lawSpecEvaluateAssayxportHaskellCppAssignments(
 	symbols map[string]*LawSpecSymbol,
 	ts LawSpecValue,
@@ -12032,7 +13097,15 @@ func lawSpecEvaluateAssayxportHaskellCppAssignments(
 	return lsfToValueListKeyValTextInteger(lsfAssignments(lsfFromValueListText(ts)))
 }
 
-// assayxportHaskellCppBindRows on logical values — laws/haskell_cpp.lawspec:487.
+// assayxportHaskellCppBaseAtLeast48 on logical values — laws/haskell_cpp.lawspec:1141.
+func lawSpecEvaluateAssayxportHaskellCppBaseAtLeast48_2(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecValue,
+) LawSpecValue {
+	return lsfToValueLiteral(lsfAssayxportHaskellCppBaseAtLeast48(lsfFromValueUnit(u)))
+}
+
+// assayxportHaskellCppBindRows on logical values — laws/haskell_cpp.lawspec:846.
 func lawSpecEvaluateAssayxportHaskellCppBindRows(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12043,7 +13116,7 @@ func lawSpecEvaluateAssayxportHaskellCppBindRows(
 	return lsfToValueKeyValTextBinding(lsfBindRows(lsfFromValueInteger(seed_), lsfFromValueListRow(rs), lsfFromValueInteger(k), lsfFromValueKeyValTextBinding(acc)))
 }
 
-// assayxportHaskellCppBlankIf on logical values — laws/haskell_cpp.lawspec:181.
+// assayxportHaskellCppBlankIf on logical values — laws/haskell_cpp.lawspec:215.
 func lawSpecEvaluateAssayxportHaskellCppBlankIf_2(
 	symbols map[string]*LawSpecSymbol,
 	b LawSpecValue,
@@ -12052,7 +13125,7 @@ func lawSpecEvaluateAssayxportHaskellCppBlankIf_2(
 	return lsfToValueText(lsfAssayxportHaskellCppBlankIf(lsfFromValueBool(b), lsfFromValueRow(r)))
 }
 
-// assayxportHaskellCppBlockRows on logical values — laws/haskell_cpp.lawspec:107.
+// assayxportHaskellCppBlockRows on logical values — laws/haskell_cpp.lawspec:141.
 func lawSpecEvaluateAssayxportHaskellCppBlockRows(
 	symbols map[string]*LawSpecSymbol,
 	id LawSpecValue,
@@ -12061,15 +13134,25 @@ func lawSpecEvaluateAssayxportHaskellCppBlockRows(
 	return lsfToValueListRow(lsfBlockRows(lsfFromValueInteger(id), lsfFromValueListLiteral(terms)))
 }
 
-// assayxportHaskellCppBuildCount on logical values — laws/haskell_cpp.lawspec:290.
-func lawSpecEvaluateAssayxportHaskellCppBuildCount(
+// assayxportHaskellCppBlocks on logical values — laws/haskell_cpp.lawspec:358.
+func lawSpecEvaluateAssayxportHaskellCppBlocks_2(
+	symbols map[string]*LawSpecSymbol,
+	sets LawSpecValue,
+	vals LawSpecValue,
+	n LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppBlocks(lsfFromValueKeyValTextSets(sets), lsfFromValueListText(vals), lsfFromValueText(n)))
+}
+
+// assayxportHaskellCppBuildCount on logical values — laws/haskell_cpp.lawspec:502.
+func lawSpecEvaluateAssayxportHaskellCppBuildCount_2(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueInteger(lsfBuildCount(lsfFromValueListRow(rs)))
+	return lsfToValueInteger(lsfAssayxportHaskellCppBuildCount(lsfFromValueListRow(rs)))
 }
 
-// assayxportHaskellCppBuildEnv on logical values — laws/haskell_cpp.lawspec:505.
+// assayxportHaskellCppBuildEnv on logical values — laws/haskell_cpp.lawspec:864.
 func lawSpecEvaluateAssayxportHaskellCppBuildEnv(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12078,7 +13161,7 @@ func lawSpecEvaluateAssayxportHaskellCppBuildEnv(
 	return lsfToValueEnv(lsfBuildEnv(lsfFromValueInteger(seed_), lsfFromValueListSection(ss)))
 }
 
-// assayxportHaskellCppBuildOf on logical values — laws/haskell_cpp.lawspec:459.
+// assayxportHaskellCppBuildOf on logical values — laws/haskell_cpp.lawspec:818.
 func lawSpecEvaluateAssayxportHaskellCppBuildOf(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -12087,7 +13170,7 @@ func lawSpecEvaluateAssayxportHaskellCppBuildOf(
 	return lsfToValueText(lsfBuildOf(lsfFromValueEnv(env), lsfFromValueListSection(ss)))
 }
 
-// assayxportHaskellCppBuildText on logical values — laws/haskell_cpp.lawspec:450.
+// assayxportHaskellCppBuildText on logical values — laws/haskell_cpp.lawspec:814.
 func lawSpecEvaluateAssayxportHaskellCppBuildText_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -12096,25 +13179,18 @@ func lawSpecEvaluateAssayxportHaskellCppBuildText_2(
 	return lsfToValueText(lsfAssayxportHaskellCppBuildText(lsfFromValueEnv(env), lsfFromValueListRow(rs)))
 }
 
-// assayxportHaskellCppBuildsFrom on logical values — laws/haskell_cpp.lawspec:256.
-func lawSpecEvaluateAssayxportHaskellCppBuildsFrom(
+// assayxportHaskellCppBuildsFrom on logical values — laws/haskell_cpp.lawspec:452.
+func lawSpecEvaluateAssayxportHaskellCppBuildsFrom_2(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
+	w LawSpecValue,
 	asg LawSpecValue,
+	line LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueListKeyValTextInteger(lsfBuildsFrom(lsfFromValueListRow(rs), lsfFromValueKeyValTextInteger(asg)))
+	return lsfToValueListKeyValTextInteger(lsfAssayxportHaskellCppBuildsFrom(lsfFromValueListRow(rs), lsfFromValueWalk(w), lsfFromValueKeyValTextInteger(asg), lsfFromValueInteger(line)))
 }
 
-// assayxportHaskellCppChoiceAt on logical values — laws/haskell_cpp.lawspec:233.
-func lawSpecEvaluateAssayxportHaskellCppChoiceAt(
-	symbols map[string]*LawSpecSymbol,
-	asg LawSpecValue,
-	r LawSpecValue,
-) LawSpecValue {
-	return lsfToValueBool(lsfChoiceAt(lsfFromValueKeyValTextInteger(asg), lsfFromValueRow(r)))
-}
-
-// assayxportHaskellCppCodeRows on logical values — laws/haskell_cpp.lawspec:562.
+// assayxportHaskellCppCodeRows on logical values — laws/haskell_cpp.lawspec:921.
 func lawSpecEvaluateAssayxportHaskellCppCodeRows_2(
 	symbols map[string]*LawSpecSymbol,
 	lines LawSpecValue,
@@ -12123,7 +13199,7 @@ func lawSpecEvaluateAssayxportHaskellCppCodeRows_2(
 	return lsfToValueListRow(lsfAssayxportHaskellCppCodeRows(lsfFromValueListText(lines), lsfFromValueListLiteral(terms)))
 }
 
-// assayxportHaskellCppConditionAt on logical values — laws/haskell_cpp.lawspec:401.
+// assayxportHaskellCppConditionAt on logical values — laws/haskell_cpp.lawspec:721.
 func lawSpecEvaluateAssayxportHaskellCppConditionAt(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
@@ -12132,15 +13208,15 @@ func lawSpecEvaluateAssayxportHaskellCppConditionAt(
 	return lsfToValueText(lsfConditionAt(lsfFromValueListRow(rs), lsfFromValueInteger(line)))
 }
 
-// assayxportHaskellCppConditionText on logical values — laws/haskell_cpp.lawspec:399.
-func lawSpecEvaluateAssayxportHaskellCppConditionText(
+// assayxportHaskellCppConditionText on logical values — laws/haskell_cpp.lawspec:719.
+func lawSpecEvaluateAssayxportHaskellCppConditionText_2(
 	symbols map[string]*LawSpecSymbol,
 	ts LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueText(lsfConditionText(lsfFromValueListLiteral(ts)))
+	return lsfToValueText(lsfAssayxportHaskellCppConditionText(lsfFromValueListLiteral(ts)))
 }
 
-// assayxportHaskellCppConditioned on logical values — laws/haskell_cpp.lawspec:424.
+// assayxportHaskellCppConditioned on logical values — laws/haskell_cpp.lawspec:744.
 func lawSpecEvaluateAssayxportHaskellCppConditioned(
 	symbols map[string]*LawSpecSymbol,
 	ss LawSpecValue,
@@ -12149,7 +13225,7 @@ func lawSpecEvaluateAssayxportHaskellCppConditioned(
 	return lsfToValueListPackage(lsfConditioned(lsfFromValueListSection(ss), lsfFromValueListPackage(ps)))
 }
 
-// assayxportHaskellCppCopies on logical values — laws/haskell_cpp.lawspec:307.
+// assayxportHaskellCppCopies on logical values — laws/haskell_cpp.lawspec:519.
 func lawSpecEvaluateAssayxportHaskellCppCopies(
 	symbols map[string]*LawSpecSymbol,
 	ss LawSpecValue,
@@ -12157,24 +13233,24 @@ func lawSpecEvaluateAssayxportHaskellCppCopies(
 	return lsfToValueListText(lsfCopies(lsfFromValueListSection(ss)))
 }
 
-// assayxportHaskellCppCopiesOf on logical values — laws/haskell_cpp.lawspec:282.
-func lawSpecEvaluateAssayxportHaskellCppCopiesOf(
+// assayxportHaskellCppCopiesOf on logical values — laws/haskell_cpp.lawspec:494.
+func lawSpecEvaluateAssayxportHaskellCppCopiesOf_2(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
 	builds LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueListText(lsfCopiesOf(lsfFromValueListRow(rs), lsfFromValueListKeyValTextInteger(builds)))
+	return lsfToValueListText(lsfAssayxportHaskellCppCopiesOf(lsfFromValueListRow(rs), lsfFromValueListKeyValTextInteger(builds)))
 }
 
-// assayxportHaskellCppCopiesOfRows on logical values — laws/haskell_cpp.lawspec:298.
-func lawSpecEvaluateAssayxportHaskellCppCopiesOfRows(
+// assayxportHaskellCppCopiesOfRows on logical values — laws/haskell_cpp.lawspec:510.
+func lawSpecEvaluateAssayxportHaskellCppCopiesOfRows_2(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueListText(lsfCopiesOfRows(lsfFromValueListRow(rs)))
+	return lsfToValueListText(lsfAssayxportHaskellCppCopiesOfRows(lsfFromValueListRow(rs)))
 }
 
-// assayxportHaskellCppCopiesOfWalked on logical values — laws/haskell_cpp.lawspec:386.
+// assayxportHaskellCppCopiesOfWalked on logical values — laws/haskell_cpp.lawspec:654.
 func lawSpecEvaluateAssayxportHaskellCppCopiesOfWalked(
 	symbols map[string]*LawSpecSymbol,
 	ws LawSpecValue,
@@ -12182,26 +13258,49 @@ func lawSpecEvaluateAssayxportHaskellCppCopiesOfWalked(
 	return lsfToValueListText(lsfCopiesOfWalked(lsfFromValueListWalked(ws)))
 }
 
-// assayxportHaskellCppCopyOf on logical values — laws/haskell_cpp.lawspec:275.
-func lawSpecEvaluateAssayxportHaskellCppCopyOf(
+// assayxportHaskellCppCopyFrom on logical values — laws/haskell_cpp.lawspec:485.
+func lawSpecEvaluateAssayxportHaskellCppCopyFrom_2(
+	symbols map[string]*LawSpecSymbol,
+	rs LawSpecValue,
+	w LawSpecValue,
+	asg LawSpecValue,
+	line LawSpecValue,
+) LawSpecValue {
+	return lsfToValueText(lsfAssayxportHaskellCppCopyFrom(lsfFromValueListRow(rs), lsfFromValueWalk(w), lsfFromValueKeyValTextInteger(asg), lsfFromValueInteger(line)))
+}
+
+// assayxportHaskellCppCopyOf on logical values — laws/haskell_cpp.lawspec:492.
+func lawSpecEvaluateAssayxportHaskellCppCopyOf_2(
 	symbols map[string]*LawSpecSymbol,
 	asg LawSpecValue,
 	rs LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueText(lsfCopyOf(lsfFromValueKeyValTextInteger(asg), lsfFromValueListRow(rs)))
+	return lsfToValueText(lsfAssayxportHaskellCppCopyOf(lsfFromValueKeyValTextInteger(asg), lsfFromValueListRow(rs)))
 }
 
-// assayxportHaskellCppCountBuilds on logical values — laws/haskell_cpp.lawspec:245.
-func lawSpecEvaluateAssayxportHaskellCppCountBuilds(
+// assayxportHaskellCppCountBuilds on logical values — laws/haskell_cpp.lawspec:435.
+func lawSpecEvaluateAssayxportHaskellCppCountBuilds_2(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
+	w LawSpecValue,
 	asg LawSpecValue,
+	line LawSpecValue,
 	budget LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueInteger(lsfCountBuilds(lsfFromValueListRow(rs), lsfFromValueKeyValTextInteger(asg), lsfFromValueInteger(budget)))
+	return lsfToValueInteger(lsfAssayxportHaskellCppCountBuilds(lsfFromValueListRow(rs), lsfFromValueWalk(w), lsfFromValueKeyValTextInteger(asg), lsfFromValueInteger(line), lsfFromValueInteger(budget)))
 }
 
-// assayxportHaskellCppDeclRows on logical values — laws/haskell_cpp.lawspec:578.
+// assayxportHaskellCppDecidedBy on logical values — laws/haskell_cpp.lawspec:394.
+func lawSpecEvaluateAssayxportHaskellCppDecidedBy_2(
+	symbols map[string]*LawSpecSymbol,
+	sets LawSpecValue,
+	l LawSpecValue,
+	line LawSpecValue,
+) LawSpecValue {
+	return lsfToValueReading(lsfAssayxportHaskellCppDecidedBy(lsfFromValueKeyValTextSets(sets), lsfFromValueLiteral(l), lsfFromValueInteger(line)))
+}
+
+// assayxportHaskellCppDeclRows on logical values — laws/haskell_cpp.lawspec:937.
 func lawSpecEvaluateAssayxportHaskellCppDeclRows(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12210,7 +13309,7 @@ func lawSpecEvaluateAssayxportHaskellCppDeclRows(
 	return lsfToValueListRow(lsfDeclRows(lsfFromValueInteger(seed_), lsfFromValueInteger(j)))
 }
 
-// assayxportHaskellCppDeclsAt on logical values — laws/haskell_cpp.lawspec:409.
+// assayxportHaskellCppDeclsAt on logical values — laws/haskell_cpp.lawspec:729.
 func lawSpecEvaluateAssayxportHaskellCppDeclsAt(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
@@ -12219,7 +13318,7 @@ func lawSpecEvaluateAssayxportHaskellCppDeclsAt(
 	return lsfToValueListDecl(lsfDeclsAt(lsfFromValueListRow(rs), lsfFromValueListDecl(ds)))
 }
 
-// assayxportHaskellCppDefinedAnd on logical values — laws/haskell_cpp.lawspec:73.
+// assayxportHaskellCppDefinedAnd on logical values — laws/haskell_cpp.lawspec:97.
 func lawSpecEvaluateAssayxportHaskellCppDefinedAnd_2(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
@@ -12227,7 +13326,27 @@ func lawSpecEvaluateAssayxportHaskellCppDefinedAnd_2(
 	return lsfToValueCExpr(lsfAssayxportHaskellCppDefinedAnd(lsfFromValueText(n)))
 }
 
-// assayxportHaskellCppDirectiveOf on logical values — laws/haskell_cpp.lawspec:86.
+// assayxportHaskellCppDefiner on logical values — laws/haskell_cpp.lawspec:135.
+func lawSpecEvaluateAssayxportHaskellCppDefiner_2(
+	symbols map[string]*LawSpecSymbol,
+	text LawSpecValue,
+	terms LawSpecValue,
+	name LawSpecValue,
+	sets LawSpecValue,
+) LawSpecValue {
+	return lsfToValueRow(lsfAssayxportHaskellCppDefiner(lsfFromValueText(text), lsfFromValueListLiteral(terms), lsfFromValueText(name), lsfFromValueSets(sets)))
+}
+
+// assayxportHaskellCppDiffersFrom on logical values — laws/haskell_cpp.lawspec:1272.
+func lawSpecEvaluateAssayxportHaskellCppDiffersFrom_2(
+	symbols map[string]*LawSpecSymbol,
+	a LawSpecValue,
+	b LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppDiffersFrom(lsfFromValueText(a), lsfFromValueText(b)))
+}
+
+// assayxportHaskellCppDirectiveOf on logical values — laws/haskell_cpp.lawspec:115.
 func lawSpecEvaluateAssayxportHaskellCppDirectiveOf_2(
 	symbols map[string]*LawSpecSymbol,
 	first LawSpecValue,
@@ -12237,7 +13356,7 @@ func lawSpecEvaluateAssayxportHaskellCppDirectiveOf_2(
 	return lsfToValueText(lsfAssayxportHaskellCppDirectiveOf(lsfFromValueBool(first), lsfFromValueInteger(form), lsfFromValueText(n)))
 }
 
-// assayxportHaskellCppEdgesAt on logical values — laws/haskell_cpp.lawspec:405.
+// assayxportHaskellCppEdgesAt on logical values — laws/haskell_cpp.lawspec:725.
 func lawSpecEvaluateAssayxportHaskellCppEdgesAt(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -12246,7 +13365,7 @@ func lawSpecEvaluateAssayxportHaskellCppEdgesAt(
 	return lsfToValueListCallEdge(lsfEdgesAt(lsfFromValueText(t_), lsfFromValueListCallEdge(es)))
 }
 
-// assayxportHaskellCppEnvOfRows on logical values — laws/haskell_cpp.lawspec:499.
+// assayxportHaskellCppEnvOfRows on logical values — laws/haskell_cpp.lawspec:858.
 func lawSpecEvaluateAssayxportHaskellCppEnvOfRows(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12255,7 +13374,7 @@ func lawSpecEvaluateAssayxportHaskellCppEnvOfRows(
 	return lsfToValueEnv(lsfEnvOfRows(lsfFromValueInteger(seed_), lsfFromValueListRow(rs)))
 }
 
-// assayxportHaskellCppEveryCopies on logical values — laws/haskell_cpp.lawspec:391.
+// assayxportHaskellCppEveryCopies on logical values — laws/haskell_cpp.lawspec:659.
 func lawSpecEvaluateAssayxportHaskellCppEveryCopies(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
@@ -12263,7 +13382,7 @@ func lawSpecEvaluateAssayxportHaskellCppEveryCopies(
 	return lsfToValueListText(lsfEveryCopies(lsfFromValueListRow(rs)))
 }
 
-// assayxportHaskellCppExportRows on logical values — laws/haskell_cpp.lawspec:596.
+// assayxportHaskellCppExportRows on logical values — laws/haskell_cpp.lawspec:955.
 func lawSpecEvaluateAssayxportHaskellCppExportRows(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12271,16 +13390,56 @@ func lawSpecEvaluateAssayxportHaskellCppExportRows(
 	return lsfToValueListRow(lsfExportRows(lsfFromValueInteger(seed_)))
 }
 
-// assayxportHaskellCppFirstBuild on logical values — laws/haskell_cpp.lawspec:266.
-func lawSpecEvaluateAssayxportHaskellCppFirstBuild(
+// assayxportHaskellCppFileDecides on logical values — laws/haskell_cpp.lawspec:1284.
+func lawSpecEvaluateAssayxportHaskellCppFileDecides_2(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
+	w LawSpecValue,
 	asg LawSpecValue,
+	line LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueKeyValTextInteger(lsfFirstBuild(lsfFromValueListRow(rs), lsfFromValueKeyValTextInteger(asg)))
+	return lsfToValueBool(lsfAssayxportHaskellCppFileDecides(lsfFromValueListRow(rs), lsfFromValueWalk(w), lsfFromValueKeyValTextInteger(asg), lsfFromValueInteger(line)))
 }
 
-// assayxportHaskellCppFirstCopy on logical values — laws/haskell_cpp.lawspec:311.
+// assayxportHaskellCppFileDecidesSome on logical values — laws/haskell_cpp.lawspec:1299.
+func lawSpecEvaluateAssayxportHaskellCppFileDecidesSome_2(
+	symbols map[string]*LawSpecSymbol,
+	rs LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppFileDecidesSome(lsfFromValueListRow(rs)))
+}
+
+// assayxportHaskellCppFileNames on logical values — laws/haskell_cpp.lawspec:366.
+func lawSpecEvaluateAssayxportHaskellCppFileNames_2(
+	symbols map[string]*LawSpecSymbol,
+	sets LawSpecValue,
+	ns LawSpecValue,
+	acc LawSpecValue,
+) LawSpecValue {
+	return lsfToValueKeyValTextBinding(lsfAssayxportHaskellCppFileNames(lsfFromValueKeyValTextSets(sets), lsfFromValueListText(ns), lsfFromValueKeyValTextBinding(acc)))
+}
+
+// assayxportHaskellCppFileTerm on logical values — laws/haskell_cpp.lawspec:384.
+func lawSpecEvaluateAssayxportHaskellCppFileTerm_2(
+	symbols map[string]*LawSpecSymbol,
+	line LawSpecValue,
+	l LawSpecValue,
+) LawSpecValue {
+	return lsfToValueLiteral(lsfAssayxportHaskellCppFileTerm(lsfFromValueInteger(line), lsfFromValueLiteral(l)))
+}
+
+// assayxportHaskellCppFirstBuild on logical values — laws/haskell_cpp.lawspec:468.
+func lawSpecEvaluateAssayxportHaskellCppFirstBuild_2(
+	symbols map[string]*LawSpecSymbol,
+	rs LawSpecValue,
+	w LawSpecValue,
+	asg LawSpecValue,
+	line LawSpecValue,
+) LawSpecValue {
+	return lsfToValueKeyValTextInteger(lsfAssayxportHaskellCppFirstBuild(lsfFromValueListRow(rs), lsfFromValueWalk(w), lsfFromValueKeyValTextInteger(asg), lsfFromValueInteger(line)))
+}
+
+// assayxportHaskellCppFirstCopy on logical values — laws/haskell_cpp.lawspec:523.
 func lawSpecEvaluateAssayxportHaskellCppFirstCopy(
 	symbols map[string]*LawSpecSymbol,
 	ss LawSpecValue,
@@ -12288,15 +13447,15 @@ func lawSpecEvaluateAssayxportHaskellCppFirstCopy(
 	return lsfToValueText(lsfFirstCopy(lsfFromValueListSection(ss)))
 }
 
-// assayxportHaskellCppFirstCopyOfRows on logical values — laws/haskell_cpp.lawspec:305.
-func lawSpecEvaluateAssayxportHaskellCppFirstCopyOfRows(
+// assayxportHaskellCppFirstCopyOfRows on logical values — laws/haskell_cpp.lawspec:517.
+func lawSpecEvaluateAssayxportHaskellCppFirstCopyOfRows_2(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueText(lsfFirstCopyOfRows(lsfFromValueListRow(rs)))
+	return lsfToValueText(lsfAssayxportHaskellCppFirstCopyOfRows(lsfFromValueListRow(rs)))
 }
 
-// assayxportHaskellCppFooOf on logical values — laws/haskell_cpp.lawspec:576.
+// assayxportHaskellCppFooOf on logical values — laws/haskell_cpp.lawspec:935.
 func lawSpecEvaluateAssayxportHaskellCppFooOf(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12305,15 +13464,31 @@ func lawSpecEvaluateAssayxportHaskellCppFooOf(
 	return lsfToValueText(lsfFooOf(lsfFromValueInteger(seed_), lsfFromValueInteger(k)))
 }
 
-// assayxportHaskellCppHasGroup on logical values — laws/haskell_cpp.lawspec:286.
-func lawSpecEvaluateAssayxportHaskellCppHasGroup(
+// assayxportHaskellCppHasAndFoo on logical values — laws/haskell_cpp.lawspec:1189.
+func lawSpecEvaluateAssayxportHaskellCppHasAndFoo_2(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecValue,
+) LawSpecValue {
+	return lsfToValueLiteral(lsfAssayxportHaskellCppHasAndFoo(lsfFromValueUnit(u)))
+}
+
+// assayxportHaskellCppHasElifdef on logical values — laws/haskell_cpp.lawspec:1301.
+func lawSpecEvaluateAssayxportHaskellCppHasElifdef(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueBool(lsfHasGroup(lsfFromValueListRow(rs)))
+	return lsfToValueBool(lsfHasElifdef(lsfFromValueListRow(rs)))
 }
 
-// assayxportHaskellCppImportRows on logical values — laws/haskell_cpp.lawspec:569.
+// assayxportHaskellCppHasGroup on logical values — laws/haskell_cpp.lawspec:498.
+func lawSpecEvaluateAssayxportHaskellCppHasGroup_2(
+	symbols map[string]*LawSpecSymbol,
+	rs LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppHasGroup(lsfFromValueListRow(rs)))
+}
+
+// assayxportHaskellCppImportRows on logical values — laws/haskell_cpp.lawspec:928.
 func lawSpecEvaluateAssayxportHaskellCppImportRows_2(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12322,7 +13497,16 @@ func lawSpecEvaluateAssayxportHaskellCppImportRows_2(
 	return lsfToValueListRow(lsfAssayxportHaskellCppImportRows(lsfFromValueInteger(seed_), lsfFromValueInteger(i)))
 }
 
-// assayxportHaskellCppInnerRows on logical values — laws/haskell_cpp.lawspec:131.
+// assayxportHaskellCppInNames on logical values — laws/haskell_cpp.lawspec:572.
+func lawSpecEvaluateAssayxportHaskellCppInNames(
+	symbols map[string]*LawSpecSymbol,
+	ns LawSpecValue,
+	n LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfInList(lsfFromValueListText(ns), lsfFromValueText(n)))
+}
+
+// assayxportHaskellCppInnerRows on logical values — laws/haskell_cpp.lawspec:165.
 func lawSpecEvaluateAssayxportHaskellCppInnerRows(
 	symbols map[string]*LawSpecSymbol,
 	base LawSpecValue,
@@ -12333,7 +13517,7 @@ func lawSpecEvaluateAssayxportHaskellCppInnerRows(
 	return lsfToValueListRow(lsfInnerRows(lsfFromValueInteger(base), lsfFromValueListLiteral(terms), lsfFromValueListInner(items), lsfFromValueInteger(i)))
 }
 
-// assayxportHaskellCppInnersOf on logical values — laws/haskell_cpp.lawspec:468.
+// assayxportHaskellCppInnersOf on logical values — laws/haskell_cpp.lawspec:827.
 func lawSpecEvaluateAssayxportHaskellCppInnersOf(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12342,7 +13526,7 @@ func lawSpecEvaluateAssayxportHaskellCppInnersOf(
 	return lsfToValueListInner(lsfInnersOf(lsfFromValueInteger(seed_), lsfFromValueInteger(n)))
 }
 
-// assayxportHaskellCppInsertWalked on logical values — laws/haskell_cpp.lawspec:371.
+// assayxportHaskellCppInsertWalked on logical values — laws/haskell_cpp.lawspec:638.
 func lawSpecEvaluateAssayxportHaskellCppInsertWalked(
 	symbols map[string]*LawSpecSymbol,
 	w LawSpecValue,
@@ -12351,7 +13535,48 @@ func lawSpecEvaluateAssayxportHaskellCppInsertWalked(
 	return lsfToValueListWalked(lsfInsertWalked(lsfFromValueWalked(w), lsfFromValueListWalked(ws)))
 }
 
-// assayxportHaskellCppLeafLines on logical values — laws/haskell_cpp.lawspec:665.
+// assayxportHaskellCppIsElif on logical values — laws/haskell_cpp.lawspec:271.
+func lawSpecEvaluateAssayxportHaskellCppIsElif_2(
+	symbols map[string]*LawSpecSymbol,
+	r LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppIsElif(lsfFromValueRow(r)))
+}
+
+// assayxportHaskellCppIsElse on logical values — laws/haskell_cpp.lawspec:273.
+func lawSpecEvaluateAssayxportHaskellCppIsElse_2(
+	symbols map[string]*LawSpecSymbol,
+	r LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppIsElse(lsfFromValueRow(r)))
+}
+
+// assayxportHaskellCppIsEndif on logical values — laws/haskell_cpp.lawspec:274.
+func lawSpecEvaluateAssayxportHaskellCppIsEndif_2(
+	symbols map[string]*LawSpecSymbol,
+	r LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppIsEndif(lsfFromValueRow(r)))
+}
+
+// assayxportHaskellCppIsIf on logical values — laws/haskell_cpp.lawspec:272.
+func lawSpecEvaluateAssayxportHaskellCppIsIf_2(
+	symbols map[string]*LawSpecSymbol,
+	r LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppIsIf(lsfFromValueRow(r)))
+}
+
+// assayxportHaskellCppIsSet on logical values — laws/haskell_cpp.lawspec:353.
+func lawSpecEvaluateAssayxportHaskellCppIsSet_2(
+	symbols map[string]*LawSpecSymbol,
+	sets LawSpecValue,
+	n LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppIsSet(lsfFromValueKeyValTextSets(sets), lsfFromValueText(n)))
+}
+
+// assayxportHaskellCppLeafLines on logical values — laws/haskell_cpp.lawspec:1055.
 func lawSpecEvaluateAssayxportHaskellCppLeafLines_2(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12361,7 +13586,7 @@ func lawSpecEvaluateAssayxportHaskellCppLeafLines_2(
 	return lsfToValueListText(lsfAssayxportHaskellCppLeafLines(lsfFromValueInteger(seed_), lsfFromValueBool(tail), lsfFromValueInteger(place)))
 }
 
-// assayxportHaskellCppLeafOf on logical values — laws/haskell_cpp.lawspec:464.
+// assayxportHaskellCppLeafOf on logical values — laws/haskell_cpp.lawspec:823.
 func lawSpecEvaluateAssayxportHaskellCppLeafOf(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12369,7 +13594,7 @@ func lawSpecEvaluateAssayxportHaskellCppLeafOf(
 	return lsfToValueLeaf(lsfLeafOf(lsfFromValueInteger(seed_)))
 }
 
-// assayxportHaskellCppLeafRows on logical values — laws/haskell_cpp.lawspec:118.
+// assayxportHaskellCppLeafRows on logical values — laws/haskell_cpp.lawspec:152.
 func lawSpecEvaluateAssayxportHaskellCppLeafRows(
 	symbols map[string]*LawSpecSymbol,
 	group LawSpecValue,
@@ -12382,16 +13607,43 @@ func lawSpecEvaluateAssayxportHaskellCppLeafRows(
 	return lsfToValueListRow(lsfLeafRows(lsfFromValueInteger(group), lsfFromValueListLiteral(terms), lsfFromValueListInteger(forms), lsfFromValueInteger(k), lsfFromValueListLiteral(before), lsfFromValueBool(hasElse)))
 }
 
-// assayxportHaskellCppLitHolds on logical values — laws/haskell_cpp.lawspec:210.
-func lawSpecEvaluateAssayxportHaskellCppLitHolds(
+// assayxportHaskellCppLitHolds on logical values — laws/haskell_cpp.lawspec:670.
+func lawSpecEvaluateAssayxportHaskellCppLitHolds_2(
 	symbols map[string]*LawSpecSymbol,
 	asg LawSpecValue,
 	l LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueBool(lsfLitHolds(lsfFromValueKeyValTextInteger(asg), lsfFromValueLiteral(l)))
+	return lsfToValueBool(lsfAssayxportHaskellCppLitHolds(lsfFromValueKeyValTextInteger(asg), lsfFromValueLiteral(l)))
 }
 
-// assayxportHaskellCppModuleOf on logical values — laws/haskell_cpp.lawspec:485.
+// assayxportHaskellCppLitTrue on logical values — laws/haskell_cpp.lawspec:418.
+func lawSpecEvaluateAssayxportHaskellCppLitTrue_2(
+	symbols map[string]*LawSpecSymbol,
+	asg LawSpecValue,
+	l LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppLitTrue(lsfFromValueKeyValTextInteger(asg), lsfFromValueLiteral(l)))
+}
+
+// assayxportHaskellCppLiveOf on logical values — laws/haskell_cpp.lawspec:266.
+func lawSpecEvaluateAssayxportHaskellCppLiveOf_2(
+	symbols map[string]*LawSpecSymbol,
+	stack LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppLiveOf(lsfFromValueListFrame(stack)))
+}
+
+// assayxportHaskellCppMayStayOpen on logical values — laws/haskell_cpp.lawspec:574.
+func lawSpecEvaluateAssayxportHaskellCppMayStayOpen(
+	symbols map[string]*LawSpecSymbol,
+	setBy LawSpecValue,
+	otherBy LawSpecValue,
+	l LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfMayStayOpen(lsfFromValueListText(setBy), lsfFromValueListText(otherBy), lsfFromValueLiteral(l)))
+}
+
+// assayxportHaskellCppModuleOf on logical values — laws/haskell_cpp.lawspec:844.
 func lawSpecEvaluateAssayxportHaskellCppModuleOf(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12399,7 +13651,7 @@ func lawSpecEvaluateAssayxportHaskellCppModuleOf(
 	return lsfToValueListSection(lsfModuleOf(lsfFromValueInteger(seed_)))
 }
 
-// assayxportHaskellCppNameOf on logical values — laws/haskell_cpp.lawspec:71.
+// assayxportHaskellCppNameOf on logical values — laws/haskell_cpp.lawspec:95.
 func lawSpecEvaluateAssayxportHaskellCppNameOf(
 	symbols map[string]*LawSpecSymbol,
 	group LawSpecValue,
@@ -12408,7 +13660,15 @@ func lawSpecEvaluateAssayxportHaskellCppNameOf(
 	return lsfToValueText(lsfNameOf(lsfFromValueInteger(group), lsfFromValueInteger(arm)))
 }
 
-// assayxportHaskellCppNegate on logical values — laws/haskell_cpp.lawspec:93.
+// assayxportHaskellCppNamesOf on logical values — laws/haskell_cpp.lawspec:313.
+func lawSpecEvaluateAssayxportHaskellCppNamesOf_2(
+	symbols map[string]*LawSpecSymbol,
+	e LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListText(lsfAssayxportHaskellCppNamesOf(lsfFromValueCExpr(e)))
+}
+
+// assayxportHaskellCppNegate on logical values — laws/haskell_cpp.lawspec:122.
 func lawSpecEvaluateAssayxportHaskellCppNegate_2(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -12416,7 +13676,72 @@ func lawSpecEvaluateAssayxportHaskellCppNegate_2(
 	return lsfToValueLiteral(lsfAssayxportHaskellCppNegate(lsfFromValueLiteral(t_)))
 }
 
-// assayxportHaskellCppOneGroup on logical values — laws/haskell_cpp.lawspec:554.
+// assayxportHaskellCppOldBuilds on logical values — laws/haskell_cpp.lawspec:686.
+func lawSpecEvaluateAssayxportHaskellCppOldBuilds_2(
+	symbols map[string]*LawSpecSymbol,
+	rs LawSpecValue,
+	ts LawSpecValue,
+	asg LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListKeyValTextInteger(lsfAssayxportHaskellCppOldBuilds(lsfFromValueListRow(rs), lsfFromValueListText(ts), lsfFromValueKeyValTextInteger(asg)))
+}
+
+// assayxportHaskellCppOldCopies on logical values — laws/haskell_cpp.lawspec:713.
+func lawSpecEvaluateAssayxportHaskellCppOldCopies_2(
+	symbols map[string]*LawSpecSymbol,
+	rs LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListText(lsfAssayxportHaskellCppOldCopies(lsfFromValueListRow(rs)))
+}
+
+// assayxportHaskellCppOldCopiesOf on logical values — laws/haskell_cpp.lawspec:702.
+func lawSpecEvaluateAssayxportHaskellCppOldCopiesOf_2(
+	symbols map[string]*LawSpecSymbol,
+	rs LawSpecValue,
+	builds LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListText(lsfAssayxportHaskellCppOldCopiesOf(lsfFromValueListRow(rs), lsfFromValueListKeyValTextInteger(builds)))
+}
+
+// assayxportHaskellCppOldCopy on logical values — laws/haskell_cpp.lawspec:695.
+func lawSpecEvaluateAssayxportHaskellCppOldCopy_2(
+	symbols map[string]*LawSpecSymbol,
+	asg LawSpecValue,
+	rs LawSpecValue,
+) LawSpecValue {
+	return lsfToValueText(lsfAssayxportHaskellCppOldCopy(lsfFromValueKeyValTextInteger(asg), lsfFromValueListRow(rs)))
+}
+
+// assayxportHaskellCppOldReadAt on logical values — laws/haskell_cpp.lawspec:679.
+func lawSpecEvaluateAssayxportHaskellCppOldReadAt_2(
+	symbols map[string]*LawSpecSymbol,
+	rs LawSpecValue,
+	asg LawSpecValue,
+	t_ LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppOldReadAt(lsfFromValueListRow(rs), lsfFromValueKeyValTextInteger(asg), lsfFromValueText(t_)))
+}
+
+// assayxportHaskellCppOldRuleDiffers on logical values — laws/haskell_cpp.lawspec:1281.
+func lawSpecEvaluateAssayxportHaskellCppOldRuleDiffers_2(
+	symbols map[string]*LawSpecSymbol,
+	rs LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppOldRuleDiffers(lsfFromValueListRow(rs)))
+}
+
+// assayxportHaskellCppOneArm on logical values — laws/haskell_cpp.lawspec:1137.
+func lawSpecEvaluateAssayxportHaskellCppOneArm_2(
+	symbols map[string]*LawSpecSymbol,
+	own LawSpecValue,
+	directive LawSpecValue,
+	name LawSpecValue,
+	yes LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListRow(lsfAssayxportHaskellCppOneArm(lsfFromValueLiteral(own), lsfFromValueText(directive), lsfFromValueText(name), lsfFromValueListText(yes)))
+}
+
+// assayxportHaskellCppOneGroup on logical values — laws/haskell_cpp.lawspec:913.
 func lawSpecEvaluateAssayxportHaskellCppOneGroup_2(
 	symbols map[string]*LawSpecSymbol,
 	outer LawSpecValue,
@@ -12429,7 +13754,7 @@ func lawSpecEvaluateAssayxportHaskellCppOneGroup_2(
 	return lsfToValueListRow(lsfAssayxportHaskellCppOneGroup(lsfFromValueListLiteral(outer), lsfFromValueInteger(form), lsfFromValueText(n), lsfFromValueListText(yes), lsfFromValueBool(hasElse), lsfFromValueListText(no)))
 }
 
-// assayxportHaskellCppOpener on logical values — laws/haskell_cpp.lawspec:101.
+// assayxportHaskellCppOpener on logical values — laws/haskell_cpp.lawspec:130.
 func lawSpecEvaluateAssayxportHaskellCppOpener_2(
 	symbols map[string]*LawSpecSymbol,
 	text LawSpecValue,
@@ -12439,7 +13764,7 @@ func lawSpecEvaluateAssayxportHaskellCppOpener_2(
 	return lsfToValueRow(lsfAssayxportHaskellCppOpener(lsfFromValueText(text), lsfFromValueListLiteral(terms), lsfFromValueText(name)))
 }
 
-// assayxportHaskellCppOverCap on logical values — laws/haskell_cpp.lawspec:309.
+// assayxportHaskellCppOverCap on logical values — laws/haskell_cpp.lawspec:521.
 func lawSpecEvaluateAssayxportHaskellCppOverCap(
 	symbols map[string]*LawSpecSymbol,
 	ss LawSpecValue,
@@ -12447,23 +13772,49 @@ func lawSpecEvaluateAssayxportHaskellCppOverCap(
 	return lsfToValueBool(lsfOverCap(lsfFromValueListSection(ss)))
 }
 
-// assayxportHaskellCppOverCapRows on logical values — laws/haskell_cpp.lawspec:293.
-func lawSpecEvaluateAssayxportHaskellCppOverCapRows(
+// assayxportHaskellCppOverCapRows on logical values — laws/haskell_cpp.lawspec:505.
+func lawSpecEvaluateAssayxportHaskellCppOverCapRows_2(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueBool(lsfOverCapRows(lsfFromValueListRow(rs)))
+	return lsfToValueBool(lsfAssayxportHaskellCppOverCapRows(lsfFromValueListRow(rs)))
 }
 
-// assayxportHaskellCppOwnText on logical values — laws/haskell_cpp.lawspec:219.
-func lawSpecEvaluateAssayxportHaskellCppOwnText(
+// assayxportHaskellCppOwnHolds on logical values — laws/haskell_cpp.lawspec:801.
+func lawSpecEvaluateAssayxportHaskellCppOwnHolds_2(
+	symbols map[string]*LawSpecSymbol,
+	env LawSpecValue,
+	r LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppOwnHolds(lsfFromValueEnv(env), lsfFromValueRow(r)))
+}
+
+// assayxportHaskellCppOwnLit on logical values — laws/haskell_cpp.lawspec:306.
+func lawSpecEvaluateAssayxportHaskellCppOwnLit_2(
+	symbols map[string]*LawSpecSymbol,
+	r LawSpecValue,
+) LawSpecValue {
+	return lsfToValueMaybeLiteral(lsfAssayxportHaskellCppOwnLit(lsfFromValueRow(r)))
+}
+
+// assayxportHaskellCppOwnText on logical values — laws/haskell_cpp.lawspec:430.
+func lawSpecEvaluateAssayxportHaskellCppOwnText_2(
 	symbols map[string]*LawSpecSymbol,
 	ls LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueText(lsfOwnText(lsfFromValueListLiteral(ls)))
+	return lsfToValueText(lsfAssayxportHaskellCppOwnText(lsfFromValueListLiteral(ls)))
 }
 
-// assayxportHaskellCppPackagesAt on logical values — laws/haskell_cpp.lawspec:417.
+// assayxportHaskellCppOwnTexts on logical values — laws/haskell_cpp.lawspec:706.
+func lawSpecEvaluateAssayxportHaskellCppOwnTexts_2(
+	symbols map[string]*LawSpecSymbol,
+	rs LawSpecValue,
+	seen LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListText(lsfAssayxportHaskellCppOwnTexts(lsfFromValueListRow(rs), lsfFromValueListText(seen)))
+}
+
+// assayxportHaskellCppPackagesAt on logical values — laws/haskell_cpp.lawspec:737.
 func lawSpecEvaluateAssayxportHaskellCppPackagesAt(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
@@ -12472,7 +13823,16 @@ func lawSpecEvaluateAssayxportHaskellCppPackagesAt(
 	return lsfToValueListPackage(lsfPackagesAt(lsfFromValueListRow(rs), lsfFromValueListPackage(ps)))
 }
 
-// assayxportHaskellCppPoolBinding on logical values — laws/haskell_cpp.lawspec:608.
+// assayxportHaskellCppPathTexts on logical values — laws/haskell_cpp.lawspec:1260.
+func lawSpecEvaluateAssayxportHaskellCppPathTexts_2(
+	symbols map[string]*LawSpecSymbol,
+	rs LawSpecValue,
+	t_ LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListText(lsfAssayxportHaskellCppPathTexts(lsfFromValueListRow(rs), lsfFromValueText(t_)))
+}
+
+// assayxportHaskellCppPoolBinding on logical values — laws/haskell_cpp.lawspec:967.
 func lawSpecEvaluateAssayxportHaskellCppPoolBinding(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12482,7 +13842,7 @@ func lawSpecEvaluateAssayxportHaskellCppPoolBinding(
 	return lsfToValueKeyValTextBinding(lsfPoolBinding(lsfFromValueInteger(seed_), lsfFromValueInteger(k), lsfFromValueKeyValTextBinding(acc)))
 }
 
-// assayxportHaskellCppPoolEnvAt on logical values — laws/haskell_cpp.lawspec:624.
+// assayxportHaskellCppPoolEnvAt on logical values — laws/haskell_cpp.lawspec:983.
 func lawSpecEvaluateAssayxportHaskellCppPoolEnvAt_2(
 	symbols map[string]*LawSpecSymbol,
 	i LawSpecValue,
@@ -12490,7 +13850,7 @@ func lawSpecEvaluateAssayxportHaskellCppPoolEnvAt_2(
 	return lsfToValueEnv(lsfAssayxportHaskellCppPoolEnvAt(lsfFromValueInteger(i)))
 }
 
-// assayxportHaskellCppPoolForm on logical values — laws/haskell_cpp.lawspec:548.
+// assayxportHaskellCppPoolForm on logical values — laws/haskell_cpp.lawspec:907.
 func lawSpecEvaluateAssayxportHaskellCppPoolForm_2(
 	symbols map[string]*LawSpecSymbol,
 	i LawSpecValue,
@@ -12498,7 +13858,7 @@ func lawSpecEvaluateAssayxportHaskellCppPoolForm_2(
 	return lsfToValueInteger(lsfAssayxportHaskellCppPoolForm(lsfFromValueInteger(i)))
 }
 
-// assayxportHaskellCppPoolName on logical values — laws/haskell_cpp.lawspec:543.
+// assayxportHaskellCppPoolName on logical values — laws/haskell_cpp.lawspec:902.
 func lawSpecEvaluateAssayxportHaskellCppPoolName_2(
 	symbols map[string]*LawSpecSymbol,
 	i LawSpecValue,
@@ -12506,7 +13866,7 @@ func lawSpecEvaluateAssayxportHaskellCppPoolName_2(
 	return lsfToValueText(lsfAssayxportHaskellCppPoolName(lsfFromValueInteger(i)))
 }
 
-// assayxportHaskellCppPoolState on logical values — laws/haskell_cpp.lawspec:620.
+// assayxportHaskellCppPoolState on logical values — laws/haskell_cpp.lawspec:979.
 func lawSpecEvaluateAssayxportHaskellCppPoolState_2(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
@@ -12516,16 +13876,34 @@ func lawSpecEvaluateAssayxportHaskellCppPoolState_2(
 	return lsfToValueKeyValTextBinding(lsfAssayxportHaskellCppPoolState(lsfFromValueText(n), lsfFromValueInteger(c0), lsfFromValueKeyValTextBinding(acc)))
 }
 
-// assayxportHaskellCppReached on logical values — laws/haskell_cpp.lawspec:224.
-func lawSpecEvaluateAssayxportHaskellCppReached(
+// assayxportHaskellCppReachedIn on logical values — laws/haskell_cpp.lawspec:277.
+func lawSpecEvaluateAssayxportHaskellCppReachedIn_2(
 	symbols map[string]*LawSpecSymbol,
-	asg LawSpecValue,
+	stack LawSpecValue,
 	r LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueBool(lsfReached(lsfFromValueKeyValTextInteger(asg), lsfFromValueRow(r)))
+	return lsfToValueBool(lsfAssayxportHaskellCppReachedIn(lsfFromValueListFrame(stack), lsfFromValueRow(r)))
 }
 
-// assayxportHaskellCppRender on logical values — laws/haskell_cpp.lawspec:179.
+// assayxportHaskellCppReadOnTwoPaths on logical values — laws/haskell_cpp.lawspec:1278.
+func lawSpecEvaluateAssayxportHaskellCppReadOnTwoPaths_2(
+	symbols map[string]*LawSpecSymbol,
+	rs LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppReadOnTwoPaths(lsfFromValueListRow(rs)))
+}
+
+// assayxportHaskellCppReadingAt on logical values — laws/haskell_cpp.lawspec:408.
+func lawSpecEvaluateAssayxportHaskellCppReadingAt_2(
+	symbols map[string]*LawSpecSymbol,
+	w LawSpecValue,
+	r LawSpecValue,
+	line LawSpecValue,
+) LawSpecValue {
+	return lsfToValueReading(lsfAssayxportHaskellCppReadingAt(lsfFromValueWalk(w), lsfFromValueRow(r), lsfFromValueInteger(line)))
+}
+
+// assayxportHaskellCppRender on logical values — laws/haskell_cpp.lawspec:213.
 func lawSpecEvaluateAssayxportHaskellCppRender(
 	symbols map[string]*LawSpecSymbol,
 	ss LawSpecValue,
@@ -12533,7 +13911,23 @@ func lawSpecEvaluateAssayxportHaskellCppRender(
 	return lsfToValueText(lsfRender(lsfFromValueListSection(ss)))
 }
 
-// assayxportHaskellCppReproElif on logical values — laws/haskell_cpp.lawspec:718.
+// assayxportHaskellCppReproDefineCopies on logical values — laws/haskell_cpp.lawspec:1222.
+func lawSpecEvaluateAssayxportHaskellCppReproDefineCopies_2(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListText(lsfAssayxportHaskellCppReproDefineCopies(lsfFromValueUnit(u)))
+}
+
+// assayxportHaskellCppReproDefsCopies on logical values — laws/haskell_cpp.lawspec:1234.
+func lawSpecEvaluateAssayxportHaskellCppReproDefsCopies(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListText(lsfReproDefsCopies(lsfFromValueUnit(u)))
+}
+
+// assayxportHaskellCppReproElif on logical values — laws/haskell_cpp.lawspec:1110.
 func lawSpecEvaluateAssayxportHaskellCppReproElif_2(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecValue,
@@ -12541,7 +13935,7 @@ func lawSpecEvaluateAssayxportHaskellCppReproElif_2(
 	return lsfToValueListRow(lsfAssayxportHaskellCppReproElif(lsfFromValueUnit(u)))
 }
 
-// assayxportHaskellCppReproElifCopies on logical values — laws/haskell_cpp.lawspec:868.
+// assayxportHaskellCppReproElifCopies on logical values — laws/haskell_cpp.lawspec:1525.
 func lawSpecEvaluateAssayxportHaskellCppReproElifCopies(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecValue,
@@ -12549,7 +13943,23 @@ func lawSpecEvaluateAssayxportHaskellCppReproElifCopies(
 	return lsfToValueListText(lsfReproElifCopies(lsfFromValueUnit(u)))
 }
 
-// assayxportHaskellCppReproLost on logical values — laws/haskell_cpp.lawspec:729.
+// assayxportHaskellCppReproElifdefCopies on logical values — laws/haskell_cpp.lawspec:1241.
+func lawSpecEvaluateAssayxportHaskellCppReproElifdefCopies_2(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListText(lsfAssayxportHaskellCppReproElifdefCopies(lsfFromValueUnit(u)))
+}
+
+// assayxportHaskellCppReproGuardCopies on logical values — laws/haskell_cpp.lawspec:1228.
+func lawSpecEvaluateAssayxportHaskellCppReproGuardCopies_2(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListText(lsfAssayxportHaskellCppReproGuardCopies(lsfFromValueUnit(u)))
+}
+
+// assayxportHaskellCppReproLost on logical values — laws/haskell_cpp.lawspec:1121.
 func lawSpecEvaluateAssayxportHaskellCppReproLost_2(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecValue,
@@ -12557,7 +13967,7 @@ func lawSpecEvaluateAssayxportHaskellCppReproLost_2(
 	return lsfToValueListRow(lsfAssayxportHaskellCppReproLost(lsfFromValueUnit(u)))
 }
 
-// assayxportHaskellCppReproLostCopies on logical values — laws/haskell_cpp.lawspec:876.
+// assayxportHaskellCppReproLostCopies on logical values — laws/haskell_cpp.lawspec:1533.
 func lawSpecEvaluateAssayxportHaskellCppReproLostCopies(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecValue,
@@ -12565,7 +13975,7 @@ func lawSpecEvaluateAssayxportHaskellCppReproLostCopies(
 	return lsfToValueListText(lsfReproLostCopies(lsfFromValueUnit(u)))
 }
 
-// assayxportHaskellCppReproTail on logical values — laws/haskell_cpp.lawspec:734.
+// assayxportHaskellCppReproTail on logical values — laws/haskell_cpp.lawspec:1126.
 func lawSpecEvaluateAssayxportHaskellCppReproTail_2(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecValue,
@@ -12573,7 +13983,7 @@ func lawSpecEvaluateAssayxportHaskellCppReproTail_2(
 	return lsfToValueListRow(lsfAssayxportHaskellCppReproTail(lsfFromValueUnit(u)))
 }
 
-// assayxportHaskellCppReproTailCopies on logical values — laws/haskell_cpp.lawspec:886.
+// assayxportHaskellCppReproTailCopies on logical values — laws/haskell_cpp.lawspec:1543.
 func lawSpecEvaluateAssayxportHaskellCppReproTailCopies(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecValue,
@@ -12581,7 +13991,15 @@ func lawSpecEvaluateAssayxportHaskellCppReproTailCopies(
 	return lsfToValueListText(lsfReproTailCopies(lsfFromValueUnit(u)))
 }
 
-// assayxportHaskellCppRow on logical values — laws/haskell_cpp.lawspec:96.
+// assayxportHaskellCppReproUndecided on logical values — laws/haskell_cpp.lawspec:1197.
+func lawSpecEvaluateAssayxportHaskellCppReproUndecided_2(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListRow(lsfAssayxportHaskellCppReproUndecided(lsfFromValueUnit(u)))
+}
+
+// assayxportHaskellCppRow on logical values — laws/haskell_cpp.lawspec:125.
 func lawSpecEvaluateAssayxportHaskellCppRow_2(
 	symbols map[string]*LawSpecSymbol,
 	text LawSpecValue,
@@ -12591,7 +14009,7 @@ func lawSpecEvaluateAssayxportHaskellCppRow_2(
 	return lsfToValueRow(lsfAssayxportHaskellCppRow(lsfFromValueText(text), lsfFromValueListLiteral(terms), lsfFromValueBool(directive)))
 }
 
-// assayxportHaskellCppRowsOf on logical values — laws/haskell_cpp.lawspec:167.
+// assayxportHaskellCppRowsOf on logical values — laws/haskell_cpp.lawspec:201.
 func lawSpecEvaluateAssayxportHaskellCppRowsOf(
 	symbols map[string]*LawSpecSymbol,
 	ss LawSpecValue,
@@ -12599,7 +14017,7 @@ func lawSpecEvaluateAssayxportHaskellCppRowsOf(
 	return lsfToValueListRow(lsfRowsOf(lsfFromValueListSection(ss)))
 }
 
-// assayxportHaskellCppSectionRows on logical values — laws/haskell_cpp.lawspec:155.
+// assayxportHaskellCppSectionRows on logical values — laws/haskell_cpp.lawspec:189.
 func lawSpecEvaluateAssayxportHaskellCppSectionRows(
 	symbols map[string]*LawSpecSymbol,
 	ss LawSpecValue,
@@ -12608,7 +14026,7 @@ func lawSpecEvaluateAssayxportHaskellCppSectionRows(
 	return lsfToValueListRow(lsfSectionRows(lsfFromValueListSection(ss), lsfFromValueInteger(i)))
 }
 
-// assayxportHaskellCppSectionsOf on logical values — laws/haskell_cpp.lawspec:476.
+// assayxportHaskellCppSectionsOf on logical values — laws/haskell_cpp.lawspec:835.
 func lawSpecEvaluateAssayxportHaskellCppSectionsOf(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12617,7 +14035,59 @@ func lawSpecEvaluateAssayxportHaskellCppSectionsOf(
 	return lsfToValueListSection(lsfSectionsOf(lsfFromValueInteger(seed_), lsfFromValueInteger(n)))
 }
 
-// assayxportHaskellCppSourceOf on logical values — laws/haskell_cpp.lawspec:174.
+// assayxportHaskellCppSetKind on logical values — laws/haskell_cpp.lawspec:1034.
+func lawSpecEvaluateAssayxportHaskellCppSetKind_2(
+	symbols map[string]*LawSpecSymbol,
+	k LawSpecValue,
+) LawSpecValue {
+	return lsfToValueSets(lsfAssayxportHaskellCppSetKind(lsfFromValueInteger(k)))
+}
+
+// assayxportHaskellCppSetNames on logical values — laws/haskell_cpp.lawspec:564.
+func lawSpecEvaluateAssayxportHaskellCppSetNames(
+	symbols map[string]*LawSpecSymbol,
+	rs LawSpecValue,
+	onlyOther LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListText(lsfSetNames(lsfFromValueListRow(rs), lsfFromValueBool(onlyOther)))
+}
+
+// assayxportHaskellCppSetText on logical values — laws/haskell_cpp.lawspec:1030.
+func lawSpecEvaluateAssayxportHaskellCppSetText_2(
+	symbols map[string]*LawSpecSymbol,
+	n LawSpecValue,
+	k LawSpecValue,
+) LawSpecValue {
+	return lsfToValueText(lsfAssayxportHaskellCppSetText(lsfFromValueText(n), lsfFromValueInteger(k)))
+}
+
+// assayxportHaskellCppSeveralBuilds on logical values — laws/haskell_cpp.lawspec:1305.
+func lawSpecEvaluateAssayxportHaskellCppSeveralBuilds(
+	symbols map[string]*LawSpecSymbol,
+	rs LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfSeveralBuilds(lsfFromValueListRow(rs)))
+}
+
+// assayxportHaskellCppSeveralIn on logical values — laws/haskell_cpp.lawspec:1268.
+func lawSpecEvaluateAssayxportHaskellCppSeveralIn_2(
+	symbols map[string]*LawSpecSymbol,
+	ts LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppSeveralIn(lsfFromValueListText(ts)))
+}
+
+// assayxportHaskellCppSimulated on logical values — laws/haskell_cpp.lawspec:805.
+func lawSpecEvaluateAssayxportHaskellCppSimulated_2(
+	symbols map[string]*LawSpecSymbol,
+	env LawSpecValue,
+	stack LawSpecValue,
+	rs LawSpecValue,
+) LawSpecValue {
+	return lsfToValueText(lsfAssayxportHaskellCppSimulated(lsfFromValueEnv(env), lsfFromValueListFrame(stack), lsfFromValueListRow(rs)))
+}
+
+// assayxportHaskellCppSourceOf on logical values — laws/haskell_cpp.lawspec:208.
 func lawSpecEvaluateAssayxportHaskellCppSourceOf_2(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
@@ -12625,7 +14095,42 @@ func lawSpecEvaluateAssayxportHaskellCppSourceOf_2(
 	return lsfToValueText(lsfAssayxportHaskellCppSourceOf(lsfFromValueListRow(rs)))
 }
 
-// assayxportHaskellCppTangle on logical values — laws/haskell_cpp.lawspec:603.
+// assayxportHaskellCppSpecial on logical values — laws/haskell_cpp.lawspec:349.
+func lawSpecEvaluateAssayxportHaskellCppSpecial_2(
+	symbols map[string]*LawSpecSymbol,
+	n LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppSpecial(lsfFromValueText(n)))
+}
+
+// assayxportHaskellCppStartWalk on logical values — laws/haskell_cpp.lawspec:264.
+func lawSpecEvaluateAssayxportHaskellCppStartWalk_2(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecValue,
+) LawSpecValue {
+	return lsfToValueWalk(lsfAssayxportHaskellCppStartWalk(lsfFromValueUnit(u)))
+}
+
+// assayxportHaskellCppStepped on logical values — laws/haskell_cpp.lawspec:286.
+func lawSpecEvaluateAssayxportHaskellCppStepped_2(
+	symbols map[string]*LawSpecSymbol,
+	stack LawSpecValue,
+	r LawSpecValue,
+	v LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListFrame(lsfAssayxportHaskellCppStepped(lsfFromValueListFrame(stack), lsfFromValueRow(r), lsfFromValueBool(v)))
+}
+
+// assayxportHaskellCppTableAfter on logical values — laws/haskell_cpp.lawspec:792.
+func lawSpecEvaluateAssayxportHaskellCppTableAfter_2(
+	symbols map[string]*LawSpecSymbol,
+	env LawSpecValue,
+	r LawSpecValue,
+) LawSpecValue {
+	return lsfToValueEnv(lsfAssayxportHaskellCppTableAfter(lsfFromValueEnv(env), lsfFromValueRow(r)))
+}
+
+// assayxportHaskellCppTangle on logical values — laws/haskell_cpp.lawspec:962.
 func lawSpecEvaluateAssayxportHaskellCppTangle(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12633,7 +14138,7 @@ func lawSpecEvaluateAssayxportHaskellCppTangle(
 	return lsfToValueListRow(lsfTangle(lsfFromValueInteger(seed_)))
 }
 
-// assayxportHaskellCppTangleEnv on logical values — laws/haskell_cpp.lawspec:614.
+// assayxportHaskellCppTangleEnv on logical values — laws/haskell_cpp.lawspec:973.
 func lawSpecEvaluateAssayxportHaskellCppTangleEnv(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12641,7 +14146,7 @@ func lawSpecEvaluateAssayxportHaskellCppTangleEnv(
 	return lsfToValueEnv(lsfTangleEnv(lsfFromValueInteger(seed_)))
 }
 
-// assayxportHaskellCppTangleForm on logical values — laws/haskell_cpp.lawspec:566.
+// assayxportHaskellCppTangleForm on logical values — laws/haskell_cpp.lawspec:925.
 func lawSpecEvaluateAssayxportHaskellCppTangleForm_2(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12650,7 +14155,7 @@ func lawSpecEvaluateAssayxportHaskellCppTangleForm_2(
 	return lsfToValueInteger(lsfAssayxportHaskellCppTangleForm(lsfFromValueInteger(seed_), lsfFromValueInteger(k)))
 }
 
-// assayxportHaskellCppTangleName on logical values — laws/haskell_cpp.lawspec:567.
+// assayxportHaskellCppTangleName on logical values — laws/haskell_cpp.lawspec:926.
 func lawSpecEvaluateAssayxportHaskellCppTangleName_2(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12659,7 +14164,7 @@ func lawSpecEvaluateAssayxportHaskellCppTangleName_2(
 	return lsfToValueText(lsfAssayxportHaskellCppTangleName(lsfFromValueInteger(seed_), lsfFromValueInteger(k)))
 }
 
-// assayxportHaskellCppTermHolds on logical values — laws/haskell_cpp.lawspec:442.
+// assayxportHaskellCppTermHolds on logical values — laws/haskell_cpp.lawspec:762.
 func lawSpecEvaluateAssayxportHaskellCppTermHolds_2(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -12668,7 +14173,7 @@ func lawSpecEvaluateAssayxportHaskellCppTermHolds_2(
 	return lsfToValueBool(lsfAssayxportHaskellCppTermHolds(lsfFromValueEnv(env), lsfFromValueLiteral(t_)))
 }
 
-// assayxportHaskellCppTermOf on logical values — laws/haskell_cpp.lawspec:77.
+// assayxportHaskellCppTermOf on logical values — laws/haskell_cpp.lawspec:104.
 func lawSpecEvaluateAssayxportHaskellCppTermOf_2(
 	symbols map[string]*LawSpecSymbol,
 	first LawSpecValue,
@@ -12678,7 +14183,19 @@ func lawSpecEvaluateAssayxportHaskellCppTermOf_2(
 	return lsfToValueLiteral(lsfAssayxportHaskellCppTermOf(lsfFromValueBool(first), lsfFromValueInteger(form), lsfFromValueText(n)))
 }
 
-// assayxportHaskellCppTermsIn on logical values — laws/haskell_cpp.lawspec:237.
+// assayxportHaskellCppTermsFrom on logical values — laws/haskell_cpp.lawspec:587.
+func lawSpecEvaluateAssayxportHaskellCppTermsFrom(
+	symbols map[string]*LawSpecSymbol,
+	rs LawSpecValue,
+	setBy LawSpecValue,
+	otherBy LawSpecValue,
+	line LawSpecValue,
+	seen LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListText(lsfTermsFrom(lsfFromValueListRow(rs), lsfFromValueListText(setBy), lsfFromValueListText(otherBy), lsfFromValueInteger(line), lsfFromValueListText(seen)))
+}
+
+// assayxportHaskellCppTermsIn on logical values — laws/haskell_cpp.lawspec:602.
 func lawSpecEvaluateAssayxportHaskellCppTermsIn(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
@@ -12687,7 +14204,7 @@ func lawSpecEvaluateAssayxportHaskellCppTermsIn(
 	return lsfToValueListText(lsfTermsIn(lsfFromValueListRow(rs), lsfFromValueListText(seen)))
 }
 
-// assayxportHaskellCppTraceBefore on logical values — laws/haskell_cpp.lawspec:360.
+// assayxportHaskellCppTraceBefore on logical values — laws/haskell_cpp.lawspec:627.
 func lawSpecEvaluateAssayxportHaskellCppTraceBefore(
 	symbols map[string]*LawSpecSymbol,
 	a LawSpecValue,
@@ -12696,17 +14213,39 @@ func lawSpecEvaluateAssayxportHaskellCppTraceBefore(
 	return lsfToValueBool(lsfTraceBefore(lsfFromValueListInteger(a), lsfFromValueListInteger(b)))
 }
 
-// assayxportHaskellCppTraceOf on logical values — laws/haskell_cpp.lawspec:345.
-func lawSpecEvaluateAssayxportHaskellCppTraceOf(
+// assayxportHaskellCppTraceFrom on logical values — laws/haskell_cpp.lawspec:607.
+func lawSpecEvaluateAssayxportHaskellCppTraceFrom(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
+	w LawSpecValue,
 	full LawSpecValue,
+	line LawSpecValue,
 	seen LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueListInteger(lsfTraceOf(lsfFromValueListRow(rs), lsfFromValueKeyValTextInteger(full), lsfFromValueListText(seen)))
+	return lsfToValueListInteger(lsfTraceFrom(lsfFromValueListRow(rs), lsfFromValueWalk(w), lsfFromValueKeyValTextInteger(full), lsfFromValueInteger(line), lsfFromValueListText(seen)))
 }
 
-// assayxportHaskellCppUnder on logical values — laws/haskell_cpp.lawspec:711.
+// assayxportHaskellCppTruthAt on logical values — laws/haskell_cpp.lawspec:422.
+func lawSpecEvaluateAssayxportHaskellCppTruthAt_2(
+	symbols map[string]*LawSpecSymbol,
+	w LawSpecValue,
+	asg LawSpecValue,
+	r LawSpecValue,
+	line LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppTruthAt(lsfFromValueWalk(w), lsfFromValueKeyValTextInteger(asg), lsfFromValueRow(r), lsfFromValueInteger(line)))
+}
+
+// assayxportHaskellCppTwoPathsOf on logical values — laws/haskell_cpp.lawspec:1274.
+func lawSpecEvaluateAssayxportHaskellCppTwoPathsOf_2(
+	symbols map[string]*LawSpecSymbol,
+	rs LawSpecValue,
+	t_ LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppTwoPathsOf(lsfFromValueListRow(rs), lsfFromValueText(t_)))
+}
+
+// assayxportHaskellCppUnder on logical values — laws/haskell_cpp.lawspec:1103.
 func lawSpecEvaluateAssayxportHaskellCppUnder_2(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
@@ -12718,7 +14257,7 @@ func lawSpecEvaluateAssayxportHaskellCppUnder_2(
 	return lsfToValueListRow(lsfAssayxportHaskellCppUnder(lsfFromValueText(n), lsfFromValueInteger(form), lsfFromValueListText(yes), lsfFromValueBool(hasElse), lsfFromValueListText(no)))
 }
 
-// assayxportHaskellCppUnread on logical values — laws/haskell_cpp.lawspec:435.
+// assayxportHaskellCppUnread on logical values — laws/haskell_cpp.lawspec:755.
 func lawSpecEvaluateAssayxportHaskellCppUnread(
 	symbols map[string]*LawSpecSymbol,
 	ps LawSpecValue,
@@ -12726,7 +14265,7 @@ func lawSpecEvaluateAssayxportHaskellCppUnread(
 	return lsfToValueListPackage(lsfUnread(lsfFromValueListPackage(ps)))
 }
 
-// assayxportHaskellCppUnreadDecls on logical values — laws/haskell_cpp.lawspec:426.
+// assayxportHaskellCppUnreadDecls on logical values — laws/haskell_cpp.lawspec:746.
 func lawSpecEvaluateAssayxportHaskellCppUnreadDecls(
 	symbols map[string]*LawSpecSymbol,
 	ds LawSpecValue,
@@ -12734,7 +14273,7 @@ func lawSpecEvaluateAssayxportHaskellCppUnreadDecls(
 	return lsfToValueListDecl(lsfUnreadDecls(lsfFromValueListDecl(ds)))
 }
 
-// assayxportHaskellCppValueIn on logical values — laws/haskell_cpp.lawspec:339.
+// assayxportHaskellCppValueIn on logical values — laws/haskell_cpp.lawspec:558.
 func lawSpecEvaluateAssayxportHaskellCppValueIn(
 	symbols map[string]*LawSpecSymbol,
 	full LawSpecValue,
@@ -12743,16 +14282,24 @@ func lawSpecEvaluateAssayxportHaskellCppValueIn(
 	return lsfToValueInteger(lsfValueIn_2(lsfFromValueKeyValTextInteger(full), lsfFromValueText(t_)))
 }
 
-// assayxportHaskellCppValued on logical values — laws/haskell_cpp.lawspec:228.
-func lawSpecEvaluateAssayxportHaskellCppValued(
+// assayxportHaskellCppValueNames on logical values — laws/haskell_cpp.lawspec:331.
+func lawSpecEvaluateAssayxportHaskellCppValueNames_2(
+	symbols map[string]*LawSpecSymbol,
+	e LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListText(lsfAssayxportHaskellCppValueNames(lsfFromValueCExpr(e)))
+}
+
+// assayxportHaskellCppValued on logical values — laws/haskell_cpp.lawspec:413.
+func lawSpecEvaluateAssayxportHaskellCppValued_2(
 	symbols map[string]*LawSpecSymbol,
 	asg LawSpecValue,
 	t_ LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueBool(lsfValued(lsfFromValueKeyValTextInteger(asg), lsfFromValueText(t_)))
+	return lsfToValueBool(lsfAssayxportHaskellCppValued(lsfFromValueKeyValTextInteger(asg), lsfFromValueText(t_)))
 }
 
-// assayxportHaskellCppWalkedAll on logical values — laws/haskell_cpp.lawspec:379.
+// assayxportHaskellCppWalkedAll on logical values — laws/haskell_cpp.lawspec:646.
 func lawSpecEvaluateAssayxportHaskellCppWalkedAll(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
@@ -12762,7 +14309,7 @@ func lawSpecEvaluateAssayxportHaskellCppWalkedAll(
 	return lsfToValueListWalked(lsfWalkedAll(lsfFromValueListRow(rs), lsfFromValueListKeyValTextInteger(fulls), lsfFromValueListWalked(acc)))
 }
 
-// assayxportHaskellCppWeave on logical values — laws/haskell_cpp.lawspec:702.
+// assayxportHaskellCppWeave on logical values — laws/haskell_cpp.lawspec:1094.
 func lawSpecEvaluateAssayxportHaskellCppWeave_2(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12770,7 +14317,7 @@ func lawSpecEvaluateAssayxportHaskellCppWeave_2(
 	return lsfToValueListRow(lsfAssayxportHaskellCppWeave(lsfFromValueInteger(seed_)))
 }
 
-// assayxportHaskellCppWeaveArms on logical values — laws/haskell_cpp.lawspec:676.
+// assayxportHaskellCppWeaveArms on logical values — laws/haskell_cpp.lawspec:1066.
 func lawSpecEvaluateAssayxportHaskellCppWeaveArms_2(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12786,7 +14333,7 @@ func lawSpecEvaluateAssayxportHaskellCppWeaveArms_2(
 	return lsfToValueListRow(lsfAssayxportHaskellCppWeaveArms(lsfFromValueInteger(seed_), lsfFromValueInteger(group), lsfFromValueListLiteral(outer), lsfFromValueListLiteral(before), lsfFromValueInteger(k), lsfFromValueInteger(left), lsfFromValueInteger(depth), lsfFromValueBool(tail), lsfFromValueInteger(fuel)))
 }
 
-// assayxportHaskellCppWeaveForm on logical values — laws/haskell_cpp.lawspec:661.
+// assayxportHaskellCppWeaveForm on logical values — laws/haskell_cpp.lawspec:1049.
 func lawSpecEvaluateAssayxportHaskellCppWeaveForm_2(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12796,7 +14343,7 @@ func lawSpecEvaluateAssayxportHaskellCppWeaveForm_2(
 	return lsfToValueInteger(lsfAssayxportHaskellCppWeaveForm(lsfFromValueInteger(seed_), lsfFromValueInteger(place), lsfFromValueBool(first)))
 }
 
-// assayxportHaskellCppWeaveName on logical values — laws/haskell_cpp.lawspec:657.
+// assayxportHaskellCppWeaveName on logical values — laws/haskell_cpp.lawspec:1045.
 func lawSpecEvaluateAssayxportHaskellCppWeaveName_2(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12805,7 +14352,15 @@ func lawSpecEvaluateAssayxportHaskellCppWeaveName_2(
 	return lsfToValueText(lsfAssayxportHaskellCppWeaveName(lsfFromValueInteger(seed_), lsfFromValueInteger(place)))
 }
 
-// assayxportHaskellCppWeaveSection on logical values — laws/haskell_cpp.lawspec:694.
+// assayxportHaskellCppWeaveNew on logical values — laws/haskell_cpp.lawspec:1028.
+func lawSpecEvaluateAssayxportHaskellCppWeaveNew_2(
+	symbols map[string]*LawSpecSymbol,
+	seed_ LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppWeaveNew(lsfFromValueInteger(seed_)))
+}
+
+// assayxportHaskellCppWeaveSection on logical values — laws/haskell_cpp.lawspec:1085.
 func lawSpecEvaluateAssayxportHaskellCppWeaveSection_2(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -12814,7 +14369,18 @@ func lawSpecEvaluateAssayxportHaskellCppWeaveSection_2(
 	return lsfToValueListRow(lsfAssayxportHaskellCppWeaveSection(lsfFromValueInteger(seed_), lsfFromValueInteger(i)))
 }
 
-// assayxportHaskellCppWideRows on logical values — laws/haskell_cpp.lawspec:904.
+// assayxportHaskellCppWeaveSets on logical values — laws/haskell_cpp.lawspec:1039.
+func lawSpecEvaluateAssayxportHaskellCppWeaveSets_2(
+	symbols map[string]*LawSpecSymbol,
+	seed_ LawSpecValue,
+	place LawSpecValue,
+	odds LawSpecValue,
+	path LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListRow(lsfAssayxportHaskellCppWeaveSets(lsfFromValueInteger(seed_), lsfFromValueInteger(place), lsfFromValueInteger(odds), lsfFromValueListLiteral(path)))
+}
+
+// assayxportHaskellCppWideRows on logical values — laws/haskell_cpp.lawspec:1561.
 func lawSpecEvaluateAssayxportHaskellCppWideRows_2(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
@@ -12822,7 +14388,7 @@ func lawSpecEvaluateAssayxportHaskellCppWideRows_2(
 	return lsfToValueListRow(lsfAssayxportHaskellCppWideRows(lsfFromValueInteger(n)))
 }
 
-// assayxportHaskellCppWithValue on logical values — laws/haskell_cpp.lawspec:327.
+// assayxportHaskellCppWithValue on logical values — laws/haskell_cpp.lawspec:546.
 func lawSpecEvaluateAssayxportHaskellCppWithValue(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -15149,6 +16715,11 @@ func lawSpecEvaluateBadChar(symbols map[string]*LawSpecSymbol, ch LawSpecValue) 
 	return lsfToValueBool(lsfBadChar(lsfFromValueSyntax(ch)))
 }
 
+// basePackage on logical values — laws/haskell_extract.lawspec:4573.
+func lawSpecEvaluateBasePackage(symbols map[string]*LawSpecSymbol, v LawSpecValue) LawSpecValue {
+	return lsfToValueBindingLine(lsfBasePackage(lsfFromValueListInteger(v)))
+}
+
 // before on logical values — laws/haskell_extract.lawspec:71.
 func lawSpecEvaluateBefore(
 	symbols map[string]*LawSpecSymbol,
@@ -15168,17 +16739,17 @@ func lawSpecEvaluateBeforeProc(
 	return lsfToValueListText(lsfBeforeProc(lsfFromValueListText(ls), lsfFromValueListText(cur), lsfFromValueListText(best)))
 }
 
-// bigDecl on logical values — laws/haskell_extract.lawspec:4303.
+// bigDecl on logical values — laws/haskell_extract.lawspec:4683.
 func lawSpecEvaluateBigDecl(symbols map[string]*LawSpecSymbol, i LawSpecValue) LawSpecValue {
 	return lsfToValueText(lsfBigDecl(lsfFromValueInteger(i)))
 }
 
-// bigDecls on logical values — laws/haskell_extract.lawspec:4307.
+// bigDecls on logical values — laws/haskell_extract.lawspec:4687.
 func lawSpecEvaluateBigDecls(symbols map[string]*LawSpecSymbol, n LawSpecValue) LawSpecValue {
 	return lsfToValueListText(lsfBigDecls(lsfFromValueInteger(n)))
 }
 
-// bigModule on logical values — laws/haskell_extract.lawspec:4309.
+// bigModule on logical values — laws/haskell_extract.lawspec:4689.
 func lawSpecEvaluateBigModule(symbols map[string]*LawSpecSymbol, n LawSpecValue) LawSpecValue {
 	return lsfToValueText(lsfBigModule(lsfFromValueInteger(n)))
 }
@@ -15206,7 +16777,7 @@ func lawSpecEvaluateBlanksOf(symbols map[string]*LawSpecSymbol, l LawSpecValue) 
 	return lsfToValueInteger(lsfBlanksOf(lsfFromValueText(l)))
 }
 
-// blockDocIs on logical values — laws/haskell_extract.lawspec:3615.
+// blockDocIs on logical values — laws/haskell_extract.lawspec:3877.
 func lawSpecEvaluateBlockDocIs(
 	symbols map[string]*LawSpecSymbol,
 	raw LawSpecValue,
@@ -15254,7 +16825,7 @@ func lawSpecEvaluateBrings(
 	return lsfToValueBool(lsfBrings(lsfFromValueImport(i), lsfFromValueText(n)))
 }
 
-// buildTexts on logical values — laws/haskell_extract.lawspec:3992.
+// buildTexts on logical values — laws/haskell_extract.lawspec:4278.
 func lawSpecEvaluateBuildTexts(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
@@ -15272,12 +16843,12 @@ func lawSpecEvaluateBundled(
 	return lsfToValueListText(lsfBundled(lsfFromValueKeyValTextListText(loose), lsfFromValueListSyntax(cs)))
 }
 
-// byteOrderMark on logical values — laws/haskell_extract.lawspec:2954.
+// byteOrderMark on logical values — laws/haskell_extract.lawspec:3216.
 func lawSpecEvaluateByteOrderMark(symbols map[string]*LawSpecSymbol, u LawSpecValue) LawSpecValue {
 	return lsfToValueText(lsfByteOrderMark(lsfFromValueUnit(u)))
 }
 
-// callsAre on logical values — laws/haskell_extract.lawspec:2872.
+// callsAre on logical values — laws/haskell_extract.lawspec:3134.
 func lawSpecEvaluateCallsAre(
 	symbols map[string]*LawSpecSymbol,
 	id LawSpecValue,
@@ -15287,7 +16858,7 @@ func lawSpecEvaluateCallsAre(
 	return lsfToValueBool(lsfCallsAre(lsfFromValueText(id), lsfFromValueListCallEdge(es), lsfFromValueDecl(d)))
 }
 
-// charModule on logical values — laws/haskell_extract.lawspec:2854.
+// charModule on logical values — laws/haskell_extract.lawspec:3116.
 func lawSpecEvaluateCharModule(symbols map[string]*LawSpecSymbol, token LawSpecValue) LawSpecValue {
 	return lsfToValueSyntax(lsfCharModule(lsfFromValueText(token)))
 }
@@ -15327,7 +16898,7 @@ func lawSpecEvaluateChildrenOrdered(
 	return lsfToValueBool(lsfAssayxportHaskellExtractChildrenOrdered(lsfFromValueSyntax(parent), lsfFromValueListSyntax(cs)))
 }
 
-// chosen on logical values — laws/haskell_extract.lawspec:3151.
+// chosen on logical values — laws/haskell_extract.lawspec:3413.
 func lawSpecEvaluateChosen_2(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
@@ -15337,7 +16908,7 @@ func lawSpecEvaluateChosen_2(
 	return lsfToValueText(lsfChosen(lsfFromValueInteger(n), lsfFromValueListText(ts), lsfFromValueText(none)))
 }
 
-// classColumn on logical values — laws/haskell_extract.lawspec:3605.
+// classColumn on logical values — laws/haskell_extract.lawspec:3867.
 func lawSpecEvaluateClassColumn(
 	symbols map[string]*LawSpecSymbol,
 	ds LawSpecValue,
@@ -15371,7 +16942,7 @@ func lawSpecEvaluateClassMethods(symbols map[string]*LawSpecSymbol, d LawSpecVal
 	return lsfToValueListSyntax(lsfClassMethods(lsfFromValueSyntax(d)))
 }
 
-// classicHeader on logical values — laws/haskell_extract.lawspec:3006.
+// classicHeader on logical values — laws/haskell_extract.lawspec:3268.
 func lawSpecEvaluateClassicHeader(symbols map[string]*LawSpecSymbol, u LawSpecValue) LawSpecValue {
 	return lsfToValueText(lsfClassicHeader(lsfFromValueUnit(u)))
 }
@@ -15446,7 +17017,7 @@ func lawSpecEvaluateConNameOf(symbols map[string]*LawSpecSymbol, shape LawSpecVa
 	return lsfToValueText(lsfConNameOf(lsfFromValueSyntax(shape)))
 }
 
-// condHolds on logical values — laws/haskell_extract.lawspec:4096.
+// condHolds on logical values — laws/haskell_extract.lawspec:4390.
 func lawSpecEvaluateCondHolds(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -15517,7 +17088,7 @@ func lawSpecEvaluateContextOf(
 	return lsfToValueCtx(lsfContextOf(lsfFromValueSyntax(root), lsfFromValueListDecl(base)))
 }
 
-// copyEnv on logical values — laws/haskell_extract.lawspec:3847.
+// copyEnv on logical values — laws/haskell_extract.lawspec:4133.
 func lawSpecEvaluateCopyEnv(symbols map[string]*LawSpecSymbol, i LawSpecValue) LawSpecValue {
 	return lsfToValueEnv(lsfCopyEnv(lsfFromValueInteger(i)))
 }
@@ -15532,17 +17103,17 @@ func lawSpecEvaluateCoreType(symbols map[string]*LawSpecSymbol, t_ LawSpecValue)
 	return lsfToValueSyntax(lsfCoreType(lsfFromValueSyntax(t_)))
 }
 
-// cpp2BuildHolds on logical values — laws/haskell_extract.lawspec:3898.
+// cpp2BuildHolds on logical values — laws/haskell_extract.lawspec:4184.
 func lawSpecEvaluateCpp2BuildHolds(symbols map[string]*LawSpecSymbol, i LawSpecValue) LawSpecValue {
 	return lsfToValueBool(lsfCpp2BuildHolds(symbols, lsfFromValueInteger(i)))
 }
 
-// cpp2BuildsHold on logical values — laws/haskell_extract.lawspec:3908.
+// cpp2BuildsHold on logical values — laws/haskell_extract.lawspec:4194.
 func lawSpecEvaluateCpp2BuildsHold(symbols map[string]*LawSpecSymbol, n LawSpecValue) LawSpecValue {
 	return lsfToValueBool(lsfCpp2BuildsHold(symbols, lsfFromValueInteger(n)))
 }
 
-// cpp2Filtered on logical values — laws/haskell_extract.lawspec:3956.
+// cpp2Filtered on logical values — laws/haskell_extract.lawspec:4242.
 func lawSpecEvaluateCpp2Filtered(
 	symbols map[string]*LawSpecSymbol,
 	lines LawSpecValue,
@@ -15550,22 +17121,22 @@ func lawSpecEvaluateCpp2Filtered(
 	return lsfToValueFiltered(lsfCpp2Filtered(symbols, lsfFromValueListBindingLine(lines)))
 }
 
-// cpp2Lines on logical values — laws/haskell_extract.lawspec:3887.
+// cpp2Lines on logical values — laws/haskell_extract.lawspec:4173.
 func lawSpecEvaluateCpp2Lines(symbols map[string]*LawSpecSymbol, i LawSpecValue) LawSpecValue {
 	return lsfToValueListBindingLine(lsfCpp2Lines(lsfFromValueInteger(i)))
 }
 
-// cppCopies on logical values — laws/haskell_extract.lawspec:2552.
+// cppCopies on logical values — laws/haskell_extract.lawspec:2808.
 func lawSpecEvaluateCppCopies(symbols map[string]*LawSpecSymbol, source LawSpecValue) LawSpecValue {
 	return lsfToValueListText(lsfCppCopies(lsfFromValueText(source)))
 }
 
-// cppPlan on logical values — laws/haskell_extract.lawspec:2538.
+// cppPlan on logical values — laws/haskell_extract.lawspec:2794.
 func lawSpecEvaluateCppPlan(symbols map[string]*LawSpecSymbol, source LawSpecValue) LawSpecValue {
 	return lsfToValueCxPlan(lsfCppPlan(lsfFromValueText(source)))
 }
 
-// cxAddDecl on logical values — laws/haskell_extract.lawspec:2645.
+// cxAddDecl on logical values — laws/haskell_extract.lawspec:2907.
 func lawSpecEvaluateCxAddDecl(
 	symbols map[string]*LawSpecSymbol,
 	d LawSpecValue,
@@ -15575,7 +17146,7 @@ func lawSpecEvaluateCxAddDecl(
 	return lsfToValueCxBook(lsfCxAddDecl(lsfFromValueDecl(d), lsfFromValueInteger(i), lsfFromValueCxBook(book)))
 }
 
-// cxAddDecls on logical values — laws/haskell_extract.lawspec:2654.
+// cxAddDecls on logical values — laws/haskell_extract.lawspec:2916.
 func lawSpecEvaluateCxAddDecls(
 	symbols map[string]*LawSpecSymbol,
 	ds LawSpecValue,
@@ -15585,7 +17156,7 @@ func lawSpecEvaluateCxAddDecls(
 	return lsfToValueCxBook(lsfCxAddDecls(lsfFromValueListDecl(ds), lsfFromValueInteger(i), lsfFromValueCxBook(book)))
 }
 
-// cxAddEdge on logical values — laws/haskell_extract.lawspec:2624.
+// cxAddEdge on logical values — laws/haskell_extract.lawspec:2886.
 func lawSpecEvaluateCxAddEdge(
 	symbols map[string]*LawSpecSymbol,
 	e LawSpecValue,
@@ -15595,7 +17166,7 @@ func lawSpecEvaluateCxAddEdge(
 	return lsfToValueListCxEdge(lsfCxAddEdge(lsfFromValueCallEdge(e), lsfFromValueInteger(i), lsfFromValueListCxEdge(es)))
 }
 
-// cxAddEdges on logical values — laws/haskell_extract.lawspec:2632.
+// cxAddEdges on logical values — laws/haskell_extract.lawspec:2894.
 func lawSpecEvaluateCxAddEdges(
 	symbols map[string]*LawSpecSymbol,
 	es LawSpecValue,
@@ -15605,7 +17176,7 @@ func lawSpecEvaluateCxAddEdges(
 	return lsfToValueListCxEdge(lsfCxAddEdges(lsfFromValueListCallEdge(es), lsfFromValueInteger(i), lsfFromValueListCxEdge(acc)))
 }
 
-// cxAddSym on logical values — laws/haskell_extract.lawspec:2636.
+// cxAddSym on logical values — laws/haskell_extract.lawspec:2898.
 func lawSpecEvaluateCxAddSym(
 	symbols map[string]*LawSpecSymbol,
 	form LawSpecValue,
@@ -15616,26 +17187,42 @@ func lawSpecEvaluateCxAddSym(
 	return lsfToValueListCxSym(lsfCxAddSym(lsfFromValueDecl(form), lsfFromValueListCallEdge(es), lsfFromValueInteger(i), lsfFromValueListCxSym(syms)))
 }
 
-// cxAllHold on logical values — laws/haskell_extract.lawspec:2461.
-func lawSpecEvaluateCxAllHold(
+// cxAfter on logical values — laws/haskell_extract.lawspec:2640.
+func lawSpecEvaluateCxAfter(
 	symbols map[string]*LawSpecSymbol,
-	asg LawSpecValue,
-	ls LawSpecValue,
+	w LawSpecValue,
+	r LawSpecValue,
+	v LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueBool(lsfCxAllHold(lsfFromValueKeyValTextInteger(asg), lsfFromValueListCxTerm(ls)))
+	return lsfToValueCxPass(lsfCxAfter(lsfFromValueCxPass(w), lsfFromValueCxRow(r), lsfFromValueBool(v)))
 }
 
-// cxBlanks on logical values — laws/haskell_extract.lawspec:2510.
+// cxBlanks on logical values — laws/haskell_extract.lawspec:2766.
 func lawSpecEvaluateCxBlanks(symbols map[string]*LawSpecSymbol, n LawSpecValue) LawSpecValue {
 	return lsfToValueListText(lsfCxBlanks(lsfFromValueInteger(n)))
 }
 
-// cxBodyOf on logical values — laws/haskell_extract.lawspec:2341.
+// cxBlocks on logical values — laws/haskell_extract.lawspec:2655.
+func lawSpecEvaluateCxBlocks(
+	symbols map[string]*LawSpecSymbol,
+	sets LawSpecValue,
+	vals LawSpecValue,
+	n LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfCxBlocks(lsfFromValueKeyValTextCxSets(sets), lsfFromValueListText(vals), lsfFromValueText(n)))
+}
+
+// cxBodyOf on logical values — laws/haskell_extract.lawspec:2351.
 func lawSpecEvaluateCxBodyOf(symbols map[string]*LawSpecSymbol, joined LawSpecValue) LawSpecValue {
 	return lsfToValueText(lsfCxBodyOf(lsfFromValueText(joined)))
 }
 
-// cxBookOf on logical values — laws/haskell_extract.lawspec:2682.
+// cxBodySets on logical values — laws/haskell_extract.lawspec:2452.
+func lawSpecEvaluateCxBodySets(symbols map[string]*LawSpecSymbol, rest LawSpecValue) LawSpecValue {
+	return lsfToValueCxSets(lsfCxBodySets(lsfFromValueText(rest)))
+}
+
+// cxBookOf on logical values — laws/haskell_extract.lawspec:2944.
 func lawSpecEvaluateCxBookOf(
 	symbols map[string]*LawSpecSymbol,
 	live LawSpecValue,
@@ -15644,25 +17231,29 @@ func lawSpecEvaluateCxBookOf(
 	return lsfToValueCxBook(lsfCxBookOf(lsfFromValueListCxCopyPkg(live), lsfFromValueCxBook(book)))
 }
 
-// cxBuilds on logical values — laws/haskell_extract.lawspec:2493.
+// cxBuilds on logical values — laws/haskell_extract.lawspec:2736.
 func lawSpecEvaluateCxBuilds(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
+	w LawSpecValue,
 	asg LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueListKeyValTextInteger(lsfCxBuilds(lsfFromValueListCxRow(rs), lsfFromValueKeyValTextInteger(asg)))
+	return lsfToValueListKeyValTextInteger(lsfCxBuilds(lsfFromValueListCxRow(rs), lsfFromValueCxPass(w), lsfFromValueKeyValTextInteger(asg)))
 }
 
-// cxChoiceAt on logical values — laws/haskell_extract.lawspec:2478.
-func lawSpecEvaluateCxChoiceAt(
+// cxCommentOpen on logical values — laws/haskell_extract.lawspec:2363.
+func lawSpecEvaluateCxCommentOpen(
 	symbols map[string]*LawSpecSymbol,
-	asg LawSpecValue,
-	r LawSpecValue,
+	t_ LawSpecValue,
+	i LawSpecValue,
+	n LawSpecValue,
+	inside LawSpecValue,
+	fuel LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueBool(lsfCxChoiceAt(lsfFromValueKeyValTextInteger(asg), lsfFromValueCxRow(r)))
+	return lsfToValueBool(lsfCxCommentOpen(lsfFromValueText(t_), lsfFromValueInteger(i), lsfFromValueInteger(n), lsfFromValueBool(inside), lsfFromValueInteger(fuel)))
 }
 
-// cxCondText on logical values — laws/haskell_extract.lawspec:2599.
+// cxCondText on logical values — laws/haskell_extract.lawspec:2861.
 func lawSpecEvaluateCxCondText(
 	symbols map[string]*LawSpecSymbol,
 	plan LawSpecValue,
@@ -15671,7 +17262,7 @@ func lawSpecEvaluateCxCondText(
 	return lsfToValueText(lsfCxCondText(lsfFromValueCxPlan(plan), lsfFromValueListInteger(j)))
 }
 
-// cxCopiesOf on logical values — laws/haskell_extract.lawspec:2525.
+// cxCopiesOf on logical values — laws/haskell_extract.lawspec:2781.
 func lawSpecEvaluateCxCopiesOf(
 	symbols map[string]*LawSpecSymbol,
 	rows LawSpecValue,
@@ -15680,16 +17271,17 @@ func lawSpecEvaluateCxCopiesOf(
 	return lsfToValueListText(lsfCxCopiesOf(lsfFromValueListCxRow(rows), lsfFromValueListKeyValTextInteger(builds)))
 }
 
-// cxCopyLines on logical values — laws/haskell_extract.lawspec:2514.
+// cxCopyLines on logical values — laws/haskell_extract.lawspec:2770.
 func lawSpecEvaluateCxCopyLines(
 	symbols map[string]*LawSpecSymbol,
+	w LawSpecValue,
 	asg LawSpecValue,
 	rows LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueListText(lsfCxCopyLines(lsfFromValueKeyValTextInteger(asg), lsfFromValueListCxRow(rows)))
+	return lsfToValueListText(lsfCxCopyLines(lsfFromValueCxPass(w), lsfFromValueKeyValTextInteger(asg), lsfFromValueListCxRow(rows)))
 }
 
-// cxCopyOf on logical values — laws/haskell_extract.lawspec:2523.
+// cxCopyOf on logical values — laws/haskell_extract.lawspec:2779.
 func lawSpecEvaluateCxCopyOf(
 	symbols map[string]*LawSpecSymbol,
 	asg LawSpecValue,
@@ -15698,37 +17290,41 @@ func lawSpecEvaluateCxCopyOf(
 	return lsfToValueText(lsfCxCopyOf(lsfFromValueKeyValTextInteger(asg), lsfFromValueListCxRow(rows)))
 }
 
-// cxCount on logical values — laws/haskell_extract.lawspec:2482.
+// cxCount on logical values — laws/haskell_extract.lawspec:2719.
 func lawSpecEvaluateCxCount(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
+	w LawSpecValue,
 	asg LawSpecValue,
 	budget LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueInteger(lsfCxCount(lsfFromValueListCxRow(rs), lsfFromValueKeyValTextInteger(asg), lsfFromValueInteger(budget)))
+	return lsfToValueInteger(lsfCxCount(lsfFromValueListCxRow(rs), lsfFromValueCxPass(w), lsfFromValueKeyValTextInteger(asg), lsfFromValueInteger(budget)))
 }
 
-// cxCubeLits on logical values — laws/haskell_extract.lawspec:2593.
+// cxCubeLits on logical values — laws/haskell_extract.lawspec:2855.
 func lawSpecEvaluateCxCubeLits(symbols map[string]*LawSpecSymbol, cs LawSpecValue) LawSpecValue {
 	return lsfToValueListListLiteral(lsfCxCubeLits(lsfFromValueListListCxTerm(cs)))
 }
 
-// cxDeadOf on logical values — laws/haskell_extract.lawspec:2404.
-func lawSpecEvaluateCxDeadOf(symbols map[string]*LawSpecSymbol, stack LawSpecValue) LawSpecValue {
-	return lsfToValueBool(lsfCxDeadOf(lsfFromValueListCxOpen(stack)))
+// cxDecidedBy on logical values — laws/haskell_extract.lawspec:2685.
+func lawSpecEvaluateCxDecidedBy(
+	symbols map[string]*LawSpecSymbol,
+	sets LawSpecValue,
+	r LawSpecValue,
+) LawSpecValue {
+	return lsfToValueCxReading(lsfCxDecidedBy(lsfFromValueKeyValTextCxSets(sets), lsfFromValueCxRow(r)))
 }
 
-// cxDirective on logical values — laws/haskell_extract.lawspec:2420.
-func lawSpecEvaluateCxDirective(
+// cxDefinition on logical values — laws/haskell_extract.lawspec:2464.
+func lawSpecEvaluateCxDefinition(
 	symbols map[string]*LawSpecSymbol,
 	word LawSpecValue,
 	body LawSpecValue,
-	st LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueCxEffect(lsfCxDirective(lsfFromValueText(word), lsfFromValueText(body), lsfFromValueCxState(st)))
+	return lsfToValueCxDef(lsfCxDefinition(lsfFromValueText(word), lsfFromValueText(body)))
 }
 
-// cxEdgesCond on logical values — laws/haskell_extract.lawspec:2692.
+// cxEdgesCond on logical values — laws/haskell_extract.lawspec:2954.
 func lawSpecEvaluateCxEdgesCond(
 	symbols map[string]*LawSpecSymbol,
 	plan LawSpecValue,
@@ -15737,7 +17333,7 @@ func lawSpecEvaluateCxEdgesCond(
 	return lsfToValueListCallEdge(lsfCxEdgesCond(lsfFromValueCxPlan(plan), lsfFromValueListCxEdge(es)))
 }
 
-// cxEmit on logical values — laws/haskell_extract.lawspec:2707.
+// cxEmit on logical values — laws/haskell_extract.lawspec:2969.
 func lawSpecEvaluateCxEmit(
 	symbols map[string]*LawSpecSymbol,
 	plan LawSpecValue,
@@ -15747,7 +17343,7 @@ func lawSpecEvaluateCxEmit(
 	return lsfToValueListDecl(lsfCxEmit(lsfFromValueCxPlan(plan), lsfFromValueCxBook(book), lsfFromValueListText(ids)))
 }
 
-// cxEmitSyms on logical values — laws/haskell_extract.lawspec:2699.
+// cxEmitSyms on logical values — laws/haskell_extract.lawspec:2961.
 func lawSpecEvaluateCxEmitSyms(
 	symbols map[string]*LawSpecSymbol,
 	plan LawSpecValue,
@@ -15756,55 +17352,139 @@ func lawSpecEvaluateCxEmitSyms(
 	return lsfToValueListDecl(lsfCxEmitSyms(lsfFromValueCxPlan(plan), lsfFromValueListCxSym(syms)))
 }
 
-// cxFirstBuild on logical values — laws/haskell_extract.lawspec:2503.
+// cxExprOf on logical values — laws/haskell_extract.lawspec:2493.
+func lawSpecEvaluateCxExprOf(symbols map[string]*LawSpecSymbol, text LawSpecValue) LawSpecValue {
+	return lsfToValueMaybeCExpr(lsfCxExprOf(lsfFromValueText(text)))
+}
+
+// cxFileNames on logical values — laws/haskell_extract.lawspec:2663.
+func lawSpecEvaluateCxFileNames(
+	symbols map[string]*LawSpecSymbol,
+	sets LawSpecValue,
+	ns LawSpecValue,
+	acc LawSpecValue,
+) LawSpecValue {
+	return lsfToValueKeyValTextBinding(lsfCxFileNames(lsfFromValueKeyValTextCxSets(sets), lsfFromValueListText(ns), lsfFromValueKeyValTextBinding(acc)))
+}
+
+// cxFileTerm on logical values — laws/haskell_extract.lawspec:2680.
+func lawSpecEvaluateCxFileTerm(
+	symbols map[string]*LawSpecSymbol,
+	line LawSpecValue,
+	l LawSpecValue,
+) LawSpecValue {
+	return lsfToValueLiteral(lsfCxFileTerm(lsfFromValueInteger(line), lsfFromValueLiteral(l)))
+}
+
+// cxFindOpen on logical values — laws/haskell_extract.lawspec:2423.
+func lawSpecEvaluateCxFindOpen(
+	symbols map[string]*LawSpecSymbol,
+	t_ LawSpecValue,
+	i LawSpecValue,
+	n LawSpecValue,
+) LawSpecValue {
+	return lsfToValueInteger(lsfCxFindOpen(lsfFromValueText(t_), lsfFromValueInteger(i), lsfFromValueInteger(n)))
+}
+
+// cxFirstBuild on logical values — laws/haskell_extract.lawspec:2752.
 func lawSpecEvaluateCxFirstBuild(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
+	w LawSpecValue,
 	asg LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueKeyValTextInteger(lsfCxFirstBuild(lsfFromValueListCxRow(rs), lsfFromValueKeyValTextInteger(asg)))
+	return lsfToValueKeyValTextInteger(lsfCxFirstBuild(lsfFromValueListCxRow(rs), lsfFromValueCxPass(w), lsfFromValueKeyValTextInteger(asg)))
 }
 
-// cxFirstId on logical values — laws/haskell_extract.lawspec:2675.
+// cxFirstId on logical values — laws/haskell_extract.lawspec:2937.
 func lawSpecEvaluateCxFirstId(symbols map[string]*LawSpecSymbol, pks LawSpecValue) LawSpecValue {
 	return lsfToValueMaybePackage(lsfCxFirstId(lsfFromValueListListPackage(pks)))
 }
 
-// cxHasGroup on logical values — laws/haskell_extract.lawspec:2532.
+// cxHasGroup on logical values — laws/haskell_extract.lawspec:2788.
 func lawSpecEvaluateCxHasGroup(symbols map[string]*LawSpecSymbol, rs LawSpecValue) LawSpecValue {
 	return lsfToValueBool(lsfCxHasGroup(lsfFromValueListCxRow(rs)))
 }
 
-// cxIdent on logical values — laws/haskell_extract.lawspec:2382.
+// cxIdent on logical values — laws/haskell_extract.lawspec:2418.
 func lawSpecEvaluateCxIdent(symbols map[string]*LawSpecSymbol, t_ LawSpecValue) LawSpecValue {
 	return lsfToValueText(lsfCxIdent(lsfFromValueText(t_)))
 }
 
-// cxIsBlank on logical values — laws/haskell_extract.lawspec:2311.
+// cxIdents on logical values — laws/haskell_extract.lawspec:2542.
+func lawSpecEvaluateCxIdents(
+	symbols map[string]*LawSpecSymbol,
+	t_ LawSpecValue,
+	fuel LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListText(lsfCxIdents(lsfFromValueText(t_), lsfFromValueInteger(fuel)))
+}
+
+// cxIsBlank on logical values — laws/haskell_extract.lawspec:2321.
 func lawSpecEvaluateCxIsBlank(symbols map[string]*LawSpecSymbol, ch LawSpecValue) LawSpecValue {
 	return lsfToValueBool(lsfCxIsBlank(lsfFromValueText(ch)))
 }
 
-// cxJoin on logical values — laws/haskell_extract.lawspec:2354.
+// cxIsDefForm on logical values — laws/haskell_extract.lawspec:2485.
+func lawSpecEvaluateCxIsDefForm(symbols map[string]*LawSpecSymbol, word LawSpecValue) LawSpecValue {
+	return lsfToValueBool(lsfCxIsDefForm(lsfFromValueText(word)))
+}
+
+// cxIsElifWord on logical values — laws/haskell_extract.lawspec:2476.
+func lawSpecEvaluateCxIsElifWord(symbols map[string]*LawSpecSymbol, w LawSpecValue) LawSpecValue {
+	return lsfToValueBool(lsfCxIsElifWord(lsfFromValueText(w)))
+}
+
+// cxIsIfWord on logical values — laws/haskell_extract.lawspec:2475.
+func lawSpecEvaluateCxIsIfWord(symbols map[string]*LawSpecSymbol, w LawSpecValue) LawSpecValue {
+	return lsfToValueBool(lsfCxIsIfWord(lsfFromValueText(w)))
+}
+
+// cxIsSet on logical values — laws/haskell_extract.lawspec:2645.
+func lawSpecEvaluateCxIsSet(
+	symbols map[string]*LawSpecSymbol,
+	sets LawSpecValue,
+	n LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfCxIsSet(lsfFromValueKeyValTextCxSets(sets), lsfFromValueText(n)))
+}
+
+// cxJoin on logical values — laws/haskell_extract.lawspec:2395.
 func lawSpecEvaluateCxJoin(symbols map[string]*LawSpecSymbol, ls LawSpecValue) LawSpecValue {
 	return lsfToValueCxJoin(lsfCxJoin_2(lsfFromValueListText(ls)))
 }
 
-// cxLitHolds on logical values — laws/haskell_extract.lawspec:2454.
-func lawSpecEvaluateCxLitHolds(
+// cxJoinMore on logical values — laws/haskell_extract.lawspec:2382.
+func lawSpecEvaluateCxJoinMore(
+	symbols map[string]*LawSpecSymbol,
+	acc LawSpecValue,
+	n LawSpecValue,
+	rest LawSpecValue,
+	fuel LawSpecValue,
+) LawSpecValue {
+	return lsfToValueCxJoin(lsfCxJoinMore(lsfFromValueText(acc), lsfFromValueInteger(n), lsfFromValueListText(rest), lsfFromValueInteger(fuel)))
+}
+
+// cxLitTrue on logical values — laws/haskell_extract.lawspec:2706.
+func lawSpecEvaluateCxLitTrue(
 	symbols map[string]*LawSpecSymbol,
 	asg LawSpecValue,
 	l LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueBool(lsfCxLitHolds(lsfFromValueKeyValTextInteger(asg), lsfFromValueCxTerm(l)))
+	return lsfToValueBool(lsfAssayxportHaskellCppLitTrue(lsfFromValueKeyValTextInteger(asg), lsfFromValueLiteral(l)))
 }
 
-// cxLits on logical values — laws/haskell_extract.lawspec:2586.
+// cxLitValue on logical values — laws/haskell_extract.lawspec:2441.
+func lawSpecEvaluateCxLitValue(symbols map[string]*LawSpecSymbol, s LawSpecValue) LawSpecValue {
+	return lsfToValueMaybeInteger(lsfCxLitValue(lsfFromValueText(s)))
+}
+
+// cxLits on logical values — laws/haskell_extract.lawspec:2848.
 func lawSpecEvaluateCxLits(symbols map[string]*LawSpecSymbol, ts LawSpecValue) LawSpecValue {
 	return lsfToValueListLiteral(lsfCxLits(lsfFromValueListCxTerm(ts)))
 }
 
-// cxLive on logical values — laws/haskell_extract.lawspec:2664.
+// cxLive on logical values — laws/haskell_extract.lawspec:2926.
 func lawSpecEvaluateCxLive(
 	symbols map[string]*LawSpecSymbol,
 	pks LawSpecValue,
@@ -15814,22 +17494,22 @@ func lawSpecEvaluateCxLive(
 	return lsfToValueListCxCopyPkg(lsfCxLive(lsfFromValueListListPackage(pks), lsfFromValueInteger(i), lsfFromValueText(id)))
 }
 
-// cxNegate on logical values — laws/haskell_extract.lawspec:2379.
-func lawSpecEvaluateCxNegate(symbols map[string]*LawSpecSymbol, t_ LawSpecValue) LawSpecValue {
-	return lsfToValueCxTerm(lsfCxNegate(lsfFromValueCxTerm(t_)))
+// cxLiveOf on logical values — laws/haskell_extract.lawspec:2611.
+func lawSpecEvaluateCxLiveOf(symbols map[string]*LawSpecSymbol, stack LawSpecValue) LawSpecValue {
+	return lsfToValueBool(lsfCxLiveOf(lsfFromValueListCxFrame(stack)))
 }
 
-// cxOwnText on logical values — laws/haskell_extract.lawspec:2463.
-func lawSpecEvaluateCxOwnText(symbols map[string]*LawSpecSymbol, ls LawSpecValue) LawSpecValue {
-	return lsfToValueText(lsfCxOwnText(lsfFromValueListCxTerm(ls)))
+// cxNamesOf on logical values — laws/haskell_extract.lawspec:2506.
+func lawSpecEvaluateCxNamesOf(symbols map[string]*LawSpecSymbol, e LawSpecValue) LawSpecValue {
+	return lsfToValueListText(lsfAssayxportHaskellCppNamesOf(lsfFromValueCExpr(e)))
 }
 
-// cxPathOf on logical values — laws/haskell_extract.lawspec:2397.
-func lawSpecEvaluateCxPathOf(symbols map[string]*LawSpecSymbol, stack LawSpecValue) LawSpecValue {
-	return lsfToValueListCxTerm(lsfCxPathOf(lsfFromValueListCxOpen(stack)))
+// cxNoTerm on logical values — laws/haskell_extract.lawspec:2560.
+func lawSpecEvaluateCxNoTerm(symbols map[string]*LawSpecSymbol, u LawSpecValue) LawSpecValue {
+	return lsfToValueLiteral(lsfCxNoTerm(lsfFromValueUnit(u)))
 }
 
-// cxPrefixed on logical values — laws/haskell_extract.lawspec:2566.
+// cxPrefixed on logical values — laws/haskell_extract.lawspec:2823.
 func lawSpecEvaluateCxPrefixed(
 	symbols map[string]*LawSpecSymbol,
 	l LawSpecValue,
@@ -15838,25 +17518,48 @@ func lawSpecEvaluateCxPrefixed(
 	return lsfToValueListListCxTerm(lsfCxPrefixed(lsfFromValueCxTerm(l), lsfFromValueListListCxTerm(cs)))
 }
 
-// cxReached on logical values — laws/haskell_extract.lawspec:2469.
-func lawSpecEvaluateCxReached(
+// cxReachedIn on logical values — laws/haskell_extract.lawspec:2616.
+func lawSpecEvaluateCxReachedIn(
 	symbols map[string]*LawSpecSymbol,
-	asg LawSpecValue,
+	stack LawSpecValue,
 	r LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueBool(lsfCxReached(lsfFromValueKeyValTextInteger(asg), lsfFromValueCxRow(r)))
+	return lsfToValueBool(lsfCxReachedIn(lsfFromValueListCxFrame(stack), lsfFromValueCxRow(r)))
 }
 
-// cxScan on logical values — laws/haskell_extract.lawspec:2437.
+// cxReadingAt on logical values — laws/haskell_extract.lawspec:2697.
+func lawSpecEvaluateCxReadingAt(
+	symbols map[string]*LawSpecSymbol,
+	w LawSpecValue,
+	r LawSpecValue,
+) LawSpecValue {
+	return lsfToValueCxReading(lsfCxReadingAt(lsfFromValueCxPass(w), lsfFromValueCxRow(r)))
+}
+
+// cxReadsWord on logical values — laws/haskell_extract.lawspec:2477.
+func lawSpecEvaluateCxReadsWord(symbols map[string]*LawSpecSymbol, w LawSpecValue) LawSpecValue {
+	return lsfToValueBool(lsfCxReadsWord(lsfFromValueText(w)))
+}
+
+// cxRowOf on logical values — laws/haskell_extract.lawspec:2562.
+func lawSpecEvaluateCxRowOf(
+	symbols map[string]*LawSpecSymbol,
+	u LawSpecValue,
+	line LawSpecValue,
+) LawSpecValue {
+	return lsfToValueCxRow(lsfCxRowOf(lsfFromValueCxUnit(u), lsfFromValueInteger(line)))
+}
+
+// cxScan on logical values — laws/haskell_extract.lawspec:2585.
 func lawSpecEvaluateCxScan(
 	symbols map[string]*LawSpecSymbol,
 	us LawSpecValue,
-	st LawSpecValue,
+	line LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueListCxRow(lsfCxScan(lsfFromValueListCxUnit(us), lsfFromValueCxState(st)))
+	return lsfToValueListCxRow(lsfCxScan(lsfFromValueListCxUnit(us), lsfFromValueInteger(line)))
 }
 
-// cxSkipBlanks on logical values — laws/haskell_extract.lawspec:2313.
+// cxSkipBlanks on logical values — laws/haskell_extract.lawspec:2323.
 func lawSpecEvaluateCxSkipBlanks(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -15865,32 +17568,65 @@ func lawSpecEvaluateCxSkipBlanks(
 	return lsfToValueText(lsfCxSkipBlanks(lsfFromValueText(t_), lsfFromValueInteger(fuel)))
 }
 
-// cxTermOf on logical values — laws/haskell_extract.lawspec:2390.
+// cxSpecial on logical values — laws/haskell_extract.lawspec:2648.
+func lawSpecEvaluateCxSpecial(symbols map[string]*LawSpecSymbol, n LawSpecValue) LawSpecValue {
+	return lsfToValueBool(lsfAssayxportHaskellCppSpecial(lsfFromValueText(n)))
+}
+
+// cxSpliced on logical values — laws/haskell_extract.lawspec:2371.
+func lawSpecEvaluateCxSpliced(symbols map[string]*LawSpecSymbol, t_ LawSpecValue) LawSpecValue {
+	return lsfToValueBool(lsfCxSpliced(lsfFromValueText(t_)))
+}
+
+// cxStart on logical values — laws/haskell_extract.lawspec:2609.
+func lawSpecEvaluateCxStart(symbols map[string]*LawSpecSymbol, u LawSpecValue) LawSpecValue {
+	return lsfToValueCxPass(lsfCxStart(lsfFromValueUnit(u)))
+}
+
+// cxStepped on logical values — laws/haskell_extract.lawspec:2625.
+func lawSpecEvaluateCxStepped(
+	symbols map[string]*LawSpecSymbol,
+	stack LawSpecValue,
+	r LawSpecValue,
+	v LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListCxFrame(lsfCxStepped(lsfFromValueListCxFrame(stack), lsfFromValueCxRow(r), lsfFromValueBool(v)))
+}
+
+// cxStrip on logical values — laws/haskell_extract.lawspec:2427.
+func lawSpecEvaluateCxStrip(
+	symbols map[string]*LawSpecSymbol,
+	t_ LawSpecValue,
+	fuel LawSpecValue,
+) LawSpecValue {
+	return lsfToValueText(lsfCxStrip(lsfFromValueText(t_), lsfFromValueInteger(fuel)))
+}
+
+// cxTermOf on logical values — laws/haskell_extract.lawspec:2495.
 func lawSpecEvaluateCxTermOf(
 	symbols map[string]*LawSpecSymbol,
 	word LawSpecValue,
 	body LawSpecValue,
 	line LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueCxTerm(lsfCxTermOf(lsfFromValueText(word), lsfFromValueText(body), lsfFromValueInteger(line)))
+	return lsfToValueLiteral(lsfCxTermOf(lsfFromValueText(word), lsfFromValueText(body), lsfFromValueInteger(line)))
 }
 
-// cxTopEffect on logical values — laws/haskell_extract.lawspec:2416.
-func lawSpecEvaluateCxTopEffect(
+// cxTextOf on logical values — laws/haskell_extract.lawspec:2487.
+func lawSpecEvaluateCxTextOf(
 	symbols map[string]*LawSpecSymbol,
-	top LawSpecValue,
-	rest LawSpecValue,
-	reads LawSpecValue,
+	word LawSpecValue,
+	body LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueCxEffect(lsfCxTopEffect(lsfFromValueCxOpen(top), lsfFromValueListCxOpen(rest), lsfFromValueBool(reads)))
+	return lsfToValueText(lsfCxTextOf(lsfFromValueText(word), lsfFromValueText(body)))
 }
 
-// cxTrim on logical values — laws/haskell_extract.lawspec:2322.
+// cxTrim on logical values — laws/haskell_extract.lawspec:2332.
 func lawSpecEvaluateCxTrim(symbols map[string]*LawSpecSymbol, t_ LawSpecValue) LawSpecValue {
 	return lsfToValueText(lsfCxTrim(lsfFromValueText(t_)))
 }
 
-// cxTrimEnd on logical values — laws/haskell_extract.lawspec:2317.
+// cxTrimEnd on logical values — laws/haskell_extract.lawspec:2327.
 func lawSpecEvaluateCxTrimEnd(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -15899,7 +17635,17 @@ func lawSpecEvaluateCxTrimEnd(
 	return lsfToValueText(lsfCxTrimEnd(lsfFromValueText(t_), lsfFromValueInteger(fuel)))
 }
 
-// cxUnits on logical values — laws/haskell_extract.lawspec:2364.
+// cxTruthAt on logical values — laws/haskell_extract.lawspec:2710.
+func lawSpecEvaluateCxTruthAt(
+	symbols map[string]*LawSpecSymbol,
+	w LawSpecValue,
+	asg LawSpecValue,
+	r LawSpecValue,
+) LawSpecValue {
+	return lsfToValueBool(lsfCxTruthAt(lsfFromValueCxPass(w), lsfFromValueKeyValTextInteger(asg), lsfFromValueCxRow(r)))
+}
+
+// cxUnits on logical values — laws/haskell_extract.lawspec:2402.
 func lawSpecEvaluateCxUnits(
 	symbols map[string]*LawSpecSymbol,
 	ls LawSpecValue,
@@ -15908,42 +17654,53 @@ func lawSpecEvaluateCxUnits(
 	return lsfToValueListCxUnit(lsfCxUnits(lsfFromValueListText(ls), lsfFromValueInteger(fuel)))
 }
 
-// cxUnreadDecls on logical values — laws/haskell_extract.lawspec:2724.
+// cxUnreadDecls on logical values — laws/haskell_extract.lawspec:2986.
 func lawSpecEvaluateCxUnreadDecls(symbols map[string]*LawSpecSymbol, ds LawSpecValue) LawSpecValue {
 	return lsfToValueListDecl(lsfCxUnreadDecls(lsfFromValueListDecl(ds)))
 }
 
-// cxUnreadEdges on logical values — laws/haskell_extract.lawspec:2720.
+// cxUnreadEdges on logical values — laws/haskell_extract.lawspec:2982.
 func lawSpecEvaluateCxUnreadEdges(symbols map[string]*LawSpecSymbol, es LawSpecValue) LawSpecValue {
 	return lsfToValueListCallEdge(lsfCxUnreadEdges(lsfFromValueListCallEdge(es)))
 }
 
-// cxUnreadPkgs on logical values — laws/haskell_extract.lawspec:2731.
+// cxUnreadPkgs on logical values — laws/haskell_extract.lawspec:2993.
 func lawSpecEvaluateCxUnreadPkgs(symbols map[string]*LawSpecSymbol, ps LawSpecValue) LawSpecValue {
 	return lsfToValueListPackage(lsfCxUnreadPkgs(lsfFromValueListPackage(ps)))
 }
 
-// cxValued on logical values — laws/haskell_extract.lawspec:2473.
+// cxUnsplice on logical values — laws/haskell_extract.lawspec:2373.
+func lawSpecEvaluateCxUnsplice(symbols map[string]*LawSpecSymbol, t_ LawSpecValue) LawSpecValue {
+	return lsfToValueText(lsfCxUnsplice(lsfFromValueText(t_)))
+}
+
+// cxValueNames on logical values — laws/haskell_extract.lawspec:2524.
+func lawSpecEvaluateCxValueNames(symbols map[string]*LawSpecSymbol, e LawSpecValue) LawSpecValue {
+	return lsfToValueListText(lsfAssayxportHaskellCppValueNames(lsfFromValueCExpr(e)))
+}
+
+// cxValued on logical values — laws/haskell_extract.lawspec:2701.
 func lawSpecEvaluateCxValued(
 	symbols map[string]*LawSpecSymbol,
 	asg LawSpecValue,
 	t_ LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueBool(lsfValued(lsfFromValueKeyValTextInteger(asg), lsfFromValueText(t_)))
+	return lsfToValueBool(lsfAssayxportHaskellCppValued(lsfFromValueKeyValTextInteger(asg), lsfFromValueText(t_)))
 }
 
-// cxWalk on logical values — laws/haskell_extract.lawspec:2570.
+// cxWalk on logical values — laws/haskell_extract.lawspec:2827.
 func lawSpecEvaluateCxWalk(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
+	w LawSpecValue,
 	asg LawSpecValue,
 	k LawSpecValue,
 	j LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueCxWalk(lsfCxWalk_2(lsfFromValueListCxRow(rs), lsfFromValueKeyValTextInteger(asg), lsfFromValueInteger(k), lsfFromValueListInteger(j)))
+	return lsfToValueCxWalk(lsfCxWalk_2(lsfFromValueListCxRow(rs), lsfFromValueCxPass(w), lsfFromValueKeyValTextInteger(asg), lsfFromValueInteger(k), lsfFromValueListInteger(j)))
 }
 
-// cxWordLen on logical values — laws/haskell_extract.lawspec:2324.
+// cxWordLen on logical values — laws/haskell_extract.lawspec:2334.
 func lawSpecEvaluateCxWordLen(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -15953,12 +17710,12 @@ func lawSpecEvaluateCxWordLen(
 	return lsfToValueInteger(lsfCxWordLen(lsfFromValueText(t_), lsfFromValueInteger(i), lsfFromValueInteger(n)))
 }
 
-// cxWordOf on logical values — laws/haskell_extract.lawspec:2331.
+// cxWordOf on logical values — laws/haskell_extract.lawspec:2341.
 func lawSpecEvaluateCxWordOf(symbols map[string]*LawSpecSymbol, l LawSpecValue) LawSpecValue {
 	return lsfToValueText(lsfCxWordOf(lsfFromValueText(l)))
 }
 
-// damaged on logical values — laws/haskell_extract.lawspec:3509.
+// damaged on logical values — laws/haskell_extract.lawspec:3771.
 func lawSpecEvaluateDamaged(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -15967,7 +17724,7 @@ func lawSpecEvaluateDamaged(
 	return lsfToValueListSyntax(lsfDamaged(lsfFromValueInteger(seed_), lsfFromValueListSyntax(cs)))
 }
 
-// damagedFixturesWellFormed on logical values — laws/haskell_extract.lawspec:3525.
+// damagedFixturesWellFormed on logical values — laws/haskell_extract.lawspec:3787.
 func lawSpecEvaluateDamagedFixturesWellFormed(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -16017,7 +17774,7 @@ func lawSpecEvaluateDamagedFixturesWellFormed(
 	})
 }
 
-// damagedTree on logical values — laws/haskell_extract.lawspec:3523.
+// damagedTree on logical values — laws/haskell_extract.lawspec:3785.
 func lawSpecEvaluateDamagedTree(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -16074,12 +17831,12 @@ func lawSpecEvaluateDataWild(symbols map[string]*LawSpecSymbol, items LawSpecVal
 	return lsfToValueBool(lsfDataWild(lsfFromValueListSyntax(items)))
 }
 
-// declFacts on logical values — laws/haskell_extract.lawspec:4132.
+// declFacts on logical values — laws/haskell_extract.lawspec:4426.
 func lawSpecEvaluateDeclFacts(symbols map[string]*LawSpecSymbol, ds LawSpecValue) LawSpecValue {
 	return lsfToValueListText(lsfDeclFacts(lsfFromValueListDecl(ds)))
 }
 
-// declImplies on logical values — laws/haskell_extract.lawspec:4100.
+// declImplies on logical values — laws/haskell_extract.lawspec:4394.
 func lawSpecEvaluateDeclImplies(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -16125,7 +17882,7 @@ func lawSpecEvaluateDirectName(symbols map[string]*LawSpecSymbol, s LawSpecValue
 	return lsfToValueText(lsfDirectName(lsfFromValueSyntax(s)))
 }
 
-// distinctTexts on logical values — laws/haskell_extract.lawspec:3996.
+// distinctTexts on logical values — laws/haskell_extract.lawspec:4282.
 func lawSpecEvaluateDistinctTexts(
 	symbols map[string]*LawSpecSymbol,
 	ts LawSpecValue,
@@ -16164,7 +17921,7 @@ func lawSpecEvaluateDocBetweenAt(
 	return lsfToValueDocText(lsfDocBetweenAt(lsfFromValueIx(ix), lsfFromValueInteger(from), lsfFromValueInteger(until), lsfFromValueInteger(col)))
 }
 
-// docIs on logical values — laws/haskell_extract.lawspec:3004.
+// docIs on logical values — laws/haskell_extract.lawspec:3266.
 func lawSpecEvaluateDocIs(
 	symbols map[string]*LawSpecSymbol,
 	id LawSpecValue,
@@ -16209,7 +17966,7 @@ func lawSpecEvaluateDocsOf(
 	return lsfToValueDocs(lsfDocsOf(lsfFromValueListSyntax(hs), lsfFromValueKeyValIntegerBool(code_), lsfFromValueInteger(fuel), lsfFromValueDocs(d)))
 }
 
-// documented on logical values — laws/haskell_extract.lawspec:4311.
+// documented on logical values — laws/haskell_extract.lawspec:4691.
 func lawSpecEvaluateDocumented(symbols map[string]*LawSpecSymbol, d LawSpecValue) LawSpecValue {
 	return lsfToValueBool(lsfDocumented(lsfFromValueDecl(d)))
 }
@@ -16233,7 +17990,7 @@ func lawSpecEvaluateDropLead(
 	return lsfToValueText(lsfDropLead(lsfFromValueText(t_), lsfFromValueInteger(n)))
 }
 
-// edgeFacts on logical values — laws/haskell_extract.lawspec:4128.
+// edgeFacts on logical values — laws/haskell_extract.lawspec:4422.
 func lawSpecEvaluateEdgeFacts(
 	symbols map[string]*LawSpecSymbol,
 	id LawSpecValue,
@@ -16242,7 +17999,7 @@ func lawSpecEvaluateEdgeFacts(
 	return lsfToValueListText(lsfEdgeFacts(lsfFromValueText(id), lsfFromValueListCallEdge(es)))
 }
 
-// edgeImplies on logical values — laws/haskell_extract.lawspec:4098.
+// edgeImplies on logical values — laws/haskell_extract.lawspec:4392.
 func lawSpecEvaluateEdgeImplies(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -16351,12 +18108,12 @@ func lawSpecEvaluateExportedOf(
 	return lsfToValueMaybeKeyValTextBool(lsfExportedOf(lsfFromValueSyntax(root), lsfFromValueListDecl(decls)))
 }
 
-// extractEach on logical values — laws/haskell_extract.lawspec:4003.
+// extractEach on logical values — laws/haskell_extract.lawspec:4289.
 func lawSpecEvaluateExtractEach(symbols map[string]*LawSpecSymbol, ts LawSpecValue) LawSpecValue {
 	return lsfToValueListListPackage(lsfExtractEach(symbols, lsfFromValueListText(ts)))
 }
 
-// extractFiles on logical values — laws/haskell_extract.lawspec:2769.
+// extractFiles on logical values — laws/haskell_extract.lawspec:3031.
 func lawSpecEvaluateExtractFiles(
 	symbols map[string]*LawSpecSymbol,
 	files LawSpecValue,
@@ -16373,12 +18130,12 @@ func lawSpecEvaluateExtractModule(
 	return lsfToValuePackage(lsfExtractModule(lsfFromValueText(path), lsfFromValueSyntax(root)))
 }
 
-// factsOf on logical values — laws/haskell_extract.lawspec:4146.
+// factsOf on logical values — laws/haskell_extract.lawspec:4440.
 func lawSpecEvaluateFactsOf(symbols map[string]*LawSpecSymbol, source LawSpecValue) LawSpecValue {
 	return lsfToValueSetText(lsfFactsOf(symbols, lsfFromValueText(source)))
 }
 
-// factsWith on logical values — laws/haskell_extract.lawspec:4150.
+// factsWith on logical values — laws/haskell_extract.lawspec:4444.
 func lawSpecEvaluateFactsWith(
 	symbols map[string]*LawSpecSymbol,
 	lines LawSpecValue,
@@ -16387,7 +18144,7 @@ func lawSpecEvaluateFactsWith(
 	return lsfToValueSetText(lsfFactsWith(symbols, lsfFromValueListBindingLine(lines), lsfFromValueText(source)))
 }
 
-// failingEnv on logical values — laws/haskell_extract.lawspec:4026.
+// failingEnv on logical values — laws/haskell_extract.lawspec:4312.
 func lawSpecEvaluateFailingEnv(
 	symbols map[string]*LawSpecSymbol,
 	rs LawSpecValue,
@@ -16419,7 +18176,7 @@ func lawSpecEvaluateFamsIn(
 	return lsfToValueListDecl(lsfFamsIn(lsfFromValueIx(ix), lsfFromValueText(owner), lsfFromValueListSyntax(cs)))
 }
 
-// farTree on logical values — laws/haskell_extract.lawspec:3562.
+// farTree on logical values — laws/haskell_extract.lawspec:3824.
 func lawSpecEvaluateFarTree(symbols map[string]*LawSpecSymbol, last LawSpecValue) LawSpecValue {
 	return lsfToValueSyntax(lsfFarTree(lsfFromValueInteger(last)))
 }
@@ -16472,7 +18229,7 @@ func lawSpecEvaluateFieldPatNames(
 	return lsfToValueListText(lsfFieldPatNames(lsfFromValueListSyntax(fps)))
 }
 
-// fieldsIn on logical values — laws/haskell_extract.lawspec:3252.
+// fieldsIn on logical values — laws/haskell_extract.lawspec:3514.
 func lawSpecEvaluateFieldsIn(symbols map[string]*LawSpecSymbol, cs LawSpecValue) LawSpecValue {
 	return lsfToValueListText(lsfFieldsIn(lsfFromValueListSyntax(cs)))
 }
@@ -16491,7 +18248,7 @@ func lawSpecEvaluateFindAll(
 	return lsfToValueListSyntax(lsfFindAll(lsfFromValueText(k), lsfFromValueListSyntax(cs)))
 }
 
-// firstArms on logical values — laws/haskell_extract.lawspec:3827.
+// firstArms on logical values — laws/haskell_extract.lawspec:4113.
 func lawSpecEvaluateFirstArms(symbols map[string]*LawSpecSymbol, u LawSpecValue) LawSpecValue {
 	return lsfToValueListBindingLine(lsfFirstArms(lsfFromValueUnit(u)))
 }
@@ -16510,7 +18267,7 @@ func lawSpecEvaluateFirstOp(symbols map[string]*LawSpecSymbol, cs LawSpecValue) 
 	return lsfToValueListSyntax(lsfFirstOp(lsfFromValueListSyntax(cs)))
 }
 
-// fixtureBuildHolds on logical values — laws/haskell_extract.lawspec:3849.
+// fixtureBuildHolds on logical values — laws/haskell_extract.lawspec:4135.
 func lawSpecEvaluateFixtureBuildHolds(
 	symbols map[string]*LawSpecSymbol,
 	i LawSpecValue,
@@ -16518,7 +18275,7 @@ func lawSpecEvaluateFixtureBuildHolds(
 	return lsfToValueBool(lsfFixtureBuildHolds(symbols, lsfFromValueInteger(i)))
 }
 
-// fixtureFiltered on logical values — laws/haskell_extract.lawspec:3935.
+// fixtureFiltered on logical values — laws/haskell_extract.lawspec:4221.
 func lawSpecEvaluateFixtureFiltered(
 	symbols map[string]*LawSpecSymbol,
 	lines LawSpecValue,
@@ -16526,7 +18283,7 @@ func lawSpecEvaluateFixtureFiltered(
 	return lsfToValueFiltered(lsfFixtureFiltered(symbols, lsfFromValueListBindingLine(lines)))
 }
 
-// fixtureLine on logical values — laws/haskell_extract.lawspec:3824.
+// fixtureLine on logical values — laws/haskell_extract.lawspec:4110.
 func lawSpecEvaluateFixtureLine(
 	symbols map[string]*LawSpecSymbol,
 	name LawSpecValue,
@@ -16535,7 +18292,7 @@ func lawSpecEvaluateFixtureLine(
 	return lsfToValueBindingLine(lsfSetName(lsfFromValueText(name), lsfFromValueInteger(v)))
 }
 
-// fixtureMoreHolds on logical values — laws/haskell_extract.lawspec:3873.
+// fixtureMoreHolds on logical values — laws/haskell_extract.lawspec:4159.
 func lawSpecEvaluateFixtureMoreHolds(
 	symbols map[string]*LawSpecSymbol,
 	i LawSpecValue,
@@ -16543,12 +18300,12 @@ func lawSpecEvaluateFixtureMoreHolds(
 	return lsfToValueBool(lsfFixtureMoreHolds(symbols, lsfFromValueInteger(i)))
 }
 
-// focusForest on logical values — laws/haskell_extract.lawspec:3291.
+// focusForest on logical values — laws/haskell_extract.lawspec:3553.
 func lawSpecEvaluateFocusForest(symbols map[string]*LawSpecSymbol, n LawSpecValue) LawSpecValue {
 	return lsfToValueListSyntax(lsfFocusForest(lsfFromValueInteger(n)))
 }
 
-// focusKind on logical values — laws/haskell_extract.lawspec:3267.
+// focusKind on logical values — laws/haskell_extract.lawspec:3529.
 func lawSpecEvaluateFocusKind(
 	symbols map[string]*LawSpecSymbol,
 	g LawSpecValue,
@@ -16557,7 +18314,7 @@ func lawSpecEvaluateFocusKind(
 	return lsfToValueText(lsfFocusKind(lsfFromValueGrammar(g), lsfFromValueInteger(s)))
 }
 
-// focusModule on logical values — laws/haskell_extract.lawspec:3283.
+// focusModule on logical values — laws/haskell_extract.lawspec:3545.
 func lawSpecEvaluateFocusModule(
 	symbols map[string]*LawSpecSymbol,
 	source LawSpecValue,
@@ -16571,7 +18328,7 @@ func lawSpecEvaluateFocusModule(
 	return lsfToValueSyntax(lsfFocusModule(lsfFromValueText(source), lsfFromValueText(name), lsfFromValuePoint(p), lsfFromValuePoint(q), lsfFromValueSyntax(asDecl), lsfFromValueSyntax(asPattern), lsfFromValueSyntax(asBody)))
 }
 
-// focusTree on logical values — laws/haskell_extract.lawspec:3272.
+// focusTree on logical values — laws/haskell_extract.lawspec:3534.
 func lawSpecEvaluateFocusTree(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -16590,7 +18347,7 @@ func lawSpecEvaluateForeignDecls(
 	return lsfToValueListDecl(lsfForeignDecls(lsfFromValueIx(ix), lsfFromValueSyntax(d)))
 }
 
-// furtherArms on logical values — laws/haskell_extract.lawspec:3833.
+// furtherArms on logical values — laws/haskell_extract.lawspec:4119.
 func lawSpecEvaluateFurtherArms(symbols map[string]*LawSpecSymbol, i LawSpecValue) LawSpecValue {
 	return lsfToValueListBindingLine(lsfFurtherArms(lsfFromValueInteger(i)))
 }
@@ -16625,27 +18382,27 @@ func lawSpecEvaluateGadtsOf(symbols map[string]*LawSpecSymbol, d LawSpecValue) L
 	return lsfToValueListSyntax(lsfGadtsOf(lsfFromValueSyntax(d)))
 }
 
-// grammarForest on logical values — laws/haskell_extract.lawspec:3257.
+// grammarForest on logical values — laws/haskell_extract.lawspec:3519.
 func lawSpecEvaluateGrammarForest(symbols map[string]*LawSpecSymbol, n LawSpecValue) LawSpecValue {
 	return lsfToValueListSyntax(lsfGrammarForest(lsfFromValueInteger(n)))
 }
 
-// grammarGroups on logical values — laws/haskell_extract.lawspec:3444.
+// grammarGroups on logical values — laws/haskell_extract.lawspec:3706.
 func lawSpecEvaluateGrammarGroups(symbols map[string]*LawSpecSymbol, u LawSpecValue) LawSpecValue {
 	return lsfToValueListSlot(lsfGrammarGroups(lsfFromValueUnit(u)))
 }
 
-// grammarProds on logical values — laws/haskell_extract.lawspec:3297.
+// grammarProds on logical values — laws/haskell_extract.lawspec:3559.
 func lawSpecEvaluateGrammarProds(symbols map[string]*LawSpecSymbol, u LawSpecValue) LawSpecValue {
 	return lsfToValueListProd(lsfGrammarProds(lsfFromValueUnit(u)))
 }
 
-// grammarTexts on logical values — laws/haskell_extract.lawspec:3117.
+// grammarTexts on logical values — laws/haskell_extract.lawspec:3379.
 func lawSpecEvaluateGrammarTexts(symbols map[string]*LawSpecSymbol, u LawSpecValue) LawSpecValue {
 	return lsfToValueListSlot(lsfGrammarTexts(lsfFromValueUnit(u)))
 }
 
-// grammarTree on logical values — laws/haskell_extract.lawspec:3241.
+// grammarTree on logical values — laws/haskell_extract.lawspec:3503.
 func lawSpecEvaluateGrammarTree(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -16655,7 +18412,7 @@ func lawSpecEvaluateGrammarTree(
 	return lsfToValueSyntax(lsfGrammarTree(lsfFromValueInteger(seed_), lsfFromValuePoint(p), lsfFromValuePoint(q)))
 }
 
-// grow on logical values — laws/haskell_extract.lawspec:3225.
+// grow on logical values — laws/haskell_extract.lawspec:3487.
 func lawSpecEvaluateGrow(
 	symbols map[string]*LawSpecSymbol,
 	g LawSpecValue,
@@ -16681,12 +18438,12 @@ func lawSpecEvaluateHaddockText(symbols map[string]*LawSpecSymbol, h LawSpecValu
 	return lsfToValueText(lsfHaddockText(lsfFromValueSyntax(h)))
 }
 
-// handledFields on logical values — laws/haskell_extract.lawspec:3477.
+// handledFields on logical values — laws/haskell_extract.lawspec:3739.
 func lawSpecEvaluateHandledFields(symbols map[string]*LawSpecSymbol, u LawSpecValue) LawSpecValue {
 	return lsfToValueListText(lsfHandledFields(lsfFromValueUnit(u)))
 }
 
-// handledKinds on logical values — laws/haskell_extract.lawspec:3465.
+// handledKinds on logical values — laws/haskell_extract.lawspec:3727.
 func lawSpecEvaluateHandledKinds(symbols map[string]*LawSpecSymbol, u LawSpecValue) LawSpecValue {
 	return lsfToValueListText(lsfHandledKinds(lsfFromValueUnit(u)))
 }
@@ -16739,7 +18496,7 @@ func lawSpecEvaluateHeaderOf(symbols map[string]*LawSpecSymbol, root LawSpecValu
 	return lsfToValueMaybeSyntax(lsfHeaderOf(lsfFromValueSyntax(root)))
 }
 
-// headerlessTree on logical values — laws/haskell_extract.lawspec:2956.
+// headerlessTree on logical values — laws/haskell_extract.lawspec:3218.
 func lawSpecEvaluateHeaderlessTree(
 	symbols map[string]*LawSpecSymbol,
 	source LawSpecValue,
@@ -16787,7 +18544,7 @@ func lawSpecEvaluateImportsWithPrelude(
 	return lsfToValueListImport(lsfImportsWithPrelude(lsfFromValueCtx(x)))
 }
 
-// inTexts on logical values — laws/haskell_extract.lawspec:3726.
+// inTexts on logical values — laws/haskell_extract.lawspec:3994.
 func lawSpecEvaluateInTexts(
 	symbols map[string]*LawSpecSymbol,
 	ts LawSpecValue,
@@ -16882,7 +18639,7 @@ func lawSpecEvaluateIsEqualsHead(
 	return lsfToValueBool(lsfIsEqualsHead(lsfFromValueText(whole), lsfFromValueText(pat)))
 }
 
-// isMainEntry on logical values — laws/haskell_extract.lawspec:2922.
+// isMainEntry on logical values — laws/haskell_extract.lawspec:3184.
 func lawSpecEvaluateIsMainEntry(symbols map[string]*LawSpecSymbol, d LawSpecValue) LawSpecValue {
 	return lsfToValueBool(lsfIsMainEntry(lsfFromValueDecl(d)))
 }
@@ -16892,7 +18649,7 @@ func lawSpecEvaluateIsNameNode(symbols map[string]*LawSpecSymbol, nd LawSpecValu
 	return lsfToValueBool(lsfIsNameNode(lsfFromValueSyntax(nd)))
 }
 
-// isOtherEntry on logical values — laws/haskell_extract.lawspec:2923.
+// isOtherEntry on logical values — laws/haskell_extract.lawspec:3185.
 func lawSpecEvaluateIsOtherEntry(symbols map[string]*LawSpecSymbol, d LawSpecValue) LawSpecValue {
 	return lsfToValueBool(lsfIsOtherEntry(lsfFromValueDecl(d)))
 }
@@ -16941,7 +18698,7 @@ func lawSpecEvaluateItemNames(symbols map[string]*LawSpecSymbol, items LawSpecVa
 	return lsfToValueListText(lsfItemNames(lsfFromValueListSyntax(items)))
 }
 
-// kidsOf on logical values — laws/haskell_extract.lawspec:3210.
+// kidsOf on logical values — laws/haskell_extract.lawspec:3472.
 func lawSpecEvaluateKidsOf(
 	symbols map[string]*LawSpecSymbol,
 	g LawSpecValue,
@@ -16952,7 +18709,7 @@ func lawSpecEvaluateKidsOf(
 	return lsfToValueListPick(lsfKidsOf(lsfFromValueGrammar(g), lsfFromValueText(kind_2), lsfFromValueInteger(seed_), lsfFromValueInteger(fuel)))
 }
 
-// kindFor on logical values — laws/haskell_extract.lawspec:3169.
+// kindFor on logical values — laws/haskell_extract.lawspec:3431.
 func lawSpecEvaluateKindFor(
 	symbols map[string]*LawSpecSymbol,
 	g LawSpecValue,
@@ -16962,12 +18719,12 @@ func lawSpecEvaluateKindFor(
 	return lsfToValueText(lsfKindFor(lsfFromValueGrammar(g), lsfFromValueSlot(s), lsfFromValueInteger(seed_)))
 }
 
-// kindsIn on logical values — laws/haskell_extract.lawspec:3248.
+// kindsIn on logical values — laws/haskell_extract.lawspec:3510.
 func lawSpecEvaluateKindsIn(symbols map[string]*LawSpecSymbol, cs LawSpecValue) LawSpecValue {
 	return lsfToValueListText(lsfKindsIn(lsfFromValueListSyntax(cs)))
 }
 
-// kindsNamed on logical values — laws/haskell_extract.lawspec:3160.
+// kindsNamed on logical values — laws/haskell_extract.lawspec:3422.
 func lawSpecEvaluateKindsNamed(
 	symbols map[string]*LawSpecSymbol,
 	name LawSpecValue,
@@ -17373,7 +19130,7 @@ func lawSpecEvaluateLawspecCollectionsWrappingUIntSize_5(
 }
 
 // lawspecResilienceAppended on logical values — <lawspec.resilience>:75.
-func lawSpecEvaluateLawspecResilienceAppended_4(
+func lawSpecEvaluateLawspecResilienceAppended_5(
 	symbols map[string]*LawSpecSymbol,
 	times LawSpecValue,
 	time LawSpecValue,
@@ -17382,7 +19139,7 @@ func lawSpecEvaluateLawspecResilienceAppended_4(
 }
 
 // lawspecResilienceAtLeastZero on logical values — <lawspec.resilience>:12.
-func lawSpecEvaluateLawspecResilienceAtLeastZero_4(
+func lawSpecEvaluateLawspecResilienceAtLeastZero_5(
 	symbols map[string]*LawSpecSymbol,
 	x LawSpecValue,
 ) LawSpecValue {
@@ -17390,7 +19147,7 @@ func lawSpecEvaluateLawspecResilienceAtLeastZero_4(
 }
 
 // lawspecResilienceBreakerAdmit on logical values — <lawspec.resilience>:121.
-func lawSpecEvaluateLawspecResilienceBreakerAdmit_4(
+func lawSpecEvaluateLawspecResilienceBreakerAdmit_5(
 	symbols map[string]*LawSpecSymbol,
 	state LawSpecValue,
 	now LawSpecValue,
@@ -17399,7 +19156,7 @@ func lawSpecEvaluateLawspecResilienceBreakerAdmit_4(
 }
 
 // lawspecResilienceBreakerRecord on logical values — <lawspec.resilience>:129.
-func lawSpecEvaluateLawspecResilienceBreakerRecord_4(
+func lawSpecEvaluateLawspecResilienceBreakerRecord_5(
 	symbols map[string]*LawSpecSymbol,
 	failures LawSpecValue,
 	window LawSpecValue,
@@ -17412,7 +19169,7 @@ func lawSpecEvaluateLawspecResilienceBreakerRecord_4(
 }
 
 // lawspecResilienceBreakerStart on logical values — <lawspec.resilience>:119.
-func lawSpecEvaluateLawspecResilienceBreakerStart_4(
+func lawSpecEvaluateLawspecResilienceBreakerStart_5(
 	symbols map[string]*LawSpecSymbol,
 	now LawSpecValue,
 ) LawSpecValue {
@@ -17420,7 +19177,7 @@ func lawSpecEvaluateLawspecResilienceBreakerStart_4(
 }
 
 // lawspecResilienceBulkheadAdmit on logical values — <lawspec.resilience>:146.
-func lawSpecEvaluateLawspecResilienceBulkheadAdmit_4(
+func lawSpecEvaluateLawspecResilienceBulkheadAdmit_5(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
 	state LawSpecValue,
@@ -17430,7 +19187,7 @@ func lawSpecEvaluateLawspecResilienceBulkheadAdmit_4(
 }
 
 // lawspecResilienceBulkheadRelease on logical values — <lawspec.resilience>:152.
-func lawSpecEvaluateLawspecResilienceBulkheadRelease_4(
+func lawSpecEvaluateLawspecResilienceBulkheadRelease_5(
 	symbols map[string]*LawSpecSymbol,
 	state LawSpecValue,
 ) LawSpecValue {
@@ -17438,7 +19195,7 @@ func lawSpecEvaluateLawspecResilienceBulkheadRelease_4(
 }
 
 // lawspecResilienceBulkheadStart on logical values — <lawspec.resilience>:144.
-func lawSpecEvaluateLawspecResilienceBulkheadStart_4(
+func lawSpecEvaluateLawspecResilienceBulkheadStart_5(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
 	now LawSpecValue,
@@ -17447,21 +19204,21 @@ func lawSpecEvaluateLawspecResilienceBulkheadStart_4(
 }
 
 // lawspecResilienceCeilingQuotient on logical values — <lawspec.resilience>:14.
-func lawSpecEvaluateLawspecResilienceCeilingQuotient_4(
+func lawSpecEvaluateLawspecResilienceCeilingQuotient_5(
 	symbols map[string]*LawSpecSymbol,
 	a LawSpecValue,
 	b LawSpecValue,
 ) LawSpecValue {
 	return lsNativeContext("assayxport.haskell.extract::lawspecResilienceCeilingQuotient", func() LawSpecValue {
 		lsRequireContract(lsTruth(lsBinary(">=", b, lsInteger("Integer", "1"))), "precondition")
-		result := lsBinary("quot", lsBinary("-", lsBinary("+", lawSpecEvaluateLawspecResilienceAtLeastZero_4(symbols, a), b), lsInteger("Integer", "1")), b)
+		result := lsBinary("quot", lsBinary("-", lsBinary("+", lawSpecEvaluateLawspecResilienceAtLeastZero_5(symbols, a), b), lsInteger("Integer", "1")), b)
 		checkedResult := result
 		return checkedResult
 	})
 }
 
 // lawspecResilienceFixedWindowAdmit on logical values — <lawspec.resilience>:53.
-func lawSpecEvaluateLawspecResilienceFixedWindowAdmit_4(
+func lawSpecEvaluateLawspecResilienceFixedWindowAdmit_5(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
 	period LawSpecValue,
@@ -17480,10 +19237,10 @@ func lawSpecEvaluateLawspecResilienceFixedWindowAdmit_4(
 					selection := matchedData.fields[0]
 					selection_2 := matchedData.fields[1]
 					return lsEvaluate(func() LawSpecValue {
-						if lsTruth(lsBinary("==", lsBinary("quot", lawSpecEvaluateLawspecResilienceAtLeastZero_4(symbols, now), period), selection)) {
-							return lawSpecEvaluateLawspecResilienceFixedWindowDecide_4(symbols, n, period, selection, selection_2, now)
+						if lsTruth(lsBinary("==", lsBinary("quot", lawSpecEvaluateLawspecResilienceAtLeastZero_5(symbols, now), period), selection)) {
+							return lawSpecEvaluateLawspecResilienceFixedWindowDecide_5(symbols, n, period, selection, selection_2, now)
 						}
-						return lawSpecEvaluateLawspecResilienceFixedWindowDecide_4(symbols, n, period, lsBinary("quot", lawSpecEvaluateLawspecResilienceAtLeastZero_4(symbols, now), period), lsInteger("Integer", "0"), now)
+						return lawSpecEvaluateLawspecResilienceFixedWindowDecide_5(symbols, n, period, lsBinary("quot", lawSpecEvaluateLawspecResilienceAtLeastZero_5(symbols, now), period), lsInteger("Integer", "0"), now)
 					})
 				default:
 					panic("invalid constructor in match")
@@ -17496,7 +19253,7 @@ func lawSpecEvaluateLawspecResilienceFixedWindowAdmit_4(
 }
 
 // lawspecResilienceFixedWindowDecide on logical values — <lawspec.resilience>:47.
-func lawSpecEvaluateLawspecResilienceFixedWindowDecide_4(
+func lawSpecEvaluateLawspecResilienceFixedWindowDecide_5(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
 	period LawSpecValue,
@@ -17508,7 +19265,7 @@ func lawSpecEvaluateLawspecResilienceFixedWindowDecide_4(
 }
 
 // lawspecResilienceFixedWindowStart on logical values — <lawspec.resilience>:45.
-func lawSpecEvaluateLawspecResilienceFixedWindowStart_4(
+func lawSpecEvaluateLawspecResilienceFixedWindowStart_5(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
 	period LawSpecValue,
@@ -17518,7 +19275,7 @@ func lawSpecEvaluateLawspecResilienceFixedWindowStart_4(
 }
 
 // lawspecResilienceLeakyBucketAdmit on logical values — <lawspec.resilience>:106.
-func lawSpecEvaluateLawspecResilienceLeakyBucketAdmit_4(
+func lawSpecEvaluateLawspecResilienceLeakyBucketAdmit_5(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
 	period LawSpecValue,
@@ -17540,7 +19297,7 @@ func lawSpecEvaluateLawspecResilienceLeakyBucketAdmit_4(
 						if lsTruth(lsBinary("<=", selection, now)) {
 							return lsEvaluate(func() LawSpecValue {
 								recordField := lsEvaluate(func() LawSpecValue {
-									recordField := lsBinary("+", now, lawSpecEvaluateLawspecResilienceCeilingQuotient_4(symbols, period, n))
+									recordField := lsBinary("+", now, lawSpecEvaluateLawspecResilienceCeilingQuotient_5(symbols, period, n))
 									return _lawSpecDefinitionSchema.construct(lsNamed("lawspec.resilience::type::LeakyBucket"), "lawspec.resilience::type::LeakyBucket::LeakyBucket", []LawSpecValue{
 										recordField,
 									}, 64, symbols)
@@ -17583,7 +19340,7 @@ func lawSpecEvaluateLawspecResilienceLeakyBucketAdmit_4(
 }
 
 // lawspecResilienceLeakyBucketStart on logical values — <lawspec.resilience>:104.
-func lawSpecEvaluateLawspecResilienceLeakyBucketStart_4(
+func lawSpecEvaluateLawspecResilienceLeakyBucketStart_5(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
 	period LawSpecValue,
@@ -17593,7 +19350,7 @@ func lawSpecEvaluateLawspecResilienceLeakyBucketStart_4(
 }
 
 // lawspecResilienceOldest on logical values — <lawspec.resilience>:82.
-func lawSpecEvaluateLawspecResilienceOldest_4(
+func lawSpecEvaluateLawspecResilienceOldest_5(
 	symbols map[string]*LawSpecSymbol,
 	times LawSpecValue,
 	fallback LawSpecValue,
@@ -17602,7 +19359,7 @@ func lawSpecEvaluateLawspecResilienceOldest_4(
 }
 
 // lawspecResilienceRecent on logical values — <lawspec.resilience>:68.
-func lawSpecEvaluateLawspecResilienceRecent_4(
+func lawSpecEvaluateLawspecResilienceRecent_5(
 	symbols map[string]*LawSpecSymbol,
 	times LawSpecValue,
 	since LawSpecValue,
@@ -17611,7 +19368,7 @@ func lawSpecEvaluateLawspecResilienceRecent_4(
 }
 
 // lawspecResilienceRefilled on logical values — <lawspec.resilience>:26.
-func lawSpecEvaluateLawspecResilienceRefilled_4(
+func lawSpecEvaluateLawspecResilienceRefilled_5(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
 	period LawSpecValue,
@@ -17622,7 +19379,7 @@ func lawSpecEvaluateLawspecResilienceRefilled_4(
 }
 
 // lawspecResilienceSlidingWindowAdmit on logical values — <lawspec.resilience>:95.
-func lawSpecEvaluateLawspecResilienceSlidingWindowAdmit_4(
+func lawSpecEvaluateLawspecResilienceSlidingWindowAdmit_5(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
 	period LawSpecValue,
@@ -17633,7 +19390,7 @@ func lawSpecEvaluateLawspecResilienceSlidingWindowAdmit_4(
 }
 
 // lawspecResilienceSlidingWindowDecide on logical values — <lawspec.resilience>:89.
-func lawSpecEvaluateLawspecResilienceSlidingWindowDecide_4(
+func lawSpecEvaluateLawspecResilienceSlidingWindowDecide_5(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
 	period LawSpecValue,
@@ -17644,7 +19401,7 @@ func lawSpecEvaluateLawspecResilienceSlidingWindowDecide_4(
 }
 
 // lawspecResilienceSlidingWindowStart on logical values — <lawspec.resilience>:66.
-func lawSpecEvaluateLawspecResilienceSlidingWindowStart_4(
+func lawSpecEvaluateLawspecResilienceSlidingWindowStart_5(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
 	period LawSpecValue,
@@ -17654,7 +19411,7 @@ func lawSpecEvaluateLawspecResilienceSlidingWindowStart_4(
 }
 
 // lawspecResilienceTokenBucketAdmit on logical values — <lawspec.resilience>:36.
-func lawSpecEvaluateLawspecResilienceTokenBucketAdmit_4(
+func lawSpecEvaluateLawspecResilienceTokenBucketAdmit_5(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
 	period LawSpecValue,
@@ -17673,7 +19430,7 @@ func lawSpecEvaluateLawspecResilienceTokenBucketAdmit_4(
 				case "lawspec.resilience::type::TokenBucket::TokenBucket":
 					selection := matchedData.fields[0]
 					selection_2 := matchedData.fields[1]
-					return lawSpecEvaluateLawspecResilienceTokenBucketDecide_4(symbols, n, period, lawSpecEvaluateLawspecResilienceRefilled_4(symbols, n, period, selection, lsBinary("-", now, selection_2)), now)
+					return lawSpecEvaluateLawspecResilienceTokenBucketDecide_5(symbols, n, period, lawSpecEvaluateLawspecResilienceRefilled_5(symbols, n, period, selection, lsBinary("-", now, selection_2)), now)
 				default:
 					panic("invalid constructor in match")
 				}
@@ -17685,7 +19442,7 @@ func lawSpecEvaluateLawspecResilienceTokenBucketAdmit_4(
 }
 
 // lawspecResilienceTokenBucketDecide on logical values — <lawspec.resilience>:30.
-func lawSpecEvaluateLawspecResilienceTokenBucketDecide_4(
+func lawSpecEvaluateLawspecResilienceTokenBucketDecide_5(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
 	period LawSpecValue,
@@ -17730,7 +19487,7 @@ func lawSpecEvaluateLawspecResilienceTokenBucketDecide_4(
 				})
 				return lsEvaluate(func() LawSpecValue {
 					recordField_2 := _lawSpecDefinitionSchema.construct(lsNamed("lawspec.resilience::type::Gate"), "lawspec.resilience::type::Gate::WaitFor", []LawSpecValue{
-						lawSpecEvaluateLawspecResilienceCeilingQuotient_4(symbols, lsBinary("-", period, level), n),
+						lawSpecEvaluateLawspecResilienceCeilingQuotient_5(symbols, lsBinary("-", period, level), n),
 					}, 64, symbols)
 					return _lawSpecDefinitionSchema.construct(lsNamed("lawspec.resilience::type::Step", lsNamed("lawspec.resilience::type::TokenBucket")), "lawspec.resilience::type::Step::Step", []LawSpecValue{
 						recordField,
@@ -17745,7 +19502,7 @@ func lawSpecEvaluateLawspecResilienceTokenBucketDecide_4(
 }
 
 // lawspecResilienceTokenBucketStart on logical values — <lawspec.resilience>:22.
-func lawSpecEvaluateLawspecResilienceTokenBucketStart_4(
+func lawSpecEvaluateLawspecResilienceTokenBucketStart_5(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
 	period LawSpecValue,
@@ -17981,6 +19738,24 @@ func lawSpecEvaluateLawspecCollectionsKeyValEntriesKeyValEdgeKeyTally_5(
 }
 
 // keyValFromItems on logical values — <lawspec.collections>:281.
+func lawSpecEvaluateLawspecCollectionsKeyValFromItemsListEntryTextSetsListEntryTextSets_3(
+	symbols map[string]*LawSpecSymbol,
+	es LawSpecValue,
+	acc LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListEntryTextSets(lsfLawspecCollectionsKeyValFromItemsListEntryTextSetsListEntryTextSets(lsfFromValueListEntryTextSets(es), lsfFromValueListEntryTextSets(acc)))
+}
+
+// keyValFromItems on logical values — <lawspec.collections>:281.
+func lawSpecEvaluateLawspecCollectionsKeyValFromItemsListEntryTextCxSetsListEntryTextCxSets(
+	symbols map[string]*LawSpecSymbol,
+	es LawSpecValue,
+	acc LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListEntryTextCxSets(lsfLawspecCollectionsKeyValFromItemsListEntryTextCxSetsListEntryTextCxSets(lsfFromValueListEntryTextCxSets(es), lsfFromValueListEntryTextCxSets(acc)))
+}
+
+// keyValFromItems on logical values — <lawspec.collections>:281.
 func lawSpecEvaluateLawspecCollectionsKeyValFromItemsListEntryEdgeKeyCountedListEntryEdgeKeyCounted_3(
 	symbols map[string]*LawSpecSymbol,
 	es LawSpecValue,
@@ -18053,7 +19828,7 @@ func lawSpecEvaluateLawspecCollectionsKeyValFromItemsListEntryIntegerTextListEnt
 }
 
 // keyValFromItems on logical values — <lawspec.collections>:281.
-func lawSpecEvaluateLawspecCollectionsKeyValFromItemsListEntryTextIntegerListEntryTextInteger_2(
+func lawSpecEvaluateLawspecCollectionsKeyValFromItemsListEntryTextIntegerListEntryTextInteger_3(
 	symbols map[string]*LawSpecSymbol,
 	es LawSpecValue,
 	acc LawSpecValue,
@@ -18148,6 +19923,24 @@ func lawSpecEvaluateLawspecCollectionsKeyValLookupItemsTextListEntryTextListSynt
 }
 
 // keyValLookupItems on logical values — <lawspec.collections>:268.
+func lawSpecEvaluateLawspecCollectionsKeyValLookupItemsTextListEntryTextSets_3(
+	symbols map[string]*LawSpecSymbol,
+	k LawSpecValue,
+	es LawSpecValue,
+) LawSpecValue {
+	return lsfToValueMaybeSets(lsfLawspecCollectionsKeyValLookupItemsTextListEntryTextSets(lsfFromValueText(k), lsfFromValueListEntryTextSets(es)))
+}
+
+// keyValLookupItems on logical values — <lawspec.collections>:268.
+func lawSpecEvaluateLawspecCollectionsKeyValLookupItemsTextListEntryTextCxSets(
+	symbols map[string]*LawSpecSymbol,
+	k LawSpecValue,
+	es LawSpecValue,
+) LawSpecValue {
+	return lsfToValueMaybeCxSets(lsfLawspecCollectionsKeyValLookupItemsTextListEntryTextCxSets(lsfFromValueText(k), lsfFromValueListEntryTextCxSets(es)))
+}
+
+// keyValLookupItems on logical values — <lawspec.collections>:268.
 func lawSpecEvaluateLawspecCollectionsKeyValLookupItemsTextListEntryTextListCxSym(
 	symbols map[string]*LawSpecSymbol,
 	k LawSpecValue,
@@ -18238,7 +20031,7 @@ func lawSpecEvaluateLawspecCollectionsKeyValLookupItemsIntegerListEntryIntegerTe
 }
 
 // keyValLookupItems on logical values — <lawspec.collections>:268.
-func lawSpecEvaluateLawspecCollectionsKeyValLookupItemsTextListEntryTextInteger_2(
+func lawSpecEvaluateLawspecCollectionsKeyValLookupItemsTextListEntryTextInteger_3(
 	symbols map[string]*LawSpecSymbol,
 	k LawSpecValue,
 	es LawSpecValue,
@@ -18262,6 +20055,24 @@ func lawSpecEvaluateLawspecCollectionsKeyValLookupIntegerKeyValIntegerInteger(
 	m_ LawSpecValue,
 ) LawSpecValue {
 	return lsfToValueMaybeInteger(lsfLawspecCollectionsKeyValLookupIntegerKeyValIntegerInteger(lsfFromValueInteger(k), lsfFromValueKeyValIntegerInteger(m_)))
+}
+
+// keyValLookup on logical values — <lawspec.collections>:308.
+func lawSpecEvaluateLawspecCollectionsKeyValLookupTextKeyValTextCxSets(
+	symbols map[string]*LawSpecSymbol,
+	k LawSpecValue,
+	m_ LawSpecValue,
+) LawSpecValue {
+	return lsfToValueMaybeCxSets(lsfLawspecCollectionsKeyValLookupTextKeyValTextCxSets(lsfFromValueText(k), lsfFromValueKeyValTextCxSets(m_)))
+}
+
+// keyValLookup on logical values — <lawspec.collections>:308.
+func lawSpecEvaluateLawspecCollectionsKeyValLookupTextKeyValTextSets_3(
+	symbols map[string]*LawSpecSymbol,
+	k LawSpecValue,
+	m_ LawSpecValue,
+) LawSpecValue {
+	return lsfToValueMaybeSets(lsfLawspecCollectionsKeyValLookupTextKeyValTextSets(lsfFromValueText(k), lsfFromValueKeyValTextSets(m_)))
 }
 
 // keyValLookup on logical values — <lawspec.collections>:308.
@@ -18346,7 +20157,7 @@ func lawSpecEvaluateLawspecCollectionsKeyValLookupTextKeyValTextListInteger_5(
 }
 
 // keyValLookup on logical values — <lawspec.collections>:308.
-func lawSpecEvaluateLawspecCollectionsKeyValLookupTextKeyValTextInteger_2(
+func lawSpecEvaluateLawspecCollectionsKeyValLookupTextKeyValTextInteger_3(
 	symbols map[string]*LawSpecSymbol,
 	k LawSpecValue,
 	m_ LawSpecValue,
@@ -18402,6 +20213,22 @@ func lawSpecEvaluateLawspecCollectionsKeyValOfListEntryIntegerText(
 	es LawSpecValue,
 ) LawSpecValue {
 	return lsfToValueKeyValIntegerText(lsfLawspecCollectionsKeyValOfListEntryIntegerText(lsfFromValueListEntryIntegerText(es)))
+}
+
+// keyValOf on logical values — <lawspec.collections>:304.
+func lawSpecEvaluateLawspecCollectionsKeyValOfListEntryTextCxSets(
+	symbols map[string]*LawSpecSymbol,
+	es LawSpecValue,
+) LawSpecValue {
+	return lsfToValueKeyValTextCxSets(lsfLawspecCollectionsKeyValOfListEntryTextCxSets(lsfFromValueListEntryTextCxSets(es)))
+}
+
+// keyValOf on logical values — <lawspec.collections>:304.
+func lawSpecEvaluateLawspecCollectionsKeyValOfListEntryTextSets_3(
+	symbols map[string]*LawSpecSymbol,
+	es LawSpecValue,
+) LawSpecValue {
+	return lsfToValueKeyValTextSets(lsfLawspecCollectionsKeyValOfListEntryTextSets(lsfFromValueListEntryTextSets(es)))
 }
 
 // keyValOf on logical values — <lawspec.collections>:304.
@@ -18461,7 +20288,7 @@ func lawSpecEvaluateLawspecCollectionsKeyValOfListEntryTextListCxSym(
 }
 
 // keyValOf on logical values — <lawspec.collections>:304.
-func lawSpecEvaluateLawspecCollectionsKeyValOfListEntryTextInteger_2(
+func lawSpecEvaluateLawspecCollectionsKeyValOfListEntryTextInteger_3(
 	symbols map[string]*LawSpecSymbol,
 	es LawSpecValue,
 ) LawSpecValue {
@@ -18525,7 +20352,7 @@ func lawSpecEvaluateLawspecCollectionsKeyValPutItemsTextListIntegerListEntryText
 }
 
 // keyValPutItems on logical values — <lawspec.collections>:242.
-func lawSpecEvaluateLawspecCollectionsKeyValPutItemsTextIntegerListEntryTextInteger_2(
+func lawSpecEvaluateLawspecCollectionsKeyValPutItemsTextIntegerListEntryTextInteger_3(
 	symbols map[string]*LawSpecSymbol,
 	k LawSpecValue,
 	v LawSpecValue,
@@ -18542,6 +20369,26 @@ func lawSpecEvaluateLawspecCollectionsKeyValPutItemsTextBindingListEntryTextBind
 	es LawSpecValue,
 ) LawSpecValue {
 	return lsfToValueListEntryTextBinding(lsfLawspecCollectionsKeyValPutItemsTextBindingListEntryTextBinding(lsfFromValueText(k), lsfFromValueBinding(v), lsfFromValueListEntryTextBinding(es)))
+}
+
+// keyValPutItems on logical values — <lawspec.collections>:242.
+func lawSpecEvaluateLawspecCollectionsKeyValPutItemsTextCxSetsListEntryTextCxSets(
+	symbols map[string]*LawSpecSymbol,
+	k LawSpecValue,
+	v LawSpecValue,
+	es LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListEntryTextCxSets(lsfLawspecCollectionsKeyValPutItemsTextCxSetsListEntryTextCxSets(lsfFromValueText(k), lsfFromValueCxSets(v), lsfFromValueListEntryTextCxSets(es)))
+}
+
+// keyValPutItems on logical values — <lawspec.collections>:242.
+func lawSpecEvaluateLawspecCollectionsKeyValPutItemsTextSetsListEntryTextSets_3(
+	symbols map[string]*LawSpecSymbol,
+	k LawSpecValue,
+	v LawSpecValue,
+	es LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListEntryTextSets(lsfLawspecCollectionsKeyValPutItemsTextSetsListEntryTextSets(lsfFromValueText(k), lsfFromValueSets(v), lsfFromValueListEntryTextSets(es)))
 }
 
 // keyValPutItems on logical values — <lawspec.collections>:242.
@@ -18625,6 +20472,26 @@ func lawSpecEvaluateLawspecCollectionsKeyValPutItemsTextSyntaxListEntryTextSynta
 }
 
 // keyValPut on logical values — <lawspec.collections>:312.
+func lawSpecEvaluateLawspecCollectionsKeyValPutTextSetsKeyValTextSets_3(
+	symbols map[string]*LawSpecSymbol,
+	k LawSpecValue,
+	v LawSpecValue,
+	m_ LawSpecValue,
+) LawSpecValue {
+	return lsfToValueKeyValTextSets(lsfLawspecCollectionsKeyValPutTextSetsKeyValTextSets(lsfFromValueText(k), lsfFromValueSets(v), lsfFromValueKeyValTextSets(m_)))
+}
+
+// keyValPut on logical values — <lawspec.collections>:312.
+func lawSpecEvaluateLawspecCollectionsKeyValPutTextCxSetsKeyValTextCxSets(
+	symbols map[string]*LawSpecSymbol,
+	k LawSpecValue,
+	v LawSpecValue,
+	m_ LawSpecValue,
+) LawSpecValue {
+	return lsfToValueKeyValTextCxSets(lsfLawspecCollectionsKeyValPutTextCxSetsKeyValTextCxSets(lsfFromValueText(k), lsfFromValueCxSets(v), lsfFromValueKeyValTextCxSets(m_)))
+}
+
+// keyValPut on logical values — <lawspec.collections>:312.
 func lawSpecEvaluateLawspecCollectionsKeyValPutTextListCxSymKeyValTextListCxSym(
 	symbols map[string]*LawSpecSymbol,
 	k LawSpecValue,
@@ -18635,7 +20502,7 @@ func lawSpecEvaluateLawspecCollectionsKeyValPutTextListCxSymKeyValTextListCxSym(
 }
 
 // keyValPut on logical values — <lawspec.collections>:312.
-func lawSpecEvaluateLawspecCollectionsKeyValPutTextIntegerKeyValTextInteger_2(
+func lawSpecEvaluateLawspecCollectionsKeyValPutTextIntegerKeyValTextInteger_3(
 	symbols map[string]*LawSpecSymbol,
 	k LawSpecValue,
 	v LawSpecValue,
@@ -18695,7 +20562,7 @@ func lawSpecEvaluateLawspecCollectionsKeyValPutEdgeKeyTallyKeyValEdgeKeyTally_5(
 }
 
 // keyValPut on logical values — <lawspec.collections>:312.
-func lawSpecEvaluateLawspecCollectionsKeyValPutTextListIntegerKeyValTextListInteger_4(
+func lawSpecEvaluateLawspecCollectionsKeyValPutTextListIntegerKeyValTextListInteger_5(
 	symbols map[string]*LawSpecSymbol,
 	k LawSpecValue,
 	v LawSpecValue,
@@ -18923,7 +20790,7 @@ func lawSpecEvaluateLeadBlanks(
 	return lsfToValueInteger(lsfLeadBlanks(lsfFromValueText(t_), lsfFromValueInteger(i), lsfFromValueInteger(n)))
 }
 
-// leaf on logical values — laws/haskell_extract.lawspec:3040.
+// leaf on logical values — laws/haskell_extract.lawspec:3302.
 func lawSpecEvaluateLeaf(
 	symbols map[string]*LawSpecSymbol,
 	kind_2 LawSpecValue,
@@ -19036,7 +20903,7 @@ func lawSpecEvaluateMemberIndex(
 	return lsfToValueKeyValTextListText(lsfMemberIndex(lsfFromValueListDecl(decls), lsfFromValueKeyValTextListText(acc)))
 }
 
-// memberRight on logical values — laws/haskell_extract.lawspec:3612.
+// memberRight on logical values — laws/haskell_extract.lawspec:3874.
 func lawSpecEvaluateMemberRight(
 	symbols map[string]*LawSpecSymbol,
 	every LawSpecValue,
@@ -19055,7 +20922,7 @@ func lawSpecEvaluateMemberTexts(symbols map[string]*LawSpecSymbol, cs LawSpecVal
 	return lsfToValueListText(lsfMemberTexts(lsfFromValueListSyntax(cs)))
 }
 
-// membersRight on logical values — laws/haskell_extract.lawspec:3616.
+// membersRight on logical values — laws/haskell_extract.lawspec:3878.
 func lawSpecEvaluateMembersRight(
 	symbols map[string]*LawSpecSymbol,
 	ds LawSpecValue,
@@ -19100,7 +20967,16 @@ func lawSpecEvaluateMethodNames(
 	return lsfToValueListDecl(lsfMethodNames(lsfFromValueIx(ix), lsfFromValueText(owner), lsfFromValueSyntax(s), lsfFromValueListText(ns), lsfFromValueListSyntax(defaults), lsfFromValueInteger(until)))
 }
 
-// mix on logical values — laws/haskell_extract.lawspec:3147.
+// missingWith on logical values — laws/haskell_extract.lawspec:4575.
+func lawSpecEvaluateMissingWith(
+	symbols map[string]*LawSpecSymbol,
+	lines LawSpecValue,
+	source LawSpecValue,
+) LawSpecValue {
+	return lsfToValueListText(lsfMissingWith(symbols, lsfFromValueListBindingLine(lines), lsfFromValueText(source)))
+}
+
+// mix on logical values — laws/haskell_extract.lawspec:3409.
 func lawSpecEvaluateMix_2(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -19171,7 +21047,7 @@ func lawSpecEvaluateModuleText(symbols map[string]*LawSpecSymbol, m_ LawSpecValu
 	return lsfToValueText(lsfModuleText(lsfFromValueMaybeSyntax(m_)))
 }
 
-// modulesOfRoots on logical values — laws/haskell_extract.lawspec:2755.
+// modulesOfRoots on logical values — laws/haskell_extract.lawspec:3017.
 func lawSpecEvaluateModulesOfRoots(
 	symbols map[string]*LawSpecSymbol,
 	path LawSpecValue,
@@ -19180,7 +21056,7 @@ func lawSpecEvaluateModulesOfRoots(
 	return lsfToValueListListPackage(lsfModulesOfRoots(lsfFromValueText(path), lsfFromValueListSyntax(roots)))
 }
 
-// moreEnv on logical values — laws/haskell_extract.lawspec:3861.
+// moreEnv on logical values — laws/haskell_extract.lawspec:4147.
 func lawSpecEvaluateMoreEnv(symbols map[string]*LawSpecSymbol, i LawSpecValue) LawSpecValue {
 	return lsfToValueEnv(lsfMoreEnv(lsfFromValueInteger(i)))
 }
@@ -19195,7 +21071,7 @@ func lawSpecEvaluateNameEdges(
 	return lsfToValueListCallEdge(lsfNameEdges(lsfFromValueCtx(x), lsfFromValueListText(locals), lsfFromValueListSyntax(os_)))
 }
 
-// nameIs on logical values — laws/haskell_extract.lawspec:2924.
+// nameIs on logical values — laws/haskell_extract.lawspec:3186.
 func lawSpecEvaluateNameIs(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
@@ -19224,7 +21100,7 @@ func lawSpecEvaluateNamedNodes(
 }
 
 // namesOf on logical values — laws/haskell_extract.lawspec:620.
-func lawSpecEvaluateNamesOf(symbols map[string]*LawSpecSymbol, s LawSpecValue) LawSpecValue {
+func lawSpecEvaluateNamesOf_2(symbols map[string]*LawSpecSymbol, s LawSpecValue) LawSpecValue {
 	return lsfToValueListText(lsfNamesOf(lsfFromValueSyntax(s)))
 }
 
@@ -19277,7 +21153,7 @@ func lawSpecEvaluateNoPreludePragma(
 	return lsfToValueBool(lsfNoPreludePragma(lsfFromValueSyntax(p)))
 }
 
-// node on logical values — laws/haskell_extract.lawspec:3044.
+// node on logical values — laws/haskell_extract.lawspec:3306.
 func lawSpecEvaluateNode(
 	symbols map[string]*LawSpecSymbol,
 	kind_2 LawSpecValue,
@@ -19305,7 +21181,7 @@ func lawSpecEvaluateNormalized(symbols map[string]*LawSpecSymbol, t_ LawSpecValu
 	return lsfToValueText(lsfNormalized(lsfFromValueText(t_)))
 }
 
-// oneFile on logical values — laws/haskell_extract.lawspec:4341.
+// oneFile on logical values — laws/haskell_extract.lawspec:4721.
 func lawSpecEvaluateOneFile(
 	symbols map[string]*LawSpecSymbol,
 	path LawSpecValue,
@@ -19363,12 +21239,12 @@ func lawSpecEvaluateOwnerHas(
 	return lsfToValueBool(lsfOwnerHas(lsfFromValueText(n), lsfFromValueText(owner)))
 }
 
-// packageFacts on logical values — laws/haskell_extract.lawspec:4142.
+// packageFacts on logical values — laws/haskell_extract.lawspec:4436.
 func lawSpecEvaluatePackageFacts(symbols map[string]*LawSpecSymbol, ps LawSpecValue) LawSpecValue {
 	return lsfToValueListText(lsfPackageFacts(lsfFromValueListPackage(ps)))
 }
 
-// packageImplies on logical values — laws/haskell_extract.lawspec:4102.
+// packageImplies on logical values — laws/haskell_extract.lawspec:4396.
 func lawSpecEvaluatePackageImplies(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -19388,7 +21264,7 @@ func lawSpecEvaluatePackageOf_2(
 	return lsfToValuePackage(lsfPackageOf(lsfFromValueText(path), lsfFromValueSyntax(root), lsfFromValueIx(ix), lsfFromValueListDecl(decls)))
 }
 
-// packagesOfCopies on logical values — laws/haskell_extract.lawspec:2739.
+// packagesOfCopies on logical values — laws/haskell_extract.lawspec:3001.
 func lawSpecEvaluatePackagesOfCopies(
 	symbols map[string]*LawSpecSymbol,
 	plan LawSpecValue,
@@ -19407,7 +21283,7 @@ func lawSpecEvaluateParenHead(symbols map[string]*LawSpecSymbol, d LawSpecValue)
 	return lsfToValueText(lsfParenHead(lsfFromValueSyntax(d)))
 }
 
-// parseAll on logical values — laws/haskell_extract.lawspec:2762.
+// parseAll on logical values — laws/haskell_extract.lawspec:3024.
 func lawSpecEvaluateParseAll(symbols map[string]*LawSpecSymbol, texts LawSpecValue) LawSpecValue {
 	return lsfToValueListSyntax(lsfParseAll(symbols, lsfFromValueListText(texts)))
 }
@@ -19445,7 +21321,7 @@ func lawSpecEvaluatePatternVars(
 	return lsfToValueListText(lsfPatternVars(lsfFromValueCtx(x), lsfFromValueMaybeSyntax(m_)))
 }
 
-// picksOf on logical values — laws/haskell_extract.lawspec:3194.
+// picksOf on logical values — laws/haskell_extract.lawspec:3456.
 func lawSpecEvaluatePicksOf(
 	symbols map[string]*LawSpecSymbol,
 	g LawSpecValue,
@@ -19456,7 +21332,7 @@ func lawSpecEvaluatePicksOf(
 	return lsfToValueListPick(lsfPicksOf(lsfFromValueGrammar(g), lsfFromValueListSlot(ss), lsfFromValueInteger(seed_), lsfFromValueInteger(fuel)))
 }
 
-// pointFor on logical values — laws/haskell_extract.lawspec:3218.
+// pointFor on logical values — laws/haskell_extract.lawspec:3480.
 func lawSpecEvaluatePointFor(
 	symbols map[string]*LawSpecSymbol,
 	seed_ LawSpecValue,
@@ -19466,7 +21342,7 @@ func lawSpecEvaluatePointFor(
 	return lsfToValuePoint(lsfPointFor(lsfFromValueInteger(seed_), lsfFromValuePoint(p), lsfFromValuePoint(q)))
 }
 
-// poolFailure on logical values — laws/haskell_extract.lawspec:4033.
+// poolFailure on logical values — laws/haskell_extract.lawspec:4319.
 func lawSpecEvaluatePoolFailure(symbols map[string]*LawSpecSymbol, rs LawSpecValue) LawSpecValue {
 	return lsfToValueInteger(lsfPoolFailure(symbols, lsfFromValueListRow(rs)))
 }
@@ -19479,7 +21355,7 @@ func lawSpecEvaluatePositionsOrdered(
 	return lsfToValueBool(lsfAssayxportHaskellExtractPositionsOrdered(lsfFromValueSyntax(s)))
 }
 
-// pr on logical values — laws/haskell_extract.lawspec:3108.
+// pr on logical values — laws/haskell_extract.lawspec:3370.
 func lawSpecEvaluatePr(
 	symbols map[string]*LawSpecSymbol,
 	kind_2 LawSpecValue,
@@ -19613,12 +21489,12 @@ func lawSpecEvaluateQualsBound(
 	return lsfToValueListText(lsfQualsBound(lsfFromValueCtx(x), lsfFromValueListSyntax(cs)))
 }
 
-// reachForest on logical values — laws/haskell_extract.lawspec:3484.
+// reachForest on logical values — laws/haskell_extract.lawspec:3746.
 func lawSpecEvaluateReachForest(symbols map[string]*LawSpecSymbol, u LawSpecValue) LawSpecValue {
 	return lsfToValueListSyntax(lsfReachForest(lsfFromValueUnit(u)))
 }
 
-// readOf on logical values — laws/haskell_extract.lawspec:4011.
+// readOf on logical values — laws/haskell_extract.lawspec:4297.
 func lawSpecEvaluateReadOf(
 	symbols map[string]*LawSpecSymbol,
 	t_ LawSpecValue,
@@ -19654,7 +21530,7 @@ func lawSpecEvaluateRenderedParses(
 	return lsfToValueBool(lsfRenderedParses(symbols, lsfFromValueListSourceFile(files)))
 }
 
-// repeats on logical values — laws/haskell_extract.lawspec:3185.
+// repeats on logical values — laws/haskell_extract.lawspec:3447.
 func lawSpecEvaluateRepeats(
 	symbols map[string]*LawSpecSymbol,
 	s LawSpecValue,
@@ -19664,17 +21540,17 @@ func lawSpecEvaluateRepeats(
 	return lsfToValueInteger(lsfRepeats(lsfFromValueSlot(s), lsfFromValueInteger(seed_), lsfFromValueInteger(fuel)))
 }
 
-// reproEither on logical values — laws/haskell_extract.lawspec:4164.
+// reproEither on logical values — laws/haskell_extract.lawspec:4458.
 func lawSpecEvaluateReproEither(symbols map[string]*LawSpecSymbol, u LawSpecValue) LawSpecValue {
 	return lsfToValueText(lsfReproEither(lsfFromValueUnit(u)))
 }
 
-// reproSpan on logical values — laws/haskell_extract.lawspec:4159.
+// reproSpan on logical values — laws/haskell_extract.lawspec:4453.
 func lawSpecEvaluateReproSpan(symbols map[string]*LawSpecSymbol, u LawSpecValue) LawSpecValue {
 	return lsfToValueText(lsfReproSource(lsfFromValueUnit(u)))
 }
 
-// reproUnreadable on logical values — laws/haskell_extract.lawspec:4169.
+// reproUnreadable on logical values — laws/haskell_extract.lawspec:4463.
 func lawSpecEvaluateReproUnreadable(
 	symbols map[string]*LawSpecSymbol,
 	u LawSpecValue,
@@ -19784,10 +21660,10 @@ func lawSpecEvaluateSingle(symbols map[string]*LawSpecSymbol, ms LawSpecValue) L
 
 // skippedPath on logical values — laws/haskell_extract.lawspec:2247.
 func lawSpecEvaluateSkippedPath(symbols map[string]*LawSpecSymbol, p LawSpecValue) LawSpecValue {
-	return lsfToValueBool(lsfSkippedPath(lsfFromValueText(p)))
+	return lsfToValueBool(lsfAssayxportHaskellExtractSkippedPath(lsfFromValueText(p)))
 }
 
-// sl on logical values — laws/haskell_extract.lawspec:3104.
+// sl on logical values — laws/haskell_extract.lawspec:3366.
 func lawSpecEvaluateSl(
 	symbols map[string]*LawSpecSymbol,
 	field LawSpecValue,
@@ -19798,7 +21674,7 @@ func lawSpecEvaluateSl(
 	return lsfToValueSlot(lsfSl(lsfFromValueText(field), lsfFromValueBool(many), lsfFromValueBool(needed), lsfFromValueListText(kinds)))
 }
 
-// slotPicks on logical values — laws/haskell_extract.lawspec:3190.
+// slotPicks on logical values — laws/haskell_extract.lawspec:3452.
 func lawSpecEvaluateSlotPicks(
 	symbols map[string]*LawSpecSymbol,
 	g LawSpecValue,
@@ -19809,7 +21685,7 @@ func lawSpecEvaluateSlotPicks(
 	return lsfToValueListPick(lsfSlotPicks(lsfFromValueGrammar(g), lsfFromValueSlot(s), lsfFromValueInteger(n), lsfFromValueInteger(seed_)))
 }
 
-// slotsOf on logical values — laws/haskell_extract.lawspec:3156.
+// slotsOf on logical values — laws/haskell_extract.lawspec:3418.
 func lawSpecEvaluateSlotsOf(
 	symbols map[string]*LawSpecSymbol,
 	k LawSpecValue,
@@ -19896,7 +21772,7 @@ func lawSpecEvaluateSynonymOf(symbols map[string]*LawSpecSymbol, ps LawSpecValue
 	return lsfToValueMaybeSyntax(lsfSynonymOf(lsfFromValueSyntax(ps)))
 }
 
-// textFor on logical values — laws/haskell_extract.lawspec:3164.
+// textFor on logical values — laws/haskell_extract.lawspec:3426.
 func lawSpecEvaluateTextFor(
 	symbols map[string]*LawSpecSymbol,
 	g LawSpecValue,
@@ -19916,7 +21792,7 @@ func lawSpecEvaluateTextsOf(symbols map[string]*LawSpecSymbol, cs LawSpecValue) 
 	return lsfToValueListText(lsfTextsOf(lsfFromValueListSyntax(cs)))
 }
 
-// theGrammar on logical values — laws/haskell_extract.lawspec:3140.
+// theGrammar on logical values — laws/haskell_extract.lawspec:3402.
 func lawSpecEvaluateTheGrammar(symbols map[string]*LawSpecSymbol, u LawSpecValue) LawSpecValue {
 	return lsfToValueGrammar(lsfTheGrammar(lsfFromValueUnit(u)))
 }
@@ -19944,7 +21820,7 @@ func lawSpecEvaluateTrimEnd(
 	return lsfToValueText(lsfTrimEnd(lsfFromValueText(t_), lsfFromValueInteger(n)))
 }
 
-// turned on logical values — laws/haskell_extract.lawspec:3203.
+// turned on logical values — laws/haskell_extract.lawspec:3465.
 func lawSpecEvaluateTurned(
 	symbols map[string]*LawSpecSymbol,
 	n LawSpecValue,
@@ -19992,12 +21868,12 @@ func lawSpecEvaluateTypeNode(symbols map[string]*LawSpecSymbol, nd LawSpecValue)
 	return lsfToValueBool(lsfTypeNode(lsfFromValueSyntax(nd)))
 }
 
-// unreadableAt3 on logical values — laws/haskell_extract.lawspec:4173.
+// unreadableAt3 on logical values — laws/haskell_extract.lawspec:4467.
 func lawSpecEvaluateUnreadableAt3(symbols map[string]*LawSpecSymbol, u LawSpecValue) LawSpecValue {
 	return lsfToValueText(lsfUnreadableAt3(lsfFromValueUnit(u)))
 }
 
-// unreadableWith on logical values — laws/haskell_extract.lawspec:4154.
+// unreadableWith on logical values — laws/haskell_extract.lawspec:4448.
 func lawSpecEvaluateUnreadableWith(
 	symbols map[string]*LawSpecSymbol,
 	lines LawSpecValue,
@@ -20053,10 +21929,10 @@ func lawSpecEvaluateWalk(
 	w LawSpecValue,
 	cs LawSpecValue,
 ) LawSpecValue {
-	return lsfToValueListCallEdge(lsfWalk(lsfFromValueCtx(x), lsfFromValueListText(locals), lsfFromValueWhere(w), lsfFromValueListSyntax(cs)))
+	return lsfToValueListCallEdge(lsfWalk_2(lsfFromValueCtx(x), lsfFromValueListText(locals), lsfFromValueWhere(w), lsfFromValueListSyntax(cs)))
 }
 
-// whenEnv on logical values — laws/haskell_extract.lawspec:2784.
+// whenEnv on logical values — laws/haskell_extract.lawspec:3046.
 func lawSpecEvaluateWhenEnv(
 	symbols map[string]*LawSpecSymbol,
 	origin LawSpecValue,
@@ -20065,12 +21941,12 @@ func lawSpecEvaluateWhenEnv(
 	return lsfToValueEitherTextEnv(lsfWhenEnv(lsfFromValueText(origin), lsfFromValueListText(lines)))
 }
 
-// whenHeader on logical values — laws/haskell_extract.lawspec:2800.
+// whenHeader on logical values — laws/haskell_extract.lawspec:3062.
 func lawSpecEvaluateWhenHeader(symbols map[string]*LawSpecSymbol, u LawSpecValue) LawSpecValue {
 	return lsfToValueListText(lsfWhenHeader(lsfFromValueUnit(u)))
 }
 
-// whenInitNothing on logical values — laws/haskell_extract.lawspec:2805.
+// whenInitNothing on logical values — laws/haskell_extract.lawspec:3067.
 func lawSpecEvaluateWhenInitNothing(
 	symbols map[string]*LawSpecSymbol,
 	root LawSpecValue,
@@ -20079,7 +21955,7 @@ func lawSpecEvaluateWhenInitNothing(
 	return lsfToValueText(lsfWhenInitNothing(lsfFromValueText(root), lsfFromValueFiltered(f)))
 }
 
-// whenInitWarnings on logical values — laws/haskell_extract.lawspec:2804.
+// whenInitWarnings on logical values — laws/haskell_extract.lawspec:3066.
 func lawSpecEvaluateWhenInitWarnings(
 	symbols map[string]*LawSpecSymbol,
 	f LawSpecValue,
@@ -20087,7 +21963,7 @@ func lawSpecEvaluateWhenInitWarnings(
 	return lsfToValueListText(lsfWhenInitWarnings(lsfFromValueFiltered(f)))
 }
 
-// whenListed on logical values — laws/haskell_extract.lawspec:2799.
+// whenListed on logical values — laws/haskell_extract.lawspec:3061.
 func lawSpecEvaluateWhenListed(symbols map[string]*LawSpecSymbol, lines LawSpecValue) LawSpecValue {
 	return lsNativeContext("assayxport.haskell.extract::whenListed", func() LawSpecValue {
 		result := lawSpecEvaluateAssayxportConditionsListedNames_2(symbols, lines)
@@ -20095,7 +21971,7 @@ func lawSpecEvaluateWhenListed(symbols map[string]*LawSpecSymbol, lines LawSpecV
 	})
 }
 
-// whenPaste on logical values — laws/haskell_extract.lawspec:2798.
+// whenPaste on logical values — laws/haskell_extract.lawspec:3060.
 func lawSpecEvaluateWhenPaste(
 	symbols map[string]*LawSpecSymbol,
 	env LawSpecValue,
@@ -20105,17 +21981,17 @@ func lawSpecEvaluateWhenPaste(
 	return lsfToValueListText(lsfWhenPaste(lsfFromValueEnv(env), lsfFromValueListText(listed), lsfFromValueListPackage(ps)))
 }
 
-// whenText on logical values — laws/haskell_extract.lawspec:4126.
+// whenText on logical values — laws/haskell_extract.lawspec:4420.
 func lawSpecEvaluateWhenText(symbols map[string]*LawSpecSymbol, cond LawSpecValue) LawSpecValue {
 	return lsfToValueText(lsfWhenText(lsfFromValueText(cond)))
 }
 
-// whenWarnings on logical values — laws/haskell_extract.lawspec:2791.
+// whenWarnings on logical values — laws/haskell_extract.lawspec:3053.
 func lawSpecEvaluateWhenWarnings(symbols map[string]*LawSpecSymbol, f LawSpecValue) LawSpecValue {
 	return lsfToValueListText(lsfWhenWarnings(lsfFromValueFiltered(f)))
 }
 
-// whenWarningsWith on logical values — laws/haskell_extract.lawspec:2797.
+// whenWarningsWith on logical values — laws/haskell_extract.lawspec:3059.
 func lawSpecEvaluateWhenWarningsWith(
 	symbols map[string]*LawSpecSymbol,
 	f LawSpecValue,
@@ -20129,17 +22005,17 @@ func lawSpecEvaluateWhereOf(symbols map[string]*LawSpecSymbol, nd LawSpecValue) 
 	return lsfToValueWhere(lsfWhereOf(lsfFromValueSyntax(nd)))
 }
 
-// wideEnv on logical values — laws/haskell_extract.lawspec:4269.
+// wideEnv on logical values — laws/haskell_extract.lawspec:4649.
 func lawSpecEvaluateWideEnv(symbols map[string]*LawSpecSymbol, n LawSpecValue) LawSpecValue {
 	return lsfToValueEnv(lsfWideEnv(lsfFromValueInteger(n)))
 }
 
-// wideFile on logical values — laws/haskell_extract.lawspec:4271.
+// wideFile on logical values — laws/haskell_extract.lawspec:4651.
 func lawSpecEvaluateWideFile(symbols map[string]*LawSpecSymbol, t_ LawSpecValue) LawSpecValue {
 	return lsfToValueListSourceFile(lsfWideFile(lsfFromValueText(t_)))
 }
 
-// wideLines on logical values — laws/haskell_extract.lawspec:4265.
+// wideLines on logical values — laws/haskell_extract.lawspec:4645.
 func lawSpecEvaluateWideLines(symbols map[string]*LawSpecSymbol, n LawSpecValue) LawSpecValue {
 	return lsfToValueListBindingLine(lsfWideLines(lsfFromValueInteger(n)))
 }
@@ -20190,7 +22066,7 @@ func lawSpecEvaluateWildKinds(
 	return lsfToValueBool(lsfWildKinds(lsfFromValueText(ns), lsfFromValueDecl(d)))
 }
 
-// wildModule on logical values — laws/haskell_extract.lawspec:3048.
+// wildModule on logical values — laws/haskell_extract.lawspec:3310.
 func lawSpecEvaluateWildModule(
 	symbols map[string]*LawSpecSymbol,
 	header LawSpecValue,

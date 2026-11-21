@@ -20,7 +20,7 @@ func flagTree(t *testing.T) string {
 
 func writeDecisions(t *testing.T, dir, text string) {
 	t.Helper()
-	writeFixture(t, dir, ".assayxport/when", text)
+	writeFixture(t, dir, "assayxport.when", text)
 }
 
 // symbolWhen reports whether the shards hold the symbol, and its condition.
@@ -85,9 +85,15 @@ func TestDiscoveredLinesBoundaries(t *testing.T) {
 		t.Fatalf(".assayxport as a file: %v, %v", got, err)
 	}
 	asDir := filepath.Join(dir, "u")
-	writeFixture(t, asDir, ".assayxport/when/x", "x")
-	if _, err := discoveredLines(asDir); err == nil {
-		t.Fatal("a decisions path that is a directory must be an error")
+	writeFixture(t, asDir, "assayxport.when/x", "x")
+	if got, err := discoveredLines(asDir); err != nil || got != nil {
+		t.Fatalf("a decisions path that is a directory is no decisions file (D2): %v, %v", got, err)
+	}
+	// The old place is not read (O101): a file there decides nothing.
+	asOld := filepath.Join(dir, "v")
+	writeFixture(t, asOld, ".assayxport/when", "undef FLAG1\n")
+	if got, err := discoveredLines(asOld); err != nil || got != nil {
+		t.Fatalf("the old decisions path must not be read: %v, %v", got, err)
 	}
 }
 
@@ -229,5 +235,51 @@ func TestWatchSeesHaskellEdit(t *testing.T) {
 	writeFixture(t, dir, "O.hs-boot", "module O where\n")
 	if digest(dir) != after {
 		t.Fatal(".lhs and .hs-boot are not watched")
+	}
+}
+
+// A .hs file counts for the digest exactly when the extractor's walk reads it
+// (N3, law HSX-45).
+func TestWatchDigestFollowsSkippedPath(t *testing.T) {
+	for rel, read := range map[string]bool{
+		"dist-newstyle/build/autogen/Paths_p.hs": false,
+		"A.hs":                                   true,
+		"dist/build/B.hs":                        false,
+		".stack-work/dist/C.hs":                  false,
+		"src/dist/D.hs":                          false,
+		"src/E.hs":                               true,
+		"distant/G.hs":                           true,
+		"src/.hidden/H.hs":                       false,
+	} {
+		dir := flagTree(t)
+		before := digest(dir)
+		writeFixture(t, dir, rel, "module W where\nw = 1\n")
+		if changed := digest(dir) != before; changed != read {
+			t.Errorf("%s: digest changed = %v, extractor reads it = %v", rel, changed, read)
+		}
+	}
+}
+
+// The first pass of `ax serve` in its default (progressive) mode reads the
+// decisions file (review 9, S1; law HSX-44).
+func TestRunProgressiveReadsDecisionsFile(t *testing.T) {
+	dir := flagTree(t)
+	writeDecisions(t, dir, "undef FLAG1\n")
+	for _, noDiscovery := range []bool{false, true} {
+		out := t.TempDir()
+		cur := &current{}
+		if err := runProgressive(dir, stringsFlag{"haskell"}, true, noDiscovery, out, cur, newFocusRegistry()); err != nil {
+			t.Fatal(err)
+		}
+		held := false
+		for rel, b := range collectJSON(t, out) {
+			if strings.Contains(string(b), `"name":"foo"`) || strings.Contains(string(b), `"name": "foo"`) {
+				held = true
+				_ = rel
+			}
+		}
+		if held == !noDiscovery {
+			t.Fatalf("noDiscovery=%v: foo present = %v", noDiscovery, held)
+		}
 	}
 }

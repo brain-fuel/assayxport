@@ -57,7 +57,7 @@ func runDiffCmd(args []string) error {
 	sameLangOnly := fs.Bool("same-language-only", false, "correspond: drop cross-language candidate pairs")
 	ignoreParamNames := fs.Bool("ignore-param-names", false, "drift: a parameter rename is not signature drift")
 	quiet := fs.Bool("quiet", false, "suppress progress on stderr")
-	noDiscovery := fs.Bool("when-no-discovery", false, "do not read each source's .assayxport/when")
+	noDiscovery := fs.Bool("when-no-discovery", false, "do not read each source's assayxport.when")
 	var langs stringsFlag
 	fs.Var(&langs, "lang", "language to compare (repeatable; default: all)")
 	fs.Usage = func() {

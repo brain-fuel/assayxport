@@ -11,8 +11,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
 	"math/big"
+	"net"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -635,4 +639,172 @@ func written(out string, stderr string) WhenRun {
 		}
 	}
 	return WhenRun{Packages: decodePackages(combined), Warnings: warnings, Paste: paste}
+}
+
+// freePort asks the system for a port nothing listens on.
+func freePort() int {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		panic(fmt.Sprintf("no free port: %v", err))
+	}
+	defer l.Close()
+	return l.Addr().(*net.TCPAddr).Port
+}
+
+func httpGet(u string) (int, []byte) {
+	resp, err := http.Get(u)
+	if err != nil {
+		return 0, nil
+	}
+	defer resp.Body.Close()
+	b, _ := io.ReadAll(resp.Body)
+	return resp.StatusCode, b
+}
+
+// ServeFirst runs the first pass of `ax serve <root> --lang haskell --port
+// <free> <args>`: it waits until /api/status says the assay is complete,
+// reads /api/index and each shard it names, stops the command, and sorts
+// the stderr written up to then into warnings and lines to paste.
+func (handler *HaskellWhenHandler) ServeFirst(root string, args []string) WhenRun {
+	port := freePort()
+	cmd := exec.Command(handler.bin, append([]string{"serve", root, "--lang", "haskell", "--port", fmt.Sprint(port)}, args...)...)
+	stderr := &lockedBuffer{}
+	cmd.Stderr = stderr
+	if err := cmd.Start(); err != nil {
+		panic(fmt.Sprintf("ax serve failed to start: %v", err))
+	}
+	done := make(chan struct{})
+	go func() { _ = cmd.Wait(); close(done) }()
+	stop := func() { _ = cmd.Process.Kill(); <-done }
+	base := fmt.Sprintf("http://127.0.0.1:%d", port)
+	deadline := time.Now().Add(120 * time.Second)
+	for {
+		text := stderr.String()
+		if i := strings.Index(text, "ax: assay failed"); i >= 0 && strings.Contains(text[i:], "\n") {
+			stop()
+			line := strings.SplitN(text[i:], "\n", 2)[0]
+			panic(LawSpecFail{Value: ExtractFailure{Value: ExtractionFailedDetails{Message: strings.TrimPrefix(line, "ax: assay failed: ")}}})
+		}
+		if code, body := httpGet(base + "/api/status"); code == 200 {
+			var st struct {
+				Complete bool `json:"complete"`
+			}
+			if json.Unmarshal(body, &st) == nil && st.Complete {
+				break
+			}
+		}
+		select {
+		case <-done:
+			panic(fmt.Sprintf("ax serve ended: %s", stderr.String()))
+		default:
+		}
+		if time.Now().After(deadline) {
+			stop()
+			panic(fmt.Sprintf("ax serve did not finish its first pass in time: %s", stderr.String()))
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	code, index := httpGet(base + "/api/index")
+	if code != 200 {
+		stop()
+		panic(fmt.Sprintf("ax serve: /api/index gave %d", code))
+	}
+	var idx struct {
+		Packages []struct {
+			Shard string `json:"shard"`
+		} `json:"packages"`
+	}
+	if err := json.Unmarshal(index, &idx); err != nil {
+		stop()
+		panic(fmt.Sprintf("ax serve: the index does not decode: %v", err))
+	}
+	shards := map[string]json.RawMessage{}
+	for _, p := range idx.Packages {
+		c, b := httpGet(base + "/api/shard?path=" + url.QueryEscape(p.Shard))
+		if c != 200 {
+			stop()
+			panic(fmt.Sprintf("ax serve: shard %q gave %d", p.Shard, c))
+		}
+		shards[p.Shard] = b
+	}
+	said := stderr.String()
+	stop()
+	combined, err := json.Marshal(map[string]any{"index": json.RawMessage(index), "shards": shards})
+	if err != nil {
+		panic(fmt.Sprintf("manifest does not combine: %v", err))
+	}
+	warnings, paste := []string{}, []string{}
+	for _, line := range stderrLines(said) {
+		if w, found := strings.CutPrefix(line, "ax: warning: "); found {
+			warnings = append(warnings, w)
+		} else if !strings.HasPrefix(line, "ax: ") {
+			paste = append(paste, line)
+		}
+	}
+	return WhenRun{Packages: decodePackages(combined), Warnings: warnings, Paste: paste}
+}
+
+// passes counts the passes `ax watch` has reported: one line per pass, the
+// line that names the packages written (serve.gp: "ax: <time>  N packages → ...").
+func passes(stderr string) int {
+	k := 0
+	for _, line := range stderrLines(stderr) {
+		if strings.HasPrefix(line, "ax: ") && strings.Contains(line, " packages ") {
+			k++
+		}
+	}
+	return k
+}
+
+// WatchPasses starts `ax watch <root> --lang haskell --out <out> --no-html`,
+// waits for its first pass, and for each path in turn writes a new module
+// there and says whether a pass followed (true at once when one is
+// reported, within 60 s; false when none is in 4 s).
+func (handler *HaskellWhenHandler) WatchPasses(root string, out string, paths []string) []bool {
+	cmd := exec.Command(handler.bin, "watch", root, "--lang", "haskell", "--out", out, "--no-html")
+	stderr := &lockedBuffer{}
+	cmd.Stderr = stderr
+	if err := cmd.Start(); err != nil {
+		panic(fmt.Sprintf("ax watch failed to start: %v", err))
+	}
+	done := make(chan struct{})
+	go func() { _ = cmd.Wait(); close(done) }()
+	defer func() { _ = cmd.Process.Kill(); <-done }()
+	deadline := time.Now().Add(120 * time.Second)
+	for !strings.Contains(stderr.String(), "ax: watching ") {
+		if time.Now().After(deadline) {
+			panic(fmt.Sprintf("ax watch said nothing in time: %s", stderr.String()))
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	result := []bool{}
+	for i, p := range paths {
+		before := passes(stderr.String())
+		full := filepath.Join(root, filepath.FromSlash(p))
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			panic(err)
+		}
+		if err := os.WriteFile(full, []byte(fmt.Sprintf("module W%d where\nw%d = %d\n", i, i, i)), 0o644); err != nil {
+			panic(err)
+		}
+		followed := false
+		quiet := time.Now().Add(4 * time.Second)
+		for time.Now().Before(quiet) {
+			if passes(stderr.String()) > before {
+				followed = true
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+		result = append(result, followed)
+	}
+	return result
+}
+
+// LinkTo makes link a symbolic link to the directory target.
+func (handler *HaskellWhenHandler) LinkTo(link string, target string) {
+	_ = os.Remove(link)
+	if err := os.Symlink(target, link); err != nil {
+		panic(fmt.Sprintf("symlink: %v", err))
+	}
 }

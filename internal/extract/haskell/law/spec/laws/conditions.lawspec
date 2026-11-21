@@ -28,11 +28,15 @@ import assayxport.conditions.policy as wp (Env, Binding, Outcome, OpenInfo, CExp
 -- (evalWhen is defined below, with the lexer and parser it needs.)
 
 -- The lexer. A condition's text is cut into tokens; a form this evaluator
--- does not read (an unsigned literal, a character constant) is the token
--- `TUnread`, which the parser makes the literal -1: the reference answers
--- Bad for it when it is evaluated, and C does not evaluate a decided side.
+-- does not read is the token `TUnread`, which the parser makes the
+-- literal -1: the reference answers Bad for it when it is evaluated, and
+-- C does not evaluate a decided side. Next cycle 7 (review 9, N2; WHEN-2x,
+-- WHEN-2g): a literal with a `u` suffix, a literal up to 2^64 - 1, a
+-- character constant of one plain character or a simple escape, and the
+-- comma operator ARE read; `TUnread` is left for the other character
+-- constants and for a literal past 2^64 - 1.
 -- Any other character or token C does not accept makes the whole text Bad.
-type Tok is one of | TNum of type Integer | TId of type Text | TOp of type Text | TUnread end type
+type Tok is one of | TNum of type Integer | TUNum of type Integer | TId of type Text | TOp of type Text | TUnread end type
 
 type Parsed is a record{
   expr :: CExpr
@@ -101,7 +105,28 @@ end function
 function unsignedOf (suffix :: Text) -> Bool is (suffix contains "u") || (suffix contains "U") end function
 
 function tokOfNumber (v :: Integer) (unsigned :: Bool) -> Maybe Tok is
-  if unsigned then Present TUnread else Present (TNum v) end if
+  if unsigned then Present (TUNum v) else Present (TNum v) end if
+end function
+
+-- A character constant of one plain printable ASCII character, or of one
+-- of the escapes \n \t \r \0 \\ \' \" : its code. Any other (several
+-- characters, an octal or hexadecimal escape) is not read.
+function plainCodes (u :: Unit) -> Text is " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~" end function
+
+function charCode (content :: Text) -> Maybe Integer is
+  if prelude.length content = 1 then
+    (if content = "\\" || content = "'" then Absent
+     else (let k = idxIn (plainCodes unitValue) content 0 95 in (if k >= 95 then Absent else Present (k + 32) end if) end let) end if)
+  else (if prelude.length content = 2 && prelude.take 1 content = "\\" then
+    (let c = prelude.drop 1 content in
+      (if c = "n" then Present 10 else (if c = "t" then Present 9 else (if c = "r" then Present 13 else (if c = "0" then Present 0
+       else (if c = "\\" then Present 92 else (if c = "'" then Present 39 else (if c = "\"" then Present 34 else Absent end if) end if) end if) end if) end if) end if) end if)
+    end let)
+  else Absent end if) end if
+end function
+
+function charTok (content :: Text) -> Tok is
+  first matching case of charCode content : when Present k then TNum k when Absent then TUnread end case
 end function
 
 -- An integer literal as C reads it: decimal, 0x hexadecimal, leading-0
@@ -137,7 +162,7 @@ function lexT (t :: Text) (acc :: List Tok) (fuel :: Integer) -> Maybe (List Tok
        else (if isIdStart ch then
          (let e = idLen t 0 n in lexT (prelude.drop e t) (acc ++ [TId (prelude.take e t)]) (fuel - 1) end let)
        else (if ch = "'" then
-         (let e = quoteEnd t 1 n false in (if e < 0 || e = 2 then Absent else lexT (prelude.drop e t) (acc ++ [TUnread]) (fuel - 1) end if) end let)
+         (let e = quoteEnd t 1 n false in (if e < 0 || e = 2 then Absent else lexT (prelude.drop e t) (acc ++ [charTok (prelude.take (e - 2) (prelude.drop 1 t))]) (fuel - 1) end if) end let)
        else (if (prelude.take 3 t = "<<=") || (prelude.take 3 t = ">>=") then Absent
        else (if two matches regex "\\+\\+|--|\\+=|-=|\\*=|/=|%=|&=|[|]=|\\^=|->|##" then Absent
        else (if two matches regex "<<|>>|<=|>=|==|!=|&&|[|][|]" then lexT (prelude.drop 2 t) (acc ++ [TOp two]) (fuel - 1)
@@ -214,10 +239,11 @@ function parseLevel (lvl :: Integer) (acc :: Maybe CExpr) (toks :: List Tok) (fu
       when Present tk then
         (first matching case of tk :
           when TNum v then Present (Parsed record{ expr = Lit v , rest = prelude.drop 1 toks})
+          when TUNum v then Present (Parsed record{ expr = ULit v , rest = prelude.drop 1 toks})
           when TUnread then Present (Parsed record{ expr = Lit (0 - 1) , rest = prelude.drop 1 toks})
           when TOp s then
             (if s = "(" then
-              (first matching case of parseLevel 1 Absent (prelude.drop 1 toks) (fuel - 1) :
+              (first matching case of parseLevel 0 Absent (prelude.drop 1 toks) (fuel - 1) :
                 when Absent then Absent
                 when Present p then
                   (first matching case of expectOp p.rest ")" :
@@ -305,12 +331,27 @@ function parseLevel (lvl :: Integer) (acc :: Maybe CExpr) (toks :: List Tok) (fu
            else Present (Parsed record{ expr = left , rest = toks}) end if)
         end let)
     end case)
+  else (if lvl <= 0 then
+    (first matching case of acc :
+      when Absent then
+        (first matching case of parseLevel 1 Absent toks (fuel - 1) :
+          when Absent then Absent
+          when Present l then parseLevel 0 (Present l.expr) l.rest (fuel - 1)
+        end case)
+      when Present left then
+        (if tokOp toks = "," then
+          (first matching case of parseLevel 1 Absent (prelude.drop 1 toks) (fuel - 1) :
+            when Absent then Absent
+            when Present r then parseLevel 0 (Present (Bin record{ op = BComma , left = left , right = r.expr})) r.rest (fuel - 1)
+          end case)
+         else Present (Parsed record{ expr = left , rest = toks}) end if)
+    end case)
   else
     (first matching case of parseLevel 2 Absent toks (fuel - 1) :
       when Absent then Absent
       when Present t then
         (if tokOp t.rest = "?" then
-          (first matching case of parseLevel 1 Absent (prelude.drop 1 t.rest) (fuel - 1) :
+          (first matching case of parseLevel 0 Absent (prelude.drop 1 t.rest) (fuel - 1) :
             when Absent then Absent
             when Present y then
               (first matching case of expectOp y.rest ":" :
@@ -323,14 +364,14 @@ function parseLevel (lvl :: Integer) (acc :: Maybe CExpr) (toks :: List Tok) (fu
               end case)
           end case)
          else Present t end if)
-    end case) end if) end if) end if) end if
+    end case) end if) end if) end if) end if) end if
 end function
 
 function parseWhen (text :: Text) -> Maybe CExpr is
   first matching case of lexT text [] (prelude.length text + 1) :
     when Absent then Absent
     when Present toks then
-      (first matching case of parseLevel 1 Absent toks (14 * (prelude.length toks + 3)) :
+      (first matching case of parseLevel 0 Absent toks (16 * (prelude.length toks + 3)) :
         when Absent then Absent
         when Present p then (if prelude.length p.rest = 0 then Present p.expr else Absent end if)
       end case)
@@ -955,18 +996,84 @@ end law
 law "|the forms this evaluator does not read are Bad, unless C skips them| is
   id: "WHEN-2x"
   description :
-    "Unsigned literals, literals outside 63 bits, character constants and the comma operator are not read (design.md, section 5). C does not evaluate the right side of a decided `&&`, so such a form there does no harm."
+    "Changed in next cycle 7 (review 9, N2): unsigned literals, literals
+    up to 2^64 - 1, plain character constants and the comma operator are
+    now read (WHEN-2g). What is still not read, where the preprocessor
+    evaluates it: a character constant of several characters, with an
+    octal or hexadecimal escape, or with a prefix; and a literal past
+    2^64 - 1. Each is Bad where it is evaluated: a fact under it is kept,
+    undecided, with a warning. C does not evaluate the right side of a
+    decided `&&`, so such a form there does no harm."
   end description
   definition :
-    evalWhen (tableFull unitValue) "1u" = Bad
-    && evalWhen (tableFull unitValue) "1U + 1" = Bad
-    && evalWhen (tableFull unitValue) "18446744073709551615" = Bad
-    && evalWhen (tableFull unitValue) "9223372036854775808" = Bad
-    && evalWhen (tableFull unitValue) "'a'" = Bad
-    && evalWhen (tableFull unitValue) "1, 2" = Bad
-    && evalWhen (tableFull unitValue) "0 && 1u" = Known 0
-    && evalWhen (tableFull unitValue) "0 && 'a'" = Known 0
-    && evalWhen (tableFull unitValue) "1 || 18446744073709551615" = Known 1
+    evalWhen (tableFull unitValue) "'ab'" = Bad
+    && evalWhen (tableFull unitValue) "'\\101' == 65" = Bad
+    && evalWhen (tableFull unitValue) "'\\x41' == 65" = Bad
+    && evalWhen (tableFull unitValue) "L'a'" = Bad
+    && evalWhen (tableFull unitValue) "18446744073709551616" = Bad
+    && evalWhen (tableFull unitValue) "1lul" = Bad
+    && evalWhen (tableFull unitValue) "0 && 'ab'" = Known 0
+    && evalWhen (tableFull unitValue) "1 || 18446744073709551616" = Known 1
+  end definition
+end law
+
+law "|unsigned literals, character constants and the comma are evaluated as the C preprocessor evaluates them| is
+  id: "WHEN-2g"
+  description :
+    "Review 9, N2. Each of these was Bad (`cannot evaluate`), and the
+    preprocessor has a value for it. A `u` suffix makes the literal
+    unsigned, with or before an `l` suffix; an operation with an
+    unsigned operand is unsigned (WHP-15 has the rules). A literal with
+    no suffix past 2^63 - 1 wraps, as `cpp -traditional` reads it. A
+    character constant of one plain ASCII character, or of one of the
+    escapes for a newline, a tab, a carriage return, a zero, a
+    backslash and the two quotes, is that character's code, a signed
+    value. The comma evaluates both sides and gives the right one; a
+    comma inside a version macro's argument list separates arguments.
+    Every row was run through `cpp -undef -traditional -nostdinc` (GCC
+    15.2) by next-cycle-7/tools/exprs.py before this text was printed."
+  end description
+  definition :
+    evalWhen (tableFull unitValue) "1u" = Known 1
+    && evalWhen (tableFull unitValue) "1U + 1" = Known 2
+    && evalWhen (tableFull unitValue) "1uL + 1LU + 1ull + 1llu" = Known 4
+    && evalWhen (tableFull unitValue) "-1 < 0u" = Known 0
+    && evalWhen (tableFull unitValue) "-1 < 0" = Known 1
+    && evalWhen (tableFull unitValue) "(0 ? 1u : -1) < 0" = Known 0
+    && evalWhen (tableFull unitValue) "-1 / 2u" = Known 9223372036854775807
+    && evalWhen (tableFull unitValue) "-1u >> 1" = Known 9223372036854775807
+    && evalWhen (tableFull unitValue) "-1 >> 1u" = Known (0 - 1)
+    && evalWhen (tableFull unitValue) "1 << 64u" = Known 0
+    && evalWhen (tableFull unitValue) "N < 0u" = Known 0
+    && evalWhen (tableFull unitValue) "0xffffffffffffffffU == -1" = Known 1
+    && evalWhen (tableFull unitValue) "18446744073709551615" = Known (0 - 1)
+    && evalWhen (tableFull unitValue) "18446744073709551615 > 0" = Known 0
+    && evalWhen (tableFull unitValue) "9223372036854775808" = Known (0 - 9223372036854775808)
+    && evalWhen (tableFull unitValue) "0xffffffffffffffff > 0" = Known 0
+    && evalWhen (tableFull unitValue) "'a'" = Known 97
+    && evalWhen (tableFull unitValue) "'a' == 97 && 'Z' - 'A' == 25" = Known 1
+    && evalWhen (tableFull unitValue) "' '" = Known 32
+    && evalWhen (tableFull unitValue) "'\\n'" = Known 10
+    && evalWhen (tableFull unitValue) "'\\t'" = Known 9
+    && evalWhen (tableFull unitValue) "'\\r'" = Known 13
+    && evalWhen (tableFull unitValue) "'\\0'" = Known 0
+    && evalWhen (tableFull unitValue) "'\\\\'" = Known 92
+    && evalWhen (tableFull unitValue) "'\\''" = Known 39
+    && evalWhen (tableFull unitValue) "'\\\"'" = Known 34
+    && evalWhen (tableFull unitValue) "'\"'" = Known 34
+    && evalWhen (tableFull unitValue) "-'a' < 0" = Known 1
+    && evalWhen (tableFull unitValue) "'a' - 98u < 0" = Known 0
+    && evalWhen (tableFull unitValue) "1, 2" = Known 2
+    && evalWhen (tableFull unitValue) "1, 0" = Known 0
+    && evalWhen (tableFull unitValue) "(1, 0) || (0, A)" = Known 1
+    && evalWhen (tableFull unitValue) "(1/0, 1)" = Bad
+    && evalWhen (tableFull unitValue) "1 ? 2, 0 : 3" = Known 0
+    && evalWhen (tableFull unitValue) "0 ? 1 : 2, 0" = Known 0
+    && evalWhen (tableFull unitValue) "(0u , -1) < 0" = Known 1
+    && evalWhen (tableFull unitValue) "MIN_VERSION_base((1, 4), 18, 0)" = Known 1
+    && evalWhen (tableFull unitValue) "MIN_VERSION_base(4, 18, 0, 0)" = Bad
+    && evalWhen (tablePart unitValue) "(Zq, 3) == 3" = Known 1
+    && evalWhen (tablePart unitValue) "(3, Zq)" = unknown ["Zq"] false
   end definition
 end law
 
@@ -1518,7 +1625,7 @@ law "|the starter file and the lines to paste, to the letter| is
   end description
   definition :
     initLines (sampleManifest unitValue)
-      = ["# ax decisions file (.assayxport/when): one decision per line.",
+      = ["# ax decisions file (assayxport.when): one decision per line.",
          "# ax reads it on every assay of this root; --when-file and --when replace its values.",
          "# Decide a name by replacing its \"# NAME=\" line with one of",
          "#   NAME=<integer>    NAME    undef NAME    package P=X.Y.Z",

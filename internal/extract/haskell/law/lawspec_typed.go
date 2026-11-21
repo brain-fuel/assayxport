@@ -706,12 +706,20 @@ func (*lsfTok_TNum) lsfTagTok() int {
 	return 0
 }
 
+type lsfTok_TUNum struct {
+	fValue lsfInt
+}
+
+func (*lsfTok_TUNum) lsfTagTok() int {
+	return 1
+}
+
 type lsfTok_TId struct {
 	fValue string
 }
 
 func (*lsfTok_TId) lsfTagTok() int {
-	return 1
+	return 2
 }
 
 type lsfTok_TOp struct {
@@ -719,16 +727,16 @@ type lsfTok_TOp struct {
 }
 
 func (*lsfTok_TOp) lsfTagTok() int {
-	return 2
+	return 3
 }
 
 type lsfTok_TUnread struct{}
 
 func (*lsfTok_TUnread) lsfTagTok() int {
-	return 3
+	return 4
 }
 
-var lsfTokRanks = [...]int{1, 0, 2, 3}
+var lsfTokRanks = [...]int{1, 3, 0, 2, 4}
 
 // lsfParsed is Parsed (assayxport.conditions::type::Parsed).
 type lsfParsed struct {
@@ -851,9 +859,10 @@ const (
 	lsfBinOp_BOr
 	lsfBinOp_BLand
 	lsfBinOp_BLor
+	lsfBinOp_BComma
 )
 
-var lsfBinOpRanks = [...]int{10, 2, 13, 0, 16, 14, 15, 9, 7, 5, 4, 3, 11, 1, 17, 12, 6, 8}
+var lsfBinOpRanks = [...]int{11, 3, 14, 0, 17, 15, 16, 10, 8, 6, 5, 4, 12, 1, 18, 13, 7, 9, 2}
 
 // lsfCExpr is CExpr (assayxport.conditions.policy::type::CExpr).
 type lsfCExpr interface {
@@ -868,12 +877,20 @@ func (*lsfCExpr_Lit) lsfTagCExpr() int {
 	return 0
 }
 
+type lsfCExpr_ULit struct {
+	fValue lsfInt
+}
+
+func (*lsfCExpr_ULit) lsfTagCExpr() int {
+	return 1
+}
+
 type lsfCExpr_Name struct {
 	fValue string
 }
 
 func (*lsfCExpr_Name) lsfTagCExpr() int {
-	return 1
+	return 2
 }
 
 type lsfCExpr_IsDefined struct {
@@ -881,7 +898,7 @@ type lsfCExpr_IsDefined struct {
 }
 
 func (*lsfCExpr_IsDefined) lsfTagCExpr() int {
-	return 2
+	return 3
 }
 
 type lsfCExpr_Un struct {
@@ -889,7 +906,7 @@ type lsfCExpr_Un struct {
 }
 
 func (*lsfCExpr_Un) lsfTagCExpr() int {
-	return 3
+	return 4
 }
 
 type lsfCExpr_Bin struct {
@@ -897,7 +914,7 @@ type lsfCExpr_Bin struct {
 }
 
 func (*lsfCExpr_Bin) lsfTagCExpr() int {
-	return 4
+	return 5
 }
 
 type lsfCExpr_Cond struct {
@@ -905,7 +922,7 @@ type lsfCExpr_Cond struct {
 }
 
 func (*lsfCExpr_Cond) lsfTagCExpr() int {
-	return 5
+	return 6
 }
 
 type lsfCExpr_MinVersion struct {
@@ -913,7 +930,7 @@ type lsfCExpr_MinVersion struct {
 }
 
 func (*lsfCExpr_MinVersion) lsfTagCExpr() int {
-	return 6
+	return 7
 }
 
 type lsfCExpr_MinGhc struct {
@@ -921,10 +938,10 @@ type lsfCExpr_MinGhc struct {
 }
 
 func (*lsfCExpr_MinGhc) lsfTagCExpr() int {
-	return 7
+	return 8
 }
 
-var lsfCExprRanks = [...]int{3, 6, 2, 7, 0, 1, 5, 4}
+var lsfCExprRanks = [...]int{3, 7, 6, 2, 8, 0, 1, 5, 4}
 
 // lsfLiteral is Literal (assayxport.conditions.policy::type::Literal).
 type lsfLiteral struct {
@@ -1137,6 +1154,39 @@ func (*lsfSection_Group) lsfTagSection() int {
 
 var lsfSectionRanks = [...]int{0, 1}
 
+// lsfSets is Sets (assayxport.haskell.cpp::type::Sets).
+type lsfSets interface {
+	lsfTagSets() int
+}
+
+type lsfSets_SetsNothing struct{}
+
+func (*lsfSets_SetsNothing) lsfTagSets() int {
+	return 0
+}
+
+type lsfSets_SetsInt struct {
+	fValue lsfInt
+}
+
+func (*lsfSets_SetsInt) lsfTagSets() int {
+	return 1
+}
+
+type lsfSets_SetsOther struct{}
+
+func (*lsfSets_SetsOther) lsfTagSets() int {
+	return 2
+}
+
+type lsfSets_Unsets struct{}
+
+func (*lsfSets_Unsets) lsfTagSets() int {
+	return 3
+}
+
+var lsfSetsRanks = [...]int{1, 0, 2, 3}
+
 // lsfRow is Row (assayxport.haskell.cpp::type::Row).
 type lsfRow struct {
 	fText      string
@@ -1144,7 +1194,49 @@ type lsfRow struct {
 	fDirective bool
 	fReads     bool
 	fName      string
+	fSets      lsfSets
 }
+
+// lsfFrame is Frame (assayxport.haskell.cpp::type::Frame).
+type lsfFrame struct {
+	fLive bool
+	fDone bool
+}
+
+// lsfWalk is Walk (assayxport.haskell.cpp::type::Walk).
+type lsfWalk struct {
+	fStack *lsfList[*lsfFrame]
+	fSets  *lsfMap[string, lsfSets]
+}
+
+// lsfReading is Reading (assayxport.haskell.cpp::type::Reading).
+type lsfReading interface {
+	lsfTagReading() int
+}
+
+type lsfReading_NotRead struct{}
+
+func (*lsfReading_NotRead) lsfTagReading() int {
+	return 0
+}
+
+type lsfReading_ByFile struct {
+	fValue bool
+}
+
+func (*lsfReading_ByFile) lsfTagReading() int {
+	return 1
+}
+
+type lsfReading_ByTerm struct {
+	fValue *lsfLiteral
+}
+
+func (*lsfReading_ByTerm) lsfTagReading() int {
+	return 2
+}
+
+var lsfReadingRanks = [...]int{2, 0, 1}
 
 // lsfWalked is Walked (assayxport.haskell.cpp::type::Walked).
 type lsfWalked struct {
@@ -1233,21 +1325,6 @@ type lsfCxTerm struct {
 	fText    string
 }
 
-// lsfCxOpen is CxOpen (assayxport.haskell.extract::type::CxOpen).
-type lsfCxOpen struct {
-	fOuter   *lsfList[*lsfCxTerm]
-	fBefore  *lsfList[*lsfCxTerm]
-	fOwn     *lsfCxTerm
-	fHasElse bool
-	fDead    bool
-}
-
-// lsfCxState is CxState (assayxport.haskell.extract::type::CxState).
-type lsfCxState struct {
-	fStack *lsfList[*lsfCxOpen]
-	fLine  lsfInt
-}
-
 // lsfCxUnit is CxUnit (assayxport.haskell.extract::type::CxUnit).
 type lsfCxUnit struct {
 	fNlines lsfInt
@@ -1256,14 +1333,57 @@ type lsfCxUnit struct {
 	fBody   string
 }
 
+// lsfCxSets is CxSets (assayxport.haskell.extract::type::CxSets).
+type lsfCxSets interface {
+	lsfTagCxSets() int
+}
+
+type lsfCxSets_XNothing struct{}
+
+func (*lsfCxSets_XNothing) lsfTagCxSets() int {
+	return 0
+}
+
+type lsfCxSets_XInt struct {
+	fValue lsfInt
+}
+
+func (*lsfCxSets_XInt) lsfTagCxSets() int {
+	return 1
+}
+
+type lsfCxSets_XOther struct{}
+
+func (*lsfCxSets_XOther) lsfTagCxSets() int {
+	return 2
+}
+
+type lsfCxSets_XUnset struct{}
+
+func (*lsfCxSets_XUnset) lsfTagCxSets() int {
+	return 3
+}
+
+var lsfCxSetsRanks = [...]int{1, 0, 2, 3}
+
+// lsfCxDef is CxDef (assayxport.haskell.extract::type::CxDef).
+type lsfCxDef struct {
+	fName string
+	fSets lsfCxSets
+}
+
 // lsfCxRow is CxRow (assayxport.haskell.extract::type::CxRow).
 type lsfCxRow struct {
-	fNlines    lsfInt
-	fDirective bool
-	fReads     bool
-	fDead      bool
-	fTerms     *lsfList[*lsfCxTerm]
-	fText      string
+	fNlines lsfInt
+	fLine   lsfInt
+	fWord   string
+	fText   string
+	fOwn    *lsfLiteral
+	fNames  *lsfList[string]
+	fVals   *lsfList[string]
+	fParsed bool
+	fName   string
+	fSets   lsfCxSets
 }
 
 // lsfCxPlan is CxPlan (assayxport.haskell.extract::type::CxPlan).
@@ -1279,12 +1399,46 @@ type lsfCxJoin struct {
 	fText   string
 }
 
-// lsfCxEffect is CxEffect (assayxport.haskell.extract::type::CxEffect).
-type lsfCxEffect struct {
-	fStack *lsfList[*lsfCxOpen]
-	fTerms *lsfList[*lsfCxTerm]
-	fReads bool
+// lsfCxFrame is CxFrame (assayxport.haskell.extract::type::CxFrame).
+type lsfCxFrame struct {
+	fLive bool
+	fDone bool
 }
+
+// lsfCxPass is CxPass (assayxport.haskell.extract::type::CxPass).
+type lsfCxPass struct {
+	fStack *lsfList[*lsfCxFrame]
+	fSets  *lsfMap[string, lsfCxSets]
+}
+
+// lsfCxReading is CxReading (assayxport.haskell.extract::type::CxReading).
+type lsfCxReading interface {
+	lsfTagCxReading() int
+}
+
+type lsfCxReading_XNotRead struct{}
+
+func (*lsfCxReading_XNotRead) lsfTagCxReading() int {
+	return 0
+}
+
+type lsfCxReading_XByFile struct {
+	fValue bool
+}
+
+func (*lsfCxReading_XByFile) lsfTagCxReading() int {
+	return 1
+}
+
+type lsfCxReading_XByTerm struct {
+	fValue *lsfLiteral
+}
+
+func (*lsfCxReading_XByTerm) lsfTagCxReading() int {
+	return 2
+}
+
+var lsfCxReadingRanks = [...]int{2, 0, 1}
 
 // lsfCxWalk is CxWalk (assayxport.haskell.extract::type::CxWalk).
 type lsfCxWalk struct {
@@ -3165,7 +3319,7 @@ func lsfWithCounts(es *lsfList[*lsfEntry[*lsfEdgeKey, *lsfCounted]]) *lsfList[*l
 	}
 }
 
-// allNeeds — laws/conditions.lawspec:719.
+// allNeeds — laws/conditions.lawspec:760.
 func lsfAllNeeds(us *lsfList[*lsfUseNote]) *lsfList[string] {
 	it := us
 	if it == nil {
@@ -3180,7 +3334,7 @@ func lsfAllNeeds(us *lsfList[*lsfUseNote]) *lsfList[string] {
 	}
 }
 
-// applyWhen — laws/conditions.lawspec:572.
+// applyWhen — laws/conditions.lawspec:613.
 func lsfApplyWhen(env *lsfEnv, ps *lsfList[*lsfPackage]) *lsfFiltered {
 	recordField := lsfPackagesKept(env, ps)
 	var value *lsfList[string]
@@ -3196,7 +3350,7 @@ func lsfApplyWhen(env *lsfEnv, ps *lsfList[*lsfPackage]) *lsfFiltered {
 	return &lsfFiltered{recordField, recordField_2, recordField_3}
 }
 
-// assayxportConditionsPolicyAsTruth — laws/conditions_policy.lawspec:474.
+// assayxportConditionsPolicyAsTruth — laws/conditions_policy.lawspec:570.
 func lsfAssayxportConditionsPolicyAsTruth(o lsfOutcome) lsfOutcome {
 	it := o
 	switch variant := it.(type) {
@@ -3212,88 +3366,97 @@ func lsfAssayxportConditionsPolicyAsTruth(o lsfOutcome) lsfOutcome {
 	}
 }
 
-// assayxportConditionsPolicyBinary — laws/conditions_policy.lawspec:197.
+// assayxportConditionsPolicyBinary — laws/conditions_policy.lawspec:243.
 func lsfAssayxportConditionsPolicyBinary(op lsfBinOp, l lsfOutcome, r lsfOutcome) lsfOutcome {
+	return lsfAssayxportConditionsPolicyBinaryAs(false, false, op, l, r)
+}
+
+// assayxportConditionsPolicyBinaryAs — laws/conditions_policy.lawspec:263.
+func lsfAssayxportConditionsPolicyBinaryAs(lu bool, ru bool, op lsfBinOp, l lsfOutcome, r lsfOutcome) lsfOutcome {
 	if lsfEqualBinOp(op, lsfBinOp_BLand) {
 		return lsfAssayxportConditionsPolicyLogical(true, l, r)
 	} else {
 		if lsfEqualBinOp(op, lsfBinOp_BLor) {
 			return lsfAssayxportConditionsPolicyLogical(false, l, r)
 		} else {
-			if lsfAssayxportConditionsPolicyIsBad(l) || lsfAssayxportConditionsPolicyIsBad(r) {
-				return &lsfOutcome_Bad{}
+			if lsfEqualBinOp(op, lsfBinOp_BComma) {
+				return lsfAssayxportConditionsPolicyComma(l, r)
 			} else {
-				it := l
-				switch variant := it.(type) {
-				case *lsfOutcome_Known:
-					selection := variant.fValue
-					it_2 := r
-					switch variant_2 := it_2.(type) {
-					case *lsfOutcome_Known:
-						matchSelection := variant_2.fValue
-						return lsfAssayxportConditionsPolicyCompute(op, selection, matchSelection)
-					case *lsfOutcome_Unknown:
-						matchSelection_2 := variant_2.fValue
-						var value *lsfList[string]
-						missing := matchSelection_2.fMissing
-						value = missing
-						var value_2 bool
-						risky := matchSelection_2.fRisky
-						value_2 = risky
-						return lsfAssayxportConditionsPolicyUnknown(value, (value_2 || lsfAssayxportConditionsPolicyIsDivision(op)))
-					case *lsfOutcome_Bad:
-						return &lsfOutcome_Bad{}
-					default:
-						panic("unreachable branch reached")
-					}
-				case *lsfOutcome_Unknown:
-					selection_2 := variant.fValue
-					it_3 := r
-					switch variant_3 := it_3.(type) {
-					case *lsfOutcome_Known:
-						matchSelection_3 := variant_3.fValue
-						if lsfAssayxportConditionsPolicyIsDivision(op) && (lsfCmpInt(matchSelection_3, lsfSmall(int64(0))) == 0) {
-							return &lsfOutcome_Bad{}
-						} else {
-							return l
-						}
-					case *lsfOutcome_Unknown:
-						matchSelection_4 := variant_3.fValue
-						var value_3 *lsfList[string]
-						missing_2 := selection_2.fMissing
-						value_3 = missing_2
-						var value_4 *lsfList[string]
-						missing_3 := matchSelection_4.fMissing
-						value_4 = missing_3
-						var value_5 bool
-						risky_2 := selection_2.fRisky
-						value_5 = risky_2
-						var logic bool
-						if !(value_5) {
-							var value_6 bool
-							risky_3 := matchSelection_4.fRisky
-							value_6 = risky_3
-							logic = value_6
-						} else {
-							logic = true
-						}
-						return lsfAssayxportConditionsPolicyUnknown(lsfAppend(value_3, value_4), (logic || lsfAssayxportConditionsPolicyIsDivision(op)))
-					case *lsfOutcome_Bad:
-						return &lsfOutcome_Bad{}
-					default:
-						panic("unreachable branch reached")
-					}
-				case *lsfOutcome_Bad:
+				if lsfAssayxportConditionsPolicyIsBad(l) || lsfAssayxportConditionsPolicyIsBad(r) {
 					return &lsfOutcome_Bad{}
-				default:
-					panic("unreachable branch reached")
+				} else {
+					it := l
+					switch variant := it.(type) {
+					case *lsfOutcome_Known:
+						selection := variant.fValue
+						it_2 := r
+						switch variant_2 := it_2.(type) {
+						case *lsfOutcome_Known:
+							matchSelection := variant_2.fValue
+							return lsfAssayxportConditionsPolicyComputeAs(lu, ru, op, selection, matchSelection)
+						case *lsfOutcome_Unknown:
+							matchSelection_2 := variant_2.fValue
+							var value *lsfList[string]
+							missing := matchSelection_2.fMissing
+							value = missing
+							var value_2 bool
+							risky := matchSelection_2.fRisky
+							value_2 = risky
+							return lsfAssayxportConditionsPolicyUnknown(value, (value_2 || lsfAssayxportConditionsPolicyIsDivision(op)))
+						case *lsfOutcome_Bad:
+							return &lsfOutcome_Bad{}
+						default:
+							panic("unreachable branch reached")
+						}
+					case *lsfOutcome_Unknown:
+						selection_2 := variant.fValue
+						it_3 := r
+						switch variant_3 := it_3.(type) {
+						case *lsfOutcome_Known:
+							matchSelection_3 := variant_3.fValue
+							if lsfAssayxportConditionsPolicyIsDivision(op) && (lsfCmpInt(matchSelection_3, lsfSmall(int64(0))) == 0) {
+								return &lsfOutcome_Bad{}
+							} else {
+								return l
+							}
+						case *lsfOutcome_Unknown:
+							matchSelection_4 := variant_3.fValue
+							var value_3 *lsfList[string]
+							missing_2 := selection_2.fMissing
+							value_3 = missing_2
+							var value_4 *lsfList[string]
+							missing_3 := matchSelection_4.fMissing
+							value_4 = missing_3
+							var value_5 bool
+							risky_2 := selection_2.fRisky
+							value_5 = risky_2
+							var logic bool
+							if !(value_5) {
+								var value_6 bool
+								risky_3 := matchSelection_4.fRisky
+								value_6 = risky_3
+								logic = value_6
+							} else {
+								logic = true
+							}
+							return lsfAssayxportConditionsPolicyUnknown(lsfAppend(value_3, value_4), (logic || lsfAssayxportConditionsPolicyIsDivision(op)))
+						case *lsfOutcome_Bad:
+							return &lsfOutcome_Bad{}
+						default:
+							panic("unreachable branch reached")
+						}
+					case *lsfOutcome_Bad:
+						return &lsfOutcome_Bad{}
+					default:
+						panic("unreachable branch reached")
+					}
 				}
 			}
 		}
 	}
 }
 
-// assayxportConditionsPolicyBitsOf — laws/conditions_policy.lawspec:101.
+// assayxportConditionsPolicyBitsOf — laws/conditions_policy.lawspec:116.
 func lsfAssayxportConditionsPolicyBitsOf(which lsfInt, a lsfInt, b lsfInt, n lsfInt) lsfInt {
 	if lsfCmpInt(n, lsfSmall(int64(0))) <= 0 {
 		return lsfSmall(0)
@@ -3326,12 +3489,12 @@ func lsfAssayxportConditionsPolicyBitsOf(which lsfInt, a lsfInt, b lsfInt, n lsf
 	}
 }
 
-// assayxportConditionsPolicyBitwise — laws/conditions_policy.lawspec:111.
+// assayxportConditionsPolicyBitwise — laws/conditions_policy.lawspec:126.
 func lsfAssayxportConditionsPolicyBitwise(which lsfInt, a lsfInt, b lsfInt) lsfInt {
 	return lsfAssayxportConditionsPolicyWrap(lsfAssayxportConditionsPolicyBitsOf(which, lsfAssayxportConditionsPolicyUnsigned64(a), lsfAssayxportConditionsPolicyUnsigned64(b), lsfSmall(64)))
 }
 
-// assayxportConditionsPolicyBlockOf — laws/conditions_policy.lawspec:1406.
+// assayxportConditionsPolicyBlockOf — laws/conditions_policy.lawspec:1596.
 func lsfAssayxportConditionsPolicyBlockOf(name string, uses *lsfList[*lsfUsePlace]) *lsfList[string] {
 	var value *lsfList[*lsfUsePlace]
 	matched_ := lsfSetOf(uses, lsfCompareUsePlace)
@@ -3340,7 +3503,7 @@ func lsfAssayxportConditionsPolicyBlockOf(name string, uses *lsfList[*lsfUsePlac
 	return lsfAppend(lsfAppend(lsfCons[string]("", lsfCons[string]((("# " + name) + " is not decided. Facts that depend on it:"), (*lsfList[string])(nil))), lsfAssayxportConditionsPolicyUseLines(value)), lsfCons[string](lsfAssayxportConditionsPolicyUndecidedLine(name), (*lsfList[string])(nil)))
 }
 
-// assayxportConditionsPolicyBound — laws/conditions_policy.lawspec:1085.
+// assayxportConditionsPolicyBound — laws/conditions_policy.lawspec:1269.
 func lsfAssayxportConditionsPolicyBound(env *lsfEnv, b lsfBindingLine) *lsfEnv {
 	it := b
 	switch variant := it.(type) {
@@ -3432,12 +3595,14 @@ func lsfAssayxportConditionsPolicyBound(env *lsfEnv, b lsfBindingLine) *lsfEnv {
 	}
 }
 
-// assayxportConditionsPolicyBroken — laws/conditions_policy.lawspec:371.
+// assayxportConditionsPolicyBroken — laws/conditions_policy.lawspec:465.
 func lsfAssayxportConditionsPolicyBroken(env *lsfEnv, e lsfCExpr) bool {
 	for {
 		it := e
 		switch variant := it.(type) {
 		case *lsfCExpr_Lit:
+			return false
+		case *lsfCExpr_ULit:
 			return false
 		case *lsfCExpr_Name:
 			selection := variant.fValue
@@ -3606,12 +3771,68 @@ func lsfAssayxportConditionsPolicyBroken(env *lsfEnv, e lsfCExpr) bool {
 	}
 }
 
-// assayxportConditionsPolicyBuildCap — laws/conditions_policy.lawspec:503.
+// assayxportConditionsPolicyBuildCap — laws/conditions_policy.lawspec:599.
 func lsfAssayxportConditionsPolicyBuildCap(u lsfUnit) lsfInt {
 	return lsfSmall(256)
 }
 
-// assayxportConditionsPolicyCompleted — laws/conditions_policy.lawspec:778.
+// assayxportConditionsPolicyComma — laws/conditions_policy.lawspec:249.
+func lsfAssayxportConditionsPolicyComma(l lsfOutcome, r lsfOutcome) lsfOutcome {
+	if lsfAssayxportConditionsPolicyIsBad(l) || lsfAssayxportConditionsPolicyIsBad(r) {
+		return &lsfOutcome_Bad{}
+	} else {
+		it := l
+		switch variant := it.(type) {
+		case *lsfOutcome_Known:
+			return r
+		case *lsfOutcome_Unknown:
+			selection := variant.fValue
+			it_2 := r
+			switch variant_2 := it_2.(type) {
+			case *lsfOutcome_Known:
+				var value bool
+				risky := selection.fRisky
+				value = risky
+				if value {
+					return l
+				} else {
+					return r
+				}
+			case *lsfOutcome_Unknown:
+				matchSelection := variant_2.fValue
+				var value_2 *lsfList[string]
+				missing := selection.fMissing
+				value_2 = missing
+				var value_3 *lsfList[string]
+				missing_2 := matchSelection.fMissing
+				value_3 = missing_2
+				var value_4 bool
+				risky_2 := selection.fRisky
+				value_4 = risky_2
+				var logic bool
+				if !(value_4) {
+					var value_5 bool
+					risky_3 := matchSelection.fRisky
+					value_5 = risky_3
+					logic = value_5
+				} else {
+					logic = true
+				}
+				return lsfAssayxportConditionsPolicyUnknown(lsfAppend(value_2, value_3), logic)
+			case *lsfOutcome_Bad:
+				return &lsfOutcome_Bad{}
+			default:
+				panic("unreachable branch reached")
+			}
+		case *lsfOutcome_Bad:
+			return &lsfOutcome_Bad{}
+		default:
+			panic("unreachable branch reached")
+		}
+	}
+}
+
+// assayxportConditionsPolicyCompleted — laws/conditions_policy.lawspec:898.
 func lsfAssayxportConditionsPolicyCompleted(env *lsfEnv) *lsfEnv {
 	replacement := true
 	names := env.fNames
@@ -3619,7 +3840,7 @@ func lsfAssayxportConditionsPolicyCompleted(env *lsfEnv) *lsfEnv {
 	return &lsfEnv{names, versions, replacement}
 }
 
-// assayxportConditionsPolicyComponent — laws/conditions_policy.lawspec:308.
+// assayxportConditionsPolicyComponent — laws/conditions_policy.lawspec:375.
 func lsfAssayxportConditionsPolicyComponent(v *lsfList[lsfInt], i lsfInt) lsfInt {
 	it := lsfAtList(v, lsfIndex(i))
 	if it.ok {
@@ -3630,52 +3851,104 @@ func lsfAssayxportConditionsPolicyComponent(v *lsfList[lsfInt], i lsfInt) lsfInt
 	}
 }
 
-// assayxportConditionsPolicyCompute — laws/conditions_policy.lawspec:131.
-func lsfAssayxportConditionsPolicyCompute(op lsfBinOp, a lsfInt, b lsfInt) lsfOutcome {
+// assayxportConditionsPolicyComputeAs — laws/conditions_policy.lawspec:174.
+func lsfAssayxportConditionsPolicyComputeAs(lu bool, ru bool, op lsfBinOp, a lsfInt, b lsfInt) lsfOutcome {
+	uns := (lu || ru)
+	ua := lsfAssayxportConditionsPolicyUnsigned64(a)
+	ub := lsfAssayxportConditionsPolicyUnsigned64(b)
+	var value lsfInt
+	if ru {
+		value = ub
+	} else {
+		value = b
+	}
+	n := value
 	it := op
 	switch it {
+	case lsfBinOp_BComma:
+		return &lsfOutcome_Known{b}
 	case lsfBinOp_BMul:
 		return &lsfOutcome_Known{lsfAssayxportConditionsPolicyWrap(a.Mul(b))}
 	case lsfBinOp_BDiv:
-		if lsfCmpInt(b, lsfSmall(int64(0))) == 0 {
-			return &lsfOutcome_Bad{}
+		if uns {
+			if lsfCmpInt(ub, lsfSmall(int64(0))) == 0 {
+				return &lsfOutcome_Bad{}
+			} else {
+				return &lsfOutcome_Known{lsfAssayxportConditionsPolicyWrap(ua.Quot(ub))}
+			}
 		} else {
-			return &lsfOutcome_Known{lsfAssayxportConditionsPolicyWrap(a.Quot(b))}
+			if lsfCmpInt(b, lsfSmall(int64(0))) == 0 {
+				return &lsfOutcome_Bad{}
+			} else {
+				return &lsfOutcome_Known{lsfAssayxportConditionsPolicyWrap(a.Quot(b))}
+			}
 		}
 	case lsfBinOp_BRem:
-		if lsfCmpInt(b, lsfSmall(int64(0))) == 0 {
-			return &lsfOutcome_Bad{}
+		if uns {
+			if lsfCmpInt(ub, lsfSmall(int64(0))) == 0 {
+				return &lsfOutcome_Bad{}
+			} else {
+				return &lsfOutcome_Known{lsfAssayxportConditionsPolicyWrap(ua.Rem(ub))}
+			}
 		} else {
-			return &lsfOutcome_Known{lsfAssayxportConditionsPolicyWrap(a.Rem(b))}
+			if lsfCmpInt(b, lsfSmall(int64(0))) == 0 {
+				return &lsfOutcome_Bad{}
+			} else {
+				return &lsfOutcome_Known{lsfAssayxportConditionsPolicyWrap(a.Rem(b))}
+			}
 		}
 	case lsfBinOp_BAdd:
 		return &lsfOutcome_Known{lsfAssayxportConditionsPolicyWrap(a.Add(b))}
 	case lsfBinOp_BSub:
 		return &lsfOutcome_Known{lsfAssayxportConditionsPolicyWrap(a.Sub(b))}
 	case lsfBinOp_BShl:
-		var value lsfInt
-		if lsfCmpInt(b, lsfSmall(int64(0))) >= 0 {
-			value = lsfAssayxportConditionsPolicyShiftLeft(a, b)
-		} else {
-			value = lsfAssayxportConditionsPolicyShiftRight(a, lsfSmall(int64(0)).Sub(b))
-		}
-		return &lsfOutcome_Known{value}
-	case lsfBinOp_BShr:
 		var value_2 lsfInt
-		if lsfCmpInt(b, lsfSmall(int64(0))) >= 0 {
-			value_2 = lsfAssayxportConditionsPolicyShiftRight(a, b)
+		if lsfCmpInt(n, lsfSmall(int64(0))) >= 0 {
+			value_2 = lsfAssayxportConditionsPolicyShiftLeft(a, n)
 		} else {
-			value_2 = lsfAssayxportConditionsPolicyShiftLeft(a, lsfSmall(int64(0)).Sub(b))
+			value_2 = lsfAssayxportConditionsPolicyShiftRightAs(lu, a, lsfSmall(int64(0)).Sub(n))
 		}
 		return &lsfOutcome_Known{value_2}
+	case lsfBinOp_BShr:
+		var value_3 lsfInt
+		if lsfCmpInt(n, lsfSmall(int64(0))) >= 0 {
+			value_3 = lsfAssayxportConditionsPolicyShiftRightAs(lu, a, n)
+		} else {
+			value_3 = lsfAssayxportConditionsPolicyShiftLeft(a, lsfSmall(int64(0)).Sub(n))
+		}
+		return &lsfOutcome_Known{value_3}
 	case lsfBinOp_BLt:
-		return &lsfOutcome_Known{lsfAssayxportConditionsPolicyTruth((lsfCmpInt(a, b) < 0))}
+		var value_4 bool
+		if uns {
+			value_4 = (lsfCmpInt(ua, ub) < 0)
+		} else {
+			value_4 = (lsfCmpInt(a, b) < 0)
+		}
+		return &lsfOutcome_Known{lsfAssayxportConditionsPolicyTruth(value_4)}
 	case lsfBinOp_BLe:
-		return &lsfOutcome_Known{lsfAssayxportConditionsPolicyTruth((lsfCmpInt(a, b) <= 0))}
+		var value_5 bool
+		if uns {
+			value_5 = (lsfCmpInt(ua, ub) <= 0)
+		} else {
+			value_5 = (lsfCmpInt(a, b) <= 0)
+		}
+		return &lsfOutcome_Known{lsfAssayxportConditionsPolicyTruth(value_5)}
 	case lsfBinOp_BGt:
-		return &lsfOutcome_Known{lsfAssayxportConditionsPolicyTruth((lsfCmpInt(a, b) > 0))}
+		var value_6 bool
+		if uns {
+			value_6 = (lsfCmpInt(ua, ub) > 0)
+		} else {
+			value_6 = (lsfCmpInt(a, b) > 0)
+		}
+		return &lsfOutcome_Known{lsfAssayxportConditionsPolicyTruth(value_6)}
 	case lsfBinOp_BGe:
-		return &lsfOutcome_Known{lsfAssayxportConditionsPolicyTruth((lsfCmpInt(a, b) >= 0))}
+		var value_7 bool
+		if uns {
+			value_7 = (lsfCmpInt(ua, ub) >= 0)
+		} else {
+			value_7 = (lsfCmpInt(a, b) >= 0)
+		}
+		return &lsfOutcome_Known{lsfAssayxportConditionsPolicyTruth(value_7)}
 	case lsfBinOp_BEq:
 		return &lsfOutcome_Known{lsfAssayxportConditionsPolicyTruth((lsfCmpInt(a, b) == 0))}
 	case lsfBinOp_BNe:
@@ -3695,7 +3968,7 @@ func lsfAssayxportConditionsPolicyCompute(op lsfBinOp, a lsfInt, b lsfInt) lsfOu
 	}
 }
 
-// assayxportConditionsPolicyConditionText — laws/conditions_policy.lawspec:469.
+// assayxportConditionsPolicyConditionText — laws/conditions_policy.lawspec:565.
 func lsfAssayxportConditionsPolicyConditionText(cs *lsfList[*lsfList[*lsfLiteral]]) string {
 	if int64(cs.length()) == int64(0) {
 		return "0"
@@ -3716,7 +3989,7 @@ func lsfAssayxportConditionsPolicyConditionText(cs *lsfList[*lsfList[*lsfLiteral
 	}
 }
 
-// assayxportConditionsPolicyConditional — laws/conditions_policy.lawspec:234.
+// assayxportConditionsPolicyConditional — laws/conditions_policy.lawspec:301.
 func lsfAssayxportConditionsPolicyConditional(t_ lsfOutcome, y lsfOutcome, n lsfOutcome) lsfOutcome {
 	it := t_
 	switch variant := it.(type) {
@@ -3768,7 +4041,7 @@ func lsfAssayxportConditionsPolicyConditional(t_ lsfOutcome, y lsfOutcome, n lsf
 	}
 }
 
-// assayxportConditionsPolicyCubeText — laws/conditions_policy.lawspec:451.
+// assayxportConditionsPolicyCubeText — laws/conditions_policy.lawspec:547.
 func lsfAssayxportConditionsPolicyCubeText(ls *lsfList[*lsfLiteral]) string {
 	it := ls
 	if it == nil {
@@ -3786,7 +4059,7 @@ func lsfAssayxportConditionsPolicyCubeText(ls *lsfList[*lsfLiteral]) string {
 	}
 }
 
-// assayxportConditionsPolicyCubesText — laws/conditions_policy.lawspec:458.
+// assayxportConditionsPolicyCubesText — laws/conditions_policy.lawspec:554.
 func lsfAssayxportConditionsPolicyCubesText(cs *lsfList[*lsfList[*lsfLiteral]]) string {
 	it := cs
 	if it == nil {
@@ -3804,17 +4077,22 @@ func lsfAssayxportConditionsPolicyCubesText(cs *lsfList[*lsfList[*lsfLiteral]]) 
 	}
 }
 
-// assayxportConditionsPolicyDecisionsHeader — laws/conditions_policy.lawspec:1365.
+// assayxportConditionsPolicyDecisionsHeader — laws/conditions_policy.lawspec:1555.
 func lsfAssayxportConditionsPolicyDecisionsHeader(u lsfUnit) *lsfList[string] {
-	return lsfCons[string]("# ax decisions file (.assayxport/when): one decision per line.", lsfCons[string]("# ax reads it on every assay of this root; --when-file and --when replace its values.", lsfCons[string]("# Decide a name by replacing its \"# NAME=\" line with one of", lsfCons[string]("#   NAME=<integer>    NAME    undef NAME    package P=X.Y.Z", lsfCons[string]("# Until every name below is decided, the facts that depend on an undecided", lsfCons[string]("# name keep their condition, and the call graph is incomplete.", (*lsfList[string])(nil)))))))
+	return lsfCons[string]((("# ax decisions file (" + lsfAssayxportConditionsPolicyDecisionsPath(lsfUnit{})) + "): one decision per line."), lsfCons[string]("# ax reads it on every assay of this root; --when-file and --when replace its values.", lsfCons[string]("# Decide a name by replacing its \"# NAME=\" line with one of", lsfCons[string]("#   NAME=<integer>    NAME    undef NAME    package P=X.Y.Z", lsfCons[string]("# Until every name below is decided, the facts that depend on an undecided", lsfCons[string]("# name keep their condition, and the call graph is incomplete.", (*lsfList[string])(nil)))))))
 }
 
-// assayxportConditionsPolicyDefinedAs — laws/conditions_policy.lawspec:1082.
+// assayxportConditionsPolicyDecisionsPath — laws/conditions_policy.lawspec:1553.
+func lsfAssayxportConditionsPolicyDecisionsPath(u lsfUnit) string {
+	return "assayxport.when"
+}
+
+// assayxportConditionsPolicyDefinedAs — laws/conditions_policy.lawspec:1266.
 func lsfAssayxportConditionsPolicyDefinedAs(v lsfInt) lsfBinding {
 	return &lsfBinding_Defined{v}
 }
 
-// assayxportConditionsPolicyDefinedOf — laws/conditions_policy.lawspec:286.
+// assayxportConditionsPolicyDefinedOf — laws/conditions_policy.lawspec:353.
 func lsfAssayxportConditionsPolicyDefinedOf(env *lsfEnv, n string) lsfOutcome {
 	if (n) == ("MIN_VERSION_GLASGOW_HASKELL") {
 		return lsfAssayxportConditionsPolicyDefinedOf2(env, lsfAssayxportConditionsPolicyGhcName(lsfUnit{}))
@@ -3867,7 +4145,7 @@ func lsfAssayxportConditionsPolicyDefinedOf(env *lsfEnv, n string) lsfOutcome {
 	}
 }
 
-// assayxportConditionsPolicyDefinedOf2 — laws/conditions_policy.lawspec:299.
+// assayxportConditionsPolicyDefinedOf2 — laws/conditions_policy.lawspec:366.
 func lsfAssayxportConditionsPolicyDefinedOf2(env *lsfEnv, n string) lsfOutcome {
 	var value *lsfMap[string, lsfBinding]
 	names := env.fNames
@@ -3895,12 +4173,12 @@ func lsfAssayxportConditionsPolicyDefinedOf2(env *lsfEnv, n string) lsfOutcome {
 	}
 }
 
-// assayxportConditionsPolicyEmptyCube — laws/conditions_policy.lawspec:465.
+// assayxportConditionsPolicyEmptyCube — laws/conditions_policy.lawspec:561.
 func lsfAssayxportConditionsPolicyEmptyCube(ls *lsfList[*lsfLiteral]) bool {
 	return (int64(ls.length()) == int64(0))
 }
 
-// assayxportConditionsPolicyEmptyEnv — laws/conditions_policy.lawspec:780.
+// assayxportConditionsPolicyEmptyEnv — laws/conditions_policy.lawspec:900.
 func lsfAssayxportConditionsPolicyEmptyEnv(u lsfUnit) *lsfEnv {
 	recordField := lsfKeyValOf((*lsfList[*lsfEntry[string, lsfBinding]])(nil), lsfCompareText)
 	recordField_2 := lsfKeyValOf((*lsfList[*lsfEntry[string, *lsfList[lsfInt]]])(nil), lsfCompareText)
@@ -3908,7 +4186,7 @@ func lsfAssayxportConditionsPolicyEmptyEnv(u lsfUnit) *lsfEnv {
 	return &lsfEnv{recordField, recordField_2, recordField_3}
 }
 
-// assayxportConditionsPolicyEnvFrom — laws/conditions_policy.lawspec:1099.
+// assayxportConditionsPolicyEnvFrom — laws/conditions_policy.lawspec:1283.
 func lsfAssayxportConditionsPolicyEnvFrom(env *lsfEnv, bs *lsfList[lsfBindingLine]) *lsfEnv {
 	for {
 		it := bs
@@ -3926,77 +4204,90 @@ func lsfAssayxportConditionsPolicyEnvFrom(env *lsfEnv, bs *lsfList[lsfBindingLin
 	}
 }
 
-// assayxportConditionsPolicyEvalIn — laws/conditions_policy.lawspec:390.
+// assayxportConditionsPolicyEvalIn — laws/conditions_policy.lawspec:485.
 func lsfAssayxportConditionsPolicyEvalIn(env *lsfEnv, e lsfCExpr) lsfOutcome {
 	it := e
 	switch variant := it.(type) {
 	case *lsfCExpr_Lit:
 		selection := variant.fValue
-		if (lsfCmpInt(selection, lsfSmall(int64(0))) < 0) || (lsfCmpInt(selection, lsfAssayxportConditionsPolicyMaxLit(lsfUnit{})) > 0) {
+		if (lsfCmpInt(selection, lsfSmall(int64(0))) < 0) || (lsfCmpInt(selection, lsfAssayxportConditionsPolicyMaxULit(lsfUnit{})) > 0) {
 			return &lsfOutcome_Bad{}
 		} else {
-			return &lsfOutcome_Known{selection}
+			return &lsfOutcome_Known{lsfAssayxportConditionsPolicyWrap(selection)}
+		}
+	case *lsfCExpr_ULit:
+		selection_2 := variant.fValue
+		if (lsfCmpInt(selection_2, lsfSmall(int64(0))) < 0) || (lsfCmpInt(selection_2, lsfAssayxportConditionsPolicyMaxULit(lsfUnit{})) > 0) {
+			return &lsfOutcome_Bad{}
+		} else {
+			return &lsfOutcome_Known{lsfAssayxportConditionsPolicyWrap(selection_2)}
 		}
 	case *lsfCExpr_Name:
-		selection_2 := variant.fValue
-		return lsfAssayxportConditionsPolicyValueOf(env, selection_2)
-	case *lsfCExpr_IsDefined:
 		selection_3 := variant.fValue
-		return lsfAssayxportConditionsPolicyDefinedOf(env, selection_3)
-	case *lsfCExpr_Un:
+		return lsfAssayxportConditionsPolicyValueOf(env, selection_3)
+	case *lsfCExpr_IsDefined:
 		selection_4 := variant.fValue
+		return lsfAssayxportConditionsPolicyDefinedOf(env, selection_4)
+	case *lsfCExpr_Un:
+		selection_5 := variant.fValue
 		var value lsfUnOp
-		op := selection_4.fOp
+		op := selection_5.fOp
 		value = op
 		var value_2 lsfCExpr
-		arg := selection_4.fArg
+		arg := selection_5.fArg
 		value_2 = arg
 		return lsfAssayxportConditionsPolicyUnary(value, lsfAssayxportConditionsPolicyEvalIn(env, value_2))
 	case *lsfCExpr_Bin:
-		selection_5 := variant.fValue
-		var value_3 lsfBinOp
-		op_2 := selection_5.fOp
-		value_3 = op_2
-		var value_4 lsfCExpr
-		left := selection_5.fLeft
-		value_4 = left
-		var value_5 lsfCExpr
-		right := selection_5.fRight
-		value_5 = right
-		return lsfAssayxportConditionsPolicyBinary(value_3, lsfAssayxportConditionsPolicyEvalIn(env, value_4), lsfAssayxportConditionsPolicyEvalIn(env, value_5))
-	case *lsfCExpr_Cond:
 		selection_6 := variant.fValue
+		var value_3 lsfCExpr
+		left := selection_6.fLeft
+		value_3 = left
+		var value_4 lsfCExpr
+		right := selection_6.fRight
+		value_4 = right
+		var value_5 lsfBinOp
+		op_2 := selection_6.fOp
+		value_5 = op_2
 		var value_6 lsfCExpr
-		test := selection_6.fTest
-		value_6 = test
+		left_2 := selection_6.fLeft
+		value_6 = left_2
 		var value_7 lsfCExpr
-		yes := selection_6.fYes
-		value_7 = yes
-		var value_8 lsfCExpr
-		no := selection_6.fNo
-		value_8 = no
-		return lsfAssayxportConditionsPolicyConditional(lsfAssayxportConditionsPolicyEvalIn(env, value_6), lsfAssayxportConditionsPolicyEvalIn(env, value_7), lsfAssayxportConditionsPolicyEvalIn(env, value_8))
-	case *lsfCExpr_MinVersion:
+		right_2 := selection_6.fRight
+		value_7 = right_2
+		return lsfAssayxportConditionsPolicyBinaryAs(lsfAssayxportConditionsPolicyUnsignedOf(value_3), lsfAssayxportConditionsPolicyUnsignedOf(value_4), value_5, lsfAssayxportConditionsPolicyEvalIn(env, value_6), lsfAssayxportConditionsPolicyEvalIn(env, value_7))
+	case *lsfCExpr_Cond:
 		selection_7 := variant.fValue
+		var value_8 lsfCExpr
+		test := selection_7.fTest
+		value_8 = test
 		var value_9 lsfCExpr
-		major1 := selection_7.fMajor1
-		value_9 = major1
-		a := lsfAssayxportConditionsPolicyEvalIn(env, value_9)
+		yes := selection_7.fYes
+		value_9 = yes
 		var value_10 lsfCExpr
-		major2 := selection_7.fMajor2
-		value_10 = major2
-		b := lsfAssayxportConditionsPolicyEvalIn(env, value_10)
+		no := selection_7.fNo
+		value_10 = no
+		return lsfAssayxportConditionsPolicyConditional(lsfAssayxportConditionsPolicyEvalIn(env, value_8), lsfAssayxportConditionsPolicyEvalIn(env, value_9), lsfAssayxportConditionsPolicyEvalIn(env, value_10))
+	case *lsfCExpr_MinVersion:
+		selection_8 := variant.fValue
 		var value_11 lsfCExpr
-		minor := selection_7.fMinor
-		value_11 = minor
-		mn := lsfAssayxportConditionsPolicyEvalIn(env, value_11)
-		var value_12 string
-		pkg := selection_7.fPkg
-		value_12 = pkg
-		var value_13 *lsfMap[string, *lsfList[lsfInt]]
+		major1 := selection_8.fMajor1
+		value_11 = major1
+		a := lsfAssayxportConditionsPolicyEvalIn(env, value_11)
+		var value_12 lsfCExpr
+		major2 := selection_8.fMajor2
+		value_12 = major2
+		b := lsfAssayxportConditionsPolicyEvalIn(env, value_12)
+		var value_13 lsfCExpr
+		minor := selection_8.fMinor
+		value_13 = minor
+		mn := lsfAssayxportConditionsPolicyEvalIn(env, value_13)
+		var value_14 string
+		pkg := selection_8.fPkg
+		value_14 = pkg
+		var value_15 *lsfMap[string, *lsfList[lsfInt]]
 		versions := env.fVersions
-		value_13 = versions
-		it_2 := lsfLookup(value_13, value_12, lsfCompareText)
+		value_15 = versions
+		it_2 := lsfLookup(value_15, value_14, lsfCompareText)
 		if it_2.ok {
 			matchSelection := it_2.v
 			if (lsfAssayxportConditionsPolicyIsBad(a) || lsfAssayxportConditionsPolicyIsBad(b)) || lsfAssayxportConditionsPolicyIsBad(mn) {
@@ -4005,43 +4296,43 @@ func lsfAssayxportConditionsPolicyEvalIn(env *lsfEnv, e lsfCExpr) lsfOutcome {
 				return lsfAssayxportConditionsPolicyMinVersion(matchSelection, a, b, mn)
 			}
 		} else {
-			var value_14 string
-			pkg_2 := selection_7.fPkg
-			value_14 = pkg_2
-			return lsfAssayxportConditionsPolicyUnknownCall(("MIN_VERSION_" + value_14), lsfCons[lsfOutcome](a, lsfCons[lsfOutcome](b, lsfCons[lsfOutcome](mn, (*lsfList[lsfOutcome])(nil)))))
+			var value_16 string
+			pkg_2 := selection_8.fPkg
+			value_16 = pkg_2
+			return lsfAssayxportConditionsPolicyUnknownCall(("MIN_VERSION_" + value_16), lsfCons[lsfOutcome](a, lsfCons[lsfOutcome](b, lsfCons[lsfOutcome](mn, (*lsfList[lsfOutcome])(nil)))))
 		}
 	case *lsfCExpr_MinGhc:
-		selection_8 := variant.fValue
-		var value_15 lsfCExpr
-		major1_2 := selection_8.fMajor1
-		value_15 = major1_2
-		a_2 := lsfAssayxportConditionsPolicyEvalIn(env, value_15)
-		var value_16 lsfCExpr
-		major2_2 := selection_8.fMajor2
-		value_16 = major2_2
-		b_2 := lsfAssayxportConditionsPolicyEvalIn(env, value_16)
+		selection_9 := variant.fValue
 		var value_17 lsfCExpr
-		patch1 := selection_8.fPatch1
-		value_17 = patch1
-		p := lsfAssayxportConditionsPolicyEvalIn(env, value_17)
+		major1_2 := selection_9.fMajor1
+		value_17 = major1_2
+		a_2 := lsfAssayxportConditionsPolicyEvalIn(env, value_17)
 		var value_18 lsfCExpr
-		patch2 := selection_8.fPatch2
-		value_18 = patch2
-		q := lsfAssayxportConditionsPolicyEvalIn(env, value_18)
+		major2_2 := selection_9.fMajor2
+		value_18 = major2_2
+		b_2 := lsfAssayxportConditionsPolicyEvalIn(env, value_18)
+		var value_19 lsfCExpr
+		patch1 := selection_9.fPatch1
+		value_19 = patch1
+		p := lsfAssayxportConditionsPolicyEvalIn(env, value_19)
+		var value_20 lsfCExpr
+		patch2 := selection_9.fPatch2
+		value_20 = patch2
+		q := lsfAssayxportConditionsPolicyEvalIn(env, value_20)
 		if ((lsfAssayxportConditionsPolicyIsBad(a_2) || lsfAssayxportConditionsPolicyIsBad(b_2)) || lsfAssayxportConditionsPolicyIsBad(p)) || lsfAssayxportConditionsPolicyIsBad(q) {
 			return &lsfOutcome_Bad{}
 		} else {
-			var value_19 bool
-			var value_20 *lsfMap[string, lsfBinding]
+			var value_21 bool
+			var value_22 *lsfMap[string, lsfBinding]
 			names := env.fNames
-			value_20 = names
-			it_3 := lsfLookup(value_20, lsfAssayxportConditionsPolicyGhcName(lsfUnit{}), lsfCompareText)
+			value_22 = names
+			it_3 := lsfLookup(value_22, lsfAssayxportConditionsPolicyGhcName(lsfUnit{}), lsfCompareText)
 			if it_3.ok {
-				value_19 = true
+				value_21 = true
 			} else {
-				value_19 = false
+				value_21 = false
 			}
-			if value_19 {
+			if value_21 {
 				return lsfAssayxportConditionsPolicyMinGhc(env, a_2, b_2, p, q)
 			} else {
 				return lsfAssayxportConditionsPolicyUnknownCall(lsfAssayxportConditionsPolicyGhcName(lsfUnit{}), lsfCons[lsfOutcome](a_2, lsfCons[lsfOutcome](b_2, lsfCons[lsfOutcome](p, lsfCons[lsfOutcome](q, (*lsfList[lsfOutcome])(nil))))))
@@ -4052,17 +4343,17 @@ func lsfAssayxportConditionsPolicyEvalIn(env *lsfEnv, e lsfCExpr) lsfOutcome {
 	}
 }
 
-// assayxportConditionsPolicyFromInt64 — laws/conditions_policy.lawspec:90.
+// assayxportConditionsPolicyFromInt64 — laws/conditions_policy.lawspec:104.
 func lsfAssayxportConditionsPolicyFromInt64(x int64) lsfInt {
 	return lsfSmall(x).Add(lsfSmall(int64(0)))
 }
 
-// assayxportConditionsPolicyGhcName — laws/conditions_policy.lawspec:278.
+// assayxportConditionsPolicyGhcName — laws/conditions_policy.lawspec:345.
 func lsfAssayxportConditionsPolicyGhcName(u lsfUnit) string {
 	return "__GLASGOW_HASKELL__"
 }
 
-// assayxportConditionsPolicyHalved — laws/conditions_policy.lawspec:119.
+// assayxportConditionsPolicyHalved — laws/conditions_policy.lawspec:134.
 func lsfAssayxportConditionsPolicyHalved(a lsfInt, n lsfInt) lsfInt {
 	for {
 		if lsfCmpInt(n, lsfSmall(int64(0))) <= 0 {
@@ -4083,7 +4374,22 @@ func lsfAssayxportConditionsPolicyHalved(a lsfInt, n lsfInt) lsfInt {
 	}
 }
 
-// assayxportConditionsPolicyIsBad — laws/conditions_policy.lawspec:170.
+// assayxportConditionsPolicyHalvedU — laws/conditions_policy.lawspec:158.
+func lsfAssayxportConditionsPolicyHalvedU(a lsfInt, n lsfInt) lsfInt {
+	for {
+		if lsfCmpInt(n, lsfSmall(int64(0))) <= 0 {
+			return a
+		} else {
+			next := a.Quot(lsfSmall(int64(2)))
+			next_2 := n.Sub(lsfSmall(int64(1)))
+			a = next
+			n = next_2
+			continue
+		}
+	}
+}
+
+// assayxportConditionsPolicyIsBad — laws/conditions_policy.lawspec:216.
 func lsfAssayxportConditionsPolicyIsBad(o lsfOutcome) bool {
 	it := o
 	switch it.(type) {
@@ -4098,22 +4404,22 @@ func lsfAssayxportConditionsPolicyIsBad(o lsfOutcome) bool {
 	}
 }
 
-// assayxportConditionsPolicyIsDivision — laws/conditions_policy.lawspec:195.
+// assayxportConditionsPolicyIsDivision — laws/conditions_policy.lawspec:241.
 func lsfAssayxportConditionsPolicyIsDivision(op lsfBinOp) bool {
 	return ((lsfEqualBinOp(op, lsfBinOp_BDiv)) || (lsfEqualBinOp(op, lsfBinOp_BRem)))
 }
 
-// assayxportConditionsPolicyIsVersionName — laws/conditions_policy.lawspec:276.
+// assayxportConditionsPolicyIsVersionName — laws/conditions_policy.lawspec:343.
 func lsfAssayxportConditionsPolicyIsVersionName(n string) bool {
 	return (strings.HasPrefix(n, "VERSION_") && (lsfTextLength(n) > int64(8)))
 }
 
-// assayxportConditionsPolicyLessOr — laws/conditions_policy.lawspec:312.
+// assayxportConditionsPolicyLessOr — laws/conditions_policy.lawspec:379.
 func lsfAssayxportConditionsPolicyLessOr(a lsfOutcome, x lsfInt) lsfOutcome {
 	return lsfAssayxportConditionsPolicyBinary(lsfBinOp_BLt, a, &lsfOutcome_Known{x})
 }
 
-// assayxportConditionsPolicyLitText — laws/conditions_policy.lawspec:447.
+// assayxportConditionsPolicyLitText — laws/conditions_policy.lawspec:543.
 func lsfAssayxportConditionsPolicyLitText(l *lsfLiteral) string {
 	var value bool
 	negated := l.fNegated
@@ -4139,7 +4445,7 @@ func lsfAssayxportConditionsPolicyLitText(l *lsfLiteral) string {
 	}
 }
 
-// assayxportConditionsPolicyLogical — laws/conditions_policy.lawspec:176.
+// assayxportConditionsPolicyLogical — laws/conditions_policy.lawspec:222.
 func lsfAssayxportConditionsPolicyLogical(isAnd bool, l lsfOutcome, r lsfOutcome) lsfOutcome {
 	it := l
 	switch variant := it.(type) {
@@ -4217,7 +4523,7 @@ func lsfAssayxportConditionsPolicyLogical(isAnd bool, l lsfOutcome, r lsfOutcome
 	}
 }
 
-// assayxportConditionsPolicyMacroName — laws/conditions_policy.lawspec:1073.
+// assayxportConditionsPolicyMacroName — laws/conditions_policy.lawspec:1257.
 func lsfAssayxportConditionsPolicyMacroName(p string, fuel lsfInt) string {
 	if (lsfCmpInt(fuel, lsfSmall(int64(0))) <= 0) || (lsfTextLength(p) == int64(0)) {
 		return ""
@@ -4232,12 +4538,12 @@ func lsfAssayxportConditionsPolicyMacroName(p string, fuel lsfInt) string {
 	}
 }
 
-// assayxportConditionsPolicyMaxLit — laws/conditions_policy.lawspec:95.
-func lsfAssayxportConditionsPolicyMaxLit(u lsfUnit) lsfInt {
-	return lsfSmall(9223372036854775807)
+// assayxportConditionsPolicyMaxULit — laws/conditions_policy.lawspec:110.
+func lsfAssayxportConditionsPolicyMaxULit(u lsfUnit) lsfInt {
+	return lsfFromBig(lsInt("18446744073709551615"))
 }
 
-// assayxportConditionsPolicyMinGhc — laws/conditions_policy.lawspec:330.
+// assayxportConditionsPolicyMinGhc — laws/conditions_policy.lawspec:397.
 func lsfAssayxportConditionsPolicyMinGhc(env *lsfEnv, ma lsfOutcome, mi lsfOutcome, p1 lsfOutcome, p2 lsfOutcome) lsfOutcome {
 	v := lsfAssayxportConditionsPolicyBinary(lsfBinOp_BAdd, lsfAssayxportConditionsPolicyBinary(lsfBinOp_BMul, ma, &lsfOutcome_Known{lsfSmall(100)}), mi)
 	g := lsfAssayxportConditionsPolicyValueOf(env, lsfAssayxportConditionsPolicyGhcName(lsfUnit{}))
@@ -4246,7 +4552,7 @@ func lsfAssayxportConditionsPolicyMinGhc(env *lsfEnv, ma lsfOutcome, mi lsfOutco
 	return lsfAssayxportConditionsPolicyLogical(false, lsfAssayxportConditionsPolicyLogical(false, lsfAssayxportConditionsPolicyBinary(lsfBinOp_BLt, v, g), lsfAssayxportConditionsPolicyLogical(true, lsfAssayxportConditionsPolicyBinary(lsfBinOp_BEq, v, g), lsfAssayxportConditionsPolicyBinary(lsfBinOp_BLt, p1, g1))), lsfAssayxportConditionsPolicyLogical(true, lsfAssayxportConditionsPolicyLogical(true, lsfAssayxportConditionsPolicyBinary(lsfBinOp_BEq, v, g), lsfAssayxportConditionsPolicyBinary(lsfBinOp_BEq, p1, g1)), lsfAssayxportConditionsPolicyBinary(lsfBinOp_BLe, p2, g2)))
 }
 
-// assayxportConditionsPolicyMinVersion — laws/conditions_policy.lawspec:318.
+// assayxportConditionsPolicyMinVersion — laws/conditions_policy.lawspec:385.
 func lsfAssayxportConditionsPolicyMinVersion(v *lsfList[lsfInt], a lsfOutcome, b lsfOutcome, m_ lsfOutcome) lsfOutcome {
 	x := lsfAssayxportConditionsPolicyComponent(v, lsfSmall(0))
 	y := lsfAssayxportConditionsPolicyComponent(v, lsfSmall(1))
@@ -4254,7 +4560,7 @@ func lsfAssayxportConditionsPolicyMinVersion(v *lsfList[lsfInt], a lsfOutcome, b
 	return lsfAssayxportConditionsPolicyLogical(false, lsfAssayxportConditionsPolicyLogical(false, lsfAssayxportConditionsPolicyLessOr(a, x), lsfAssayxportConditionsPolicyLogical(true, lsfAssayxportConditionsPolicySame(a, x), lsfAssayxportConditionsPolicyLessOr(b, y))), lsfAssayxportConditionsPolicyLogical(true, lsfAssayxportConditionsPolicyLogical(true, lsfAssayxportConditionsPolicySame(a, x), lsfAssayxportConditionsPolicySame(b, y)), lsfAssayxportConditionsPolicyBinary(lsfBinOp_BLe, m_, &lsfOutcome_Known{z})))
 }
 
-// assayxportConditionsPolicyMissingAll — laws/conditions_policy.lawspec:346.
+// assayxportConditionsPolicyMissingAll — laws/conditions_policy.lawspec:413.
 func lsfAssayxportConditionsPolicyMissingAll(os_ *lsfList[lsfOutcome]) *lsfList[string] {
 	it := os_
 	if it == nil {
@@ -4266,7 +4572,7 @@ func lsfAssayxportConditionsPolicyMissingAll(os_ *lsfList[lsfOutcome]) *lsfList[
 	}
 }
 
-// assayxportConditionsPolicyMissingOf — laws/conditions_policy.lawspec:161.
+// assayxportConditionsPolicyMissingOf — laws/conditions_policy.lawspec:207.
 func lsfAssayxportConditionsPolicyMissingOf(o lsfOutcome) *lsfList[string] {
 	it := o
 	switch variant := it.(type) {
@@ -4283,7 +4589,7 @@ func lsfAssayxportConditionsPolicyMissingOf(o lsfOutcome) *lsfList[string] {
 	}
 }
 
-// assayxportConditionsPolicyMix — laws/conditions_policy.lawspec:641.
+// assayxportConditionsPolicyMix — laws/conditions_policy.lawspec:751.
 func lsfAssayxportConditionsPolicyMix(seed_ lsfInt, k lsfInt) lsfInt {
 	var value lsfInt
 	if lsfCmpInt(seed_, lsfSmall(int64(0))) < 0 {
@@ -4294,12 +4600,12 @@ func lsfAssayxportConditionsPolicyMix(seed_ lsfInt, k lsfInt) lsfInt {
 	return value.Add(k.Mul(lsfSmall(int64(7919)))).Add(lsfSmall(int64(1))).Mul(lsfSmall(int64(1103515245))).Add(lsfSmall(int64(12345))).Rem(lsfSmall(int64(2147483648)))
 }
 
-// assayxportConditionsPolicyNotDefined — laws/conditions_policy.lawspec:1083.
+// assayxportConditionsPolicyNotDefined — laws/conditions_policy.lawspec:1267.
 func lsfAssayxportConditionsPolicyNotDefined(u lsfUnit) lsfBinding {
 	return &lsfBinding_Undefined{}
 }
 
-// assayxportConditionsPolicyPackageOf — laws/conditions_policy.lawspec:1375.
+// assayxportConditionsPolicyPackageOf — laws/conditions_policy.lawspec:1565.
 func lsfAssayxportConditionsPolicyPackageOf(m_ string, fuel lsfInt) string {
 	if (lsfCmpInt(fuel, lsfSmall(int64(0))) <= 0) || (lsfTextLength(m_) == int64(0)) {
 		return ""
@@ -4314,7 +4620,7 @@ func lsfAssayxportConditionsPolicyPackageOf(m_ string, fuel lsfInt) string {
 	}
 }
 
-// assayxportConditionsPolicyPackageState — laws/conditions_policy.lawspec:271.
+// assayxportConditionsPolicyPackageState — laws/conditions_policy.lawspec:338.
 func lsfAssayxportConditionsPolicyPackageState(env *lsfEnv, p string) lsfInt {
 	var value bool
 	var value_2 *lsfMap[string, *lsfList[lsfInt]]
@@ -4347,7 +4653,7 @@ func lsfAssayxportConditionsPolicyPackageState(env *lsfEnv, p string) lsfInt {
 	}
 }
 
-// assayxportConditionsPolicyPick — laws/conditions_policy.lawspec:645.
+// assayxportConditionsPolicyPick — laws/conditions_policy.lawspec:755.
 func lsfAssayxportConditionsPolicyPick(seed_ lsfInt, k lsfInt, n lsfInt) lsfInt {
 	if lsfCmpInt(n, lsfSmall(int64(1))) <= 0 {
 		return lsfSmall(0)
@@ -4356,7 +4662,7 @@ func lsfAssayxportConditionsPolicyPick(seed_ lsfInt, k lsfInt, n lsfInt) lsfInt 
 	}
 }
 
-// assayxportConditionsPolicyPow2 — laws/conditions_policy.lawspec:93.
+// assayxportConditionsPolicyPow2 — laws/conditions_policy.lawspec:107.
 func lsfAssayxportConditionsPolicyPow2(n lsfInt) lsfInt {
 	if lsfCmpInt(n, lsfSmall(int64(0))) <= 0 {
 		return lsfSmall(1)
@@ -4365,7 +4671,7 @@ func lsfAssayxportConditionsPolicyPow2(n lsfInt) lsfInt {
 	}
 }
 
-// assayxportConditionsPolicyRefEval — laws/conditions_policy.lawspec:412.
+// assayxportConditionsPolicyRefEval — laws/conditions_policy.lawspec:508.
 func lsfAssayxportConditionsPolicyRefEval(env *lsfEnv, e lsfCExpr) lsfOutcome {
 	if lsfAssayxportConditionsPolicyBroken(env, e) {
 		return &lsfOutcome_Bad{}
@@ -4374,7 +4680,7 @@ func lsfAssayxportConditionsPolicyRefEval(env *lsfEnv, e lsfCExpr) lsfOutcome {
 	}
 }
 
-// assayxportConditionsPolicyRiskyOf — laws/conditions_policy.lawspec:166.
+// assayxportConditionsPolicyRiskyOf — laws/conditions_policy.lawspec:212.
 func lsfAssayxportConditionsPolicyRiskyOf(o lsfOutcome) bool {
 	it := o
 	switch variant := it.(type) {
@@ -4391,12 +4697,12 @@ func lsfAssayxportConditionsPolicyRiskyOf(o lsfOutcome) bool {
 	}
 }
 
-// assayxportConditionsPolicySame — laws/conditions_policy.lawspec:313.
+// assayxportConditionsPolicySame — laws/conditions_policy.lawspec:380.
 func lsfAssayxportConditionsPolicySame(a lsfOutcome, x lsfInt) lsfOutcome {
 	return lsfAssayxportConditionsPolicyBinary(lsfBinOp_BEq, a, &lsfOutcome_Known{x})
 }
 
-// assayxportConditionsPolicyShiftLeft — laws/conditions_policy.lawspec:116.
+// assayxportConditionsPolicyShiftLeft — laws/conditions_policy.lawspec:131.
 func lsfAssayxportConditionsPolicyShiftLeft(a lsfInt, n lsfInt) lsfInt {
 	if lsfCmpInt(n, lsfSmall(int64(64))) >= 0 {
 		return lsfSmall(0)
@@ -4405,7 +4711,7 @@ func lsfAssayxportConditionsPolicyShiftLeft(a lsfInt, n lsfInt) lsfInt {
 	}
 }
 
-// assayxportConditionsPolicyShiftRight — laws/conditions_policy.lawspec:123.
+// assayxportConditionsPolicyShiftRight — laws/conditions_policy.lawspec:138.
 func lsfAssayxportConditionsPolicyShiftRight(a lsfInt, n lsfInt) lsfInt {
 	if lsfCmpInt(n, lsfSmall(int64(64))) >= 0 {
 		if lsfCmpInt(a, lsfSmall(int64(0))) < 0 {
@@ -4418,24 +4724,42 @@ func lsfAssayxportConditionsPolicyShiftRight(a lsfInt, n lsfInt) lsfInt {
 	}
 }
 
-// assayxportConditionsPolicySimple — laws/conditions_policy.lawspec:445.
+// assayxportConditionsPolicyShiftRightAs — laws/conditions_policy.lawspec:166.
+func lsfAssayxportConditionsPolicyShiftRightAs(lu bool, a lsfInt, n lsfInt) lsfInt {
+	if lu {
+		return lsfAssayxportConditionsPolicyShiftRightU(a, n)
+	} else {
+		return lsfAssayxportConditionsPolicyShiftRight(a, n)
+	}
+}
+
+// assayxportConditionsPolicyShiftRightU — laws/conditions_policy.lawspec:162.
+func lsfAssayxportConditionsPolicyShiftRightU(a lsfInt, n lsfInt) lsfInt {
+	if lsfCmpInt(n, lsfSmall(int64(64))) >= 0 {
+		return lsfSmall(0)
+	} else {
+		return lsfAssayxportConditionsPolicyWrap(lsfAssayxportConditionsPolicyHalvedU(lsfAssayxportConditionsPolicyUnsigned64(a), n))
+	}
+}
+
+// assayxportConditionsPolicySimple — laws/conditions_policy.lawspec:541.
 func lsfAssayxportConditionsPolicySimple(t_ string) bool {
 	return lsfRegexMatches("[A-Za-z_][A-Za-z0-9_]*(\\([^()]*\\))?|[0-9]+", t_)
 }
 
-// assayxportConditionsPolicySorted — laws/conditions_policy.lawspec:157.
+// assayxportConditionsPolicySorted — laws/conditions_policy.lawspec:203.
 func lsfAssayxportConditionsPolicySorted(ns *lsfList[string]) *lsfList[string] {
 	matched_ := lsfSetOf(ns, lsfCompareText)
 	items := lsfSetItems(matched_)
 	return items
 }
 
-// assayxportConditionsPolicyToInt64 — laws/conditions_policy.lawspec:89.
+// assayxportConditionsPolicyToInt64 — laws/conditions_policy.lawspec:103.
 func lsfAssayxportConditionsPolicyToInt64(x lsfInt) int64 {
 	return lsfWrappingInt64(x)
 }
 
-// assayxportConditionsPolicyTruth — laws/conditions_policy.lawspec:127.
+// assayxportConditionsPolicyTruth — laws/conditions_policy.lawspec:142.
 func lsfAssayxportConditionsPolicyTruth(b bool) lsfInt {
 	if b {
 		return lsfSmall(1)
@@ -4444,7 +4768,7 @@ func lsfAssayxportConditionsPolicyTruth(b bool) lsfInt {
 	}
 }
 
-// assayxportConditionsPolicyUnary — laws/conditions_policy.lawspec:218.
+// assayxportConditionsPolicyUnary — laws/conditions_policy.lawspec:285.
 func lsfAssayxportConditionsPolicyUnary(op lsfUnOp, o lsfOutcome) lsfOutcome {
 	it := o
 	switch variant := it.(type) {
@@ -4472,7 +4796,7 @@ func lsfAssayxportConditionsPolicyUnary(op lsfUnOp, o lsfOutcome) lsfOutcome {
 	}
 }
 
-// assayxportConditionsPolicyUndecidedLine — laws/conditions_policy.lawspec:1381.
+// assayxportConditionsPolicyUndecidedLine — laws/conditions_policy.lawspec:1571.
 func lsfAssayxportConditionsPolicyUndecidedLine(name string) string {
 	if strings.HasPrefix(name, "MIN_VERSION_") {
 		return (("# package " + lsfAssayxportConditionsPolicyPackageOf(lsfSliceText(name, int64(12), lsfIndex(lsfSmall(9223372036854775807))), lsfSmall(lsfTextLength(name)))) + "=")
@@ -4481,7 +4805,7 @@ func lsfAssayxportConditionsPolicyUndecidedLine(name string) string {
 	}
 }
 
-// assayxportConditionsPolicyUnknown — laws/conditions_policy.lawspec:159.
+// assayxportConditionsPolicyUnknown — laws/conditions_policy.lawspec:205.
 func lsfAssayxportConditionsPolicyUnknown(ns *lsfList[string], risky bool) lsfOutcome {
 	var value *lsfOpenInfo
 	recordField := lsfAssayxportConditionsPolicySorted(ns)
@@ -4490,7 +4814,7 @@ func lsfAssayxportConditionsPolicyUnknown(ns *lsfList[string], risky bool) lsfOu
 	return &lsfOutcome_Unknown{value}
 }
 
-// assayxportConditionsPolicyUnknownCall — laws/conditions_policy.lawspec:342.
+// assayxportConditionsPolicyUnknownCall — laws/conditions_policy.lawspec:409.
 func lsfAssayxportConditionsPolicyUnknownCall(name string, args *lsfList[lsfOutcome]) lsfOutcome {
 	all := true
 	for cell := args; cell != nil; cell = cell.tail {
@@ -4515,14 +4839,14 @@ func lsfAssayxportConditionsPolicyUnknownCall(name string, args *lsfList[lsfOutc
 	}
 }
 
-// assayxportConditionsPolicyUnlisted — laws/conditions_policy.lawspec:1149.
+// assayxportConditionsPolicyUnlisted — laws/conditions_policy.lawspec:1333.
 func lsfAssayxportConditionsPolicyUnlisted(missing *lsfList[string], listed *lsfList[string]) *lsfList[string] {
 	matched_ := lsfSetDifference(lsfSetOf(missing, lsfCompareText), lsfSetOf(listed, lsfCompareText), lsfCompareText)
 	items := lsfSetItems(matched_)
 	return items
 }
 
-// assayxportConditionsPolicyUnreadDecl — laws/conditions_policy.lawspec:1184.
+// assayxportConditionsPolicyUnreadDecl — laws/conditions_policy.lawspec:1368.
 func lsfAssayxportConditionsPolicyUnreadDecl(d *lsfDecl) bool {
 	var value string
 	condition := d.fCondition
@@ -4547,7 +4871,7 @@ func lsfAssayxportConditionsPolicyUnreadDecl(d *lsfDecl) bool {
 	return logic
 }
 
-// assayxportConditionsPolicyUnreadEdge — laws/conditions_policy.lawspec:1182.
+// assayxportConditionsPolicyUnreadEdge — laws/conditions_policy.lawspec:1366.
 func lsfAssayxportConditionsPolicyUnreadEdge(e *lsfCallEdge) bool {
 	var value string
 	condition := e.fCondition
@@ -4555,12 +4879,12 @@ func lsfAssayxportConditionsPolicyUnreadEdge(e *lsfCallEdge) bool {
 	return ((value) == (lsfAssayxportConditionsPolicyUnreadText(lsfUnit{})))
 }
 
-// assayxportConditionsPolicyUnreadLine — laws/conditions_policy.lawspec:1174.
+// assayxportConditionsPolicyUnreadLine — laws/conditions_policy.lawspec:1358.
 func lsfAssayxportConditionsPolicyUnreadLine(path string) string {
 	return (((("when: " + path) + ": more than ") + lsfTextOfInt(lsfAssayxportConditionsPolicyBuildCap(lsfUnit{}))) + " builds: one is read, and its facts are not decided")
 }
 
-// assayxportConditionsPolicyUnreadLines — laws/conditions_policy.lawspec:1178.
+// assayxportConditionsPolicyUnreadLines — laws/conditions_policy.lawspec:1362.
 func lsfAssayxportConditionsPolicyUnreadLines(paths *lsfList[string]) *lsfList[string] {
 	it := paths
 	if it == nil {
@@ -4572,7 +4896,7 @@ func lsfAssayxportConditionsPolicyUnreadLines(paths *lsfList[string]) *lsfList[s
 	}
 }
 
-// assayxportConditionsPolicyUnreadPaths — laws/conditions_policy.lawspec:1187.
+// assayxportConditionsPolicyUnreadPaths — laws/conditions_policy.lawspec:1371.
 func lsfAssayxportConditionsPolicyUnreadPaths(ps *lsfList[*lsfPackage]) *lsfList[string] {
 	it := ps
 	if it == nil {
@@ -4604,12 +4928,12 @@ func lsfAssayxportConditionsPolicyUnreadPaths(ps *lsfList[*lsfPackage]) *lsfList
 	}
 }
 
-// assayxportConditionsPolicyUnreadText — laws/conditions_policy.lawspec:504.
+// assayxportConditionsPolicyUnreadText — laws/conditions_policy.lawspec:600.
 func lsfAssayxportConditionsPolicyUnreadText(u lsfUnit) string {
 	return "\"unread\""
 }
 
-// assayxportConditionsPolicyUnreadableLines — laws/conditions_policy.lawspec:1167.
+// assayxportConditionsPolicyUnreadableLines — laws/conditions_policy.lawspec:1351.
 func lsfAssayxportConditionsPolicyUnreadableLines(ts *lsfList[string]) *lsfList[string] {
 	it := ts
 	if it == nil {
@@ -4627,7 +4951,7 @@ func lsfAssayxportConditionsPolicyUnreadableLines(ts *lsfList[string]) *lsfList[
 	}
 }
 
-// assayxportConditionsPolicyUnsigned64 — laws/conditions_policy.lawspec:98.
+// assayxportConditionsPolicyUnsigned64 — laws/conditions_policy.lawspec:113.
 func lsfAssayxportConditionsPolicyUnsigned64(a lsfInt) lsfInt {
 	if lsfCmpInt(a, lsfSmall(int64(0))) < 0 {
 		return a.Add(lsfFromBig(lsInt("18446744073709551616")))
@@ -4636,7 +4960,178 @@ func lsfAssayxportConditionsPolicyUnsigned64(a lsfInt) lsfInt {
 	}
 }
 
-// assayxportConditionsPolicyUseAt — laws/conditions_policy.lawspec:1394.
+// assayxportConditionsPolicyUnsignedOf — laws/conditions_policy.lawspec:447.
+func lsfAssayxportConditionsPolicyUnsignedOf(e lsfCExpr) bool {
+	for {
+		it := e
+		switch variant := it.(type) {
+		case *lsfCExpr_Lit:
+			return false
+		case *lsfCExpr_ULit:
+			return true
+		case *lsfCExpr_Name:
+			return false
+		case *lsfCExpr_IsDefined:
+			return false
+		case *lsfCExpr_Un:
+			selection := variant.fValue
+			var value lsfUnOp
+			op := selection.fOp
+			value = op
+			var logic bool
+			if !(lsfEqualUnOp(value, lsfUnOp_UNot)) {
+				var value_2 lsfCExpr
+				arg := selection.fArg
+				value_2 = arg
+				logic = lsfAssayxportConditionsPolicyUnsignedOf(value_2)
+			} else {
+				logic = false
+			}
+			return logic
+		case *lsfCExpr_Bin:
+			selection_2 := variant.fValue
+			var value_3 lsfBinOp
+			op_2 := selection_2.fOp
+			value_3 = op_2
+			var logic_2 bool
+			if !(lsfEqualBinOp(value_3, lsfBinOp_BLand)) {
+				var value_4 lsfBinOp
+				op_3 := selection_2.fOp
+				value_4 = op_3
+				logic_2 = (lsfEqualBinOp(value_4, lsfBinOp_BLor))
+			} else {
+				logic_2 = true
+			}
+			var logic_3 bool
+			if !(logic_2) {
+				var value_5 lsfBinOp
+				op_4 := selection_2.fOp
+				value_5 = op_4
+				logic_3 = (lsfEqualBinOp(value_5, lsfBinOp_BLt))
+			} else {
+				logic_3 = true
+			}
+			var logic_4 bool
+			if !(logic_3) {
+				var value_6 lsfBinOp
+				op_5 := selection_2.fOp
+				value_6 = op_5
+				logic_4 = (lsfEqualBinOp(value_6, lsfBinOp_BLe))
+			} else {
+				logic_4 = true
+			}
+			var logic_5 bool
+			if !(logic_4) {
+				var value_7 lsfBinOp
+				op_6 := selection_2.fOp
+				value_7 = op_6
+				logic_5 = (lsfEqualBinOp(value_7, lsfBinOp_BGt))
+			} else {
+				logic_5 = true
+			}
+			var logic_6 bool
+			if !(logic_5) {
+				var value_8 lsfBinOp
+				op_7 := selection_2.fOp
+				value_8 = op_7
+				logic_6 = (lsfEqualBinOp(value_8, lsfBinOp_BGe))
+			} else {
+				logic_6 = true
+			}
+			var logic_7 bool
+			if !(logic_6) {
+				var value_9 lsfBinOp
+				op_8 := selection_2.fOp
+				value_9 = op_8
+				logic_7 = (lsfEqualBinOp(value_9, lsfBinOp_BEq))
+			} else {
+				logic_7 = true
+			}
+			var logic_8 bool
+			if !(logic_7) {
+				var value_10 lsfBinOp
+				op_9 := selection_2.fOp
+				value_10 = op_9
+				logic_8 = (lsfEqualBinOp(value_10, lsfBinOp_BNe))
+			} else {
+				logic_8 = true
+			}
+			if logic_8 {
+				return false
+			} else {
+				var value_11 lsfBinOp
+				op_10 := selection_2.fOp
+				value_11 = op_10
+				var logic_9 bool
+				if !(lsfEqualBinOp(value_11, lsfBinOp_BShl)) {
+					var value_12 lsfBinOp
+					op_11 := selection_2.fOp
+					value_12 = op_11
+					logic_9 = (lsfEqualBinOp(value_12, lsfBinOp_BShr))
+				} else {
+					logic_9 = true
+				}
+				if logic_9 {
+					var value_13 lsfCExpr
+					left := selection_2.fLeft
+					value_13 = left
+					next := value_13
+					e = next
+					continue
+				} else {
+					var value_14 lsfBinOp
+					op_12 := selection_2.fOp
+					value_14 = op_12
+					if lsfEqualBinOp(value_14, lsfBinOp_BComma) {
+						var value_15 lsfCExpr
+						right := selection_2.fRight
+						value_15 = right
+						next_2 := value_15
+						e = next_2
+						continue
+					} else {
+						var value_16 lsfCExpr
+						left_2 := selection_2.fLeft
+						value_16 = left_2
+						var logic_10 bool
+						if !(lsfAssayxportConditionsPolicyUnsignedOf(value_16)) {
+							var value_17 lsfCExpr
+							right_2 := selection_2.fRight
+							value_17 = right_2
+							logic_10 = lsfAssayxportConditionsPolicyUnsignedOf(value_17)
+						} else {
+							logic_10 = true
+						}
+						return logic_10
+					}
+				}
+			}
+		case *lsfCExpr_Cond:
+			selection_3 := variant.fValue
+			var value_18 lsfCExpr
+			yes := selection_3.fYes
+			value_18 = yes
+			var logic_11 bool
+			if !(lsfAssayxportConditionsPolicyUnsignedOf(value_18)) {
+				var value_19 lsfCExpr
+				no := selection_3.fNo
+				value_19 = no
+				logic_11 = lsfAssayxportConditionsPolicyUnsignedOf(value_19)
+			} else {
+				logic_11 = true
+			}
+			return logic_11
+		case *lsfCExpr_MinVersion:
+			return false
+		case *lsfCExpr_MinGhc:
+			return false
+		default:
+			panic("unreachable branch reached")
+		}
+	}
+}
+
+// assayxportConditionsPolicyUseAt — laws/conditions_policy.lawspec:1584.
 func lsfAssayxportConditionsPolicyUseAt(file string, line lsfInt, cond string) *lsfUsePlace {
 	recordField := file
 	recordField_2 := line
@@ -4644,7 +5139,7 @@ func lsfAssayxportConditionsPolicyUseAt(file string, line lsfInt, cond string) *
 	return &lsfUsePlace{recordField, recordField_2, recordField_3}
 }
 
-// assayxportConditionsPolicyUseLine — laws/conditions_policy.lawspec:1396.
+// assayxportConditionsPolicyUseLine — laws/conditions_policy.lawspec:1586.
 func lsfAssayxportConditionsPolicyUseLine(u *lsfUsePlace) string {
 	var value string
 	file := u.fFile
@@ -4658,7 +5153,7 @@ func lsfAssayxportConditionsPolicyUseLine(u *lsfUsePlace) string {
 	return ((((("#   " + value) + ":") + lsfTextOfInt(value_2)) + ": ") + value_3)
 }
 
-// assayxportConditionsPolicyUseLines — laws/conditions_policy.lawspec:1400.
+// assayxportConditionsPolicyUseLines — laws/conditions_policy.lawspec:1590.
 func lsfAssayxportConditionsPolicyUseLines(us *lsfList[*lsfUsePlace]) *lsfList[string] {
 	it := us
 	if it == nil {
@@ -4670,7 +5165,7 @@ func lsfAssayxportConditionsPolicyUseLines(us *lsfList[*lsfUsePlace]) *lsfList[s
 	}
 }
 
-// assayxportConditionsPolicyValueOf — laws/conditions_policy.lawspec:256.
+// assayxportConditionsPolicyValueOf — laws/conditions_policy.lawspec:323.
 func lsfAssayxportConditionsPolicyValueOf(env *lsfEnv, n string) lsfOutcome {
 	if (n) == ("MIN_VERSION_GLASGOW_HASKELL") {
 		var value bool
@@ -4741,12 +5236,12 @@ func lsfAssayxportConditionsPolicyValueOf(env *lsfEnv, n string) lsfOutcome {
 	}
 }
 
-// assayxportConditionsPolicyWarningsOf — laws/conditions_policy.lawspec:1162.
+// assayxportConditionsPolicyWarningsOf — laws/conditions_policy.lawspec:1346.
 func lsfAssayxportConditionsPolicyWarningsOf(f *lsfFiltered) *lsfList[string] {
 	return lsfAssayxportConditionsPolicyWarningsWith(f, (*lsfList[string])(nil))
 }
 
-// assayxportConditionsPolicyWarningsWith — laws/conditions_policy.lawspec:1153.
+// assayxportConditionsPolicyWarningsWith — laws/conditions_policy.lawspec:1337.
 func lsfAssayxportConditionsPolicyWarningsWith(f *lsfFiltered, listed *lsfList[string]) *lsfList[string] {
 	var value *lsfList[string]
 	var value_2 *lsfList[string]
@@ -4768,7 +5263,7 @@ func lsfAssayxportConditionsPolicyWarningsWith(f *lsfFiltered, listed *lsfList[s
 			var value_6 *lsfList[string]
 			missing_4 := f.fMissing
 			value_6 = missing_4
-			value_4 = lsfCons[string]((("when: not yet in a decisions file: " + lsfJoin(", ", lsfAssayxportConditionsPolicyUnlisted(value_6, listed))) + "; lines to paste into .assayxport/when follow"), (*lsfList[string])(nil))
+			value_4 = lsfCons[string]((((("when: not yet in a decisions file: " + lsfJoin(", ", lsfAssayxportConditionsPolicyUnlisted(value_6, listed))) + "; lines to paste into ") + lsfAssayxportConditionsPolicyDecisionsPath(lsfUnit{})) + " follow"), (*lsfList[string])(nil))
 		}
 		value = lsfAppend(lsfCons[string](("when: no value for " + lsfJoin(", ", value_3)), lsfCons[string]("when: the call graph is incomplete until these names are decided", (*lsfList[string])(nil))), value_4)
 	}
@@ -4781,22 +5276,22 @@ func lsfAssayxportConditionsPolicyWarningsWith(f *lsfFiltered, listed *lsfList[s
 	return lsfAppend(lsfAppend(value, lsfAssayxportConditionsPolicyUnreadableLines(value_7)), lsfAssayxportConditionsPolicyUnreadLines(lsfAssayxportConditionsPolicySorted(lsfAssayxportConditionsPolicyUnreadPaths(value_8))))
 }
 
-// assayxportConditionsPolicyWrap — laws/conditions_policy.lawspec:91.
+// assayxportConditionsPolicyWrap — laws/conditions_policy.lawspec:105.
 func lsfAssayxportConditionsPolicyWrap(x lsfInt) lsfInt {
 	return lsfAssayxportConditionsPolicyFromInt64(lsfAssayxportConditionsPolicyToInt64(x))
 }
 
-// barBarText — laws/conditions.lawspec:155.
+// barBarText — laws/conditions.lawspec:180.
 func lsfBarBarText(u lsfUnit) string {
 	return lsfSliceText(" ||", int64(1), lsfIndex(lsfSmall(9223372036854775807)))
 }
 
-// barText — laws/conditions.lawspec:154.
+// barText — laws/conditions.lawspec:179.
 func lsfBarText(u lsfUnit) string {
 	return lsfSliceText(" |", int64(1), lsfIndex(lsfSmall(9223372036854775807)))
 }
 
-// binLevel — laws/conditions.lawspec:157.
+// binLevel — laws/conditions.lawspec:182.
 func lsfBinLevel(s string) lsfInt {
 	if (((s) == ("*")) || ((s) == ("/"))) || ((s) == ("%")) {
 		return lsfSmall(11)
@@ -4841,7 +5336,7 @@ func lsfBinLevel(s string) lsfInt {
 	}
 }
 
-// binOpFor — laws/conditions.lawspec:170.
+// binOpFor — laws/conditions.lawspec:195.
 func lsfBinOpFor(s string) lsfBinOp {
 	if (s) == ("*") {
 		return lsfBinOp_BMul
@@ -4914,7 +5409,7 @@ func lsfBinOpFor(s string) lsfBinOp {
 	}
 }
 
-// blocksFor — laws/conditions.lawspec:730.
+// blocksFor — laws/conditions.lawspec:771.
 func lsfBlocksFor(names *lsfList[string], us *lsfList[*lsfUseNote]) *lsfList[string] {
 	it := names
 	if it == nil {
@@ -4926,12 +5421,74 @@ func lsfBlocksFor(names *lsfList[string], us *lsfList[*lsfUseNote]) *lsfList[str
 	}
 }
 
-// chAt — laws/conditions.lawspec:42.
+// chAt — laws/conditions.lawspec:46.
 func lsfChAt(t_ string, i lsfInt) string {
 	return lsfSliceText(lsfSliceText(t_, lsfIndex(i), lsfIndex(lsfSmall(9223372036854775807))), int64(0), int64(1))
 }
 
-// closeCall — laws/conditions.lawspec:198.
+// charCode — laws/conditions.lawspec:116.
+func lsfCharCode(content string) lsfMaybe[lsfInt] {
+	if lsfTextLength(content) == int64(1) {
+		if ((content) == ("\\")) || ((content) == ("'")) {
+			return lsfAbsent[lsfInt]()
+		} else {
+			k := lsfIdxIn(lsfPlainCodes(lsfUnit{}), content, lsfSmall(0), lsfSmall(95))
+			if lsfCmpInt(k, lsfSmall(int64(95))) >= 0 {
+				return lsfAbsent[lsfInt]()
+			} else {
+				return lsfPresent[lsfInt](k.Add(lsfSmall(int64(32))))
+			}
+		}
+	} else {
+		if (lsfTextLength(content) == int64(2)) && ((lsfSliceText(content, int64(0), int64(1))) == ("\\")) {
+			c := lsfSliceText(content, int64(1), lsfIndex(lsfSmall(9223372036854775807)))
+			if (c) == ("n") {
+				return lsfPresent[lsfInt](lsfSmall(10))
+			} else {
+				if (c) == ("t") {
+					return lsfPresent[lsfInt](lsfSmall(9))
+				} else {
+					if (c) == ("r") {
+						return lsfPresent[lsfInt](lsfSmall(13))
+					} else {
+						if (c) == ("0") {
+							return lsfPresent[lsfInt](lsfSmall(0))
+						} else {
+							if (c) == ("\\") {
+								return lsfPresent[lsfInt](lsfSmall(92))
+							} else {
+								if (c) == ("'") {
+									return lsfPresent[lsfInt](lsfSmall(39))
+								} else {
+									if (c) == ("\"") {
+										return lsfPresent[lsfInt](lsfSmall(34))
+									} else {
+										return lsfAbsent[lsfInt]()
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		} else {
+			return lsfAbsent[lsfInt]()
+		}
+	}
+}
+
+// charTok — laws/conditions.lawspec:128.
+func lsfCharTok(content string) lsfTok {
+	it := lsfCharCode(content)
+	if it.ok {
+		selection := it.v
+		return &lsfTok_TNum{selection}
+	} else {
+		return &lsfTok_TUnread{}
+	}
+}
+
+// closeCall — laws/conditions.lawspec:223.
 func lsfCloseCall(name string, a1 lsfCExpr, a2 lsfCExpr, a3 lsfCExpr, a4 lsfCExpr, rest *lsfList[lsfTok]) lsfMaybe[*lsfParsed] {
 	it := lsfExpectOp(rest, ")")
 	if it.ok {
@@ -4964,7 +5521,7 @@ func lsfCloseCall(name string, a1 lsfCExpr, a2 lsfCExpr, a3 lsfCExpr, a4 lsfCExp
 	}
 }
 
-// commentEnd — laws/conditions.lawspec:64.
+// commentEnd — laws/conditions.lawspec:68.
 func lsfCommentEnd(t_ string, j lsfInt, n lsfInt) lsfInt {
 	for {
 		if lsfCmpInt(j.Add(lsfSmall(int64(1))), n) >= 0 {
@@ -4981,7 +5538,7 @@ func lsfCommentEnd(t_ string, j lsfInt, n lsfInt) lsfInt {
 	}
 }
 
-// condOutcome — laws/conditions.lawspec:468.
+// condOutcome — laws/conditions.lawspec:509.
 func lsfCondOutcome(env *lsfEnv, cond string) lsfOutcome {
 	if lsfTextLength(cond) == int64(0) {
 		return &lsfOutcome_Known{lsfSmall(1)}
@@ -4990,12 +5547,12 @@ func lsfCondOutcome(env *lsfEnv, cond string) lsfOutcome {
 	}
 }
 
-// decisionLines — laws/conditions.lawspec:734.
+// decisionLines — laws/conditions.lawspec:775.
 func lsfDecisionLines(env *lsfEnv, listed *lsfList[string], ps *lsfList[*lsfPackage]) *lsfList[string] {
 	return lsfBlocksFor(lsfAssayxportConditionsPolicyUnlisted(lsfAllNeeds(lsfPackagesUses(env, ps)), listed), lsfPackagesUses(env, ps))
 }
 
-// declKept — laws/conditions.lawspec:527.
+// declKept — laws/conditions.lawspec:568.
 func lsfDeclKept(env *lsfEnv, d *lsfDecl) *lsfList[*lsfDecl] {
 	var value string
 	condition := d.fCondition
@@ -5061,7 +5618,7 @@ func lsfDeclKept(env *lsfEnv, d *lsfDecl) *lsfList[*lsfDecl] {
 	}
 }
 
-// declNotes — laws/conditions.lawspec:539.
+// declNotes — laws/conditions.lawspec:580.
 func lsfDeclNotes(env *lsfEnv, d *lsfDecl) *lsfList[*lsfNote] {
 	var value string
 	condition := d.fCondition
@@ -5092,7 +5649,7 @@ func lsfDeclNotes(env *lsfEnv, d *lsfDecl) *lsfList[*lsfNote] {
 	}
 }
 
-// declUses — laws/conditions.lawspec:701.
+// declUses — laws/conditions.lawspec:742.
 func lsfDeclUses(env *lsfEnv, d *lsfDecl) *lsfList[*lsfUseNote] {
 	var value string
 	condition := d.fCondition
@@ -5165,7 +5722,7 @@ func lsfDeclUses(env *lsfEnv, d *lsfDecl) *lsfList[*lsfUseNote] {
 	}
 }
 
-// declsKept — laws/conditions.lawspec:535.
+// declsKept — laws/conditions.lawspec:576.
 func lsfDeclsKept(env *lsfEnv, ds *lsfList[*lsfDecl]) *lsfList[*lsfDecl] {
 	it := ds
 	if it == nil {
@@ -5177,7 +5734,7 @@ func lsfDeclsKept(env *lsfEnv, ds *lsfList[*lsfDecl]) *lsfList[*lsfDecl] {
 	}
 }
 
-// declsNotes — laws/conditions.lawspec:549.
+// declsNotes — laws/conditions.lawspec:590.
 func lsfDeclsNotes(env *lsfEnv, ds *lsfList[*lsfDecl]) *lsfList[*lsfNote] {
 	it := ds
 	if it == nil {
@@ -5189,7 +5746,7 @@ func lsfDeclsNotes(env *lsfEnv, ds *lsfList[*lsfDecl]) *lsfList[*lsfNote] {
 	}
 }
 
-// declsUses — laws/conditions.lawspec:711.
+// declsUses — laws/conditions.lawspec:752.
 func lsfDeclsUses(env *lsfEnv, ds *lsfList[*lsfDecl]) *lsfList[*lsfUseNote] {
 	it := ds
 	if it == nil {
@@ -5201,7 +5758,7 @@ func lsfDeclsUses(env *lsfEnv, ds *lsfList[*lsfDecl]) *lsfList[*lsfUseNote] {
 	}
 }
 
-// digitRun — laws/conditions.lawspec:92.
+// digitRun — laws/conditions.lawspec:96.
 func lsfDigitRun(s string, i lsfInt, n lsfInt, hex bool) lsfInt {
 	for {
 		if lsfCmpInt(i, n) >= 0 {
@@ -5225,7 +5782,7 @@ func lsfDigitRun(s string, i lsfInt, n lsfInt, hex bool) lsfInt {
 	}
 }
 
-// digitVal — laws/conditions.lawspec:82.
+// digitVal — laws/conditions.lawspec:86.
 func lsfDigitVal(ch string) lsfInt {
 	k := lsfIdxIn("0123456789abcdefABCDEF", ch, lsfSmall(0), lsfSmall(22))
 	if (lsfCmpInt(k, lsfSmall(int64(16))) >= 0) && (lsfCmpInt(k, lsfSmall(int64(22))) < 0) {
@@ -5235,7 +5792,7 @@ func lsfDigitVal(ch string) lsfInt {
 	}
 }
 
-// dotIndex — laws/conditions.lawspec:365.
+// dotIndex — laws/conditions.lawspec:406.
 func lsfDotIndex(t_ string, i lsfInt, n lsfInt) lsfInt {
 	for {
 		if lsfCmpInt(i, n) >= 0 {
@@ -5252,7 +5809,7 @@ func lsfDotIndex(t_ string, i lsfInt, n lsfInt) lsfInt {
 	}
 }
 
-// ecCloses — laws/conditions.lawspec:628.
+// ecCloses — laws/conditions.lawspec:669.
 func lsfEcCloses(t_ string, i lsfInt, n lsfInt, d lsfInt) lsfInt {
 	for {
 		if lsfCmpInt(i, n) >= 0 {
@@ -5282,7 +5839,7 @@ func lsfEcCloses(t_ string, i lsfInt, n lsfInt, d lsfInt) lsfInt {
 	}
 }
 
-// ecCube — laws/conditions.lawspec:642.
+// ecCube — laws/conditions.lawspec:683.
 func lsfEcCube(env *lsfEnv, parts *lsfList[string], acc lsfOutcome) lsfOutcome {
 	for {
 		it := parts
@@ -5304,7 +5861,7 @@ func lsfEcCube(env *lsfEnv, parts *lsfList[string], acc lsfOutcome) lsfOutcome {
 	}
 }
 
-// ecCubes — laws/conditions.lawspec:649.
+// ecCubes — laws/conditions.lawspec:690.
 func lsfEcCubes(env *lsfEnv, cubes *lsfList[string], acc lsfOutcome) lsfOutcome {
 	for {
 		it := cubes
@@ -5326,7 +5883,7 @@ func lsfEcCubes(env *lsfEnv, cubes *lsfList[string], acc lsfOutcome) lsfOutcome 
 	}
 }
 
-// ecCut — laws/conditions.lawspec:621.
+// ecCut — laws/conditions.lawspec:662.
 func lsfEcCut(t_ string, i lsfInt, n lsfInt, d lsfInt, start lsfInt, op string, fuel lsfInt) *lsfList[string] {
 	for {
 		if (lsfCmpInt(fuel, lsfSmall(int64(0))) <= 0) || (lsfCmpInt(i, n) >= 0) {
@@ -5357,7 +5914,7 @@ func lsfEcCut(t_ string, i lsfInt, n lsfInt, d lsfInt, start lsfInt, op string, 
 	}
 }
 
-// ecLit — laws/conditions.lawspec:634.
+// ecLit — laws/conditions.lawspec:675.
 func lsfEcLit(env *lsfEnv, part string) lsfOutcome {
 	p := lsfTrimmed(part)
 	n := lsfSmall(lsfTextLength(p))
@@ -5372,7 +5929,7 @@ func lsfEcLit(env *lsfEnv, part string) lsfOutcome {
 	}
 }
 
-// edgeNotes — laws/conditions.lawspec:492.
+// edgeNotes — laws/conditions.lawspec:533.
 func lsfEdgeNotes(env *lsfEnv, es *lsfList[*lsfCallEdge]) *lsfList[*lsfNote] {
 	it := es
 	if it == nil {
@@ -5401,7 +5958,7 @@ func lsfEdgeNotes(env *lsfEnv, es *lsfList[*lsfCallEdge]) *lsfList[*lsfNote] {
 	}
 }
 
-// edgeUses — laws/conditions.lawspec:691.
+// edgeUses — laws/conditions.lawspec:732.
 func lsfEdgeUses(env *lsfEnv, file string, line lsfInt, es *lsfList[*lsfCallEdge]) *lsfList[*lsfUseNote] {
 	it := es
 	if it == nil {
@@ -5430,7 +5987,7 @@ func lsfEdgeUses(env *lsfEnv, file string, line lsfInt, es *lsfList[*lsfCallEdge
 	}
 }
 
-// edgesKept — laws/conditions.lawspec:480.
+// edgesKept — laws/conditions.lawspec:521.
 func lsfEdgesKept(env *lsfEnv, es *lsfList[*lsfCallEdge]) *lsfList[*lsfCallEdge] {
 	it := es
 	if it == nil {
@@ -5465,7 +6022,7 @@ func lsfEdgesKept(env *lsfEnv, es *lsfList[*lsfCallEdge]) *lsfList[*lsfCallEdge]
 	}
 }
 
-// eqIndex — laws/conditions.lawspec:361.
+// eqIndex — laws/conditions.lawspec:402.
 func lsfEqIndex(t_ string, i lsfInt, n lsfInt) lsfInt {
 	for {
 		if lsfCmpInt(i, n) >= 0 {
@@ -5482,12 +6039,12 @@ func lsfEqIndex(t_ string, i lsfInt, n lsfInt) lsfInt {
 	}
 }
 
-// evalCondition — laws/conditions.lawspec:658.
+// evalCondition — laws/conditions.lawspec:699.
 func lsfEvalCondition(env *lsfEnv, text string) lsfOutcome {
 	return lsfEcCubes(env, lsfEcCut(text, lsfSmall(0), lsfSmall(lsfTextLength(text)), lsfSmall(0), lsfSmall(0), lsfBarBarText(lsfUnit{}), lsfSmall(lsfTextLength(text))), &lsfOutcome_Known{lsfSmall(0)})
 }
 
-// evalWhen — laws/conditions.lawspec:340.
+// evalWhen — laws/conditions.lawspec:381.
 func lsfEvalWhen(env *lsfEnv, text string) lsfOutcome {
 	it := lsfParseWhen(text)
 	if it.ok {
@@ -5498,7 +6055,7 @@ func lsfEvalWhen(env *lsfEnv, text string) lsfOutcome {
 	}
 }
 
-// expectOp — laws/conditions.lawspec:190.
+// expectOp — laws/conditions.lawspec:215.
 func lsfExpectOp(toks *lsfList[lsfTok], s string) lsfMaybe[*lsfList[lsfTok]] {
 	if (lsfTokOp(toks)) == (s) {
 		return lsfPresent[*lsfList[lsfTok]](lsfSliceList(toks, int64(1), lsfIndex(lsfSmall(9223372036854775807))))
@@ -5507,7 +6064,7 @@ func lsfExpectOp(toks *lsfList[lsfTok], s string) lsfMaybe[*lsfList[lsfTok]] {
 	}
 }
 
-// fromTallies — laws/conditions.lawspec:517.
+// fromTallies — laws/conditions.lawspec:558.
 func lsfFromTallies(ts *lsfList[*lsfEntry[*lsfEdgeKey, *lsfTally]]) *lsfList[*lsfCallEdge] {
 	it := ts
 	if it == nil {
@@ -5537,7 +6094,7 @@ func lsfFromTallies(ts *lsfList[*lsfEntry[*lsfEdgeKey, *lsfTally]]) *lsfList[*ls
 	}
 }
 
-// idLen — laws/conditions.lawspec:49.
+// idLen — laws/conditions.lawspec:53.
 func lsfIdLen(t_ string, i lsfInt, n lsfInt) lsfInt {
 	for {
 		if lsfCmpInt(i, n) >= 0 {
@@ -5554,7 +6111,7 @@ func lsfIdLen(t_ string, i lsfInt, n lsfInt) lsfInt {
 	}
 }
 
-// idxIn — laws/conditions.lawspec:78.
+// idxIn — laws/conditions.lawspec:82.
 func lsfIdxIn(s string, ch string, i lsfInt, n lsfInt) lsfInt {
 	for {
 		if lsfCmpInt(i, n) >= 0 {
@@ -5571,37 +6128,37 @@ func lsfIdxIn(s string, ch string, i lsfInt, n lsfInt) lsfInt {
 	}
 }
 
-// isBlankCh — laws/conditions.lawspec:47.
+// isBlankCh — laws/conditions.lawspec:51.
 func lsfIsBlankCh(ch string) bool {
 	return (((((ch) == (" ")) || ((ch) == ("\x09"))) || ((ch) == ("\x0a"))) || ((ch) == ("\x0d")))
 }
 
-// isDigitCh — laws/conditions.lawspec:44.
+// isDigitCh — laws/conditions.lawspec:48.
 func lsfIsDigitCh(ch string) bool {
 	return lsfRegexMatches("[0-9]", ch)
 }
 
-// isIdCh — laws/conditions.lawspec:46.
+// isIdCh — laws/conditions.lawspec:50.
 func lsfIsIdCh(ch string) bool {
 	return lsfRegexMatches("[A-Za-z0-9_]", ch)
 }
 
-// isIdStart — laws/conditions.lawspec:45.
+// isIdStart — laws/conditions.lawspec:49.
 func lsfIsIdStart(ch string) bool {
 	return lsfRegexMatches("[A-Za-z_]", ch)
 }
 
-// isMinVersionName — laws/conditions.lawspec:194.
+// isMinVersionName — laws/conditions.lawspec:219.
 func lsfIsMinVersionName(name string) bool {
 	return (strings.HasPrefix(name, "MIN_VERSION_") && (lsfTextLength(name) > int64(12)))
 }
 
-// isName — laws/conditions.lawspec:380.
+// isName — laws/conditions.lawspec:421.
 func lsfIsName(t_ string) bool {
 	return ((lsfRegexMatches("[A-Za-z_][A-Za-z0-9_]*", t_) && !(strings.HasPrefix(t_, "MIN_VERSION_"))) && !((t_) == ("defined")))
 }
 
-// judged — laws/conditions.lawspec:472.
+// judged — laws/conditions.lawspec:513.
 func lsfJudged(o lsfOutcome) lsfInt {
 	it := o
 	switch variant := it.(type) {
@@ -6164,7 +6721,7 @@ func lsfLawspecCollectionsSetOfListUsePlace(xs *lsfList[*lsfUsePlace]) *lsfMap[*
 	return lsfSetOf(xs, lsfCompareUsePlace)
 }
 
-// lexT — laws/conditions.lawspec:122.
+// lexT — laws/conditions.lawspec:147.
 func lsfLexT(t_ string, acc *lsfList[lsfTok], fuel lsfInt) lsfMaybe[*lsfList[lsfTok]] {
 	for {
 		if lsfCmpInt(fuel, lsfSmall(int64(0))) <= 0 {
@@ -6227,7 +6784,7 @@ func lsfLexT(t_ string, acc *lsfList[lsfTok], fuel lsfInt) lsfMaybe[*lsfList[lsf
 										return lsfAbsent[*lsfList[lsfTok]]()
 									} else {
 										next_11 := lsfSliceText(t_, lsfIndex(e_4), lsfIndex(lsfSmall(9223372036854775807)))
-										next_12 := lsfAppend(acc, lsfCons[lsfTok](&lsfTok_TUnread{}, (*lsfList[lsfTok])(nil)))
+										next_12 := lsfAppend(acc, lsfCons[lsfTok](lsfCharTok(lsfSliceText(lsfSliceText(t_, int64(1), lsfIndex(lsfSmall(9223372036854775807))), int64(0), lsfIndex(e_4.Sub(lsfSmall(int64(2)))))), (*lsfList[lsfTok])(nil)))
 										next_13 := fuel.Sub(lsfSmall(int64(1)))
 										t_ = next_11
 										acc = next_12
@@ -6274,7 +6831,7 @@ func lsfLexT(t_ string, acc *lsfList[lsfTok], fuel lsfInt) lsfMaybe[*lsfList[lsf
 	}
 }
 
-// listedAll — laws/conditions.lawspec:680.
+// listedAll — laws/conditions.lawspec:721.
 func lsfListedAll(lines *lsfList[string]) *lsfList[string] {
 	it := lines
 	if it == nil {
@@ -6286,7 +6843,7 @@ func lsfListedAll(lines *lsfList[string]) *lsfList[string] {
 	}
 }
 
-// listedOne — laws/conditions.lawspec:669.
+// listedOne — laws/conditions.lawspec:710.
 func lsfListedOne(raw string) *lsfList[string] {
 	s := lsfTrimmed(raw)
 	if strings.HasPrefix(s, "# package ") {
@@ -6310,7 +6867,7 @@ func lsfListedOne(raw string) *lsfList[string] {
 	}
 }
 
-// notesBad — laws/conditions.lawspec:565.
+// notesBad — laws/conditions.lawspec:606.
 func lsfNotesBad(ns *lsfList[*lsfNote]) *lsfList[string] {
 	it := ns
 	if it == nil {
@@ -6346,7 +6903,7 @@ func lsfNotesBad(ns *lsfList[*lsfNote]) *lsfList[string] {
 	}
 }
 
-// notesMissing — laws/conditions.lawspec:561.
+// notesMissing — laws/conditions.lawspec:602.
 func lsfNotesMissing(ns *lsfList[*lsfNote]) *lsfList[string] {
 	it := ns
 	if it == nil {
@@ -6361,7 +6918,7 @@ func lsfNotesMissing(ns *lsfList[*lsfNote]) *lsfList[string] {
 	}
 }
 
-// numLen — laws/conditions.lawspec:55.
+// numLen — laws/conditions.lawspec:59.
 func lsfNumLen(t_ string, i lsfInt, n lsfInt) lsfInt {
 	for {
 		if lsfCmpInt(i, n) >= 0 {
@@ -6380,7 +6937,7 @@ func lsfNumLen(t_ string, i lsfInt, n lsfInt) lsfInt {
 	}
 }
 
-// numValue — laws/conditions.lawspec:87.
+// numValue — laws/conditions.lawspec:91.
 func lsfNumValue(s string, base lsfInt, i lsfInt, n lsfInt, acc lsfInt) lsfInt {
 	for {
 		if lsfCmpInt(i, n) >= 0 {
@@ -6395,7 +6952,7 @@ func lsfNumValue(s string, base lsfInt, i lsfInt, n lsfInt, acc lsfInt) lsfInt {
 	}
 }
 
-// numberTok — laws/conditions.lawspec:110.
+// numberTok — laws/conditions.lawspec:135.
 func lsfNumberTok(s string) lsfMaybe[lsfTok] {
 	n := lsfSmall(lsfTextLength(s))
 	if lsfRegexMatches("0[xX][0-9a-fA-F]+(([uU](ll|LL|l|L)?)|((ll|LL|l|L)[uU]?))?", s) {
@@ -6416,12 +6973,12 @@ func lsfNumberTok(s string) lsfMaybe[lsfTok] {
 	}
 }
 
-// packageName — laws/conditions.lawspec:408.
+// packageName — laws/conditions.lawspec:449.
 func lsfPackageName(p string) bool {
 	return lsfRegexMatches("[A-Za-z0-9]*[A-Za-z][A-Za-z0-9]*(-[A-Za-z0-9]*[A-Za-z][A-Za-z0-9]*)*", p)
 }
 
-// packagesKept — laws/conditions.lawspec:553.
+// packagesKept — laws/conditions.lawspec:594.
 func lsfPackagesKept(env *lsfEnv, ps *lsfList[*lsfPackage]) *lsfList[*lsfPackage] {
 	it := ps
 	if it == nil {
@@ -6448,7 +7005,7 @@ func lsfPackagesKept(env *lsfEnv, ps *lsfList[*lsfPackage]) *lsfList[*lsfPackage
 	}
 }
 
-// packagesNotes — laws/conditions.lawspec:557.
+// packagesNotes — laws/conditions.lawspec:598.
 func lsfPackagesNotes(env *lsfEnv, ps *lsfList[*lsfPackage]) *lsfList[*lsfNote] {
 	it := ps
 	if it == nil {
@@ -6463,7 +7020,7 @@ func lsfPackagesNotes(env *lsfEnv, ps *lsfList[*lsfPackage]) *lsfList[*lsfNote] 
 	}
 }
 
-// packagesUses — laws/conditions.lawspec:715.
+// packagesUses — laws/conditions.lawspec:756.
 func lsfPackagesUses(env *lsfEnv, ps *lsfList[*lsfPackage]) *lsfList[*lsfUseNote] {
 	it := ps
 	if it == nil {
@@ -6478,7 +7035,7 @@ func lsfPackagesUses(env *lsfEnv, ps *lsfList[*lsfPackage]) *lsfList[*lsfUseNote
 	}
 }
 
-// parseLevel — laws/conditions.lawspec:209.
+// parseLevel — laws/conditions.lawspec:234.
 func lsfParseLevel(lvl lsfInt, acc lsfMaybe[lsfCExpr], toks *lsfList[lsfTok], fuel lsfInt) lsfMaybe[*lsfParsed] {
 	for {
 		if lsfCmpInt(fuel, lsfSmall(int64(0))) <= 0 {
@@ -6497,32 +7054,39 @@ func lsfParseLevel(lvl lsfInt, acc lsfMaybe[lsfCExpr], toks *lsfList[lsfTok], fu
 						recordField_2 := lsfSliceList(toks, int64(1), lsfIndex(lsfSmall(9223372036854775807)))
 						value = &lsfParsed{recordField, recordField_2}
 						return lsfPresent[*lsfParsed](value)
-					case *lsfTok_TUnread:
+					case *lsfTok_TUNum:
+						matchSelection_2 := variant.fValue
 						var value_2 *lsfParsed
-						recordField_3 := &lsfCExpr_Lit{lsfSmall(int64(0)).Sub(lsfSmall(int64(1)))}
+						recordField_3 := &lsfCExpr_ULit{matchSelection_2}
 						recordField_4 := lsfSliceList(toks, int64(1), lsfIndex(lsfSmall(9223372036854775807)))
 						value_2 = &lsfParsed{recordField_3, recordField_4}
 						return lsfPresent[*lsfParsed](value_2)
+					case *lsfTok_TUnread:
+						var value_3 *lsfParsed
+						recordField_5 := &lsfCExpr_Lit{lsfSmall(int64(0)).Sub(lsfSmall(int64(1)))}
+						recordField_6 := lsfSliceList(toks, int64(1), lsfIndex(lsfSmall(9223372036854775807)))
+						value_3 = &lsfParsed{recordField_5, recordField_6}
+						return lsfPresent[*lsfParsed](value_3)
 					case *lsfTok_TOp:
-						matchSelection_2 := variant.fValue
-						if (matchSelection_2) == ("(") {
-							it_3 := lsfParseLevel(lsfSmall(1), lsfAbsent[lsfCExpr](), lsfSliceList(toks, int64(1), lsfIndex(lsfSmall(9223372036854775807))), fuel.Sub(lsfSmall(int64(1))))
+						matchSelection_3 := variant.fValue
+						if (matchSelection_3) == ("(") {
+							it_3 := lsfParseLevel(lsfSmall(0), lsfAbsent[lsfCExpr](), lsfSliceList(toks, int64(1), lsfIndex(lsfSmall(9223372036854775807))), fuel.Sub(lsfSmall(int64(1))))
 							if it_3.ok {
 								matchMatchSelection := it_3.v
-								var value_3 *lsfList[lsfTok]
+								var value_4 *lsfList[lsfTok]
 								rest := matchMatchSelection.fRest
-								value_3 = rest
-								it_4 := lsfExpectOp(value_3, ")")
+								value_4 = rest
+								it_4 := lsfExpectOp(value_4, ")")
 								if it_4.ok {
 									matchMatchMatchSelection := it_4.v
-									var value_4 *lsfParsed
-									var value_5 lsfCExpr
+									var value_5 *lsfParsed
+									var value_6 lsfCExpr
 									expr := matchMatchSelection.fExpr
-									value_5 = expr
-									recordField_5 := value_5
-									recordField_6 := matchMatchMatchSelection
-									value_4 = &lsfParsed{recordField_5, recordField_6}
-									return lsfPresent[*lsfParsed](value_4)
+									value_6 = expr
+									recordField_7 := value_6
+									recordField_8 := matchMatchMatchSelection
+									value_5 = &lsfParsed{recordField_7, recordField_8}
+									return lsfPresent[*lsfParsed](value_5)
 								} else {
 									return lsfAbsent[*lsfParsed]()
 								}
@@ -6533,19 +7097,19 @@ func lsfParseLevel(lvl lsfInt, acc lsfMaybe[lsfCExpr], toks *lsfList[lsfTok], fu
 							return lsfAbsent[*lsfParsed]()
 						}
 					case *lsfTok_TId:
-						matchSelection_3 := variant.fValue
-						if (matchSelection_3) == ("defined") {
+						matchSelection_4 := variant.fValue
+						if (matchSelection_4) == ("defined") {
 							it_5 := lsfAtList(toks, int64(1))
 							if it_5.ok {
 								matchMatchSelection_2 := it_5.v
 								switch variant_2 := matchMatchSelection_2.(type) {
 								case *lsfTok_TId:
 									selection_2 := variant_2.fValue
-									var value_6 *lsfParsed
-									recordField_7 := &lsfCExpr_IsDefined{selection_2}
-									recordField_8 := lsfSliceList(toks, int64(2), lsfIndex(lsfSmall(9223372036854775807)))
-									value_6 = &lsfParsed{recordField_7, recordField_8}
-									return lsfPresent[*lsfParsed](value_6)
+									var value_7 *lsfParsed
+									recordField_9 := &lsfCExpr_IsDefined{selection_2}
+									recordField_10 := lsfSliceList(toks, int64(2), lsfIndex(lsfSmall(9223372036854775807)))
+									value_7 = &lsfParsed{recordField_9, recordField_10}
+									return lsfPresent[*lsfParsed](value_7)
 								case *lsfTok_TOp:
 									selection_3 := variant_2.fValue
 									if (selection_3) == ("(") {
@@ -6554,19 +7118,21 @@ func lsfParseLevel(lvl lsfInt, acc lsfMaybe[lsfCExpr], toks *lsfList[lsfTok], fu
 											matchMatchSelection_3 := it_6.v
 											switch variant_3 := matchMatchSelection_3.(type) {
 											case *lsfTok_TId:
-												matchSelection_4 := variant_3.fValue
+												matchSelection_5 := variant_3.fValue
 												it_7 := lsfExpectOp(lsfSliceList(toks, int64(3), lsfIndex(lsfSmall(9223372036854775807))), ")")
 												if it_7.ok {
 													matchMatchSelection_4 := it_7.v
-													var value_7 *lsfParsed
-													recordField_9 := &lsfCExpr_IsDefined{matchSelection_4}
-													recordField_10 := matchMatchSelection_4
-													value_7 = &lsfParsed{recordField_9, recordField_10}
-													return lsfPresent[*lsfParsed](value_7)
+													var value_8 *lsfParsed
+													recordField_11 := &lsfCExpr_IsDefined{matchSelection_5}
+													recordField_12 := matchMatchSelection_4
+													value_8 = &lsfParsed{recordField_11, recordField_12}
+													return lsfPresent[*lsfParsed](value_8)
 												} else {
 													return lsfAbsent[*lsfParsed]()
 												}
 											case *lsfTok_TNum:
+												return lsfAbsent[*lsfParsed]()
+											case *lsfTok_TUNum:
 												return lsfAbsent[*lsfParsed]()
 											case *lsfTok_TOp:
 												return lsfAbsent[*lsfParsed]()
@@ -6583,6 +7149,8 @@ func lsfParseLevel(lvl lsfInt, acc lsfMaybe[lsfCExpr], toks *lsfList[lsfTok], fu
 									}
 								case *lsfTok_TNum:
 									return lsfAbsent[*lsfParsed]()
+								case *lsfTok_TUNum:
+									return lsfAbsent[*lsfParsed]()
 								case *lsfTok_TUnread:
 									return lsfAbsent[*lsfParsed]()
 								default:
@@ -6593,54 +7161,54 @@ func lsfParseLevel(lvl lsfInt, acc lsfMaybe[lsfCExpr], toks *lsfList[lsfTok], fu
 							}
 						} else {
 							if (lsfTokOp(lsfSliceList(toks, int64(1), lsfIndex(lsfSmall(9223372036854775807))))) == ("(") {
-								if ((matchSelection_3) == ("MIN_VERSION_GLASGOW_HASKELL")) || lsfIsMinVersionName(matchSelection_3) {
+								if ((matchSelection_4) == ("MIN_VERSION_GLASGOW_HASKELL")) || lsfIsMinVersionName(matchSelection_4) {
 									it_8 := lsfParseLevel(lsfSmall(1), lsfAbsent[lsfCExpr](), lsfSliceList(toks, int64(2), lsfIndex(lsfSmall(9223372036854775807))), fuel.Sub(lsfSmall(int64(1))))
 									if it_8.ok {
 										matchMatchSelection_5 := it_8.v
-										var value_8 *lsfList[lsfTok]
+										var value_9 *lsfList[lsfTok]
 										rest_2 := matchMatchSelection_5.fRest
-										value_8 = rest_2
-										it_9 := lsfExpectOp(value_8, ",")
+										value_9 = rest_2
+										it_9 := lsfExpectOp(value_9, ",")
 										if it_9.ok {
 											matchMatchMatchSelection_2 := it_9.v
 											it_10 := lsfParseLevel(lsfSmall(1), lsfAbsent[lsfCExpr](), matchMatchMatchSelection_2, fuel.Sub(lsfSmall(int64(1))))
 											if it_10.ok {
 												matchMatchMatchMatchSelection := it_10.v
-												var value_9 *lsfList[lsfTok]
+												var value_10 *lsfList[lsfTok]
 												rest_3 := matchMatchMatchMatchSelection.fRest
-												value_9 = rest_3
-												it_11 := lsfExpectOp(value_9, ",")
+												value_10 = rest_3
+												it_11 := lsfExpectOp(value_10, ",")
 												if it_11.ok {
 													matchMatchMatchMatchMatchSelection := it_11.v
 													it_12 := lsfParseLevel(lsfSmall(1), lsfAbsent[lsfCExpr](), matchMatchMatchMatchMatchSelection, fuel.Sub(lsfSmall(int64(1))))
 													if it_12.ok {
 														matchMatchMatchMatchMatchMatchSelection := it_12.v
-														if (matchSelection_3) == ("MIN_VERSION_GLASGOW_HASKELL") {
-															var value_10 *lsfList[lsfTok]
+														if (matchSelection_4) == ("MIN_VERSION_GLASGOW_HASKELL") {
+															var value_11 *lsfList[lsfTok]
 															rest_4 := matchMatchMatchMatchMatchMatchSelection.fRest
-															value_10 = rest_4
-															it_13 := lsfExpectOp(value_10, ",")
+															value_11 = rest_4
+															it_13 := lsfExpectOp(value_11, ",")
 															if it_13.ok {
 																matchMatchMatchMatchMatchMatchMatchSelection := it_13.v
 																it_14 := lsfParseLevel(lsfSmall(1), lsfAbsent[lsfCExpr](), matchMatchMatchMatchMatchMatchMatchSelection, fuel.Sub(lsfSmall(int64(1))))
 																if it_14.ok {
 																	matchMatchMatchMatchMatchMatchMatchMatchSelection := it_14.v
-																	var value_11 lsfCExpr
-																	expr_2 := matchMatchSelection_5.fExpr
-																	value_11 = expr_2
 																	var value_12 lsfCExpr
-																	expr_3 := matchMatchMatchMatchSelection.fExpr
-																	value_12 = expr_3
+																	expr_2 := matchMatchSelection_5.fExpr
+																	value_12 = expr_2
 																	var value_13 lsfCExpr
-																	expr_4 := matchMatchMatchMatchMatchMatchSelection.fExpr
-																	value_13 = expr_4
+																	expr_3 := matchMatchMatchMatchSelection.fExpr
+																	value_13 = expr_3
 																	var value_14 lsfCExpr
+																	expr_4 := matchMatchMatchMatchMatchMatchSelection.fExpr
+																	value_14 = expr_4
+																	var value_15 lsfCExpr
 																	expr_5 := matchMatchMatchMatchMatchMatchMatchMatchSelection.fExpr
-																	value_14 = expr_5
-																	var value_15 *lsfList[lsfTok]
+																	value_15 = expr_5
+																	var value_16 *lsfList[lsfTok]
 																	rest_5 := matchMatchMatchMatchMatchMatchMatchMatchSelection.fRest
-																	value_15 = rest_5
-																	return lsfCloseCall(matchSelection_3, value_11, value_12, value_13, value_14, value_15)
+																	value_16 = rest_5
+																	return lsfCloseCall(matchSelection_4, value_12, value_13, value_14, value_15, value_16)
 																} else {
 																	return lsfAbsent[*lsfParsed]()
 																}
@@ -6648,19 +7216,19 @@ func lsfParseLevel(lvl lsfInt, acc lsfMaybe[lsfCExpr], toks *lsfList[lsfTok], fu
 																return lsfAbsent[*lsfParsed]()
 															}
 														} else {
-															var value_16 lsfCExpr
-															expr_6 := matchMatchSelection_5.fExpr
-															value_16 = expr_6
 															var value_17 lsfCExpr
-															expr_7 := matchMatchMatchMatchSelection.fExpr
-															value_17 = expr_7
+															expr_6 := matchMatchSelection_5.fExpr
+															value_17 = expr_6
 															var value_18 lsfCExpr
+															expr_7 := matchMatchMatchMatchSelection.fExpr
+															value_18 = expr_7
+															var value_19 lsfCExpr
 															expr_8 := matchMatchMatchMatchMatchMatchSelection.fExpr
-															value_18 = expr_8
-															var value_19 *lsfList[lsfTok]
+															value_19 = expr_8
+															var value_20 *lsfList[lsfTok]
 															rest_6 := matchMatchMatchMatchMatchMatchSelection.fRest
-															value_19 = rest_6
-															return lsfCloseCall(matchSelection_3, value_16, value_17, value_18, &lsfCExpr_Lit{lsfSmall(0)}, value_19)
+															value_20 = rest_6
+															return lsfCloseCall(matchSelection_4, value_17, value_18, value_19, &lsfCExpr_Lit{lsfSmall(0)}, value_20)
 														}
 													} else {
 														return lsfAbsent[*lsfParsed]()
@@ -6681,11 +7249,11 @@ func lsfParseLevel(lvl lsfInt, acc lsfMaybe[lsfCExpr], toks *lsfList[lsfTok], fu
 									return lsfAbsent[*lsfParsed]()
 								}
 							} else {
-								var value_20 *lsfParsed
-								recordField_11 := &lsfCExpr_Name{matchSelection_3}
-								recordField_12 := lsfSliceList(toks, int64(1), lsfIndex(lsfSmall(9223372036854775807)))
-								value_20 = &lsfParsed{recordField_11, recordField_12}
-								return lsfPresent[*lsfParsed](value_20)
+								var value_21 *lsfParsed
+								recordField_13 := &lsfCExpr_Name{matchSelection_4}
+								recordField_14 := lsfSliceList(toks, int64(1), lsfIndex(lsfSmall(9223372036854775807)))
+								value_21 = &lsfParsed{recordField_13, recordField_14}
+								return lsfPresent[*lsfParsed](value_21)
 							}
 						}
 					default:
@@ -6701,21 +7269,21 @@ func lsfParseLevel(lvl lsfInt, acc lsfMaybe[lsfCExpr], toks *lsfList[lsfTok], fu
 						it_15 := lsfParseLevel(lsfSmall(12), lsfAbsent[lsfCExpr](), lsfSliceList(toks, int64(1), lsfIndex(lsfSmall(9223372036854775807))), fuel.Sub(lsfSmall(int64(1))))
 						if it_15.ok {
 							selection_4 := it_15.v
-							var value_21 *lsfParsed
-							var value_22 *lsfUnDetails
+							var value_22 *lsfParsed
+							var value_23 *lsfUnDetails
 							op := lsfUnOpFor(s)
-							var value_23 lsfCExpr
+							var value_24 lsfCExpr
 							expr_9 := selection_4.fExpr
-							value_23 = expr_9
-							arg := value_23
-							value_22 = &lsfUnDetails{arg, op}
-							recordField_13 := &lsfCExpr_Un{value_22}
-							var value_24 *lsfList[lsfTok]
+							value_24 = expr_9
+							arg := value_24
+							value_23 = &lsfUnDetails{arg, op}
+							recordField_15 := &lsfCExpr_Un{value_23}
+							var value_25 *lsfList[lsfTok]
 							rest_7 := selection_4.fRest
-							value_24 = rest_7
-							recordField_14 := value_24
-							value_21 = &lsfParsed{recordField_13, recordField_14}
-							return lsfPresent[*lsfParsed](value_21)
+							value_25 = rest_7
+							recordField_16 := value_25
+							value_22 = &lsfParsed{recordField_15, recordField_16}
+							return lsfPresent[*lsfParsed](value_22)
 						} else {
 							return lsfAbsent[*lsfParsed]()
 						}
@@ -6737,20 +7305,20 @@ func lsfParseLevel(lvl lsfInt, acc lsfMaybe[lsfCExpr], toks *lsfList[lsfTok], fu
 							if lsfCmpInt(lsfBinLevel(s_2), lvl) == 0 {
 								it_17 := lsfParseLevel(lvl.Add(lsfSmall(int64(1))), lsfAbsent[lsfCExpr](), lsfSliceList(toks, int64(1), lsfIndex(lsfSmall(9223372036854775807))), fuel.Sub(lsfSmall(int64(1))))
 								if it_17.ok {
-									matchSelection_5 := it_17.v
-									var value_25 *lsfBinDetails
+									matchSelection_6 := it_17.v
+									var value_26 *lsfBinDetails
 									op_2 := lsfBinOpFor(s_2)
 									left := selection_5
-									var value_26 lsfCExpr
-									expr_10 := matchSelection_5.fExpr
-									value_26 = expr_10
-									right := value_26
-									value_25 = &lsfBinDetails{left, op_2, right}
-									next_4 := lsfPresent[lsfCExpr](&lsfCExpr_Bin{value_25})
-									var value_27 *lsfList[lsfTok]
-									rest_8 := matchSelection_5.fRest
-									value_27 = rest_8
-									next_5 := value_27
+									var value_27 lsfCExpr
+									expr_10 := matchSelection_6.fExpr
+									value_27 = expr_10
+									right := value_27
+									value_26 = &lsfBinDetails{left, op_2, right}
+									next_4 := lsfPresent[lsfCExpr](&lsfCExpr_Bin{value_26})
+									var value_28 *lsfList[lsfTok]
+									rest_8 := matchSelection_6.fRest
+									value_28 = rest_8
+									next_5 := value_28
 									next_6 := fuel.Sub(lsfSmall(int64(1)))
 									acc = next_4
 									toks = next_5
@@ -6760,24 +7328,24 @@ func lsfParseLevel(lvl lsfInt, acc lsfMaybe[lsfCExpr], toks *lsfList[lsfTok], fu
 									return lsfAbsent[*lsfParsed]()
 								}
 							} else {
-								var value_28 *lsfParsed
-								recordField_15 := selection_5
-								recordField_16 := toks
-								value_28 = &lsfParsed{recordField_15, recordField_16}
-								return lsfPresent[*lsfParsed](value_28)
+								var value_29 *lsfParsed
+								recordField_17 := selection_5
+								recordField_18 := toks
+								value_29 = &lsfParsed{recordField_17, recordField_18}
+								return lsfPresent[*lsfParsed](value_29)
 							}
 						} else {
 							it_18 := lsfParseLevel(lvl.Add(lsfSmall(int64(1))), lsfAbsent[lsfCExpr](), toks, fuel.Sub(lsfSmall(int64(1))))
 							if it_18.ok {
 								selection_6 := it_18.v
-								var value_29 lsfCExpr
+								var value_30 lsfCExpr
 								expr_11 := selection_6.fExpr
-								value_29 = expr_11
-								next_7 := lsfPresent[lsfCExpr](value_29)
-								var value_30 *lsfList[lsfTok]
+								value_30 = expr_11
+								next_7 := lsfPresent[lsfCExpr](value_30)
+								var value_31 *lsfList[lsfTok]
 								rest_9 := selection_6.fRest
-								value_30 = rest_9
-								next_8 := value_30
+								value_31 = rest_9
+								next_8 := value_31
 								next_9 := fuel.Sub(lsfSmall(int64(1)))
 								acc = next_7
 								toks = next_8
@@ -6788,50 +7356,115 @@ func lsfParseLevel(lvl lsfInt, acc lsfMaybe[lsfCExpr], toks *lsfList[lsfTok], fu
 							}
 						}
 					} else {
-						it_19 := lsfParseLevel(lsfSmall(2), lsfAbsent[lsfCExpr](), toks, fuel.Sub(lsfSmall(int64(1))))
-						if it_19.ok {
-							selection_7 := it_19.v
-							var value_31 *lsfList[lsfTok]
-							rest_10 := selection_7.fRest
-							value_31 = rest_10
-							if (lsfTokOp(value_31)) == ("?") {
-								var value_32 *lsfList[lsfTok]
-								rest_11 := selection_7.fRest
-								value_32 = rest_11
-								it_20 := lsfParseLevel(lsfSmall(1), lsfAbsent[lsfCExpr](), lsfSliceList(value_32, int64(1), lsfIndex(lsfSmall(9223372036854775807))), fuel.Sub(lsfSmall(int64(1))))
-								if it_20.ok {
-									matchSelection_6 := it_20.v
-									var value_33 *lsfList[lsfTok]
-									rest_12 := matchSelection_6.fRest
-									value_33 = rest_12
-									it_21 := lsfExpectOp(value_33, ":")
-									if it_21.ok {
-										matchMatchSelection_6 := it_21.v
-										it_22 := lsfParseLevel(lsfSmall(1), lsfAbsent[lsfCExpr](), matchMatchSelection_6, fuel.Sub(lsfSmall(int64(1))))
-										if it_22.ok {
-											matchMatchMatchSelection_3 := it_22.v
-											var value_34 *lsfParsed
-											var value_35 *lsfCondDetails
-											var value_36 lsfCExpr
-											expr_12 := selection_7.fExpr
-											value_36 = expr_12
-											test := value_36
-											var value_37 lsfCExpr
-											expr_13 := matchSelection_6.fExpr
-											value_37 = expr_13
-											yes := value_37
-											var value_38 lsfCExpr
-											expr_14 := matchMatchMatchSelection_3.fExpr
-											value_38 = expr_14
-											no := value_38
-											value_35 = &lsfCondDetails{no, test, yes}
-											recordField_17 := &lsfCExpr_Cond{value_35}
-											var value_39 *lsfList[lsfTok]
-											rest_13 := matchMatchMatchSelection_3.fRest
-											value_39 = rest_13
-											recordField_18 := value_39
-											value_34 = &lsfParsed{recordField_17, recordField_18}
-											return lsfPresent[*lsfParsed](value_34)
+						if lsfCmpInt(lvl, lsfSmall(int64(0))) <= 0 {
+							it_19 := acc
+							if it_19.ok {
+								selection_7 := it_19.v
+								if (lsfTokOp(toks)) == (",") {
+									it_20 := lsfParseLevel(lsfSmall(1), lsfAbsent[lsfCExpr](), lsfSliceList(toks, int64(1), lsfIndex(lsfSmall(9223372036854775807))), fuel.Sub(lsfSmall(int64(1))))
+									if it_20.ok {
+										matchSelection_7 := it_20.v
+										next_10 := lsfSmall(0)
+										var value_32 *lsfBinDetails
+										op_3 := lsfBinOp_BComma
+										left_2 := selection_7
+										var value_33 lsfCExpr
+										expr_12 := matchSelection_7.fExpr
+										value_33 = expr_12
+										right_2 := value_33
+										value_32 = &lsfBinDetails{left_2, op_3, right_2}
+										next_11 := lsfPresent[lsfCExpr](&lsfCExpr_Bin{value_32})
+										var value_34 *lsfList[lsfTok]
+										rest_10 := matchSelection_7.fRest
+										value_34 = rest_10
+										next_12 := value_34
+										next_13 := fuel.Sub(lsfSmall(int64(1)))
+										lvl = next_10
+										acc = next_11
+										toks = next_12
+										fuel = next_13
+										continue
+									} else {
+										return lsfAbsent[*lsfParsed]()
+									}
+								} else {
+									var value_35 *lsfParsed
+									recordField_19 := selection_7
+									recordField_20 := toks
+									value_35 = &lsfParsed{recordField_19, recordField_20}
+									return lsfPresent[*lsfParsed](value_35)
+								}
+							} else {
+								it_21 := lsfParseLevel(lsfSmall(1), lsfAbsent[lsfCExpr](), toks, fuel.Sub(lsfSmall(int64(1))))
+								if it_21.ok {
+									selection_8 := it_21.v
+									next_14 := lsfSmall(0)
+									var value_36 lsfCExpr
+									expr_13 := selection_8.fExpr
+									value_36 = expr_13
+									next_15 := lsfPresent[lsfCExpr](value_36)
+									var value_37 *lsfList[lsfTok]
+									rest_11 := selection_8.fRest
+									value_37 = rest_11
+									next_16 := value_37
+									next_17 := fuel.Sub(lsfSmall(int64(1)))
+									lvl = next_14
+									acc = next_15
+									toks = next_16
+									fuel = next_17
+									continue
+								} else {
+									return lsfAbsent[*lsfParsed]()
+								}
+							}
+						} else {
+							it_22 := lsfParseLevel(lsfSmall(2), lsfAbsent[lsfCExpr](), toks, fuel.Sub(lsfSmall(int64(1))))
+							if it_22.ok {
+								selection_9 := it_22.v
+								var value_38 *lsfList[lsfTok]
+								rest_12 := selection_9.fRest
+								value_38 = rest_12
+								if (lsfTokOp(value_38)) == ("?") {
+									var value_39 *lsfList[lsfTok]
+									rest_13 := selection_9.fRest
+									value_39 = rest_13
+									it_23 := lsfParseLevel(lsfSmall(0), lsfAbsent[lsfCExpr](), lsfSliceList(value_39, int64(1), lsfIndex(lsfSmall(9223372036854775807))), fuel.Sub(lsfSmall(int64(1))))
+									if it_23.ok {
+										matchSelection_8 := it_23.v
+										var value_40 *lsfList[lsfTok]
+										rest_14 := matchSelection_8.fRest
+										value_40 = rest_14
+										it_24 := lsfExpectOp(value_40, ":")
+										if it_24.ok {
+											matchMatchSelection_6 := it_24.v
+											it_25 := lsfParseLevel(lsfSmall(1), lsfAbsent[lsfCExpr](), matchMatchSelection_6, fuel.Sub(lsfSmall(int64(1))))
+											if it_25.ok {
+												matchMatchMatchSelection_3 := it_25.v
+												var value_41 *lsfParsed
+												var value_42 *lsfCondDetails
+												var value_43 lsfCExpr
+												expr_14 := selection_9.fExpr
+												value_43 = expr_14
+												test := value_43
+												var value_44 lsfCExpr
+												expr_15 := matchSelection_8.fExpr
+												value_44 = expr_15
+												yes := value_44
+												var value_45 lsfCExpr
+												expr_16 := matchMatchMatchSelection_3.fExpr
+												value_45 = expr_16
+												no := value_45
+												value_42 = &lsfCondDetails{no, test, yes}
+												recordField_21 := &lsfCExpr_Cond{value_42}
+												var value_46 *lsfList[lsfTok]
+												rest_15 := matchMatchMatchSelection_3.fRest
+												value_46 = rest_15
+												recordField_22 := value_46
+												value_41 = &lsfParsed{recordField_21, recordField_22}
+												return lsfPresent[*lsfParsed](value_41)
+											} else {
+												return lsfAbsent[*lsfParsed]()
+											}
 										} else {
 											return lsfAbsent[*lsfParsed]()
 										}
@@ -6839,13 +7472,11 @@ func lsfParseLevel(lvl lsfInt, acc lsfMaybe[lsfCExpr], toks *lsfList[lsfTok], fu
 										return lsfAbsent[*lsfParsed]()
 									}
 								} else {
-									return lsfAbsent[*lsfParsed]()
+									return lsfPresent[*lsfParsed](selection_9)
 								}
 							} else {
-								return lsfPresent[*lsfParsed](selection_7)
+								return lsfAbsent[*lsfParsed]()
 							}
-						} else {
-							return lsfAbsent[*lsfParsed]()
 						}
 					}
 				}
@@ -6854,12 +7485,12 @@ func lsfParseLevel(lvl lsfInt, acc lsfMaybe[lsfCExpr], toks *lsfList[lsfTok], fu
 	}
 }
 
-// parseWhen — laws/conditions.lawspec:329.
+// parseWhen — laws/conditions.lawspec:370.
 func lsfParseWhen(text string) lsfMaybe[lsfCExpr] {
 	it := lsfLexT(text, (*lsfList[lsfTok])(nil), lsfSmall(lsfTextLength(text)).Add(lsfSmall(int64(1))))
 	if it.ok {
 		selection := it.v
-		it_2 := lsfParseLevel(lsfSmall(1), lsfAbsent[lsfCExpr](), selection, lsfSmall(int64(14)).Mul(lsfSmall(int64(selection.length())).Add(lsfSmall(int64(3)))))
+		it_2 := lsfParseLevel(lsfSmall(0), lsfAbsent[lsfCExpr](), selection, lsfSmall(int64(16)).Mul(lsfSmall(int64(selection.length())).Add(lsfSmall(int64(3)))))
 		if it_2.ok {
 			matchSelection := it_2.v
 			var value *lsfList[lsfTok]
@@ -6881,7 +7512,12 @@ func lsfParseWhen(text string) lsfMaybe[lsfCExpr] {
 	}
 }
 
-// quoteEnd — laws/conditions.lawspec:68.
+// plainCodes — laws/conditions.lawspec:114.
+func lsfPlainCodes(u lsfUnit) string {
+	return " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+}
+
+// quoteEnd — laws/conditions.lawspec:72.
 func lsfQuoteEnd(t_ string, j lsfInt, n lsfInt, esc bool) lsfInt {
 	for {
 		if lsfCmpInt(j, n) >= 0 {
@@ -6917,7 +7553,7 @@ func lsfQuoteEnd(t_ string, j lsfInt, n lsfInt, esc bool) lsfInt {
 	}
 }
 
-// readBindings — laws/conditions.lawspec:455.
+// readBindings — laws/conditions.lawspec:496.
 func lsfReadBindings(lines *lsfList[string]) lsfEither[*lsfBindingError, *lsfEnv] {
 	it := lsfReadFrom(lines, lsfSmall(1), (*lsfList[lsfBindingLine])(nil))
 	if !it.right {
@@ -6929,7 +7565,7 @@ func lsfReadBindings(lines *lsfList[string]) lsfEither[*lsfBindingError, *lsfEnv
 	}
 }
 
-// readFrom — laws/conditions.lawspec:444.
+// readFrom — laws/conditions.lawspec:485.
 func lsfReadFrom(lines *lsfList[string], k lsfInt, acc *lsfList[lsfBindingLine]) lsfEither[*lsfBindingError, *lsfList[lsfBindingLine]] {
 	for {
 		it := lines
@@ -6959,7 +7595,7 @@ func lsfReadFrom(lines *lsfList[string], k lsfInt, acc *lsfList[lsfBindingLine])
 	}
 }
 
-// readLine — laws/conditions.lawspec:412.
+// readLine — laws/conditions.lawspec:453.
 func lsfReadLine(raw string) lsfMaybe[lsfBindingLine] {
 	s := lsfTrimmed(raw)
 	if lsfTextLength(s) == int64(0) {
@@ -7040,7 +7676,7 @@ func lsfReadLine(raw string) lsfMaybe[lsfBindingLine] {
 	}
 }
 
-// setName — laws/conditions.lawspec:741.
+// setName — laws/conditions.lawspec:782.
 func lsfSetName(n string, v lsfInt) lsfBindingLine {
 	var value *lsfSetNameDetails
 	name := n
@@ -7050,7 +7686,7 @@ func lsfSetName(n string, v lsfInt) lsfBindingLine {
 	return &lsfBindingLine_SetName{value}
 }
 
-// stripCr — laws/conditions.lawspec:385.
+// stripCr — laws/conditions.lawspec:426.
 func lsfStripCr(t_ string, fuel lsfInt) string {
 	for {
 		if lsfCmpInt(fuel, lsfSmall(int64(0))) <= 0 {
@@ -7069,12 +7705,12 @@ func lsfStripCr(t_ string, fuel lsfInt) string {
 	}
 }
 
-// summedEdges — laws/conditions.lawspec:525.
+// summedEdges — laws/conditions.lawspec:566.
 func lsfSummedEdges(es *lsfList[*lsfCallEdge]) *lsfList[*lsfCallEdge] {
 	return lsfFromTallies(lsfToList(lsfTallied(es, lsfKeyValOf((*lsfList[*lsfEntry[*lsfEdgeKey, *lsfTally]])(nil), lsfCompareEdgeKey)), lsfEntryOf[*lsfEdgeKey, *lsfTally]))
 }
 
-// tallied — laws/conditions.lawspec:506.
+// tallied — laws/conditions.lawspec:547.
 func lsfTallied(es *lsfList[*lsfCallEdge], acc *lsfMap[*lsfEdgeKey, *lsfTally]) *lsfMap[*lsfEdgeKey, *lsfTally] {
 	for {
 		it := es
@@ -7117,16 +7753,16 @@ func lsfTallied(es *lsfList[*lsfCallEdge], acc *lsfMap[*lsfEdgeKey, *lsfTally]) 
 	}
 }
 
-// tokOfNumber — laws/conditions.lawspec:103.
+// tokOfNumber — laws/conditions.lawspec:107.
 func lsfTokOfNumber(v lsfInt, unsigned bool) lsfMaybe[lsfTok] {
 	if unsigned {
-		return lsfPresent[lsfTok](&lsfTok_TUnread{})
+		return lsfPresent[lsfTok](&lsfTok_TUNum{v})
 	} else {
 		return lsfPresent[lsfTok](&lsfTok_TNum{v})
 	}
 }
 
-// tokOp — laws/conditions.lawspec:183.
+// tokOp — laws/conditions.lawspec:208.
 func lsfTokOp(toks *lsfList[lsfTok]) string {
 	it := lsfAtList(toks, int64(0))
 	if it.ok {
@@ -7136,6 +7772,8 @@ func lsfTokOp(toks *lsfList[lsfTok]) string {
 			selection_2 := variant.fValue
 			return selection_2
 		case *lsfTok_TNum:
+			return ""
+		case *lsfTok_TUNum:
 			return ""
 		case *lsfTok_TId:
 			return ""
@@ -7149,7 +7787,7 @@ func lsfTokOp(toks *lsfList[lsfTok]) string {
 	}
 }
 
-// trimFrom — laws/conditions.lawspec:349.
+// trimFrom — laws/conditions.lawspec:390.
 func lsfTrimFrom(t_ string, fuel lsfInt) string {
 	for {
 		if lsfCmpInt(fuel, lsfSmall(int64(0))) <= 0 {
@@ -7168,7 +7806,7 @@ func lsfTrimFrom(t_ string, fuel lsfInt) string {
 	}
 }
 
-// trimTo — laws/conditions.lawspec:354.
+// trimTo — laws/conditions.lawspec:395.
 func lsfTrimTo(t_ string, fuel lsfInt) string {
 	for {
 		if lsfCmpInt(fuel, lsfSmall(int64(0))) <= 0 {
@@ -7187,12 +7825,12 @@ func lsfTrimTo(t_ string, fuel lsfInt) string {
 	}
 }
 
-// trimmed — laws/conditions.lawspec:359.
+// trimmed — laws/conditions.lawspec:400.
 func lsfTrimmed(t_ string) string {
 	return lsfTrimTo(lsfTrimFrom(t_, lsfSmall(lsfTextLength(t_))), lsfSmall(lsfTextLength(t_)))
 }
 
-// unOpFor — laws/conditions.lawspec:179.
+// unOpFor — laws/conditions.lawspec:204.
 func lsfUnOpFor(s string) lsfUnOp {
 	if (s) == ("+") {
 		return lsfUnOp_UPlus
@@ -7209,12 +7847,12 @@ func lsfUnOpFor(s string) lsfUnOp {
 	}
 }
 
-// unsignedOf — laws/conditions.lawspec:101.
+// unsignedOf — laws/conditions.lawspec:105.
 func lsfUnsignedOf(suffix string) bool {
 	return (strings.Contains(suffix, "u") || strings.Contains(suffix, "U"))
 }
 
-// usesFor — laws/conditions.lawspec:723.
+// usesFor — laws/conditions.lawspec:764.
 func lsfUsesFor(name string, us *lsfList[*lsfUseNote]) *lsfList[*lsfUsePlace] {
 	it := us
 	if it == nil {
@@ -7246,7 +7884,7 @@ func lsfUsesFor(name string, us *lsfList[*lsfUseNote]) *lsfList[*lsfUsePlace] {
 	}
 }
 
-// valueIn — laws/conditions.lawspec:392.
+// valueIn — laws/conditions.lawspec:433.
 func lsfValueIn(v string) lsfMaybe[lsfInt] {
 	neg := strings.HasPrefix(v, "-")
 	var value string
@@ -7293,7 +7931,7 @@ func lsfValueIn(v string) lsfMaybe[lsfInt] {
 	}
 }
 
-// versionParts — laws/conditions.lawspec:370.
+// versionParts — laws/conditions.lawspec:411.
 func lsfVersionParts(t_ string, fuel lsfInt) *lsfList[lsfInt] {
 	if (lsfCmpInt(fuel, lsfSmall(int64(0))) <= 0) || (lsfTextLength(t_) == int64(0)) {
 		return (*lsfList[lsfInt])(nil)
@@ -7307,7 +7945,7 @@ func lsfVersionParts(t_ string, fuel lsfInt) *lsfList[lsfInt] {
 	}
 }
 
-// bindingErrorText — laws/conditions_policy.lawspec:1040.
+// bindingErrorText — laws/conditions_policy.lawspec:1224.
 func lsfBindingErrorText(origin string, e *lsfBindingError) string {
 	var value lsfInt
 	line := e.fLine
@@ -7321,7 +7959,7 @@ func lsfBindingErrorText(origin string, e *lsfBindingError) string {
 	return (((((("when: " + origin) + ":") + lsfTextOfInt(value)) + ": cannot read \"") + lsfShownLine(value_2, lsfSmall(lsfTextLength(value_3)))) + "\"")
 }
 
-// depthAfter — laws/conditions_policy.lawspec:511.
+// depthAfter — laws/conditions_policy.lawspec:615.
 func lsfDepthAfter(t_ string, i lsfInt, n lsfInt, d lsfInt) lsfInt {
 	for {
 		if (lsfCmpInt(i, n) >= 0) || (lsfCmpInt(d, lsfSmall(int64(0))) < 0) {
@@ -7347,7 +7985,12 @@ func lsfDepthAfter(t_ string, i lsfInt, n lsfInt, d lsfInt) lsfInt {
 	}
 }
 
-// inList — laws/conditions_policy.lawspec:838.
+// fileDefinedTerm — laws/conditions_policy.lawspec:613.
+func lsfFileDefinedTerm(line lsfInt) string {
+	return (("\"#if at line " + lsfTextOfInt(line)) + " reads a name the file defines\"")
+}
+
+// inList — laws/conditions_policy.lawspec:1021.
 func lsfInList(xs *lsfList[string], n string) bool {
 	all := true
 	for cell := xs; cell != nil; cell = cell.tail {
@@ -7360,7 +8003,7 @@ func lsfInList(xs *lsfList[string], n string) bool {
 	return !(all)
 }
 
-// initNothingText — laws/conditions_policy.lawspec:1525.
+// initNothingText — laws/conditions_policy.lawspec:1715.
 func lsfInitNothingText(root string, f *lsfFiltered) string {
 	var value *lsfList[*lsfPackage]
 	packages := f.fPackages
@@ -7372,7 +8015,7 @@ func lsfInitNothingText(root string, f *lsfFiltered) string {
 	}
 }
 
-// initWarnings — laws/conditions_policy.lawspec:1522.
+// initWarnings — laws/conditions_policy.lawspec:1712.
 func lsfInitWarnings(f *lsfFiltered) *lsfList[string] {
 	var value *lsfList[string]
 	unreadable := f.fUnreadable
@@ -7383,12 +8026,12 @@ func lsfInitWarnings(f *lsfFiltered) *lsfList[string] {
 	return lsfAppend(lsfAssayxportConditionsPolicyUnreadableLines(value), lsfAssayxportConditionsPolicyUnreadLines(lsfAssayxportConditionsPolicySorted(lsfAssayxportConditionsPolicyUnreadPaths(value_2))))
 }
 
-// paired — laws/conditions_policy.lawspec:519.
+// paired — laws/conditions_policy.lawspec:623.
 func lsfPaired(t_ string) bool {
 	return (lsfCmpInt(lsfDepthAfter(t_, lsfSmall(0), lsfSmall(lsfTextLength(t_)), lsfSmall(0)), lsfSmall(int64(0))) == 0)
 }
 
-// shownLine — laws/conditions_policy.lawspec:1033.
+// shownLine — laws/conditions_policy.lawspec:1217.
 func lsfShownLine(t_ string, fuel lsfInt) string {
 	if (lsfCmpInt(fuel, lsfSmall(int64(0))) <= 0) || (lsfTextLength(t_) == int64(0)) {
 		return ""
@@ -7403,12 +8046,115 @@ func lsfShownLine(t_ string, fuel lsfInt) string {
 	}
 }
 
-// unreadableTerm — laws/conditions_policy.lawspec:509.
+// unreadableTerm — laws/conditions_policy.lawspec:605.
 func lsfUnreadableTerm(line lsfInt) string {
 	return (("\"unreadable #if at line " + lsfTextOfInt(line)) + "\"")
 }
 
-// assayxportHaskellCppBlankIf — laws/haskell_cpp.lawspec:181.
+// assayxportHaskellCppAddTerm — laws/haskell_cpp.lawspec:583.
+func lsfAssayxportHaskellCppAddTerm(t_ string, seen *lsfList[string]) *lsfList[string] {
+	var logic bool
+	if !(lsfTextLength(t_) == int64(0)) {
+		all := true
+		for cell := seen; cell != nil; cell = cell.tail {
+			item := cell.head
+			if !(!((item) == (t_))) {
+				all = false
+				break
+			}
+		}
+		logic = !(all)
+	} else {
+		logic = true
+	}
+	if logic {
+		return seen
+	} else {
+		return lsfAppend(seen, lsfCons[string](t_, (*lsfList[string])(nil)))
+	}
+}
+
+// assayxportHaskellCppAfter — laws/haskell_cpp.lawspec:301.
+func lsfAssayxportHaskellCppAfter(w *lsfWalk, r *lsfRow, v bool) *lsfWalk {
+	var value *lsfList[*lsfFrame]
+	stack := w.fStack
+	value = stack
+	recordField := lsfAssayxportHaskellCppStepped(value, r, v)
+	var value_2 *lsfMap[string, lsfSets]
+	var value_3 bool
+	var value_4 lsfSets
+	sets := r.fSets
+	value_4 = sets
+	it := value_4
+	switch it.(type) {
+	case *lsfSets_SetsNothing:
+		value_3 = true
+	case *lsfSets_SetsInt:
+		value_3 = false
+	case *lsfSets_SetsOther:
+		value_3 = false
+	case *lsfSets_Unsets:
+		value_3 = false
+	default:
+		panic("unreachable branch reached")
+	}
+	var logic bool
+	if !(value_3) {
+		var value_5 *lsfList[*lsfFrame]
+		stack_2 := w.fStack
+		value_5 = stack_2
+		logic = lsfAssayxportHaskellCppLiveOf(value_5)
+	} else {
+		logic = false
+	}
+	if logic {
+		var value_6 string
+		name := r.fName
+		value_6 = name
+		var value_7 lsfSets
+		sets_2 := r.fSets
+		value_7 = sets_2
+		var value_8 *lsfMap[string, lsfSets]
+		sets_3 := w.fSets
+		value_8 = sets_3
+		value_2 = lsfPut(value_8, value_6, value_7, lsfCompareText)
+	} else {
+		sets_4 := w.fSets
+		value_2 = sets_4
+	}
+	recordField_2 := value_2
+	return &lsfWalk{recordField, recordField_2}
+}
+
+// assayxportHaskellCppAllHold — laws/haskell_cpp.lawspec:677.
+func lsfAssayxportHaskellCppAllHold(asg *lsfMap[string, lsfInt], ls *lsfList[*lsfLiteral]) bool {
+	anyItem := asg
+	all := true
+	for cell := ls; cell != nil; cell = cell.tail {
+		anyItem_2 := cell.head
+		if !(lsfAssayxportHaskellCppLitHolds(anyItem, anyItem_2)) {
+			all = false
+			break
+		}
+	}
+	return all
+}
+
+// assayxportHaskellCppBaseAtLeast48 — laws/haskell_cpp.lawspec:1141.
+func lsfAssayxportHaskellCppBaseAtLeast48(u lsfUnit) *lsfLiteral {
+	recordField := false
+	recordField_2 := "MIN_VERSION_base(4,8,0)"
+	var value *lsfMinVersionDetails
+	pkg := "base"
+	major1 := &lsfCExpr_Lit{lsfSmall(4)}
+	major2 := &lsfCExpr_Lit{lsfSmall(8)}
+	minor := &lsfCExpr_Lit{lsfSmall(0)}
+	value = &lsfMinVersionDetails{major1, major2, minor, pkg}
+	recordField_3 := &lsfCExpr_MinVersion{value}
+	return &lsfLiteral{recordField, recordField_2, recordField_3}
+}
+
+// assayxportHaskellCppBlankIf — laws/haskell_cpp.lawspec:215.
 func lsfAssayxportHaskellCppBlankIf(b bool, r *lsfRow) string {
 	if b {
 		return "\x0a"
@@ -7418,42 +8164,125 @@ func lsfAssayxportHaskellCppBlankIf(b bool, r *lsfRow) string {
 	}
 }
 
-// assayxportHaskellCppBuildText — laws/haskell_cpp.lawspec:450.
-func lsfAssayxportHaskellCppBuildText(env *lsfEnv, rs *lsfList[*lsfRow]) string {
-	it := rs
-	if it == nil {
-		return ""
-	} else {
-		selection := it.head
-		selection_2 := it.tail
-		var value bool
-		directive := selection.fDirective
-		value = directive
-		var logic bool
-		if !(value) {
-			var value_2 bool
-			anyItem := env
-			var value_3 *lsfList[*lsfLiteral]
-			terms := selection.fTerms
-			value_3 = terms
-			all := true
-			for cell := value_3; cell != nil; cell = cell.tail {
-				anyItem_2 := cell.head
-				if !(lsfAssayxportHaskellCppTermHolds(anyItem, anyItem_2)) {
-					all = false
-					break
-				}
+// assayxportHaskellCppBlocks — laws/haskell_cpp.lawspec:358.
+func lsfAssayxportHaskellCppBlocks(sets *lsfMap[string, lsfSets], vals *lsfList[string], n string) bool {
+	it := lsfLookup(sets, n, lsfCompareText)
+	if it.ok {
+		selection := it.v
+		var logic_2 bool
+		if !(lsfAssayxportHaskellCppSpecial(n)) {
+			var value bool
+			it_2 := selection
+			switch it_2.(type) {
+			case *lsfSets_SetsOther:
+				value = true
+			case *lsfSets_SetsNothing:
+				value = false
+			case *lsfSets_SetsInt:
+				value = false
+			case *lsfSets_Unsets:
+				value = false
+			default:
+				panic("unreachable branch reached")
 			}
-			value_2 = all
-			logic = !(value_2)
+			var logic bool
+			if value {
+				all := true
+				for cell := vals; cell != nil; cell = cell.tail {
+					item := cell.head
+					if !(!((item) == (n))) {
+						all = false
+						break
+					}
+				}
+				logic = !(all)
+			} else {
+				logic = false
+			}
+			logic_2 = logic
 		} else {
-			logic = true
+			logic_2 = true
 		}
-		return (lsfAssayxportHaskellCppBlankIf(logic, selection) + lsfAssayxportHaskellCppBuildText(env, selection_2))
+		return logic_2
+	} else {
+		return true
 	}
 }
 
-// assayxportHaskellCppCodeRows — laws/haskell_cpp.lawspec:562.
+// assayxportHaskellCppBuildCount — laws/haskell_cpp.lawspec:502.
+func lsfAssayxportHaskellCppBuildCount(rs *lsfList[*lsfRow]) lsfInt {
+	return lsfAssayxportHaskellCppCountBuilds(rs, lsfAssayxportHaskellCppStartWalk(lsfUnit{}), lsfKeyValOf((*lsfList[*lsfEntry[string, lsfInt]])(nil), lsfCompareText), lsfSmall(1), lsfAssayxportConditionsPolicyBuildCap(lsfUnit{}))
+}
+
+// assayxportHaskellCppBuildText — laws/haskell_cpp.lawspec:814.
+func lsfAssayxportHaskellCppBuildText(env *lsfEnv, rs *lsfList[*lsfRow]) string {
+	return lsfAssayxportHaskellCppSimulated(env, (*lsfList[*lsfFrame])(nil), rs)
+}
+
+// assayxportHaskellCppBuildsFrom — laws/haskell_cpp.lawspec:452.
+func lsfAssayxportHaskellCppBuildsFrom(rs *lsfList[*lsfRow], w *lsfWalk, asg *lsfMap[string, lsfInt], line lsfInt) *lsfList[*lsfMap[string, lsfInt]] {
+	for {
+		it := rs
+		if it == nil {
+			return lsfCons[*lsfMap[string, lsfInt]](asg, (*lsfList[*lsfMap[string, lsfInt]])(nil))
+		} else {
+			selection := it.head
+			selection_2 := it.tail
+			it_2 := lsfAssayxportHaskellCppReadingAt(w, selection, line)
+			switch variant := it_2.(type) {
+			case *lsfReading_NotRead:
+				next := selection_2
+				next_2 := lsfAssayxportHaskellCppAfter(w, selection, false)
+				next_3 := line.Add(lsfSmall(int64(1)))
+				rs = next
+				w = next_2
+				line = next_3
+				continue
+			case *lsfReading_ByFile:
+				matchSelection := variant.fValue
+				next_4 := selection_2
+				next_5 := lsfAssayxportHaskellCppAfter(w, selection, matchSelection)
+				next_6 := line.Add(lsfSmall(int64(1)))
+				rs = next_4
+				w = next_5
+				line = next_6
+				continue
+			case *lsfReading_ByTerm:
+				matchSelection_2 := variant.fValue
+				var value string
+				text := matchSelection_2.fText
+				value = text
+				if lsfAssayxportHaskellCppValued(asg, value) {
+					next_7 := selection_2
+					next_8 := lsfAssayxportHaskellCppAfter(w, selection, lsfAssayxportHaskellCppLitTrue(asg, matchSelection_2))
+					next_9 := line.Add(lsfSmall(int64(1)))
+					rs = next_7
+					w = next_8
+					line = next_9
+					continue
+				} else {
+					var value_2 bool
+					negated := matchSelection_2.fNegated
+					value_2 = negated
+					var value_3 string
+					text_2 := matchSelection_2.fText
+					value_3 = text_2
+					var value_4 bool
+					negated_2 := matchSelection_2.fNegated
+					value_4 = negated_2
+					var value_5 string
+					text_3 := matchSelection_2.fText
+					value_5 = text_3
+					return lsfAppend(lsfAssayxportHaskellCppBuildsFrom(selection_2, lsfAssayxportHaskellCppAfter(w, selection, !(value_2)), lsfPut(asg, value_3, lsfSmall(1), lsfCompareText), line.Add(lsfSmall(int64(1)))), lsfAssayxportHaskellCppBuildsFrom(selection_2, lsfAssayxportHaskellCppAfter(w, selection, value_4), lsfPut(asg, value_5, lsfSmall(0), lsfCompareText), line.Add(lsfSmall(int64(1)))))
+				}
+			default:
+				panic("unreachable branch reached")
+			}
+		}
+	}
+}
+
+// assayxportHaskellCppCodeRows — laws/haskell_cpp.lawspec:921.
 func lsfAssayxportHaskellCppCodeRows(lines *lsfList[string], terms *lsfList[*lsfLiteral]) *lsfList[*lsfRow] {
 	it := lines
 	if it == nil {
@@ -7465,7 +8294,200 @@ func lsfAssayxportHaskellCppCodeRows(lines *lsfList[string], terms *lsfList[*lsf
 	}
 }
 
-// assayxportHaskellCppDefinedAnd — laws/haskell_cpp.lawspec:73.
+// assayxportHaskellCppConditionText — laws/haskell_cpp.lawspec:719.
+func lsfAssayxportHaskellCppConditionText(ts *lsfList[*lsfLiteral]) string {
+	return lsfAssayxportConditionsPolicyConditionText(lsfCons[*lsfList[*lsfLiteral]](ts, (*lsfList[*lsfList[*lsfLiteral]])(nil)))
+}
+
+// assayxportHaskellCppCopiesOf — laws/haskell_cpp.lawspec:494.
+func lsfAssayxportHaskellCppCopiesOf(rs *lsfList[*lsfRow], builds *lsfList[*lsfMap[string, lsfInt]]) *lsfList[string] {
+	it := builds
+	if it == nil {
+		return (*lsfList[string])(nil)
+	} else {
+		selection := it.head
+		selection_2 := it.tail
+		return lsfAppend(lsfCons[string](lsfAssayxportHaskellCppCopyOf(selection, rs), (*lsfList[string])(nil)), lsfAssayxportHaskellCppCopiesOf(rs, selection_2))
+	}
+}
+
+// assayxportHaskellCppCopiesOfRows — laws/haskell_cpp.lawspec:510.
+func lsfAssayxportHaskellCppCopiesOfRows(rs *lsfList[*lsfRow]) *lsfList[string] {
+	if !(lsfAssayxportHaskellCppHasGroup(rs)) {
+		return lsfCons[string](lsfAssayxportHaskellCppSourceOf(rs), (*lsfList[string])(nil))
+	} else {
+		if lsfAssayxportHaskellCppOverCapRows(rs) {
+			return lsfCons[string](lsfAssayxportHaskellCppFirstCopyOfRows(rs), (*lsfList[string])(nil))
+		} else {
+			return lsfAssayxportHaskellCppCopiesOf(rs, lsfAssayxportHaskellCppBuildsFrom(rs, lsfAssayxportHaskellCppStartWalk(lsfUnit{}), lsfKeyValOf((*lsfList[*lsfEntry[string, lsfInt]])(nil), lsfCompareText), lsfSmall(1)))
+		}
+	}
+}
+
+// assayxportHaskellCppCopyFrom — laws/haskell_cpp.lawspec:485.
+func lsfAssayxportHaskellCppCopyFrom(rs *lsfList[*lsfRow], w *lsfWalk, asg *lsfMap[string, lsfInt], line lsfInt) string {
+	it := rs
+	if it == nil {
+		return ""
+	} else {
+		selection := it.head
+		selection_2 := it.tail
+		var value bool
+		directive := selection.fDirective
+		value = directive
+		var logic bool
+		if !(value) {
+			var value_2 *lsfList[*lsfFrame]
+			stack := w.fStack
+			value_2 = stack
+			logic = !(lsfAssayxportHaskellCppLiveOf(value_2))
+		} else {
+			logic = true
+		}
+		return (lsfAssayxportHaskellCppBlankIf(logic, selection) + lsfAssayxportHaskellCppCopyFrom(selection_2, lsfAssayxportHaskellCppAfter(w, selection, lsfAssayxportHaskellCppTruthAt(w, asg, selection, line)), asg, line.Add(lsfSmall(int64(1)))))
+	}
+}
+
+// assayxportHaskellCppCopyOf — laws/haskell_cpp.lawspec:492.
+func lsfAssayxportHaskellCppCopyOf(asg *lsfMap[string, lsfInt], rs *lsfList[*lsfRow]) string {
+	return lsfAssayxportHaskellCppCopyFrom(rs, lsfAssayxportHaskellCppStartWalk(lsfUnit{}), asg, lsfSmall(1))
+}
+
+// assayxportHaskellCppCountBuilds — laws/haskell_cpp.lawspec:435.
+func lsfAssayxportHaskellCppCountBuilds(rs *lsfList[*lsfRow], w *lsfWalk, asg *lsfMap[string, lsfInt], line lsfInt, budget lsfInt) lsfInt {
+	for {
+		it := rs
+		if it == nil {
+			return lsfSmall(1)
+		} else {
+			selection := it.head
+			selection_2 := it.tail
+			it_2 := lsfAssayxportHaskellCppReadingAt(w, selection, line)
+			switch variant := it_2.(type) {
+			case *lsfReading_NotRead:
+				next := selection_2
+				next_2 := lsfAssayxportHaskellCppAfter(w, selection, false)
+				next_3 := line.Add(lsfSmall(int64(1)))
+				rs = next
+				w = next_2
+				line = next_3
+				continue
+			case *lsfReading_ByFile:
+				matchSelection := variant.fValue
+				next_4 := selection_2
+				next_5 := lsfAssayxportHaskellCppAfter(w, selection, matchSelection)
+				next_6 := line.Add(lsfSmall(int64(1)))
+				rs = next_4
+				w = next_5
+				line = next_6
+				continue
+			case *lsfReading_ByTerm:
+				matchSelection_2 := variant.fValue
+				var value string
+				text := matchSelection_2.fText
+				value = text
+				if lsfAssayxportHaskellCppValued(asg, value) {
+					next_7 := selection_2
+					next_8 := lsfAssayxportHaskellCppAfter(w, selection, lsfAssayxportHaskellCppLitTrue(asg, matchSelection_2))
+					next_9 := line.Add(lsfSmall(int64(1)))
+					rs = next_7
+					w = next_8
+					line = next_9
+					continue
+				} else {
+					var value_2 bool
+					negated := matchSelection_2.fNegated
+					value_2 = negated
+					var value_3 string
+					text_2 := matchSelection_2.fText
+					value_3 = text_2
+					a := lsfAssayxportHaskellCppCountBuilds(selection_2, lsfAssayxportHaskellCppAfter(w, selection, !(value_2)), lsfPut(asg, value_3, lsfSmall(1), lsfCompareText), line.Add(lsfSmall(int64(1))), budget)
+					if lsfCmpInt(a, budget) > 0 {
+						return a
+					} else {
+						var value_4 bool
+						negated_2 := matchSelection_2.fNegated
+						value_4 = negated_2
+						var value_5 string
+						text_3 := matchSelection_2.fText
+						value_5 = text_3
+						return a.Add(lsfAssayxportHaskellCppCountBuilds(selection_2, lsfAssayxportHaskellCppAfter(w, selection, value_4), lsfPut(asg, value_5, lsfSmall(0), lsfCompareText), line.Add(lsfSmall(int64(1))), budget.Sub(a)))
+					}
+				}
+			default:
+				panic("unreachable branch reached")
+			}
+		}
+	}
+}
+
+// assayxportHaskellCppDecidedBy — laws/haskell_cpp.lawspec:394.
+func lsfAssayxportHaskellCppDecidedBy(sets *lsfMap[string, lsfSets], l *lsfLiteral, line lsfInt) lsfReading {
+	var value lsfCExpr
+	expr := l.fExpr
+	value = expr
+	ns := lsfAssayxportHaskellCppNamesOf(value)
+	var value_2 bool
+	anyItem := sets
+	all := true
+	for cell := ns; cell != nil; cell = cell.tail {
+		anyItem_2 := cell.head
+		if !(!(lsfAssayxportHaskellCppIsSet(anyItem, anyItem_2))) {
+			all = false
+			break
+		}
+	}
+	value_2 = !(all)
+	if !(value_2) {
+		return &lsfReading_ByTerm{l}
+	} else {
+		var value_3 bool
+		anyItem_3 := sets
+		var value_4 lsfCExpr
+		expr_2 := l.fExpr
+		value_4 = expr_2
+		anyItem_4 := lsfAssayxportHaskellCppValueNames(value_4)
+		all_2 := true
+		for cell_2 := ns; cell_2 != nil; cell_2 = cell_2.tail {
+			anyItem_5 := cell_2.head
+			if !(!(lsfAssayxportHaskellCppBlocks(anyItem_3, anyItem_4, anyItem_5))) {
+				all_2 = false
+				break
+			}
+		}
+		value_3 = !(all_2)
+		if value_3 {
+			return &lsfReading_ByTerm{lsfAssayxportHaskellCppFileTerm(line, l)}
+		} else {
+			var value_5 *lsfEnv
+			replacement := lsfAssayxportHaskellCppFileNames(sets, ns, lsfKeyValOf((*lsfList[*lsfEntry[string, lsfBinding]])(nil), lsfCompareText))
+			matched_ := lsfAssayxportConditionsPolicyEmptyEnv(lsfUnit{})
+			versions := matched_.fVersions
+			complete := matched_.fComplete
+			value_5 = &lsfEnv{replacement, versions, complete}
+			var value_6 lsfCExpr
+			expr_3 := l.fExpr
+			value_6 = expr_3
+			it := lsfAssayxportConditionsPolicyRefEval(lsfAssayxportConditionsPolicyCompleted(value_5), value_6)
+			switch variant := it.(type) {
+			case *lsfOutcome_Known:
+				selection := variant.fValue
+				var value_7 bool
+				negated := l.fNegated
+				value_7 = negated
+				return &lsfReading_ByFile{!((lsfCmpInt(selection, lsfSmall(int64(0))) != 0) == (value_7))}
+			case *lsfOutcome_Unknown:
+				return &lsfReading_ByTerm{lsfAssayxportHaskellCppFileTerm(line, l)}
+			case *lsfOutcome_Bad:
+				return &lsfReading_ByTerm{lsfAssayxportHaskellCppFileTerm(line, l)}
+			default:
+				panic("unreachable branch reached")
+			}
+		}
+	}
+}
+
+// assayxportHaskellCppDefinedAnd — laws/haskell_cpp.lawspec:97.
 func lsfAssayxportHaskellCppDefinedAnd(n string) lsfCExpr {
 	var value *lsfBinDetails
 	op := lsfBinOp_BLand
@@ -7480,7 +8502,23 @@ func lsfAssayxportHaskellCppDefinedAnd(n string) lsfCExpr {
 	return &lsfCExpr_Bin{value}
 }
 
-// assayxportHaskellCppDirectiveOf — laws/haskell_cpp.lawspec:86.
+// assayxportHaskellCppDefiner — laws/haskell_cpp.lawspec:135.
+func lsfAssayxportHaskellCppDefiner(text string, terms *lsfList[*lsfLiteral], name string, sets lsfSets) *lsfRow {
+	recordField := (text + "\x0a")
+	recordField_2 := terms
+	recordField_3 := true
+	recordField_4 := false
+	recordField_5 := name
+	recordField_6 := sets
+	return &lsfRow{recordField, recordField_2, recordField_3, recordField_4, recordField_5, recordField_6}
+}
+
+// assayxportHaskellCppDiffersFrom — laws/haskell_cpp.lawspec:1272.
+func lsfAssayxportHaskellCppDiffersFrom(a string, b string) bool {
+	return !((a) == (b))
+}
+
+// assayxportHaskellCppDirectiveOf — laws/haskell_cpp.lawspec:115.
 func lsfAssayxportHaskellCppDirectiveOf(first bool, form lsfInt, n string) string {
 	if first {
 		if lsfCmpInt(form, lsfSmall(int64(1))) == 0 {
@@ -7501,15 +8539,242 @@ func lsfAssayxportHaskellCppDirectiveOf(first bool, form lsfInt, n string) strin
 			}
 		}
 	} else {
-		var value string
-		matched_ := lsfAssayxportHaskellCppTermOf(false, form, n)
-		text := matched_.fText
-		value = text
-		return ("#elif " + value)
+		if lsfCmpInt(form, lsfSmall(int64(5))) == 0 {
+			return ("#elifdef " + n)
+		} else {
+			if lsfCmpInt(form, lsfSmall(int64(6))) == 0 {
+				return ("#elifndef " + n)
+			} else {
+				var value string
+				matched_ := lsfAssayxportHaskellCppTermOf(false, form, n)
+				text := matched_.fText
+				value = text
+				return ("#elif " + value)
+			}
+		}
 	}
 }
 
-// assayxportHaskellCppImportRows — laws/haskell_cpp.lawspec:569.
+// assayxportHaskellCppFileDecides — laws/haskell_cpp.lawspec:1284.
+func lsfAssayxportHaskellCppFileDecides(rs *lsfList[*lsfRow], w *lsfWalk, asg *lsfMap[string, lsfInt], line lsfInt) bool {
+	for {
+		it := rs
+		if it == nil {
+			return false
+		} else {
+			selection := it.head
+			selection_2 := it.tail
+			it_2 := lsfAssayxportHaskellCppReadingAt(w, selection, line)
+			switch variant := it_2.(type) {
+			case *lsfReading_NotRead:
+				next := selection_2
+				next_2 := lsfAssayxportHaskellCppAfter(w, selection, false)
+				next_3 := line.Add(lsfSmall(int64(1)))
+				rs = next
+				w = next_2
+				line = next_3
+				continue
+			case *lsfReading_ByFile:
+				return true
+			case *lsfReading_ByTerm:
+				matchSelection := variant.fValue
+				var value string
+				text := matchSelection.fText
+				value = text
+				if lsfAssayxportHaskellCppValued(asg, value) {
+					next_4 := selection_2
+					next_5 := lsfAssayxportHaskellCppAfter(w, selection, lsfAssayxportHaskellCppLitTrue(asg, matchSelection))
+					next_6 := line.Add(lsfSmall(int64(1)))
+					rs = next_4
+					w = next_5
+					line = next_6
+					continue
+				} else {
+					var value_2 bool
+					negated := matchSelection.fNegated
+					value_2 = negated
+					var value_3 string
+					text_2 := matchSelection.fText
+					value_3 = text_2
+					var logic bool
+					if !(lsfAssayxportHaskellCppFileDecides(selection_2, lsfAssayxportHaskellCppAfter(w, selection, !(value_2)), lsfPut(asg, value_3, lsfSmall(1), lsfCompareText), line.Add(lsfSmall(int64(1))))) {
+						var value_4 bool
+						negated_2 := matchSelection.fNegated
+						value_4 = negated_2
+						var value_5 string
+						text_3 := matchSelection.fText
+						value_5 = text_3
+						logic = lsfAssayxportHaskellCppFileDecides(selection_2, lsfAssayxportHaskellCppAfter(w, selection, value_4), lsfPut(asg, value_5, lsfSmall(0), lsfCompareText), line.Add(lsfSmall(int64(1))))
+					} else {
+						logic = true
+					}
+					return logic
+				}
+			default:
+				panic("unreachable branch reached")
+			}
+		}
+	}
+}
+
+// assayxportHaskellCppFileDecidesSome — laws/haskell_cpp.lawspec:1299.
+func lsfAssayxportHaskellCppFileDecidesSome(rs *lsfList[*lsfRow]) bool {
+	return lsfAssayxportHaskellCppFileDecides(rs, lsfAssayxportHaskellCppStartWalk(lsfUnit{}), lsfKeyValOf((*lsfList[*lsfEntry[string, lsfInt]])(nil), lsfCompareText), lsfSmall(1))
+}
+
+// assayxportHaskellCppFileNames — laws/haskell_cpp.lawspec:366.
+func lsfAssayxportHaskellCppFileNames(sets *lsfMap[string, lsfSets], ns *lsfList[string], acc *lsfMap[string, lsfBinding]) *lsfMap[string, lsfBinding] {
+	for {
+		it := ns
+		if it == nil {
+			return acc
+		} else {
+			selection := it.head
+			selection_2 := it.tail
+			next := selection_2
+			var value *lsfMap[string, lsfBinding]
+			it_2 := lsfLookup(sets, selection, lsfCompareText)
+			if it_2.ok {
+				matchSelection := it_2.v
+				switch variant := matchSelection.(type) {
+				case *lsfSets_SetsInt:
+					selection_3 := variant.fValue
+					value = lsfPut(acc, selection, lsfAssayxportConditionsPolicyDefinedAs(selection_3), lsfCompareText)
+				case *lsfSets_Unsets:
+					value = lsfPut(acc, selection, lsfAssayxportConditionsPolicyNotDefined(lsfUnit{}), lsfCompareText)
+				case *lsfSets_SetsOther:
+					value = lsfPut(acc, selection, lsfAssayxportConditionsPolicyDefinedAs(lsfSmall(1)), lsfCompareText)
+				case *lsfSets_SetsNothing:
+					value = acc
+				default:
+					panic("unreachable branch reached")
+				}
+			} else {
+				value = acc
+			}
+			next_2 := value
+			ns = next
+			acc = next_2
+			continue
+		}
+	}
+}
+
+// assayxportHaskellCppFileTerm — laws/haskell_cpp.lawspec:384.
+func lsfAssayxportHaskellCppFileTerm(line lsfInt, l *lsfLiteral) *lsfLiteral {
+	var value bool
+	negated := l.fNegated
+	value = negated
+	recordField := value
+	recordField_2 := lsfFileDefinedTerm(line)
+	var value_2 *lsfBinDetails
+	op := lsfBinOp_BDiv
+	left := &lsfCExpr_Lit{lsfSmall(1)}
+	right := &lsfCExpr_Lit{lsfSmall(0)}
+	value_2 = &lsfBinDetails{left, op, right}
+	recordField_3 := &lsfCExpr_Bin{value_2}
+	return &lsfLiteral{recordField, recordField_2, recordField_3}
+}
+
+// assayxportHaskellCppFirstBuild — laws/haskell_cpp.lawspec:468.
+func lsfAssayxportHaskellCppFirstBuild(rs *lsfList[*lsfRow], w *lsfWalk, asg *lsfMap[string, lsfInt], line lsfInt) *lsfMap[string, lsfInt] {
+	for {
+		it := rs
+		if it == nil {
+			return asg
+		} else {
+			selection := it.head
+			selection_2 := it.tail
+			it_2 := lsfAssayxportHaskellCppReadingAt(w, selection, line)
+			switch variant := it_2.(type) {
+			case *lsfReading_NotRead:
+				next := selection_2
+				next_2 := lsfAssayxportHaskellCppAfter(w, selection, false)
+				next_3 := line.Add(lsfSmall(int64(1)))
+				rs = next
+				w = next_2
+				line = next_3
+				continue
+			case *lsfReading_ByFile:
+				matchSelection := variant.fValue
+				next_4 := selection_2
+				next_5 := lsfAssayxportHaskellCppAfter(w, selection, matchSelection)
+				next_6 := line.Add(lsfSmall(int64(1)))
+				rs = next_4
+				w = next_5
+				line = next_6
+				continue
+			case *lsfReading_ByTerm:
+				matchSelection_2 := variant.fValue
+				var value string
+				text := matchSelection_2.fText
+				value = text
+				if lsfAssayxportHaskellCppValued(asg, value) {
+					next_7 := selection_2
+					next_8 := lsfAssayxportHaskellCppAfter(w, selection, lsfAssayxportHaskellCppLitTrue(asg, matchSelection_2))
+					next_9 := line.Add(lsfSmall(int64(1)))
+					rs = next_7
+					w = next_8
+					line = next_9
+					continue
+				} else {
+					next_10 := selection_2
+					var value_2 bool
+					negated := matchSelection_2.fNegated
+					value_2 = negated
+					next_11 := lsfAssayxportHaskellCppAfter(w, selection, !(value_2))
+					var value_3 string
+					text_2 := matchSelection_2.fText
+					value_3 = text_2
+					next_12 := lsfPut(asg, value_3, lsfSmall(1), lsfCompareText)
+					next_13 := line.Add(lsfSmall(int64(1)))
+					rs = next_10
+					w = next_11
+					asg = next_12
+					line = next_13
+					continue
+				}
+			default:
+				panic("unreachable branch reached")
+			}
+		}
+	}
+}
+
+// assayxportHaskellCppFirstCopyOfRows — laws/haskell_cpp.lawspec:517.
+func lsfAssayxportHaskellCppFirstCopyOfRows(rs *lsfList[*lsfRow]) string {
+	return lsfAssayxportHaskellCppCopyOf(lsfAssayxportHaskellCppFirstBuild(rs, lsfAssayxportHaskellCppStartWalk(lsfUnit{}), lsfKeyValOf((*lsfList[*lsfEntry[string, lsfInt]])(nil), lsfCompareText), lsfSmall(1)), rs)
+}
+
+// assayxportHaskellCppHasAndFoo — laws/haskell_cpp.lawspec:1189.
+func lsfAssayxportHaskellCppHasAndFoo(u lsfUnit) *lsfLiteral {
+	recordField := false
+	recordField_2 := "HAS && FOO"
+	var value *lsfBinDetails
+	op := lsfBinOp_BLand
+	left := &lsfCExpr_Name{"HAS"}
+	right := &lsfCExpr_Name{"FOO"}
+	value = &lsfBinDetails{left, op, right}
+	recordField_3 := &lsfCExpr_Bin{value}
+	return &lsfLiteral{recordField, recordField_2, recordField_3}
+}
+
+// assayxportHaskellCppHasGroup — laws/haskell_cpp.lawspec:498.
+func lsfAssayxportHaskellCppHasGroup(rs *lsfList[*lsfRow]) bool {
+	it := rs
+	if it == nil {
+		return false
+	} else {
+		selection := it.head
+		selection_2 := it.tail
+		var value bool
+		reads := selection.fReads
+		value = reads
+		return (value || lsfAssayxportHaskellCppHasGroup(selection_2))
+	}
+}
+
+// assayxportHaskellCppImportRows — laws/haskell_cpp.lawspec:928.
 func lsfAssayxportHaskellCppImportRows(seed_ lsfInt, i lsfInt) *lsfList[*lsfRow] {
 	n := lsfTextOfInt(i)
 	kind := lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(int64(540)).Add(i), lsfSmall(3))
@@ -7520,7 +8785,85 @@ func lsfAssayxportHaskellCppImportRows(seed_ lsfInt, i lsfInt) *lsfList[*lsfRow]
 	}
 }
 
-// assayxportHaskellCppLeafLines — laws/haskell_cpp.lawspec:665.
+// assayxportHaskellCppIsElif — laws/haskell_cpp.lawspec:271.
+func lsfAssayxportHaskellCppIsElif(r *lsfRow) bool {
+	var value bool
+	reads := r.fReads
+	value = reads
+	var logic bool
+	if value {
+		var value_2 string
+		text := r.fText
+		value_2 = text
+		logic = strings.HasPrefix(value_2, "#elif")
+	} else {
+		logic = false
+	}
+	return logic
+}
+
+// assayxportHaskellCppIsElse — laws/haskell_cpp.lawspec:273.
+func lsfAssayxportHaskellCppIsElse(r *lsfRow) bool {
+	var value bool
+	directive := r.fDirective
+	value = directive
+	var logic bool
+	if value {
+		var value_2 string
+		text := r.fText
+		value_2 = text
+		logic = strings.HasPrefix(value_2, "#else")
+	} else {
+		logic = false
+	}
+	return logic
+}
+
+// assayxportHaskellCppIsEndif — laws/haskell_cpp.lawspec:274.
+func lsfAssayxportHaskellCppIsEndif(r *lsfRow) bool {
+	var value bool
+	directive := r.fDirective
+	value = directive
+	var logic bool
+	if value {
+		var value_2 string
+		text := r.fText
+		value_2 = text
+		logic = strings.HasPrefix(value_2, "#endif")
+	} else {
+		logic = false
+	}
+	return logic
+}
+
+// assayxportHaskellCppIsIf — laws/haskell_cpp.lawspec:272.
+func lsfAssayxportHaskellCppIsIf(r *lsfRow) bool {
+	var value bool
+	reads := r.fReads
+	value = reads
+	var logic bool
+	if value {
+		var value_2 string
+		text := r.fText
+		value_2 = text
+		logic = !(strings.HasPrefix(value_2, "#elif"))
+	} else {
+		logic = false
+	}
+	return logic
+}
+
+// assayxportHaskellCppIsSet — laws/haskell_cpp.lawspec:353.
+func lsfAssayxportHaskellCppIsSet(sets *lsfMap[string, lsfSets], n string) bool {
+	it := lsfLookup(sets, n, lsfCompareText)
+	if it.ok {
+		return true
+	} else {
+		return false
+	}
+}
+
+// assayxportHaskellCppLeafLines — laws/haskell_cpp.lawspec:1055.
 func lsfAssayxportHaskellCppLeafLines(seed_ lsfInt, tail bool, place lsfInt) *lsfList[string] {
 	n := lsfTextOfInt(place)
 	k := lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(int64(2700)).Add(place), lsfSmall(3))
@@ -7547,7 +8890,134 @@ func lsfAssayxportHaskellCppLeafLines(seed_ lsfInt, tail bool, place lsfInt) *ls
 	}
 }
 
-// assayxportHaskellCppNegate — laws/haskell_cpp.lawspec:93.
+// assayxportHaskellCppLitHolds — laws/haskell_cpp.lawspec:670.
+func lsfAssayxportHaskellCppLitHolds(asg *lsfMap[string, lsfInt], l *lsfLiteral) bool {
+	var value string
+	text := l.fText
+	value = text
+	it := lsfLookup(asg, value, lsfCompareText)
+	if it.ok {
+		selection := it.v
+		var value_2 bool
+		negated := l.fNegated
+		value_2 = negated
+		return !((lsfCmpInt(selection, lsfSmall(int64(0))) != 0) == (value_2))
+	} else {
+		return false
+	}
+}
+
+// assayxportHaskellCppLitTrue — laws/haskell_cpp.lawspec:418.
+func lsfAssayxportHaskellCppLitTrue(asg *lsfMap[string, lsfInt], l *lsfLiteral) bool {
+	var value string
+	text := l.fText
+	value = text
+	it := lsfLookup(asg, value, lsfCompareText)
+	if it.ok {
+		selection := it.v
+		var value_2 bool
+		negated := l.fNegated
+		value_2 = negated
+		return !((lsfCmpInt(selection, lsfSmall(int64(0))) != 0) == (value_2))
+	} else {
+		negated_2 := l.fNegated
+		return negated_2
+	}
+}
+
+// assayxportHaskellCppLiveOf — laws/haskell_cpp.lawspec:266.
+func lsfAssayxportHaskellCppLiveOf(stack *lsfList[*lsfFrame]) bool {
+	it := stack
+	if it == nil {
+		return true
+	} else {
+		selection := it.head
+		live := selection.fLive
+		return live
+	}
+}
+
+// assayxportHaskellCppNamesOf — laws/haskell_cpp.lawspec:313.
+func lsfAssayxportHaskellCppNamesOf(e lsfCExpr) *lsfList[string] {
+	for {
+		it := e
+		switch variant := it.(type) {
+		case *lsfCExpr_Lit:
+			return (*lsfList[string])(nil)
+		case *lsfCExpr_ULit:
+			return (*lsfList[string])(nil)
+		case *lsfCExpr_Name:
+			selection := variant.fValue
+			return lsfCons[string](selection, (*lsfList[string])(nil))
+		case *lsfCExpr_IsDefined:
+			selection_2 := variant.fValue
+			return lsfCons[string](selection_2, (*lsfList[string])(nil))
+		case *lsfCExpr_Un:
+			selection_3 := variant.fValue
+			var value lsfCExpr
+			arg := selection_3.fArg
+			value = arg
+			next := value
+			e = next
+			continue
+		case *lsfCExpr_Bin:
+			selection_4 := variant.fValue
+			var value_2 lsfCExpr
+			left := selection_4.fLeft
+			value_2 = left
+			var value_3 lsfCExpr
+			right := selection_4.fRight
+			value_3 = right
+			return lsfAppend(lsfAssayxportHaskellCppNamesOf(value_2), lsfAssayxportHaskellCppNamesOf(value_3))
+		case *lsfCExpr_Cond:
+			selection_5 := variant.fValue
+			var value_4 lsfCExpr
+			test := selection_5.fTest
+			value_4 = test
+			var value_5 lsfCExpr
+			yes := selection_5.fYes
+			value_5 = yes
+			var value_6 lsfCExpr
+			no := selection_5.fNo
+			value_6 = no
+			return lsfAppend(lsfAppend(lsfAssayxportHaskellCppNamesOf(value_4), lsfAssayxportHaskellCppNamesOf(value_5)), lsfAssayxportHaskellCppNamesOf(value_6))
+		case *lsfCExpr_MinVersion:
+			selection_6 := variant.fValue
+			var value_7 string
+			pkg := selection_6.fPkg
+			value_7 = pkg
+			var value_8 lsfCExpr
+			major1 := selection_6.fMajor1
+			value_8 = major1
+			var value_9 lsfCExpr
+			major2 := selection_6.fMajor2
+			value_9 = major2
+			var value_10 lsfCExpr
+			minor := selection_6.fMinor
+			value_10 = minor
+			return lsfAppend(lsfAppend(lsfAppend(lsfCons[string](("MIN_VERSION_" + value_7), (*lsfList[string])(nil)), lsfAssayxportHaskellCppNamesOf(value_8)), lsfAssayxportHaskellCppNamesOf(value_9)), lsfAssayxportHaskellCppNamesOf(value_10))
+		case *lsfCExpr_MinGhc:
+			selection_7 := variant.fValue
+			var value_11 lsfCExpr
+			major1_2 := selection_7.fMajor1
+			value_11 = major1_2
+			var value_12 lsfCExpr
+			major2_2 := selection_7.fMajor2
+			value_12 = major2_2
+			var value_13 lsfCExpr
+			patch1 := selection_7.fPatch1
+			value_13 = patch1
+			var value_14 lsfCExpr
+			patch2 := selection_7.fPatch2
+			value_14 = patch2
+			return lsfAppend(lsfAppend(lsfAppend(lsfAppend(lsfCons[string]("MIN_VERSION_GLASGOW_HASKELL", lsfCons[string]("__GLASGOW_HASKELL__", lsfCons[string]("__GLASGOW_HASKELL_PATCHLEVEL1__", lsfCons[string]("__GLASGOW_HASKELL_PATCHLEVEL2__", (*lsfList[string])(nil))))), lsfAssayxportHaskellCppNamesOf(value_11)), lsfAssayxportHaskellCppNamesOf(value_12)), lsfAssayxportHaskellCppNamesOf(value_13)), lsfAssayxportHaskellCppNamesOf(value_14))
+		default:
+			panic("unreachable branch reached")
+		}
+	}
+}
+
+// assayxportHaskellCppNegate — laws/haskell_cpp.lawspec:122.
 func lsfAssayxportHaskellCppNegate(t_ *lsfLiteral) *lsfLiteral {
 	var value bool
 	negated := t_.fNegated
@@ -7558,7 +9028,114 @@ func lsfAssayxportHaskellCppNegate(t_ *lsfLiteral) *lsfLiteral {
 	return &lsfLiteral{replacement, text, expr}
 }
 
-// assayxportHaskellCppOneGroup — laws/haskell_cpp.lawspec:554.
+// assayxportHaskellCppOldBuilds — laws/haskell_cpp.lawspec:686.
+func lsfAssayxportHaskellCppOldBuilds(rs *lsfList[*lsfRow], ts *lsfList[string], asg *lsfMap[string, lsfInt]) *lsfList[*lsfMap[string, lsfInt]] {
+	for {
+		it := ts
+		if it == nil {
+			return lsfCons[*lsfMap[string, lsfInt]](asg, (*lsfList[*lsfMap[string, lsfInt]])(nil))
+		} else {
+			selection := it.head
+			selection_2 := it.tail
+			if lsfAssayxportHaskellCppOldReadAt(rs, asg, selection) {
+				return lsfAppend(lsfAssayxportHaskellCppOldBuilds(rs, selection_2, lsfPut(asg, selection, lsfSmall(1), lsfCompareText)), lsfAssayxportHaskellCppOldBuilds(rs, selection_2, lsfPut(asg, selection, lsfSmall(0), lsfCompareText)))
+			} else {
+				next := selection_2
+				ts = next
+				continue
+			}
+		}
+	}
+}
+
+// assayxportHaskellCppOldCopies — laws/haskell_cpp.lawspec:713.
+func lsfAssayxportHaskellCppOldCopies(rs *lsfList[*lsfRow]) *lsfList[string] {
+	return lsfAssayxportHaskellCppOldCopiesOf(rs, lsfAssayxportHaskellCppOldBuilds(rs, lsfAssayxportHaskellCppOwnTexts(rs, (*lsfList[string])(nil)), lsfKeyValOf((*lsfList[*lsfEntry[string, lsfInt]])(nil), lsfCompareText)))
+}
+
+// assayxportHaskellCppOldCopiesOf — laws/haskell_cpp.lawspec:702.
+func lsfAssayxportHaskellCppOldCopiesOf(rs *lsfList[*lsfRow], builds *lsfList[*lsfMap[string, lsfInt]]) *lsfList[string] {
+	it := builds
+	if it == nil {
+		return (*lsfList[string])(nil)
+	} else {
+		selection := it.head
+		selection_2 := it.tail
+		return lsfAppend(lsfCons[string](lsfAssayxportHaskellCppOldCopy(selection, rs), (*lsfList[string])(nil)), lsfAssayxportHaskellCppOldCopiesOf(rs, selection_2))
+	}
+}
+
+// assayxportHaskellCppOldCopy — laws/haskell_cpp.lawspec:695.
+func lsfAssayxportHaskellCppOldCopy(asg *lsfMap[string, lsfInt], rs *lsfList[*lsfRow]) string {
+	it := rs
+	if it == nil {
+		return ""
+	} else {
+		selection := it.head
+		selection_2 := it.tail
+		var value bool
+		directive := selection.fDirective
+		value = directive
+		var logic bool
+		if !(value) {
+			var value_2 *lsfList[*lsfLiteral]
+			terms := selection.fTerms
+			value_2 = terms
+			logic = !(lsfAssayxportHaskellCppAllHold(asg, value_2))
+		} else {
+			logic = true
+		}
+		return (lsfAssayxportHaskellCppBlankIf(logic, selection) + lsfAssayxportHaskellCppOldCopy(asg, selection_2))
+	}
+}
+
+// assayxportHaskellCppOldReadAt — laws/haskell_cpp.lawspec:679.
+func lsfAssayxportHaskellCppOldReadAt(rs *lsfList[*lsfRow], asg *lsfMap[string, lsfInt], t_ string) bool {
+	it := rs
+	if it == nil {
+		return false
+	} else {
+		selection := it.head
+		selection_2 := it.tail
+		var value bool
+		reads := selection.fReads
+		value = reads
+		var logic bool
+		if value {
+			var value_2 *lsfList[*lsfLiteral]
+			terms := selection.fTerms
+			value_2 = terms
+			logic = ((lsfAssayxportHaskellCppOwnText(value_2)) == (t_))
+		} else {
+			logic = false
+		}
+		var logic_2 bool
+		if logic {
+			var value_3 *lsfList[*lsfLiteral]
+			terms_2 := selection.fTerms
+			value_3 = terms_2
+			var value_4 *lsfList[*lsfLiteral]
+			terms_3 := selection.fTerms
+			value_4 = terms_3
+			logic_2 = lsfAssayxportHaskellCppAllHold(asg, lsfSliceList(value_3, int64(0), lsfIndex(lsfSmall(int64(value_4.length())).Sub(lsfSmall(int64(1))))))
+		} else {
+			logic_2 = false
+		}
+		return (logic_2 || lsfAssayxportHaskellCppOldReadAt(selection_2, asg, t_))
+	}
+}
+
+// assayxportHaskellCppOldRuleDiffers — laws/haskell_cpp.lawspec:1281.
+func lsfAssayxportHaskellCppOldRuleDiffers(rs *lsfList[*lsfRow]) bool {
+	return !(lsfEqualListText(lsfAssayxportHaskellCppOldCopies(rs), lsfAssayxportHaskellCppCopiesOfRows(rs)))
+}
+
+// assayxportHaskellCppOneArm — laws/haskell_cpp.lawspec:1137.
+func lsfAssayxportHaskellCppOneArm(own *lsfLiteral, directive string, name string, yes *lsfList[string]) *lsfList[*lsfRow] {
+	return lsfAppend(lsfAppend(lsfCons[*lsfRow](lsfAssayxportHaskellCppOpener(directive, lsfCons[*lsfLiteral](own, (*lsfList[*lsfLiteral])(nil)), name), (*lsfList[*lsfRow])(nil)), lsfAssayxportHaskellCppCodeRows(yes, lsfCons[*lsfLiteral](own, (*lsfList[*lsfLiteral])(nil)))), lsfCons[*lsfRow](lsfAssayxportHaskellCppRow("#endif", lsfCons[*lsfLiteral](lsfAssayxportHaskellCppNegate(own), (*lsfList[*lsfLiteral])(nil)), true), (*lsfList[*lsfRow])(nil)))
+}
+
+// assayxportHaskellCppOneGroup — laws/haskell_cpp.lawspec:913.
 func lsfAssayxportHaskellCppOneGroup(outer *lsfList[*lsfLiteral], form lsfInt, n string, yes *lsfList[string], hasElse bool, no *lsfList[string]) *lsfList[*lsfRow] {
 	own := lsfAssayxportHaskellCppTermOf(true, form, n)
 	var value *lsfList[*lsfRow]
@@ -7570,17 +9147,123 @@ func lsfAssayxportHaskellCppOneGroup(outer *lsfList[*lsfLiteral], form lsfInt, n
 	return lsfAppend(lsfAppend(lsfCons[*lsfRow](lsfAssayxportHaskellCppOpener(lsfAssayxportHaskellCppDirectiveOf(true, form, n), lsfAppend(outer, lsfCons[*lsfLiteral](own, (*lsfList[*lsfLiteral])(nil))), n), (*lsfList[*lsfRow])(nil)), lsfAssayxportHaskellCppCodeRows(yes, lsfAppend(outer, lsfCons[*lsfLiteral](own, (*lsfList[*lsfLiteral])(nil))))), value)
 }
 
-// assayxportHaskellCppOpener — laws/haskell_cpp.lawspec:101.
+// assayxportHaskellCppOpener — laws/haskell_cpp.lawspec:130.
 func lsfAssayxportHaskellCppOpener(text string, terms *lsfList[*lsfLiteral], name string) *lsfRow {
 	recordField := (text + "\x0a")
 	recordField_2 := terms
 	recordField_3 := true
 	recordField_4 := true
 	recordField_5 := name
-	return &lsfRow{recordField, recordField_2, recordField_3, recordField_4, recordField_5}
+	recordField_6 := &lsfSets_SetsNothing{}
+	return &lsfRow{recordField, recordField_2, recordField_3, recordField_4, recordField_5, recordField_6}
 }
 
-// assayxportHaskellCppPoolEnvAt — laws/haskell_cpp.lawspec:624.
+// assayxportHaskellCppOverCapRows — laws/haskell_cpp.lawspec:505.
+func lsfAssayxportHaskellCppOverCapRows(rs *lsfList[*lsfRow]) bool {
+	return (lsfCmpInt(lsfAssayxportHaskellCppBuildCount(rs), lsfAssayxportConditionsPolicyBuildCap(lsfUnit{})) > 0)
+}
+
+// assayxportHaskellCppOwnHolds — laws/haskell_cpp.lawspec:801.
+func lsfAssayxportHaskellCppOwnHolds(env *lsfEnv, r *lsfRow) bool {
+	it := lsfAssayxportHaskellCppOwnLit(r)
+	if it.ok {
+		selection := it.v
+		return lsfAssayxportHaskellCppTermHolds(env, selection)
+	} else {
+		return false
+	}
+}
+
+// assayxportHaskellCppOwnLit — laws/haskell_cpp.lawspec:306.
+func lsfAssayxportHaskellCppOwnLit(r *lsfRow) lsfMaybe[*lsfLiteral] {
+	var value *lsfList[*lsfLiteral]
+	terms := r.fTerms
+	value = terms
+	var value_2 *lsfList[*lsfLiteral]
+	terms_2 := r.fTerms
+	value_2 = terms_2
+	return lsfAtList(value, lsfIndex(lsfSmall(int64(value_2.length())).Sub(lsfSmall(int64(1)))))
+}
+
+// assayxportHaskellCppOwnText — laws/haskell_cpp.lawspec:430.
+func lsfAssayxportHaskellCppOwnText(ls *lsfList[*lsfLiteral]) string {
+	it := lsfAtList(ls, lsfIndex(lsfSmall(int64(ls.length())).Sub(lsfSmall(int64(1)))))
+	if it.ok {
+		selection := it.v
+		text := selection.fText
+		return text
+	} else {
+		return ""
+	}
+}
+
+// assayxportHaskellCppOwnTexts — laws/haskell_cpp.lawspec:706.
+func lsfAssayxportHaskellCppOwnTexts(rs *lsfList[*lsfRow], seen *lsfList[string]) *lsfList[string] {
+	for {
+		it := rs
+		if it == nil {
+			return seen
+		} else {
+			selection := it.head
+			selection_2 := it.tail
+			next := selection_2
+			var value *lsfList[string]
+			var value_2 bool
+			reads := selection.fReads
+			value_2 = reads
+			if value_2 {
+				var value_3 *lsfList[*lsfLiteral]
+				terms := selection.fTerms
+				value_3 = terms
+				value = lsfAssayxportHaskellCppAddTerm(lsfAssayxportHaskellCppOwnText(value_3), seen)
+			} else {
+				value = seen
+			}
+			next_2 := value
+			rs = next
+			seen = next_2
+			continue
+		}
+	}
+}
+
+// assayxportHaskellCppPathTexts — laws/haskell_cpp.lawspec:1260.
+func lsfAssayxportHaskellCppPathTexts(rs *lsfList[*lsfRow], t_ string) *lsfList[string] {
+	it := rs
+	if it == nil {
+		return (*lsfList[string])(nil)
+	} else {
+		selection := it.head
+		selection_2 := it.tail
+		var value *lsfList[string]
+		var value_2 bool
+		reads := selection.fReads
+		value_2 = reads
+		var logic bool
+		if value_2 {
+			var value_3 *lsfList[*lsfLiteral]
+			terms := selection.fTerms
+			value_3 = terms
+			logic = ((lsfAssayxportHaskellCppOwnText(value_3)) == (t_))
+		} else {
+			logic = false
+		}
+		if logic {
+			var value_4 *lsfList[*lsfLiteral]
+			terms_2 := selection.fTerms
+			value_4 = terms_2
+			var value_5 *lsfList[*lsfLiteral]
+			terms_3 := selection.fTerms
+			value_5 = terms_3
+			value = lsfCons[string](lsfAssayxportHaskellCppConditionText(lsfSliceList(value_4, int64(0), lsfIndex(lsfSmall(int64(value_5.length())).Sub(lsfSmall(int64(1)))))), (*lsfList[string])(nil))
+		} else {
+			value = (*lsfList[string])(nil)
+		}
+		return lsfAppend(value, lsfAssayxportHaskellCppPathTexts(selection_2, t_))
+	}
+}
+
+// assayxportHaskellCppPoolEnvAt — laws/haskell_cpp.lawspec:983.
 func lsfAssayxportHaskellCppPoolEnvAt(i lsfInt) *lsfEnv {
 	var value *lsfEnv
 	replacement := lsfAssayxportHaskellCppPoolState("P", i.Rem(lsfSmall(int64(4))), lsfAssayxportHaskellCppPoolState("Q", i.Quot(lsfSmall(int64(4))).Rem(lsfSmall(int64(4))), lsfAssayxportHaskellCppPoolState("R", i.Quot(lsfSmall(int64(16))).Rem(lsfSmall(int64(4))), lsfKeyValOf((*lsfList[*lsfEntry[string, lsfBinding]])(nil), lsfCompareText))))
@@ -7591,7 +9274,7 @@ func lsfAssayxportHaskellCppPoolEnvAt(i lsfInt) *lsfEnv {
 	return lsfAssayxportConditionsPolicyCompleted(value)
 }
 
-// assayxportHaskellCppPoolForm — laws/haskell_cpp.lawspec:548.
+// assayxportHaskellCppPoolForm — laws/haskell_cpp.lawspec:907.
 func lsfAssayxportHaskellCppPoolForm(i lsfInt) lsfInt {
 	it := i
 	if lsfCmpInt(it, lsfSmall(int64(0))) == 0 {
@@ -7609,7 +9292,7 @@ func lsfAssayxportHaskellCppPoolForm(i lsfInt) lsfInt {
 	}
 }
 
-// assayxportHaskellCppPoolName — laws/haskell_cpp.lawspec:543.
+// assayxportHaskellCppPoolName — laws/haskell_cpp.lawspec:902.
 func lsfAssayxportHaskellCppPoolName(i lsfInt) string {
 	it := i
 	if lsfCmpInt(it, lsfSmall(int64(0))) == 0 {
@@ -7623,7 +9306,7 @@ func lsfAssayxportHaskellCppPoolName(i lsfInt) string {
 	}
 }
 
-// assayxportHaskellCppPoolState — laws/haskell_cpp.lawspec:620.
+// assayxportHaskellCppPoolState — laws/haskell_cpp.lawspec:979.
 func lsfAssayxportHaskellCppPoolState(n string, c0 lsfInt, acc *lsfMap[string, lsfBinding]) *lsfMap[string, lsfBinding] {
 	if lsfCmpInt(c0, lsfSmall(int64(0))) == 0 {
 		return acc
@@ -7632,7 +9315,76 @@ func lsfAssayxportHaskellCppPoolState(n string, c0 lsfInt, acc *lsfMap[string, l
 	}
 }
 
-// assayxportHaskellCppReproElif — laws/haskell_cpp.lawspec:718.
+// assayxportHaskellCppReachedIn — laws/haskell_cpp.lawspec:277.
+func lsfAssayxportHaskellCppReachedIn(stack *lsfList[*lsfFrame], r *lsfRow) bool {
+	if lsfAssayxportHaskellCppIsIf(r) {
+		return lsfAssayxportHaskellCppLiveOf(stack)
+	} else {
+		if lsfAssayxportHaskellCppIsElif(r) {
+			it := stack
+			if it == nil {
+				return false
+			} else {
+				selection := it.head
+				selection_2 := it.tail
+				var logic bool
+				if lsfAssayxportHaskellCppLiveOf(selection_2) {
+					var value bool
+					done := selection.fDone
+					value = done
+					logic = !(value)
+				} else {
+					logic = false
+				}
+				return logic
+			}
+		} else {
+			return false
+		}
+	}
+}
+
+// assayxportHaskellCppReadOnTwoPaths — laws/haskell_cpp.lawspec:1278.
+func lsfAssayxportHaskellCppReadOnTwoPaths(rs *lsfList[*lsfRow]) bool {
+	anyItem := rs
+	all := true
+	for cell := lsfAssayxportHaskellCppOwnTexts(rs, (*lsfList[string])(nil)); cell != nil; cell = cell.tail {
+		anyItem_2 := cell.head
+		if !(!(lsfAssayxportHaskellCppTwoPathsOf(anyItem, anyItem_2))) {
+			all = false
+			break
+		}
+	}
+	return !(all)
+}
+
+// assayxportHaskellCppReadingAt — laws/haskell_cpp.lawspec:408.
+func lsfAssayxportHaskellCppReadingAt(w *lsfWalk, r *lsfRow, line lsfInt) lsfReading {
+	var value *lsfList[*lsfFrame]
+	stack := w.fStack
+	value = stack
+	if !(lsfAssayxportHaskellCppReachedIn(value, r)) {
+		return &lsfReading_NotRead{}
+	} else {
+		it := lsfAssayxportHaskellCppOwnLit(r)
+		if it.ok {
+			selection := it.v
+			var value_2 *lsfMap[string, lsfSets]
+			sets := w.fSets
+			value_2 = sets
+			return lsfAssayxportHaskellCppDecidedBy(value_2, selection, line)
+		} else {
+			return &lsfReading_NotRead{}
+		}
+	}
+}
+
+// assayxportHaskellCppReproDefineCopies — laws/haskell_cpp.lawspec:1222.
+func lsfAssayxportHaskellCppReproDefineCopies(u lsfUnit) *lsfList[string] {
+	return lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0aimport Data.Void (absurd)\x0af = absurd\x0a\x0ag :: Int\x0ag = 1\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0aimport Data.Void (absurd)\x0af = absurd\x0a\x0ag :: Int\x0ag = 1\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0ag :: Int\x0ag = 1\x0a", (*lsfList[string])(nil))))
+}
+
+// assayxportHaskellCppReproElif — laws/haskell_cpp.lawspec:1110.
 func lsfAssayxportHaskellCppReproElif(u lsfUnit) *lsfList[*lsfRow] {
 	p := lsfAssayxportHaskellCppTermOf(true, lsfSmall(0), "P")
 	q := lsfAssayxportHaskellCppTermOf(false, lsfSmall(0), "Q")
@@ -7640,27 +9392,120 @@ func lsfAssayxportHaskellCppReproElif(u lsfUnit) *lsfList[*lsfRow] {
 	return lsfAppend(lsfAppend(lsfAppend(lsfAppend(lsfAppend(lsfAppend(lsfAppend(lsfAppend(lsfAssayxportHaskellCppCodeRows(lsfCons[string]("{-# LANGUAGE CPP #-}", lsfCons[string]("module M where", (*lsfList[string])(nil))), (*lsfList[*lsfLiteral])(nil)), lsfCons[*lsfRow](lsfAssayxportHaskellCppOpener("#if P", lsfCons[*lsfLiteral](p, (*lsfList[*lsfLiteral])(nil)), "P"), (*lsfList[*lsfRow])(nil))), lsfAssayxportHaskellCppOneGroup(lsfCons[*lsfLiteral](p, (*lsfList[*lsfLiteral])(nil)), lsfSmall(0), "B", lsfCons[string]("a = 1", (*lsfList[string])(nil)), false, (*lsfList[string])(nil))), lsfCons[*lsfRow](lsfAssayxportHaskellCppOpener("#elif Q", lsfCons[*lsfLiteral](lsfAssayxportHaskellCppNegate(p), lsfCons[*lsfLiteral](q, (*lsfList[*lsfLiteral])(nil))), "Q"), (*lsfList[*lsfRow])(nil))), lsfAssayxportHaskellCppCodeRows(lsfCons[string]("q = 0", (*lsfList[string])(nil)), lsfCons[*lsfLiteral](lsfAssayxportHaskellCppNegate(p), lsfCons[*lsfLiteral](q, (*lsfList[*lsfLiteral])(nil))))), lsfCons[*lsfRow](lsfAssayxportHaskellCppOpener("#elif B", lsfCons[*lsfLiteral](lsfAssayxportHaskellCppNegate(p), lsfCons[*lsfLiteral](lsfAssayxportHaskellCppNegate(q), lsfCons[*lsfLiteral](b, (*lsfList[*lsfLiteral])(nil)))), "B"), (*lsfList[*lsfRow])(nil))), lsfAssayxportHaskellCppCodeRows(lsfCons[string]("b = 2", (*lsfList[string])(nil)), lsfCons[*lsfLiteral](lsfAssayxportHaskellCppNegate(p), lsfCons[*lsfLiteral](lsfAssayxportHaskellCppNegate(q), lsfCons[*lsfLiteral](b, (*lsfList[*lsfLiteral])(nil)))))), lsfCons[*lsfRow](lsfAssayxportHaskellCppRow("#endif", lsfCons[*lsfLiteral](lsfAssayxportHaskellCppNegate(p), lsfCons[*lsfLiteral](lsfAssayxportHaskellCppNegate(q), lsfCons[*lsfLiteral](lsfAssayxportHaskellCppNegate(b), (*lsfList[*lsfLiteral])(nil)))), true), (*lsfList[*lsfRow])(nil))), lsfAssayxportHaskellCppCodeRows(lsfCons[string]("c = 3", (*lsfList[string])(nil)), (*lsfList[*lsfLiteral])(nil)))
 }
 
-// assayxportHaskellCppReproLost — laws/haskell_cpp.lawspec:729.
+// assayxportHaskellCppReproElifdefCopies — laws/haskell_cpp.lawspec:1241.
+func lsfAssayxportHaskellCppReproElifdefCopies(u lsfUnit) *lsfList[string] {
+	return lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0af = 1\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0ag = 2\x0a\x0a\x0a\x0a\x0a\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0ak = 4\x0a\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0a\x0ah = 3\x0a\x0a\x0a\x0a", (*lsfList[string])(nil)))))
+}
+
+// assayxportHaskellCppReproGuardCopies — laws/haskell_cpp.lawspec:1228.
+func lsfAssayxportHaskellCppReproGuardCopies(u lsfUnit) *lsfList[string] {
+	return lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0aa = 1\x0a\x0a\x0a\x0a\x0ac = 3\x0a\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0a\x0a\x0ab = 2\x0a\x0a\x0ac = 3\x0a\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0aa = 1\x0a\x0a\x0a\x0a\x0ac = 3\x0a\x0a", (*lsfList[string])(nil))))
+}
+
+// assayxportHaskellCppReproLost — laws/haskell_cpp.lawspec:1121.
 func lsfAssayxportHaskellCppReproLost(u lsfUnit) *lsfList[*lsfRow] {
 	return lsfAppend(lsfAppend(lsfAppend(lsfAssayxportHaskellCppCodeRows(lsfCons[string]("{-# LANGUAGE CPP #-}", lsfCons[string]("module M where", (*lsfList[string])(nil))), (*lsfList[*lsfLiteral])(nil)), lsfAssayxportHaskellCppUnder("P", lsfSmall(1), lsfCons[string]("a = 1", (*lsfList[string])(nil)), false, (*lsfList[string])(nil))), lsfAssayxportHaskellCppUnder("Q", lsfSmall(1), lsfCons[string]("b = 2", (*lsfList[string])(nil)), false, (*lsfList[string])(nil))), lsfAssayxportHaskellCppCodeRows(lsfCons[string]("c = 3", (*lsfList[string])(nil)), (*lsfList[*lsfLiteral])(nil)))
 }
 
-// assayxportHaskellCppReproTail — laws/haskell_cpp.lawspec:734.
+// assayxportHaskellCppReproTail — laws/haskell_cpp.lawspec:1126.
 func lsfAssayxportHaskellCppReproTail(u lsfUnit) *lsfList[*lsfRow] {
 	return lsfAppend(lsfAppend(lsfAppend(lsfAssayxportHaskellCppCodeRows(lsfCons[string]("{-# LANGUAGE CPP #-}", lsfCons[string]("module M where", lsfCons[string]("import Z (bar)", (*lsfList[string])(nil)))), (*lsfList[*lsfLiteral])(nil)), lsfAssayxportHaskellCppUnder("P", lsfSmall(1), lsfCons[string]("x = 1", (*lsfList[string])(nil)), false, (*lsfList[string])(nil))), lsfAssayxportHaskellCppCodeRows(lsfCons[string]("f :: Int", lsfCons[string]("f = 1", (*lsfList[string])(nil))), (*lsfList[*lsfLiteral])(nil))), lsfAssayxportHaskellCppUnder("Q", lsfSmall(1), lsfCons[string]("  + bar 2", (*lsfList[string])(nil)), true, lsfCons[string]("  + 3", (*lsfList[string])(nil))))
 }
 
-// assayxportHaskellCppRow — laws/haskell_cpp.lawspec:96.
+// assayxportHaskellCppReproUndecided — laws/haskell_cpp.lawspec:1197.
+func lsfAssayxportHaskellCppReproUndecided(u lsfUnit) *lsfList[*lsfRow] {
+	nd := lsfAssayxportHaskellCppTermOf(true, lsfSmall(2), "MIN_VERSION_base")
+	return lsfAppend(lsfAppend(lsfAppend(lsfAppend(lsfAppend(lsfAppend(lsfAppend(lsfAssayxportHaskellCppCodeRows(lsfCons[string]("{-# LANGUAGE CPP #-}", lsfCons[string]("module M where", (*lsfList[string])(nil))), (*lsfList[*lsfLiteral])(nil)), lsfCons[*lsfRow](lsfAssayxportHaskellCppDefiner("#define HAS 1", (*lsfList[*lsfLiteral])(nil), "HAS", &lsfSets_SetsInt{lsfSmall(1)}), (*lsfList[*lsfRow])(nil))), lsfAssayxportHaskellCppOneArm(lsfAssayxportHaskellCppHasAndFoo(lsfUnit{}), "#if HAS && FOO", "HAS", lsfCons[string]("a = 1", (*lsfList[string])(nil)))), lsfCons[*lsfRow](lsfAssayxportHaskellCppDefiner("#define EMPTY", (*lsfList[*lsfLiteral])(nil), "EMPTY", &lsfSets_SetsOther{}), (*lsfList[*lsfRow])(nil))), lsfAssayxportHaskellCppOneGroup((*lsfList[*lsfLiteral])(nil), lsfSmall(0), "EMPTY", lsfCons[string]("b = 2", (*lsfList[string])(nil)), false, (*lsfList[string])(nil))), lsfCons[*lsfRow](lsfAssayxportHaskellCppOpener("#ifndef MIN_VERSION_base", lsfCons[*lsfLiteral](nd, (*lsfList[*lsfLiteral])(nil)), "MIN_VERSION_base"), lsfCons[*lsfRow](lsfAssayxportHaskellCppDefiner("#define MIN_VERSION_base(x,y,z) 1", lsfCons[*lsfLiteral](nd, (*lsfList[*lsfLiteral])(nil)), "MIN_VERSION_base", &lsfSets_SetsOther{}), lsfCons[*lsfRow](lsfAssayxportHaskellCppRow("#endif", lsfCons[*lsfLiteral](lsfAssayxportHaskellCppNegate(nd), (*lsfList[*lsfLiteral])(nil)), true), (*lsfList[*lsfRow])(nil))))), lsfAssayxportHaskellCppOneArm(lsfAssayxportHaskellCppBaseAtLeast48(lsfUnit{}), "#if MIN_VERSION_base(4,8,0)", "MIN_VERSION_base", lsfCons[string]("c = 3", (*lsfList[string])(nil)))), lsfAssayxportHaskellCppCodeRows(lsfCons[string]("d = 4", (*lsfList[string])(nil)), (*lsfList[*lsfLiteral])(nil)))
+}
+
+// assayxportHaskellCppRow — laws/haskell_cpp.lawspec:125.
 func lsfAssayxportHaskellCppRow(text string, terms *lsfList[*lsfLiteral], directive bool) *lsfRow {
 	recordField := (text + "\x0a")
 	recordField_2 := terms
 	recordField_3 := directive
 	recordField_4 := false
 	recordField_5 := ""
-	return &lsfRow{recordField, recordField_2, recordField_3, recordField_4, recordField_5}
+	recordField_6 := &lsfSets_SetsNothing{}
+	return &lsfRow{recordField, recordField_2, recordField_3, recordField_4, recordField_5, recordField_6}
 }
 
-// assayxportHaskellCppSourceOf — laws/haskell_cpp.lawspec:174.
+// assayxportHaskellCppSetKind — laws/haskell_cpp.lawspec:1034.
+func lsfAssayxportHaskellCppSetKind(k lsfInt) lsfSets {
+	if lsfCmpInt(k, lsfSmall(int64(0))) == 0 {
+		return &lsfSets_SetsInt{lsfSmall(1)}
+	} else {
+		if lsfCmpInt(k, lsfSmall(int64(1))) == 0 {
+			return &lsfSets_SetsInt{lsfSmall(0)}
+		} else {
+			if lsfCmpInt(k, lsfSmall(int64(2))) == 0 {
+				return &lsfSets_Unsets{}
+			} else {
+				return &lsfSets_SetsInt{lsfSmall(2)}
+			}
+		}
+	}
+}
+
+// assayxportHaskellCppSetText — laws/haskell_cpp.lawspec:1030.
+func lsfAssayxportHaskellCppSetText(n string, k lsfInt) string {
+	if lsfCmpInt(k, lsfSmall(int64(0))) == 0 {
+		return (("#define " + n) + " 1")
+	} else {
+		if lsfCmpInt(k, lsfSmall(int64(1))) == 0 {
+			return (("#define " + n) + " 0")
+		} else {
+			if lsfCmpInt(k, lsfSmall(int64(2))) == 0 {
+				return ("#undef " + n)
+			} else {
+				return (("#define " + n) + " 2")
+			}
+		}
+	}
+}
+
+// assayxportHaskellCppSeveralIn — laws/haskell_cpp.lawspec:1268.
+func lsfAssayxportHaskellCppSeveralIn(ts *lsfList[string]) bool {
+	it := ts
+	if it == nil {
+		return false
+	} else {
+		selection := it.head
+		selection_2 := it.tail
+		anyItem := selection
+		all := true
+		for cell := selection_2; cell != nil; cell = cell.tail {
+			anyItem_2 := cell.head
+			if !(!(lsfAssayxportHaskellCppDiffersFrom(anyItem, anyItem_2))) {
+				all = false
+				break
+			}
+		}
+		return !(all)
+	}
+}
+
+// assayxportHaskellCppSimulated — laws/haskell_cpp.lawspec:805.
+func lsfAssayxportHaskellCppSimulated(env *lsfEnv, stack *lsfList[*lsfFrame], rs *lsfList[*lsfRow]) string {
+	it := rs
+	if it == nil {
+		return ""
+	} else {
+		selection := it.head
+		selection_2 := it.tail
+		var value bool
+		directive := selection.fDirective
+		value = directive
+		var value_2 *lsfEnv
+		if lsfAssayxportHaskellCppLiveOf(stack) {
+			value_2 = lsfAssayxportHaskellCppTableAfter(env, selection)
+		} else {
+			value_2 = env
+		}
+		return (lsfAssayxportHaskellCppBlankIf((value || !(lsfAssayxportHaskellCppLiveOf(stack))), selection) + lsfAssayxportHaskellCppSimulated(value_2, lsfAssayxportHaskellCppStepped(stack, selection, (lsfAssayxportHaskellCppReachedIn(stack, selection) && lsfAssayxportHaskellCppOwnHolds(env, selection))), selection_2))
+	}
+}
+
+// assayxportHaskellCppSourceOf — laws/haskell_cpp.lawspec:208.
 func lsfAssayxportHaskellCppSourceOf(rs *lsfList[*lsfRow]) string {
 	it := rs
 	if it == nil {
@@ -7675,17 +9520,133 @@ func lsfAssayxportHaskellCppSourceOf(rs *lsfList[*lsfRow]) string {
 	}
 }
 
-// assayxportHaskellCppTangleForm — laws/haskell_cpp.lawspec:566.
+// assayxportHaskellCppSpecial — laws/haskell_cpp.lawspec:349.
+func lsfAssayxportHaskellCppSpecial(n string) bool {
+	return ((strings.HasPrefix(n, "MIN_VERSION_") || strings.HasPrefix(n, "VERSION_")) || strings.HasPrefix(n, "__GLASGOW_HASKELL"))
+}
+
+// assayxportHaskellCppStartWalk — laws/haskell_cpp.lawspec:264.
+func lsfAssayxportHaskellCppStartWalk(u lsfUnit) *lsfWalk {
+	recordField := (*lsfList[*lsfFrame])(nil)
+	recordField_2 := lsfKeyValOf((*lsfList[*lsfEntry[string, lsfSets]])(nil), lsfCompareText)
+	return &lsfWalk{recordField, recordField_2}
+}
+
+// assayxportHaskellCppStepped — laws/haskell_cpp.lawspec:286.
+func lsfAssayxportHaskellCppStepped(stack *lsfList[*lsfFrame], r *lsfRow, v bool) *lsfList[*lsfFrame] {
+	if lsfAssayxportHaskellCppIsIf(r) {
+		var value *lsfFrame
+		recordField := (lsfAssayxportHaskellCppLiveOf(stack) && v)
+		recordField_2 := (!(lsfAssayxportHaskellCppLiveOf(stack)) || v)
+		value = &lsfFrame{recordField, recordField_2}
+		return lsfAppend(lsfCons[*lsfFrame](value, (*lsfList[*lsfFrame])(nil)), stack)
+	} else {
+		if lsfAssayxportHaskellCppIsElif(r) {
+			it := stack
+			if it == nil {
+				return (*lsfList[*lsfFrame])(nil)
+			} else {
+				selection := it.head
+				selection_2 := it.tail
+				var value_2 *lsfFrame
+				var value_3 bool
+				done := selection.fDone
+				value_3 = done
+				recordField_3 := (!(value_3) && v)
+				var value_4 bool
+				done_2 := selection.fDone
+				value_4 = done_2
+				recordField_4 := (value_4 || v)
+				value_2 = &lsfFrame{recordField_3, recordField_4}
+				return lsfAppend(lsfCons[*lsfFrame](value_2, (*lsfList[*lsfFrame])(nil)), selection_2)
+			}
+		} else {
+			if lsfAssayxportHaskellCppIsElse(r) {
+				it_2 := stack
+				if it_2 == nil {
+					return (*lsfList[*lsfFrame])(nil)
+				} else {
+					selection_3 := it_2.head
+					selection_4 := it_2.tail
+					var value_5 *lsfFrame
+					var value_6 bool
+					done_3 := selection_3.fDone
+					value_6 = done_3
+					recordField_5 := !(value_6)
+					recordField_6 := true
+					value_5 = &lsfFrame{recordField_5, recordField_6}
+					return lsfAppend(lsfCons[*lsfFrame](value_5, (*lsfList[*lsfFrame])(nil)), selection_4)
+				}
+			} else {
+				if lsfAssayxportHaskellCppIsEndif(r) {
+					return lsfSliceList(stack, int64(1), lsfIndex(lsfSmall(9223372036854775807)))
+				} else {
+					return stack
+				}
+			}
+		}
+	}
+}
+
+// assayxportHaskellCppTableAfter — laws/haskell_cpp.lawspec:792.
+func lsfAssayxportHaskellCppTableAfter(env *lsfEnv, r *lsfRow) *lsfEnv {
+	var value lsfSets
+	sets := r.fSets
+	value = sets
+	it := value
+	switch variant := it.(type) {
+	case *lsfSets_SetsNothing:
+		return env
+	case *lsfSets_SetsInt:
+		selection := variant.fValue
+		var value_2 string
+		name := r.fName
+		value_2 = name
+		var value_3 *lsfMap[string, lsfBinding]
+		names := env.fNames
+		value_3 = names
+		replacement := lsfPut(value_3, value_2, lsfAssayxportConditionsPolicyDefinedAs(selection), lsfCompareText)
+		versions := env.fVersions
+		complete := env.fComplete
+		return &lsfEnv{replacement, versions, complete}
+	case *lsfSets_SetsOther:
+		var value_4 string
+		name_2 := r.fName
+		value_4 = name_2
+		var value_5 *lsfMap[string, lsfBinding]
+		names_2 := env.fNames
+		value_5 = names_2
+		replacement_2 := lsfPut(value_5, value_4, lsfAssayxportConditionsPolicyDefinedAs(lsfSmall(1)), lsfCompareText)
+		versions_2 := env.fVersions
+		complete_2 := env.fComplete
+		return &lsfEnv{replacement_2, versions_2, complete_2}
+	case *lsfSets_Unsets:
+		var value_6 string
+		name_3 := r.fName
+		value_6 = name_3
+		var value_7 *lsfMap[string, lsfBinding]
+		names_3 := env.fNames
+		value_7 = names_3
+		replacement_3 := lsfPut(value_7, value_6, lsfAssayxportConditionsPolicyNotDefined(lsfUnit{}), lsfCompareText)
+		versions_3 := env.fVersions
+		complete_3 := env.fComplete
+		return &lsfEnv{replacement_3, versions_3, complete_3}
+	default:
+		panic("unreachable branch reached")
+	}
+}
+
+// assayxportHaskellCppTangleForm — laws/haskell_cpp.lawspec:925.
 func lsfAssayxportHaskellCppTangleForm(seed_ lsfInt, k lsfInt) lsfInt {
 	return lsfAssayxportHaskellCppPoolForm(lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(int64(500)).Add(k), lsfSmall(4)))
 }
 
-// assayxportHaskellCppTangleName — laws/haskell_cpp.lawspec:567.
+// assayxportHaskellCppTangleName — laws/haskell_cpp.lawspec:926.
 func lsfAssayxportHaskellCppTangleName(seed_ lsfInt, k lsfInt) string {
 	return lsfAssayxportHaskellCppPoolName(lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(int64(520)).Add(k), lsfSmall(3)))
 }
 
-// assayxportHaskellCppTermHolds — laws/haskell_cpp.lawspec:442.
+// assayxportHaskellCppTermHolds — laws/haskell_cpp.lawspec:762.
 func lsfAssayxportHaskellCppTermHolds(env *lsfEnv, t_ *lsfLiteral) bool {
 	var value lsfCExpr
 	expr := t_.fExpr
@@ -7707,58 +9668,183 @@ func lsfAssayxportHaskellCppTermHolds(env *lsfEnv, t_ *lsfLiteral) bool {
 	}
 }
 
-// assayxportHaskellCppTermOf — laws/haskell_cpp.lawspec:77.
+// assayxportHaskellCppTermOf — laws/haskell_cpp.lawspec:104.
 func lsfAssayxportHaskellCppTermOf(first bool, form lsfInt, n string) *lsfLiteral {
-	if lsfCmpInt(form, lsfSmall(int64(1))) == 0 {
+	if lsfCmpInt(form, lsfSmall(int64(5))) == 0 {
 		recordField := false
 		recordField_2 := (("defined(" + n) + ")")
 		recordField_3 := &lsfCExpr_IsDefined{n}
 		return &lsfLiteral{recordField, recordField_2, recordField_3}
 	} else {
-		if lsfCmpInt(form, lsfSmall(int64(2))) == 0 {
-			if first {
-				recordField_4 := true
-				recordField_5 := (("defined(" + n) + ")")
-				recordField_6 := &lsfCExpr_IsDefined{n}
-				return &lsfLiteral{recordField_4, recordField_5, recordField_6}
-			} else {
-				recordField_7 := false
-				recordField_8 := (("!defined(" + n) + ")")
-				var value *lsfUnDetails
-				op := lsfUnOp_UNot
-				arg := &lsfCExpr_IsDefined{n}
-				value = &lsfUnDetails{arg, op}
-				recordField_9 := &lsfCExpr_Un{value}
-				return &lsfLiteral{recordField_7, recordField_8, recordField_9}
-			}
+		if lsfCmpInt(form, lsfSmall(int64(6))) == 0 {
+			recordField_4 := true
+			recordField_5 := (("defined(" + n) + ")")
+			recordField_6 := &lsfCExpr_IsDefined{n}
+			return &lsfLiteral{recordField_4, recordField_5, recordField_6}
 		} else {
-			if lsfCmpInt(form, lsfSmall(int64(3))) == 0 {
-				recordField_10 := false
-				recordField_11 := (((("defined(" + n) + ") && ") + n) + " >= 2")
-				recordField_12 := lsfAssayxportHaskellCppDefinedAnd(n)
-				return &lsfLiteral{recordField_10, recordField_11, recordField_12}
+			if lsfCmpInt(form, lsfSmall(int64(1))) == 0 {
+				recordField_7 := false
+				recordField_8 := (("defined(" + n) + ")")
+				recordField_9 := &lsfCExpr_IsDefined{n}
+				return &lsfLiteral{recordField_7, recordField_8, recordField_9}
 			} else {
-				recordField_13 := false
-				recordField_14 := n
-				recordField_15 := &lsfCExpr_Name{n}
-				return &lsfLiteral{recordField_13, recordField_14, recordField_15}
+				if lsfCmpInt(form, lsfSmall(int64(2))) == 0 {
+					if first {
+						recordField_10 := true
+						recordField_11 := (("defined(" + n) + ")")
+						recordField_12 := &lsfCExpr_IsDefined{n}
+						return &lsfLiteral{recordField_10, recordField_11, recordField_12}
+					} else {
+						recordField_13 := false
+						recordField_14 := (("!defined(" + n) + ")")
+						var value *lsfUnDetails
+						op := lsfUnOp_UNot
+						arg := &lsfCExpr_IsDefined{n}
+						value = &lsfUnDetails{arg, op}
+						recordField_15 := &lsfCExpr_Un{value}
+						return &lsfLiteral{recordField_13, recordField_14, recordField_15}
+					}
+				} else {
+					if lsfCmpInt(form, lsfSmall(int64(3))) == 0 {
+						recordField_16 := false
+						recordField_17 := (((("defined(" + n) + ") && ") + n) + " >= 2")
+						recordField_18 := lsfAssayxportHaskellCppDefinedAnd(n)
+						return &lsfLiteral{recordField_16, recordField_17, recordField_18}
+					} else {
+						recordField_19 := false
+						recordField_20 := n
+						recordField_21 := &lsfCExpr_Name{n}
+						return &lsfLiteral{recordField_19, recordField_20, recordField_21}
+					}
+				}
 			}
 		}
 	}
 }
 
-// assayxportHaskellCppUnder — laws/haskell_cpp.lawspec:711.
+// assayxportHaskellCppTruthAt — laws/haskell_cpp.lawspec:422.
+func lsfAssayxportHaskellCppTruthAt(w *lsfWalk, asg *lsfMap[string, lsfInt], r *lsfRow, line lsfInt) bool {
+	it := lsfAssayxportHaskellCppReadingAt(w, r, line)
+	switch variant := it.(type) {
+	case *lsfReading_NotRead:
+		return false
+	case *lsfReading_ByFile:
+		selection := variant.fValue
+		return selection
+	case *lsfReading_ByTerm:
+		selection_2 := variant.fValue
+		return lsfAssayxportHaskellCppLitTrue(asg, selection_2)
+	default:
+		panic("unreachable branch reached")
+	}
+}
+
+// assayxportHaskellCppTwoPathsOf — laws/haskell_cpp.lawspec:1274.
+func lsfAssayxportHaskellCppTwoPathsOf(rs *lsfList[*lsfRow], t_ string) bool {
+	return lsfAssayxportHaskellCppSeveralIn(lsfAssayxportHaskellCppPathTexts(rs, t_))
+}
+
+// assayxportHaskellCppUnder — laws/haskell_cpp.lawspec:1103.
 func lsfAssayxportHaskellCppUnder(n string, form lsfInt, yes *lsfList[string], hasElse bool, no *lsfList[string]) *lsfList[*lsfRow] {
 	own := lsfAssayxportHaskellCppTermOf(true, lsfSmall(0), n)
 	return lsfAppend(lsfAppend(lsfCons[*lsfRow](lsfAssayxportHaskellCppOpener(("#if " + n), lsfCons[*lsfLiteral](own, (*lsfList[*lsfLiteral])(nil)), n), (*lsfList[*lsfRow])(nil)), lsfAssayxportHaskellCppOneGroup(lsfCons[*lsfLiteral](own, (*lsfList[*lsfLiteral])(nil)), form, "B", yes, hasElse, no)), lsfCons[*lsfRow](lsfAssayxportHaskellCppRow("#endif", lsfCons[*lsfLiteral](lsfAssayxportHaskellCppNegate(own), (*lsfList[*lsfLiteral])(nil)), true), (*lsfList[*lsfRow])(nil)))
 }
 
-// assayxportHaskellCppWeave — laws/haskell_cpp.lawspec:702.
+// assayxportHaskellCppValueNames — laws/haskell_cpp.lawspec:331.
+func lsfAssayxportHaskellCppValueNames(e lsfCExpr) *lsfList[string] {
+	for {
+		it := e
+		switch variant := it.(type) {
+		case *lsfCExpr_Lit:
+			return (*lsfList[string])(nil)
+		case *lsfCExpr_ULit:
+			return (*lsfList[string])(nil)
+		case *lsfCExpr_Name:
+			selection := variant.fValue
+			return lsfCons[string](selection, (*lsfList[string])(nil))
+		case *lsfCExpr_IsDefined:
+			return (*lsfList[string])(nil)
+		case *lsfCExpr_Un:
+			selection_2 := variant.fValue
+			var value lsfCExpr
+			arg := selection_2.fArg
+			value = arg
+			next := value
+			e = next
+			continue
+		case *lsfCExpr_Bin:
+			selection_3 := variant.fValue
+			var value_2 lsfCExpr
+			left := selection_3.fLeft
+			value_2 = left
+			var value_3 lsfCExpr
+			right := selection_3.fRight
+			value_3 = right
+			return lsfAppend(lsfAssayxportHaskellCppValueNames(value_2), lsfAssayxportHaskellCppValueNames(value_3))
+		case *lsfCExpr_Cond:
+			selection_4 := variant.fValue
+			var value_4 lsfCExpr
+			test := selection_4.fTest
+			value_4 = test
+			var value_5 lsfCExpr
+			yes := selection_4.fYes
+			value_5 = yes
+			var value_6 lsfCExpr
+			no := selection_4.fNo
+			value_6 = no
+			return lsfAppend(lsfAppend(lsfAssayxportHaskellCppValueNames(value_4), lsfAssayxportHaskellCppValueNames(value_5)), lsfAssayxportHaskellCppValueNames(value_6))
+		case *lsfCExpr_MinVersion:
+			selection_5 := variant.fValue
+			var value_7 string
+			pkg := selection_5.fPkg
+			value_7 = pkg
+			var value_8 lsfCExpr
+			major1 := selection_5.fMajor1
+			value_8 = major1
+			var value_9 lsfCExpr
+			major2 := selection_5.fMajor2
+			value_9 = major2
+			var value_10 lsfCExpr
+			minor := selection_5.fMinor
+			value_10 = minor
+			return lsfAppend(lsfAppend(lsfAppend(lsfCons[string](("MIN_VERSION_" + value_7), (*lsfList[string])(nil)), lsfAssayxportHaskellCppValueNames(value_8)), lsfAssayxportHaskellCppValueNames(value_9)), lsfAssayxportHaskellCppValueNames(value_10))
+		case *lsfCExpr_MinGhc:
+			selection_6 := variant.fValue
+			var value_11 lsfCExpr
+			major1_2 := selection_6.fMajor1
+			value_11 = major1_2
+			var value_12 lsfCExpr
+			major2_2 := selection_6.fMajor2
+			value_12 = major2_2
+			var value_13 lsfCExpr
+			patch1 := selection_6.fPatch1
+			value_13 = patch1
+			var value_14 lsfCExpr
+			patch2 := selection_6.fPatch2
+			value_14 = patch2
+			return lsfAppend(lsfAppend(lsfAppend(lsfAppend(lsfCons[string]("MIN_VERSION_GLASGOW_HASKELL", lsfCons[string]("__GLASGOW_HASKELL__", lsfCons[string]("__GLASGOW_HASKELL_PATCHLEVEL1__", lsfCons[string]("__GLASGOW_HASKELL_PATCHLEVEL2__", (*lsfList[string])(nil))))), lsfAssayxportHaskellCppValueNames(value_11)), lsfAssayxportHaskellCppValueNames(value_12)), lsfAssayxportHaskellCppValueNames(value_13)), lsfAssayxportHaskellCppValueNames(value_14))
+		default:
+			panic("unreachable branch reached")
+		}
+	}
+}
+
+// assayxportHaskellCppValued — laws/haskell_cpp.lawspec:413.
+func lsfAssayxportHaskellCppValued(asg *lsfMap[string, lsfInt], t_ string) bool {
+	it := lsfLookup(asg, t_, lsfCompareText)
+	if it.ok {
+		return true
+	} else {
+		return false
+	}
+}
+
+// assayxportHaskellCppWeave — laws/haskell_cpp.lawspec:1094.
 func lsfAssayxportHaskellCppWeave(seed_ lsfInt) *lsfList[*lsfRow] {
 	return lsfAppend(lsfAppend(lsfAppend(lsfAppend(lsfAppend(lsfAppend(lsfAssayxportHaskellCppCodeRows(lsfCons[string]("{-# LANGUAGE CPP #-}", lsfCons[string]("module M where", (*lsfList[string])(nil))), (*lsfList[*lsfLiteral])(nil)), lsfAssayxportHaskellCppImportRows(seed_, lsfSmall(1))), lsfAssayxportHaskellCppCodeRows(lsfCons[string]("import Z (bar)", lsfCons[string]("v0 x = x", (*lsfList[string])(nil))), (*lsfList[*lsfLiteral])(nil))), lsfAssayxportHaskellCppWeaveSection(seed_, lsfSmall(1))), lsfAssayxportHaskellCppWeaveSection(seed_, lsfSmall(2))), lsfAssayxportHaskellCppWeaveSection(seed_, lsfSmall(3))), lsfAssayxportHaskellCppCodeRows(lsfCons[string]("z = bar 0", (*lsfList[string])(nil)), (*lsfList[*lsfLiteral])(nil)))
 }
 
-// assayxportHaskellCppWeaveArms — laws/haskell_cpp.lawspec:676.
+// assayxportHaskellCppWeaveArms — laws/haskell_cpp.lawspec:1066.
 func lsfAssayxportHaskellCppWeaveArms(seed_ lsfInt, group lsfInt, outer *lsfList[*lsfLiteral], before *lsfList[*lsfLiteral], k lsfInt, left lsfInt, depth lsfInt, tail bool, fuel lsfInt) *lsfList[*lsfRow] {
 	if lsfCmpInt(fuel, lsfSmall(int64(0))) <= 0 {
 		return lsfCons[*lsfRow](lsfAssayxportHaskellCppRow("#endif", outer, true), (*lsfList[*lsfRow])(nil))
@@ -7787,26 +9873,44 @@ func lsfAssayxportHaskellCppWeaveArms(seed_ lsfInt, group lsfInt, outer *lsfList
 			} else {
 				value_2 = (*lsfList[*lsfRow])(nil)
 			}
-			return lsfAppend(lsfAppend(lsfAppend(lsfCons[*lsfRow](lsfAssayxportHaskellCppOpener(lsfAssayxportHaskellCppDirectiveOf((lsfCmpInt(k, lsfSmall(int64(0))) == 0), form, n), path, n), (*lsfList[*lsfRow])(nil)), value), value_2), lsfAssayxportHaskellCppWeaveArms(seed_, group, outer, lsfAppend(before, lsfCons[*lsfLiteral](lsfAssayxportHaskellCppNegate(own), (*lsfList[*lsfLiteral])(nil))), k.Add(lsfSmall(int64(1))), left.Sub(lsfSmall(int64(1))), depth, tail, fuel.Sub(lsfSmall(int64(1)))))
+			return lsfAppend(lsfAppend(lsfAppend(lsfAppend(lsfCons[*lsfRow](lsfAssayxportHaskellCppOpener(lsfAssayxportHaskellCppDirectiveOf((lsfCmpInt(k, lsfSmall(int64(0))) == 0), form, n), path, n), (*lsfList[*lsfRow])(nil)), lsfAssayxportHaskellCppWeaveSets(seed_, place, lsfSmall(3), path)), value), value_2), lsfAssayxportHaskellCppWeaveArms(seed_, group, outer, lsfAppend(before, lsfCons[*lsfLiteral](lsfAssayxportHaskellCppNegate(own), (*lsfList[*lsfLiteral])(nil))), k.Add(lsfSmall(int64(1))), left.Sub(lsfSmall(int64(1))), depth, tail, fuel.Sub(lsfSmall(int64(1)))))
 		}
 	}
 }
 
-// assayxportHaskellCppWeaveForm — laws/haskell_cpp.lawspec:661.
+// assayxportHaskellCppWeaveForm — laws/haskell_cpp.lawspec:1049.
 func lsfAssayxportHaskellCppWeaveForm(seed_ lsfInt, place lsfInt, first bool) lsfInt {
 	if first {
 		return lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(int64(1700)).Add(place), lsfSmall(3))
 	} else {
-		return lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(int64(1700)).Add(place), lsfSmall(2))
+		if lsfAssayxportHaskellCppWeaveNew(seed_) {
+			k := lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(int64(1700)).Add(place), lsfSmall(4))
+			if lsfCmpInt(k, lsfSmall(int64(2))) == 0 {
+				return lsfSmall(5)
+			} else {
+				if lsfCmpInt(k, lsfSmall(int64(3))) == 0 {
+					return lsfSmall(6)
+				} else {
+					return k
+				}
+			}
+		} else {
+			return lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(int64(1700)).Add(place), lsfSmall(2))
+		}
 	}
 }
 
-// assayxportHaskellCppWeaveName — laws/haskell_cpp.lawspec:657.
+// assayxportHaskellCppWeaveName — laws/haskell_cpp.lawspec:1045.
 func lsfAssayxportHaskellCppWeaveName(seed_ lsfInt, place lsfInt) string {
 	return lsfAssayxportHaskellCppPoolName(lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(int64(700)).Add(place), lsfSmall(3)))
 }
 
-// assayxportHaskellCppWeaveSection — laws/haskell_cpp.lawspec:694.
+// assayxportHaskellCppWeaveNew — laws/haskell_cpp.lawspec:1028.
+func lsfAssayxportHaskellCppWeaveNew(seed_ lsfInt) bool {
+	return (lsfCmpInt(lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(9700), lsfSmall(2)), lsfSmall(int64(1))) == 0)
+}
+
+// assayxportHaskellCppWeaveSection — laws/haskell_cpp.lawspec:1085.
 func lsfAssayxportHaskellCppWeaveSection(seed_ lsfInt, i lsfInt) *lsfList[*lsfRow] {
 	tail := (lsfCmpInt(lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(int64(7700)).Add(i), lsfSmall(2)), lsfSmall(int64(0))) == 0)
 	n := lsfTextOfInt(i)
@@ -7816,10 +9920,19 @@ func lsfAssayxportHaskellCppWeaveSection(seed_ lsfInt, i lsfInt) *lsfList[*lsfRo
 	} else {
 		value = (*lsfList[*lsfRow])(nil)
 	}
-	return lsfAppend(value, lsfAssayxportHaskellCppWeaveArms(seed_, i, (*lsfList[*lsfLiteral])(nil), (*lsfList[*lsfLiteral])(nil), lsfSmall(0), lsfSmall(int64(1)).Add(lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(int64(8700)).Add(i), lsfSmall(3))), lsfSmall(2), tail, lsfSmall(16)))
+	return lsfAppend(lsfAppend(lsfAssayxportHaskellCppWeaveSets(seed_, lsfSmall(int64(9000)).Add(i), lsfSmall(4), (*lsfList[*lsfLiteral])(nil)), value), lsfAssayxportHaskellCppWeaveArms(seed_, i, (*lsfList[*lsfLiteral])(nil), (*lsfList[*lsfLiteral])(nil), lsfSmall(0), lsfSmall(int64(1)).Add(lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(int64(8700)).Add(i), lsfSmall(3))), lsfSmall(2), tail, lsfSmall(16)))
 }
 
-// assayxportHaskellCppWideRows — laws/haskell_cpp.lawspec:904.
+// assayxportHaskellCppWeaveSets — laws/haskell_cpp.lawspec:1039.
+func lsfAssayxportHaskellCppWeaveSets(seed_ lsfInt, place lsfInt, odds lsfInt, path *lsfList[*lsfLiteral]) *lsfList[*lsfRow] {
+	if lsfAssayxportHaskellCppWeaveNew(seed_) && (lsfCmpInt(lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(int64(10700)).Add(place), odds), lsfSmall(int64(0))) == 0) {
+		return lsfCons[*lsfRow](lsfAssayxportHaskellCppDefiner(lsfAssayxportHaskellCppSetText(lsfAssayxportHaskellCppPoolName(lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(int64(11700)).Add(place), lsfSmall(3))), lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(int64(12700)).Add(place), lsfSmall(4))), path, lsfAssayxportHaskellCppPoolName(lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(int64(11700)).Add(place), lsfSmall(3))), lsfAssayxportHaskellCppSetKind(lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(int64(12700)).Add(place), lsfSmall(4)))), (*lsfList[*lsfRow])(nil))
+	} else {
+		return (*lsfList[*lsfRow])(nil)
+	}
+}
+
+// assayxportHaskellCppWideRows — laws/haskell_cpp.lawspec:1561.
 func lsfAssayxportHaskellCppWideRows(n lsfInt) *lsfList[*lsfRow] {
 	if lsfCmpInt(n, lsfSmall(int64(0))) <= 0 {
 		return lsfAssayxportHaskellCppCodeRows(lsfCons[string]("module W where", (*lsfList[string])(nil)), (*lsfList[*lsfLiteral])(nil))
@@ -7984,6 +10097,11 @@ func lsfAssayxportHaskellExtractPositionsOrdered(s *lsfSyntax) bool {
 		logic_3 = false
 	}
 	return logic_3
+}
+
+// assayxportHaskellExtractSkippedPath — laws/haskell_extract.lawspec:2247.
+func lsfAssayxportHaskellExtractSkippedPath(p string) bool {
+	return ((((((strings.HasPrefix(p, ".") && strings.Contains(p, "/")) || strings.Contains(p, "/.")) || strings.HasPrefix(p, "dist-newstyle/")) || strings.HasPrefix(p, "dist/")) || strings.Contains(p, "/dist-newstyle/")) || strings.Contains(p, "/dist/"))
 }
 
 // assayxportHaskellPolicyAfterDoc — laws/haskell_policy.lawspec:627.
@@ -15022,6 +17140,208 @@ func lsfAssayxportHaskellPolicyWithVisibility(exported lsfMaybe[*lsfList[string]
 	}
 }
 
+// keyValFromItems — <lawspec.collections>:281.
+func lsfLawspecCollectionsKeyValFromItemsListEntryTextSetsListEntryTextSets(es *lsfList[*lsfEntry[string, lsfSets]], acc *lsfList[*lsfEntry[string, lsfSets]]) *lsfList[*lsfEntry[string, lsfSets]] {
+	for {
+		it := es
+		if it == nil {
+			return acc
+		} else {
+			selection := it.head
+			selection_2 := it.tail
+			it_2 := selection
+			matchSelection := it_2.fKey
+			matchSelection_2 := it_2.fValue
+			next := selection_2
+			next_2 := lsfLawspecCollectionsKeyValPutItemsTextSetsListEntryTextSets(matchSelection, matchSelection_2, acc)
+			es = next
+			acc = next_2
+			continue
+		}
+	}
+}
+
+// keyValFromItems — <lawspec.collections>:281.
+func lsfLawspecCollectionsKeyValFromItemsListEntryTextIntegerListEntryTextInteger(es *lsfList[*lsfEntry[string, lsfInt]], acc *lsfList[*lsfEntry[string, lsfInt]]) *lsfList[*lsfEntry[string, lsfInt]] {
+	for {
+		it := es
+		if it == nil {
+			return acc
+		} else {
+			selection := it.head
+			selection_2 := it.tail
+			it_2 := selection
+			matchSelection := it_2.fKey
+			matchSelection_2 := it_2.fValue
+			next := selection_2
+			next_2 := lsfLawspecCollectionsKeyValPutItemsTextIntegerListEntryTextInteger(matchSelection, matchSelection_2, acc)
+			es = next
+			acc = next_2
+			continue
+		}
+	}
+}
+
+// keyValLookupItems — <lawspec.collections>:268.
+func lsfLawspecCollectionsKeyValLookupItemsTextListEntryTextSets(k string, es *lsfList[*lsfEntry[string, lsfSets]]) lsfMaybe[lsfSets] {
+	for {
+		it := es
+		if it == nil {
+			return lsfAbsent[lsfSets]()
+		} else {
+			selection := it.head
+			selection_2 := it.tail
+			it_2 := selection
+			matchSelection := it_2.fKey
+			matchSelection_2 := it_2.fValue
+			it_3 := lsfOrderingOf(lsfCompareText(k, matchSelection))
+			switch it_3 {
+			case lsfOrdering_Less:
+				return lsfAbsent[lsfSets]()
+			case lsfOrdering_Equal:
+				return lsfPresent[lsfSets](matchSelection_2)
+			case lsfOrdering_Greater:
+				next := selection_2
+				es = next
+				continue
+			default:
+				panic("unreachable branch reached")
+			}
+		}
+	}
+}
+
+// keyValLookupItems — <lawspec.collections>:268.
+func lsfLawspecCollectionsKeyValLookupItemsTextListEntryTextInteger(k string, es *lsfList[*lsfEntry[string, lsfInt]]) lsfMaybe[lsfInt] {
+	for {
+		it := es
+		if it == nil {
+			return lsfAbsent[lsfInt]()
+		} else {
+			selection := it.head
+			selection_2 := it.tail
+			it_2 := selection
+			matchSelection := it_2.fKey
+			matchSelection_2 := it_2.fValue
+			it_3 := lsfOrderingOf(lsfCompareText(k, matchSelection))
+			switch it_3 {
+			case lsfOrdering_Less:
+				return lsfAbsent[lsfInt]()
+			case lsfOrdering_Equal:
+				return lsfPresent[lsfInt](matchSelection_2)
+			case lsfOrdering_Greater:
+				next := selection_2
+				es = next
+				continue
+			default:
+				panic("unreachable branch reached")
+			}
+		}
+	}
+}
+
+// keyValLookup — <lawspec.collections>:308.
+func lsfLawspecCollectionsKeyValLookupTextKeyValTextSets(k string, m_ *lsfMap[string, lsfSets]) lsfMaybe[lsfSets] {
+	return lsfLookup(m_, k, lsfCompareText)
+}
+
+// keyValLookup — <lawspec.collections>:308.
+func lsfLawspecCollectionsKeyValLookupTextKeyValTextInteger(k string, m_ *lsfMap[string, lsfInt]) lsfMaybe[lsfInt] {
+	return lsfLookup(m_, k, lsfCompareText)
+}
+
+// keyValOf — <lawspec.collections>:304.
+func lsfLawspecCollectionsKeyValOfListEntryTextSets(es *lsfList[*lsfEntry[string, lsfSets]]) *lsfMap[string, lsfSets] {
+	return lsfKeyValOf(es, lsfCompareText)
+}
+
+// keyValOf — <lawspec.collections>:304.
+func lsfLawspecCollectionsKeyValOfListEntryTextInteger(es *lsfList[*lsfEntry[string, lsfInt]]) *lsfMap[string, lsfInt] {
+	return lsfKeyValOf(es, lsfCompareText)
+}
+
+// keyValPutItems — <lawspec.collections>:242.
+func lsfLawspecCollectionsKeyValPutItemsTextIntegerListEntryTextInteger(k string, v lsfInt, es *lsfList[*lsfEntry[string, lsfInt]]) *lsfList[*lsfEntry[string, lsfInt]] {
+	it := es
+	if it == nil {
+		var value *lsfEntry[string, lsfInt]
+		recordField := k
+		recordField_2 := v
+		value = &lsfEntry[string, lsfInt]{recordField, recordField_2}
+		return lsfCons[*lsfEntry[string, lsfInt]](value, (*lsfList[*lsfEntry[string, lsfInt]])(nil))
+	} else {
+		selection := it.head
+		selection_2 := it.tail
+		it_2 := selection
+		matchSelection := it_2.fKey
+		it_3 := lsfOrderingOf(lsfCompareText(k, matchSelection))
+		switch it_3 {
+		case lsfOrdering_Less:
+			var value_2 *lsfEntry[string, lsfInt]
+			recordField_3 := k
+			recordField_4 := v
+			value_2 = &lsfEntry[string, lsfInt]{recordField_3, recordField_4}
+			return lsfCons[*lsfEntry[string, lsfInt]](value_2, es)
+		case lsfOrdering_Equal:
+			var value_3 *lsfEntry[string, lsfInt]
+			recordField_5 := k
+			recordField_6 := v
+			value_3 = &lsfEntry[string, lsfInt]{recordField_5, recordField_6}
+			return lsfCons[*lsfEntry[string, lsfInt]](value_3, selection_2)
+		case lsfOrdering_Greater:
+			return lsfCons[*lsfEntry[string, lsfInt]](selection, lsfLawspecCollectionsKeyValPutItemsTextIntegerListEntryTextInteger(k, v, selection_2))
+		default:
+			panic("unreachable branch reached")
+		}
+	}
+}
+
+// keyValPutItems — <lawspec.collections>:242.
+func lsfLawspecCollectionsKeyValPutItemsTextSetsListEntryTextSets(k string, v lsfSets, es *lsfList[*lsfEntry[string, lsfSets]]) *lsfList[*lsfEntry[string, lsfSets]] {
+	it := es
+	if it == nil {
+		var value *lsfEntry[string, lsfSets]
+		recordField := k
+		recordField_2 := v
+		value = &lsfEntry[string, lsfSets]{recordField, recordField_2}
+		return lsfCons[*lsfEntry[string, lsfSets]](value, (*lsfList[*lsfEntry[string, lsfSets]])(nil))
+	} else {
+		selection := it.head
+		selection_2 := it.tail
+		it_2 := selection
+		matchSelection := it_2.fKey
+		it_3 := lsfOrderingOf(lsfCompareText(k, matchSelection))
+		switch it_3 {
+		case lsfOrdering_Less:
+			var value_2 *lsfEntry[string, lsfSets]
+			recordField_3 := k
+			recordField_4 := v
+			value_2 = &lsfEntry[string, lsfSets]{recordField_3, recordField_4}
+			return lsfCons[*lsfEntry[string, lsfSets]](value_2, es)
+		case lsfOrdering_Equal:
+			var value_3 *lsfEntry[string, lsfSets]
+			recordField_5 := k
+			recordField_6 := v
+			value_3 = &lsfEntry[string, lsfSets]{recordField_5, recordField_6}
+			return lsfCons[*lsfEntry[string, lsfSets]](value_3, selection_2)
+		case lsfOrdering_Greater:
+			return lsfCons[*lsfEntry[string, lsfSets]](selection, lsfLawspecCollectionsKeyValPutItemsTextSetsListEntryTextSets(k, v, selection_2))
+		default:
+			panic("unreachable branch reached")
+		}
+	}
+}
+
+// keyValPut — <lawspec.collections>:312.
+func lsfLawspecCollectionsKeyValPutTextSetsKeyValTextSets(k string, v lsfSets, m_ *lsfMap[string, lsfSets]) *lsfMap[string, lsfSets] {
+	return lsfPut(m_, k, v, lsfCompareText)
+}
+
+// keyValPut — <lawspec.collections>:312.
+func lsfLawspecCollectionsKeyValPutTextIntegerKeyValTextInteger(k string, v lsfInt, m_ *lsfMap[string, lsfInt]) *lsfMap[string, lsfInt] {
+	return lsfPut(m_, k, v, lsfCompareText)
+}
+
 // lawspecMatchersMatchersContainsAll — <lawspec.matchers>:36.
 func lsfLawspecMatchersMatchersContainsAllListTextListText(xs *lsfList[string], ys *lsfList[string]) bool {
 	for {
@@ -15062,17 +17382,17 @@ func lsfLawspecMatchersMatchersHasListTextText(xs *lsfList[string], x string) bo
 	}
 }
 
-// reproSource — laws/haskell.lawspec:553.
+// reproSource — laws/haskell.lawspec:593.
 func lsfReproSource(u lsfUnit) string {
 	return "{-# LANGUAGE CPP #-}\x0amodule M (f) where\x0a#if A\x0aimport X (foo)\x0a#else\x0aimport Y (foo)\x0a#endif\x0a\x0af :: Int\x0af = foo 1\x0a#if B\x0a  + 1\x0a#else\x0a  + 2\x0a#endif\x0a"
 }
 
-// allArms — laws/haskell_cpp.lawspec:189.
+// allArms — laws/haskell_cpp.lawspec:223.
 func lsfAllArms(ss *lsfList[lsfSection]) string {
 	return lsfAllArmsText(lsfRowsOf(ss))
 }
 
-// allArmsText — laws/haskell_cpp.lawspec:185.
+// allArmsText — laws/haskell_cpp.lawspec:219.
 func lsfAllArmsText(rs *lsfList[*lsfRow]) string {
 	it := rs
 	if it == nil {
@@ -15087,21 +17407,7 @@ func lsfAllArmsText(rs *lsfList[*lsfRow]) string {
 	}
 }
 
-// allHold — laws/haskell_cpp.lawspec:217.
-func lsfAllHold(asg *lsfMap[string, lsfInt], ls *lsfList[*lsfLiteral]) bool {
-	anyItem := asg
-	all := true
-	for cell := ls; cell != nil; cell = cell.tail {
-		anyItem_2 := cell.head
-		if !(lsfLitHolds(anyItem, anyItem_2)) {
-			all = false
-			break
-		}
-	}
-	return all
-}
-
-// armsOf — laws/haskell_cpp.lawspec:472.
+// armsOf — laws/haskell_cpp.lawspec:831.
 func lsfArmsOf(seed_ lsfInt, n lsfInt) *lsfList[*lsfArm] {
 	if lsfCmpInt(n, lsfSmall(int64(0))) <= 0 {
 		return (*lsfList[*lsfArm])(nil)
@@ -15114,7 +17420,7 @@ func lsfArmsOf(seed_ lsfInt, n lsfInt) *lsfList[*lsfArm] {
 	}
 }
 
-// armsRows — laws/haskell_cpp.lawspec:142.
+// armsRows — laws/haskell_cpp.lawspec:176.
 func lsfArmsRows(group lsfInt, arms *lsfList[*lsfArm], k lsfInt, before *lsfList[*lsfLiteral], hasElse bool, elseBody *lsfList[lsfInner]) *lsfList[*lsfRow] {
 	it := arms
 	if it == nil {
@@ -15140,7 +17446,7 @@ func lsfArmsRows(group lsfInt, arms *lsfList[*lsfArm], k lsfInt, before *lsfList
 	}
 }
 
-// assignments — laws/haskell_cpp.lawspec:332.
+// assignments — laws/haskell_cpp.lawspec:551.
 func lsfAssignments(ts *lsfList[string]) *lsfList[*lsfMap[string, lsfInt]] {
 	it := ts
 	if it == nil {
@@ -15152,7 +17458,7 @@ func lsfAssignments(ts *lsfList[string]) *lsfList[*lsfMap[string, lsfInt]] {
 	}
 }
 
-// bindRows — laws/haskell_cpp.lawspec:487.
+// bindRows — laws/haskell_cpp.lawspec:846.
 func lsfBindRows(seed_ lsfInt, rs *lsfList[*lsfRow], k lsfInt, acc *lsfMap[string, lsfBinding]) *lsfMap[string, lsfBinding] {
 	for {
 		it := rs
@@ -15189,7 +17495,7 @@ func lsfBindRows(seed_ lsfInt, rs *lsfList[*lsfRow], k lsfInt, acc *lsfMap[strin
 	}
 }
 
-// blockRows — laws/haskell_cpp.lawspec:107.
+// blockRows — laws/haskell_cpp.lawspec:141.
 func lsfBlockRows(id lsfInt, terms *lsfList[*lsfLiteral]) *lsfList[*lsfRow] {
 	n := lsfTextOfInt(id)
 	k := id.Rem(lsfSmall(int64(4)))
@@ -15208,62 +17514,17 @@ func lsfBlockRows(id lsfInt, terms *lsfList[*lsfLiteral]) *lsfList[*lsfRow] {
 	}
 }
 
-// buildCount — laws/haskell_cpp.lawspec:290.
-func lsfBuildCount(rs *lsfList[*lsfRow]) lsfInt {
-	return lsfCountBuilds(rs, lsfKeyValOf((*lsfList[*lsfEntry[string, lsfInt]])(nil), lsfCompareText), lsfAssayxportConditionsPolicyBuildCap(lsfUnit{}))
-}
-
-// buildEnv — laws/haskell_cpp.lawspec:505.
+// buildEnv — laws/haskell_cpp.lawspec:864.
 func lsfBuildEnv(seed_ lsfInt, ss *lsfList[lsfSection]) *lsfEnv {
 	return lsfEnvOfRows(seed_, lsfRowsOf(ss))
 }
 
-// buildOf — laws/haskell_cpp.lawspec:459.
+// buildOf — laws/haskell_cpp.lawspec:818.
 func lsfBuildOf(env *lsfEnv, ss *lsfList[lsfSection]) string {
 	return lsfAssayxportHaskellCppBuildText(env, lsfRowsOf(ss))
 }
 
-// buildsFrom — laws/haskell_cpp.lawspec:256.
-func lsfBuildsFrom(rs *lsfList[*lsfRow], asg *lsfMap[string, lsfInt]) *lsfList[*lsfMap[string, lsfInt]] {
-	for {
-		it := rs
-		if it == nil {
-			return lsfCons[*lsfMap[string, lsfInt]](asg, (*lsfList[*lsfMap[string, lsfInt]])(nil))
-		} else {
-			selection := it.head
-			selection_2 := it.tail
-			if lsfChoiceAt(asg, selection) {
-				var value *lsfList[*lsfLiteral]
-				terms := selection.fTerms
-				value = terms
-				var value_2 *lsfList[*lsfLiteral]
-				terms_2 := selection.fTerms
-				value_2 = terms_2
-				return lsfAppend(lsfBuildsFrom(selection_2, lsfPut(asg, lsfOwnText(value), lsfSmall(1), lsfCompareText)), lsfBuildsFrom(selection_2, lsfPut(asg, lsfOwnText(value_2), lsfSmall(0), lsfCompareText)))
-			} else {
-				next := selection_2
-				rs = next
-				continue
-			}
-		}
-	}
-}
-
-// choiceAt — laws/haskell_cpp.lawspec:233.
-func lsfChoiceAt(asg *lsfMap[string, lsfInt], r *lsfRow) bool {
-	var logic bool
-	if lsfReached(asg, r) {
-		var value *lsfList[*lsfLiteral]
-		terms := r.fTerms
-		value = terms
-		logic = !(lsfValued(asg, lsfOwnText(value)))
-	} else {
-		logic = false
-	}
-	return logic
-}
-
-// conditionAt — laws/haskell_cpp.lawspec:401.
+// conditionAt — laws/haskell_cpp.lawspec:721.
 func lsfConditionAt(rs *lsfList[*lsfRow], line lsfInt) string {
 	it := lsfAtList(rs, lsfIndex(line.Sub(lsfSmall(int64(1)))))
 	if it.ok {
@@ -15271,53 +17532,23 @@ func lsfConditionAt(rs *lsfList[*lsfRow], line lsfInt) string {
 		var value *lsfList[*lsfLiteral]
 		terms := selection.fTerms
 		value = terms
-		return lsfConditionText(value)
+		return lsfAssayxportHaskellCppConditionText(value)
 	} else {
 		return ""
 	}
 }
 
-// conditionText — laws/haskell_cpp.lawspec:399.
-func lsfConditionText(ts *lsfList[*lsfLiteral]) string {
-	return lsfAssayxportConditionsPolicyConditionText(lsfCons[*lsfList[*lsfLiteral]](ts, (*lsfList[*lsfList[*lsfLiteral]])(nil)))
-}
-
-// conditioned — laws/haskell_cpp.lawspec:424.
+// conditioned — laws/haskell_cpp.lawspec:744.
 func lsfConditioned(ss *lsfList[lsfSection], ps *lsfList[*lsfPackage]) *lsfList[*lsfPackage] {
 	return lsfPackagesAt(lsfRowsOf(ss), ps)
 }
 
-// copies — laws/haskell_cpp.lawspec:307.
+// copies — laws/haskell_cpp.lawspec:519.
 func lsfCopies(ss *lsfList[lsfSection]) *lsfList[string] {
-	return lsfCopiesOfRows(lsfRowsOf(ss))
+	return lsfAssayxportHaskellCppCopiesOfRows(lsfRowsOf(ss))
 }
 
-// copiesOf — laws/haskell_cpp.lawspec:282.
-func lsfCopiesOf(rs *lsfList[*lsfRow], builds *lsfList[*lsfMap[string, lsfInt]]) *lsfList[string] {
-	it := builds
-	if it == nil {
-		return (*lsfList[string])(nil)
-	} else {
-		selection := it.head
-		selection_2 := it.tail
-		return lsfAppend(lsfCons[string](lsfCopyOf(selection, rs), (*lsfList[string])(nil)), lsfCopiesOf(rs, selection_2))
-	}
-}
-
-// copiesOfRows — laws/haskell_cpp.lawspec:298.
-func lsfCopiesOfRows(rs *lsfList[*lsfRow]) *lsfList[string] {
-	if !(lsfHasGroup(rs)) {
-		return lsfCons[string](lsfAssayxportHaskellCppSourceOf(rs), (*lsfList[string])(nil))
-	} else {
-		if lsfOverCapRows(rs) {
-			return lsfCons[string](lsfFirstCopyOfRows(rs), (*lsfList[string])(nil))
-		} else {
-			return lsfCopiesOf(rs, lsfBuildsFrom(rs, lsfKeyValOf((*lsfList[*lsfEntry[string, lsfInt]])(nil), lsfCompareText)))
-		}
-	}
-}
-
-// copiesOfWalked — laws/haskell_cpp.lawspec:386.
+// copiesOfWalked — laws/haskell_cpp.lawspec:654.
 func lsfCopiesOfWalked(ws *lsfList[*lsfWalked]) *lsfList[string] {
 	it := ws
 	if it == nil {
@@ -15332,62 +17563,7 @@ func lsfCopiesOfWalked(ws *lsfList[*lsfWalked]) *lsfList[string] {
 	}
 }
 
-// copyOf — laws/haskell_cpp.lawspec:275.
-func lsfCopyOf(asg *lsfMap[string, lsfInt], rs *lsfList[*lsfRow]) string {
-	it := rs
-	if it == nil {
-		return ""
-	} else {
-		selection := it.head
-		selection_2 := it.tail
-		var value bool
-		directive := selection.fDirective
-		value = directive
-		var logic bool
-		if !(value) {
-			var value_2 *lsfList[*lsfLiteral]
-			terms := selection.fTerms
-			value_2 = terms
-			logic = !(lsfAllHold(asg, value_2))
-		} else {
-			logic = true
-		}
-		return (lsfAssayxportHaskellCppBlankIf(logic, selection) + lsfCopyOf(asg, selection_2))
-	}
-}
-
-// countBuilds — laws/haskell_cpp.lawspec:245.
-func lsfCountBuilds(rs *lsfList[*lsfRow], asg *lsfMap[string, lsfInt], budget lsfInt) lsfInt {
-	for {
-		it := rs
-		if it == nil {
-			return lsfSmall(1)
-		} else {
-			selection := it.head
-			selection_2 := it.tail
-			if lsfChoiceAt(asg, selection) {
-				var value *lsfList[*lsfLiteral]
-				terms := selection.fTerms
-				value = terms
-				a := lsfCountBuilds(selection_2, lsfPut(asg, lsfOwnText(value), lsfSmall(1), lsfCompareText), budget)
-				if lsfCmpInt(a, budget) > 0 {
-					return a
-				} else {
-					var value_2 *lsfList[*lsfLiteral]
-					terms_2 := selection.fTerms
-					value_2 = terms_2
-					return a.Add(lsfCountBuilds(selection_2, lsfPut(asg, lsfOwnText(value_2), lsfSmall(0), lsfCompareText), budget.Sub(a)))
-				}
-			} else {
-				next := selection_2
-				rs = next
-				continue
-			}
-		}
-	}
-}
-
-// declRows — laws/haskell_cpp.lawspec:578.
+// declRows — laws/haskell_cpp.lawspec:937.
 func lsfDeclRows(seed_ lsfInt, j lsfInt) *lsfList[*lsfRow] {
 	d := ("d" + lsfTextOfInt(j))
 	foo := lsfFooOf(seed_, j)
@@ -15424,7 +17600,7 @@ func lsfDeclRows(seed_ lsfInt, j lsfInt) *lsfList[*lsfRow] {
 	}
 }
 
-// declsAt — laws/haskell_cpp.lawspec:409.
+// declsAt — laws/haskell_cpp.lawspec:729.
 func lsfDeclsAt(rs *lsfList[*lsfRow], ds *lsfList[*lsfDecl]) *lsfList[*lsfDecl] {
 	it := ds
 	if it == nil {
@@ -15482,7 +17658,7 @@ func lsfDeclsAt(rs *lsfList[*lsfRow], ds *lsfList[*lsfDecl]) *lsfList[*lsfDecl] 
 	}
 }
 
-// edgesAt — laws/haskell_cpp.lawspec:405.
+// edgesAt — laws/haskell_cpp.lawspec:725.
 func lsfEdgesAt(t_ string, es *lsfList[*lsfCallEdge]) *lsfList[*lsfCallEdge] {
 	it := es
 	if it == nil {
@@ -15503,7 +17679,7 @@ func lsfEdgesAt(t_ string, es *lsfList[*lsfCallEdge]) *lsfList[*lsfCallEdge] {
 	}
 }
 
-// envOfRows — laws/haskell_cpp.lawspec:499.
+// envOfRows — laws/haskell_cpp.lawspec:858.
 func lsfEnvOfRows(seed_ lsfInt, rs *lsfList[*lsfRow]) *lsfEnv {
 	var value *lsfEnv
 	replacement := lsfBindRows(seed_, rs, lsfSmall(0), lsfKeyValOf((*lsfList[*lsfEntry[string, lsfBinding]])(nil), lsfCompareText))
@@ -15514,16 +17690,16 @@ func lsfEnvOfRows(seed_ lsfInt, rs *lsfList[*lsfRow]) *lsfEnv {
 	return lsfAssayxportConditionsPolicyCompleted(value)
 }
 
-// everyCopies — laws/haskell_cpp.lawspec:391.
+// everyCopies — laws/haskell_cpp.lawspec:659.
 func lsfEveryCopies(rs *lsfList[*lsfRow]) *lsfList[string] {
-	if !(lsfHasGroup(rs)) {
+	if !(lsfAssayxportHaskellCppHasGroup(rs)) {
 		return lsfCons[string](lsfAssayxportHaskellCppSourceOf(rs), (*lsfList[string])(nil))
 	} else {
 		return lsfCopiesOfWalked(lsfWalkedAll(rs, lsfAssignments(lsfTermsIn(rs, (*lsfList[string])(nil))), (*lsfList[*lsfWalked])(nil)))
 	}
 }
 
-// exportRows — laws/haskell_cpp.lawspec:596.
+// exportRows — laws/haskell_cpp.lawspec:955.
 func lsfExportRows(seed_ lsfInt) *lsfList[*lsfRow] {
 	var value *lsfList[*lsfRow]
 	if lsfCmpInt(lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(600), lsfSmall(2)), lsfSmall(int64(0))) == 0 {
@@ -15534,44 +17710,12 @@ func lsfExportRows(seed_ lsfInt) *lsfList[*lsfRow] {
 	return lsfAppend(lsfAppend(lsfAssayxportHaskellCppCodeRows(lsfCons[string]("module M", lsfCons[string]("  ( d1", (*lsfList[string])(nil))), (*lsfList[*lsfLiteral])(nil)), value), lsfAssayxportHaskellCppCodeRows(lsfCons[string]("  , d3", lsfCons[string]("  ) where", (*lsfList[string])(nil))), (*lsfList[*lsfLiteral])(nil)))
 }
 
-// firstBuild — laws/haskell_cpp.lawspec:266.
-func lsfFirstBuild(rs *lsfList[*lsfRow], asg *lsfMap[string, lsfInt]) *lsfMap[string, lsfInt] {
-	for {
-		it := rs
-		if it == nil {
-			return asg
-		} else {
-			selection := it.head
-			selection_2 := it.tail
-			next := selection_2
-			var value *lsfMap[string, lsfInt]
-			if lsfChoiceAt(asg, selection) {
-				var value_2 *lsfList[*lsfLiteral]
-				terms := selection.fTerms
-				value_2 = terms
-				value = lsfPut(asg, lsfOwnText(value_2), lsfSmall(1), lsfCompareText)
-			} else {
-				value = asg
-			}
-			next_2 := value
-			rs = next
-			asg = next_2
-			continue
-		}
-	}
-}
-
-// firstCopy — laws/haskell_cpp.lawspec:311.
+// firstCopy — laws/haskell_cpp.lawspec:523.
 func lsfFirstCopy(ss *lsfList[lsfSection]) string {
-	return lsfFirstCopyOfRows(lsfRowsOf(ss))
+	return lsfAssayxportHaskellCppFirstCopyOfRows(lsfRowsOf(ss))
 }
 
-// firstCopyOfRows — laws/haskell_cpp.lawspec:305.
-func lsfFirstCopyOfRows(rs *lsfList[*lsfRow]) string {
-	return lsfCopyOf(lsfFirstBuild(rs, lsfKeyValOf((*lsfList[*lsfEntry[string, lsfInt]])(nil), lsfCompareText)), rs)
-}
-
-// fooOf — laws/haskell_cpp.lawspec:576.
+// fooOf — laws/haskell_cpp.lawspec:935.
 func lsfFooOf(seed_ lsfInt, k lsfInt) string {
 	if lsfCmpInt(lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(int64(560)).Add(k), lsfSmall(2)), lsfSmall(int64(0))) == 0 {
 		return "foo1"
@@ -15580,22 +17724,31 @@ func lsfFooOf(seed_ lsfInt, k lsfInt) string {
 	}
 }
 
-// hasGroup — laws/haskell_cpp.lawspec:286.
-func lsfHasGroup(rs *lsfList[*lsfRow]) bool {
+// hasElifdef — laws/haskell_cpp.lawspec:1301.
+func lsfHasElifdef(rs *lsfList[*lsfRow]) bool {
 	it := rs
 	if it == nil {
 		return false
 	} else {
 		selection := it.head
 		selection_2 := it.tail
-		var value bool
-		reads := selection.fReads
-		value = reads
-		return (value || lsfHasGroup(selection_2))
+		var value string
+		text := selection.fText
+		value = text
+		var logic bool
+		if !(strings.HasPrefix(value, "#elifdef")) {
+			var value_2 string
+			text_2 := selection.fText
+			value_2 = text_2
+			logic = strings.HasPrefix(value_2, "#elifndef")
+		} else {
+			logic = true
+		}
+		return (logic || lsfHasElifdef(selection_2))
 	}
 }
 
-// innerRows — laws/haskell_cpp.lawspec:131.
+// innerRows — laws/haskell_cpp.lawspec:165.
 func lsfInnerRows(base lsfInt, terms *lsfList[*lsfLiteral], items *lsfList[lsfInner], i lsfInt) *lsfList[*lsfRow] {
 	it := items
 	if it == nil {
@@ -15624,7 +17777,7 @@ func lsfInnerRows(base lsfInt, terms *lsfList[*lsfLiteral], items *lsfList[lsfIn
 	}
 }
 
-// innersOf — laws/haskell_cpp.lawspec:468.
+// innersOf — laws/haskell_cpp.lawspec:827.
 func lsfInnersOf(seed_ lsfInt, n lsfInt) *lsfList[lsfInner] {
 	if lsfCmpInt(n, lsfSmall(int64(0))) <= 0 {
 		return (*lsfList[lsfInner])(nil)
@@ -15639,7 +17792,7 @@ func lsfInnersOf(seed_ lsfInt, n lsfInt) *lsfList[lsfInner] {
 	}
 }
 
-// insertWalked — laws/haskell_cpp.lawspec:371.
+// insertWalked — laws/haskell_cpp.lawspec:638.
 func lsfInsertWalked(w *lsfWalked, ws *lsfList[*lsfWalked]) *lsfList[*lsfWalked] {
 	it := ws
 	if it == nil {
@@ -15671,108 +17824,7 @@ func lsfInsertWalked(w *lsfWalked, ws *lsfList[*lsfWalked]) *lsfList[*lsfWalked]
 	}
 }
 
-// keyValFromItems — <lawspec.collections>:281.
-func lsfLawspecCollectionsKeyValFromItemsListEntryTextIntegerListEntryTextInteger(es *lsfList[*lsfEntry[string, lsfInt]], acc *lsfList[*lsfEntry[string, lsfInt]]) *lsfList[*lsfEntry[string, lsfInt]] {
-	for {
-		it := es
-		if it == nil {
-			return acc
-		} else {
-			selection := it.head
-			selection_2 := it.tail
-			it_2 := selection
-			matchSelection := it_2.fKey
-			matchSelection_2 := it_2.fValue
-			next := selection_2
-			next_2 := lsfLawspecCollectionsKeyValPutItemsTextIntegerListEntryTextInteger(matchSelection, matchSelection_2, acc)
-			es = next
-			acc = next_2
-			continue
-		}
-	}
-}
-
-// keyValLookupItems — <lawspec.collections>:268.
-func lsfLawspecCollectionsKeyValLookupItemsTextListEntryTextInteger(k string, es *lsfList[*lsfEntry[string, lsfInt]]) lsfMaybe[lsfInt] {
-	for {
-		it := es
-		if it == nil {
-			return lsfAbsent[lsfInt]()
-		} else {
-			selection := it.head
-			selection_2 := it.tail
-			it_2 := selection
-			matchSelection := it_2.fKey
-			matchSelection_2 := it_2.fValue
-			it_3 := lsfOrderingOf(lsfCompareText(k, matchSelection))
-			switch it_3 {
-			case lsfOrdering_Less:
-				return lsfAbsent[lsfInt]()
-			case lsfOrdering_Equal:
-				return lsfPresent[lsfInt](matchSelection_2)
-			case lsfOrdering_Greater:
-				next := selection_2
-				es = next
-				continue
-			default:
-				panic("unreachable branch reached")
-			}
-		}
-	}
-}
-
-// keyValLookup — <lawspec.collections>:308.
-func lsfLawspecCollectionsKeyValLookupTextKeyValTextInteger(k string, m_ *lsfMap[string, lsfInt]) lsfMaybe[lsfInt] {
-	return lsfLookup(m_, k, lsfCompareText)
-}
-
-// keyValOf — <lawspec.collections>:304.
-func lsfLawspecCollectionsKeyValOfListEntryTextInteger(es *lsfList[*lsfEntry[string, lsfInt]]) *lsfMap[string, lsfInt] {
-	return lsfKeyValOf(es, lsfCompareText)
-}
-
-// keyValPutItems — <lawspec.collections>:242.
-func lsfLawspecCollectionsKeyValPutItemsTextIntegerListEntryTextInteger(k string, v lsfInt, es *lsfList[*lsfEntry[string, lsfInt]]) *lsfList[*lsfEntry[string, lsfInt]] {
-	it := es
-	if it == nil {
-		var value *lsfEntry[string, lsfInt]
-		recordField := k
-		recordField_2 := v
-		value = &lsfEntry[string, lsfInt]{recordField, recordField_2}
-		return lsfCons[*lsfEntry[string, lsfInt]](value, (*lsfList[*lsfEntry[string, lsfInt]])(nil))
-	} else {
-		selection := it.head
-		selection_2 := it.tail
-		it_2 := selection
-		matchSelection := it_2.fKey
-		it_3 := lsfOrderingOf(lsfCompareText(k, matchSelection))
-		switch it_3 {
-		case lsfOrdering_Less:
-			var value_2 *lsfEntry[string, lsfInt]
-			recordField_3 := k
-			recordField_4 := v
-			value_2 = &lsfEntry[string, lsfInt]{recordField_3, recordField_4}
-			return lsfCons[*lsfEntry[string, lsfInt]](value_2, es)
-		case lsfOrdering_Equal:
-			var value_3 *lsfEntry[string, lsfInt]
-			recordField_5 := k
-			recordField_6 := v
-			value_3 = &lsfEntry[string, lsfInt]{recordField_5, recordField_6}
-			return lsfCons[*lsfEntry[string, lsfInt]](value_3, selection_2)
-		case lsfOrdering_Greater:
-			return lsfCons[*lsfEntry[string, lsfInt]](selection, lsfLawspecCollectionsKeyValPutItemsTextIntegerListEntryTextInteger(k, v, selection_2))
-		default:
-			panic("unreachable branch reached")
-		}
-	}
-}
-
-// keyValPut — <lawspec.collections>:312.
-func lsfLawspecCollectionsKeyValPutTextIntegerKeyValTextInteger(k string, v lsfInt, m_ *lsfMap[string, lsfInt]) *lsfMap[string, lsfInt] {
-	return lsfPut(m_, k, v, lsfCompareText)
-}
-
-// leafOf — laws/haskell_cpp.lawspec:464.
+// leafOf — laws/haskell_cpp.lawspec:823.
 func lsfLeafOf(seed_ lsfInt) *lsfLeaf {
 	var value *lsfList[lsfInt]
 	if lsfCmpInt(lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(1), lsfSmall(2)), lsfSmall(int64(0))) == 0 {
@@ -15785,7 +17837,7 @@ func lsfLeafOf(seed_ lsfInt) *lsfLeaf {
 	return &lsfLeaf{recordField, recordField_2}
 }
 
-// leafRows — laws/haskell_cpp.lawspec:118.
+// leafRows — laws/haskell_cpp.lawspec:152.
 func lsfLeafRows(group lsfInt, terms *lsfList[*lsfLiteral], forms *lsfList[lsfInt], k lsfInt, before *lsfList[*lsfLiteral], hasElse bool) *lsfList[*lsfRow] {
 	it := forms
 	if it == nil {
@@ -15802,56 +17854,90 @@ func lsfLeafRows(group lsfInt, terms *lsfList[*lsfLiteral], forms *lsfList[lsfIn
 	}
 }
 
-// litHolds — laws/haskell_cpp.lawspec:210.
-func lsfLitHolds(asg *lsfMap[string, lsfInt], l *lsfLiteral) bool {
-	var value string
-	text := l.fText
-	value = text
-	it := lsfLookup(asg, value, lsfCompareText)
-	if it.ok {
-		selection := it.v
-		var value_2 bool
-		negated := l.fNegated
-		value_2 = negated
-		return !((lsfCmpInt(selection, lsfSmall(int64(0))) != 0) == (value_2))
-	} else {
-		return false
+// mayStayOpen — laws/haskell_cpp.lawspec:574.
+func lsfMayStayOpen(setBy *lsfList[string], otherBy *lsfList[string], l *lsfLiteral) bool {
+	var value bool
+	anyItem := setBy
+	var value_2 lsfCExpr
+	expr := l.fExpr
+	value_2 = expr
+	all := true
+	for cell := lsfAssayxportHaskellCppNamesOf(value_2); cell != nil; cell = cell.tail {
+		anyItem_2 := cell.head
+		if !(!(lsfInList(anyItem, anyItem_2))) {
+			all = false
+			break
+		}
 	}
+	value = !(all)
+	var logic_2 bool
+	if value {
+		var value_3 bool
+		var value_4 lsfCExpr
+		expr_2 := l.fExpr
+		value_4 = expr_2
+		it := value_4
+		switch variant := it.(type) {
+		case *lsfCExpr_Name:
+			selection := variant.fValue
+			var logic bool
+			if !(lsfAssayxportHaskellCppSpecial(selection)) {
+				all_2 := true
+				for cell_2 := otherBy; cell_2 != nil; cell_2 = cell_2.tail {
+					item := cell_2.head
+					if !(!((item) == (selection))) {
+						all_2 = false
+						break
+					}
+				}
+				logic = !(!(all_2))
+			} else {
+				logic = false
+			}
+			value_3 = logic
+		case *lsfCExpr_IsDefined:
+			selection_2 := variant.fValue
+			value_3 = !(lsfAssayxportHaskellCppSpecial(selection_2))
+		case *lsfCExpr_Lit:
+			value_3 = false
+		case *lsfCExpr_ULit:
+			value_3 = false
+		case *lsfCExpr_Un:
+			value_3 = false
+		case *lsfCExpr_Bin:
+			value_3 = false
+		case *lsfCExpr_Cond:
+			value_3 = false
+		case *lsfCExpr_MinVersion:
+			value_3 = false
+		case *lsfCExpr_MinGhc:
+			value_3 = false
+		default:
+			panic("unreachable branch reached")
+		}
+		logic_2 = !(value_3)
+	} else {
+		logic_2 = false
+	}
+	return logic_2
 }
 
-// moduleOf — laws/haskell_cpp.lawspec:485.
+// moduleOf — laws/haskell_cpp.lawspec:844.
 func lsfModuleOf(seed_ lsfInt) *lsfList[lsfSection] {
 	return lsfSectionsOf(seed_, lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(120), lsfSmall(5)))
 }
 
-// nameOf — laws/haskell_cpp.lawspec:71.
+// nameOf — laws/haskell_cpp.lawspec:95.
 func lsfNameOf(group lsfInt, arm lsfInt) string {
 	return ((("C" + lsfTextOfInt(group)) + "_") + lsfTextOfInt(arm))
 }
 
-// overCap — laws/haskell_cpp.lawspec:309.
+// overCap — laws/haskell_cpp.lawspec:521.
 func lsfOverCap(ss *lsfList[lsfSection]) bool {
-	return lsfOverCapRows(lsfRowsOf(ss))
+	return lsfAssayxportHaskellCppOverCapRows(lsfRowsOf(ss))
 }
 
-// overCapRows — laws/haskell_cpp.lawspec:293.
-func lsfOverCapRows(rs *lsfList[*lsfRow]) bool {
-	return (lsfCmpInt(lsfBuildCount(rs), lsfAssayxportConditionsPolicyBuildCap(lsfUnit{})) > 0)
-}
-
-// ownText — laws/haskell_cpp.lawspec:219.
-func lsfOwnText(ls *lsfList[*lsfLiteral]) string {
-	it := lsfAtList(ls, lsfIndex(lsfSmall(int64(ls.length())).Sub(lsfSmall(int64(1)))))
-	if it.ok {
-		selection := it.v
-		text := selection.fText
-		return text
-	} else {
-		return ""
-	}
-}
-
-// packagesAt — laws/haskell_cpp.lawspec:417.
+// packagesAt — laws/haskell_cpp.lawspec:737.
 func lsfPackagesAt(rs *lsfList[*lsfRow], ps *lsfList[*lsfPackage]) *lsfList[*lsfPackage] {
 	it := ps
 	if it == nil {
@@ -15878,7 +17964,7 @@ func lsfPackagesAt(rs *lsfList[*lsfRow], ps *lsfList[*lsfPackage]) *lsfList[*lsf
 	}
 }
 
-// poolBinding — laws/haskell_cpp.lawspec:608.
+// poolBinding — laws/haskell_cpp.lawspec:967.
 func lsfPoolBinding(seed_ lsfInt, k lsfInt, acc *lsfMap[string, lsfBinding]) *lsfMap[string, lsfBinding] {
 	c0 := lsfAssayxportConditionsPolicyPick(seed_, lsfSmall(int64(620)).Add(k), lsfSmall(4))
 	if lsfCmpInt(c0, lsfSmall(int64(0))) == 0 {
@@ -15888,52 +17974,37 @@ func lsfPoolBinding(seed_ lsfInt, k lsfInt, acc *lsfMap[string, lsfBinding]) *ls
 	}
 }
 
-// reached — laws/haskell_cpp.lawspec:224.
-func lsfReached(asg *lsfMap[string, lsfInt], r *lsfRow) bool {
-	var value bool
-	reads := r.fReads
-	value = reads
-	var logic bool
-	if value {
-		var value_2 *lsfList[*lsfLiteral]
-		terms := r.fTerms
-		value_2 = terms
-		var value_3 *lsfList[*lsfLiteral]
-		terms_2 := r.fTerms
-		value_3 = terms_2
-		logic = lsfAllHold(asg, lsfSliceList(value_2, int64(0), lsfIndex(lsfSmall(int64(value_3.length())).Sub(lsfSmall(int64(1))))))
-	} else {
-		logic = false
-	}
-	return logic
-}
-
-// render — laws/haskell_cpp.lawspec:179.
+// render — laws/haskell_cpp.lawspec:213.
 func lsfRender(ss *lsfList[lsfSection]) string {
 	return lsfAssayxportHaskellCppSourceOf(lsfRowsOf(ss))
 }
 
-// reproElifCopies — laws/haskell_cpp.lawspec:868.
+// reproDefsCopies — laws/haskell_cpp.lawspec:1234.
+func lsfReproDefsCopies(u lsfUnit) *lsfList[string] {
+	return lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0a\x0a\x0aa = 1\x0a\x0a\x0a\x0a\x0a\x0ac = 3\x0a\x0a\x0a\x0ad = 4\x0a\x0a\x0a\x0a\x0a\x0af = 6\x0a\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0a\x0a\x0aa = 1\x0a\x0a\x0ab = 2\x0a\x0a\x0a\x0a\x0a\x0a\x0ad = 4\x0a\x0a\x0a\x0a\x0a\x0af = 6\x0a\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0a\x0a\x0aa = 1\x0a\x0a\x0ab = 2\x0a\x0a\x0a\x0a\x0a\x0a\x0ad = 4\x0a\x0a\x0a\x0a\x0a\x0af = 6\x0a\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0ab = 2\x0a\x0a\x0a\x0a\x0a\x0a\x0ad = 4\x0a\x0a\x0a\x0a\x0a\x0af = 6\x0a\x0a", (*lsfList[string])(nil)))))
+}
+
+// reproElifCopies — laws/haskell_cpp.lawspec:1525.
 func lsfReproElifCopies(u lsfUnit) *lsfList[string] {
 	return lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0aa = 1\x0a\x0a\x0a\x0a\x0a\x0a\x0ac = 3\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0ac = 3\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0a\x0aq = 0\x0a\x0a\x0a\x0ac = 3\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0ab = 2\x0a\x0ac = 3\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0ac = 3\x0a", (*lsfList[string])(nil))))))
 }
 
-// reproLostCopies — laws/haskell_cpp.lawspec:876.
+// reproLostCopies — laws/haskell_cpp.lawspec:1533.
 func lsfReproLostCopies(u lsfUnit) *lsfList[string] {
 	return lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0aa = 1\x0a\x0a\x0a\x0a\x0ab = 2\x0a\x0a\x0ac = 3\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0aa = 1\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0ac = 3\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0ac = 3\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0ac = 3\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0ab = 2\x0a\x0a\x0ac = 3\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0ac = 3\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0ac = 3\x0a", (*lsfList[string])(nil))))))))
 }
 
-// reproTailCopies — laws/haskell_cpp.lawspec:886.
+// reproTailCopies — laws/haskell_cpp.lawspec:1543.
 func lsfReproTailCopies(u lsfUnit) *lsfList[string] {
 	return lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0aimport Z (bar)\x0a\x0a\x0ax = 1\x0a\x0a\x0af :: Int\x0af = 1\x0a\x0a\x0a  + bar 2\x0a\x0a\x0a\x0a\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0aimport Z (bar)\x0a\x0a\x0ax = 1\x0a\x0a\x0af :: Int\x0af = 1\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0aimport Z (bar)\x0a\x0a\x0a\x0a\x0a\x0af :: Int\x0af = 1\x0a\x0a\x0a\x0a\x0a  + 3\x0a\x0a\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0aimport Z (bar)\x0a\x0a\x0a\x0a\x0a\x0af :: Int\x0af = 1\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0aimport Z (bar)\x0a\x0a\x0a\x0a\x0a\x0af :: Int\x0af = 1\x0a\x0a\x0a  + bar 2\x0a\x0a\x0a\x0a\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0aimport Z (bar)\x0a\x0a\x0a\x0a\x0a\x0af :: Int\x0af = 1\x0a\x0a\x0a\x0a\x0a  + 3\x0a\x0a\x0a", lsfCons[string]("{-# LANGUAGE CPP #-}\x0amodule M where\x0aimport Z (bar)\x0a\x0a\x0a\x0a\x0a\x0af :: Int\x0af = 1\x0a\x0a\x0a\x0a\x0a\x0a\x0a\x0a", (*lsfList[string])(nil))))))))
 }
 
-// rowsOf — laws/haskell_cpp.lawspec:167.
+// rowsOf — laws/haskell_cpp.lawspec:201.
 func lsfRowsOf(ss *lsfList[lsfSection]) *lsfList[*lsfRow] {
 	return lsfAppend(lsfCons[*lsfRow](lsfAssayxportHaskellCppRow("{-# LANGUAGE CPP #-}", (*lsfList[*lsfLiteral])(nil), false), lsfCons[*lsfRow](lsfAssayxportHaskellCppRow("module M where", (*lsfList[*lsfLiteral])(nil), false), (*lsfList[*lsfRow])(nil))), lsfSectionRows(ss, lsfSmall(1)))
 }
 
-// sectionRows — laws/haskell_cpp.lawspec:155.
+// sectionRows — laws/haskell_cpp.lawspec:189.
 func lsfSectionRows(ss *lsfList[lsfSection], i lsfInt) *lsfList[*lsfRow] {
 	it := ss
 	if it == nil {
@@ -15965,7 +18036,7 @@ func lsfSectionRows(ss *lsfList[lsfSection], i lsfInt) *lsfList[*lsfRow] {
 	}
 }
 
-// sectionsOf — laws/haskell_cpp.lawspec:476.
+// sectionsOf — laws/haskell_cpp.lawspec:835.
 func lsfSectionsOf(seed_ lsfInt, n lsfInt) *lsfList[lsfSection] {
 	if lsfCmpInt(n, lsfSmall(int64(0))) <= 0 {
 		return (*lsfList[lsfSection])(nil)
@@ -15985,12 +18056,76 @@ func lsfSectionsOf(seed_ lsfInt, n lsfInt) *lsfList[lsfSection] {
 	}
 }
 
-// tangle — laws/haskell_cpp.lawspec:603.
+// setNames — laws/haskell_cpp.lawspec:564.
+func lsfSetNames(rs *lsfList[*lsfRow], onlyOther bool) *lsfList[string] {
+	it := rs
+	if it == nil {
+		return (*lsfList[string])(nil)
+	} else {
+		selection := it.head
+		selection_2 := it.tail
+		var value *lsfList[string]
+		var value_2 bool
+		if onlyOther {
+			var value_3 lsfSets
+			sets := selection.fSets
+			value_3 = sets
+			it_2 := value_3
+			switch it_2.(type) {
+			case *lsfSets_SetsOther:
+				value_2 = true
+			case *lsfSets_SetsNothing:
+				value_2 = false
+			case *lsfSets_SetsInt:
+				value_2 = false
+			case *lsfSets_Unsets:
+				value_2 = false
+			default:
+				panic("unreachable branch reached")
+			}
+		} else {
+			var value_4 bool
+			var value_5 lsfSets
+			sets_2 := selection.fSets
+			value_5 = sets_2
+			it_3 := value_5
+			switch it_3.(type) {
+			case *lsfSets_SetsNothing:
+				value_4 = true
+			case *lsfSets_SetsInt:
+				value_4 = false
+			case *lsfSets_SetsOther:
+				value_4 = false
+			case *lsfSets_Unsets:
+				value_4 = false
+			default:
+				panic("unreachable branch reached")
+			}
+			value_2 = !(value_4)
+		}
+		if value_2 {
+			var value_6 string
+			name := selection.fName
+			value_6 = name
+			value = lsfCons[string](value_6, (*lsfList[string])(nil))
+		} else {
+			value = (*lsfList[string])(nil)
+		}
+		return lsfAppend(value, lsfSetNames(selection_2, onlyOther))
+	}
+}
+
+// severalBuilds — laws/haskell_cpp.lawspec:1305.
+func lsfSeveralBuilds(rs *lsfList[*lsfRow]) bool {
+	return (lsfCmpInt(lsfAssayxportHaskellCppBuildCount(rs), lsfSmall(int64(8))) >= 0)
+}
+
+// tangle — laws/haskell_cpp.lawspec:962.
 func lsfTangle(seed_ lsfInt) *lsfList[*lsfRow] {
 	return lsfAppend(lsfAppend(lsfAppend(lsfAppend(lsfAppend(lsfAppend(lsfAppend(lsfAssayxportHaskellCppCodeRows(lsfCons[string]("{-# LANGUAGE CPP #-}", (*lsfList[string])(nil)), (*lsfList[*lsfLiteral])(nil)), lsfExportRows(seed_)), lsfAssayxportHaskellCppImportRows(seed_, lsfSmall(1))), lsfAssayxportHaskellCppImportRows(seed_, lsfSmall(2))), lsfAssayxportHaskellCppCodeRows(lsfCons[string]("v0 x = x", (*lsfList[string])(nil)), (*lsfList[*lsfLiteral])(nil))), lsfDeclRows(seed_, lsfSmall(1))), lsfDeclRows(seed_, lsfSmall(2))), lsfDeclRows(seed_, lsfSmall(3)))
 }
 
-// tangleEnv — laws/haskell_cpp.lawspec:614.
+// tangleEnv — laws/haskell_cpp.lawspec:973.
 func lsfTangleEnv(seed_ lsfInt) *lsfEnv {
 	var value *lsfEnv
 	replacement := lsfPoolBinding(seed_, lsfSmall(0), lsfPoolBinding(seed_, lsfSmall(1), lsfPoolBinding(seed_, lsfSmall(2), lsfKeyValOf((*lsfList[*lsfEntry[string, lsfBinding]])(nil), lsfCompareText))))
@@ -16001,8 +18136,8 @@ func lsfTangleEnv(seed_ lsfInt) *lsfEnv {
 	return lsfAssayxportConditionsPolicyCompleted(value)
 }
 
-// termsIn — laws/haskell_cpp.lawspec:237.
-func lsfTermsIn(rs *lsfList[*lsfRow], seen *lsfList[string]) *lsfList[string] {
+// termsFrom — laws/haskell_cpp.lawspec:587.
+func lsfTermsFrom(rs *lsfList[*lsfRow], setBy *lsfList[string], otherBy *lsfList[string], line lsfInt, seen *lsfList[string]) *lsfList[string] {
 	for {
 		it := rs
 		if it == nil {
@@ -16011,44 +18146,46 @@ func lsfTermsIn(rs *lsfList[*lsfRow], seen *lsfList[string]) *lsfList[string] {
 			selection := it.head
 			selection_2 := it.tail
 			next := selection_2
+			next_2 := line.Add(lsfSmall(int64(1)))
 			var value *lsfList[string]
-			var value_2 bool
-			reads := selection.fReads
-			value_2 = reads
-			var logic bool
-			if value_2 {
-				all := true
-				for cell := seen; cell != nil; cell = cell.tail {
-					item := cell.head
-					var value_3 *lsfList[*lsfLiteral]
-					terms := selection.fTerms
-					value_3 = terms
-					if !(!((item) == (lsfOwnText(value_3)))) {
-						all = false
-						break
+			it_2 := lsfAssayxportHaskellCppOwnLit(selection)
+			if it_2.ok {
+				matchSelection := it_2.v
+				var value_2 bool
+				reads := selection.fReads
+				value_2 = reads
+				if value_2 {
+					var value_3 string
+					if lsfMayStayOpen(setBy, otherBy, matchSelection) {
+						value_3 = lsfFileDefinedTerm(line)
+					} else {
+						value_3 = ""
 					}
+					var value_4 string
+					text := matchSelection.fText
+					value_4 = text
+					value = lsfAssayxportHaskellCppAddTerm(value_3, lsfAssayxportHaskellCppAddTerm(value_4, seen))
+				} else {
+					value = seen
 				}
-				logic = !(!(all))
-			} else {
-				logic = false
-			}
-			if logic {
-				var value_4 *lsfList[*lsfLiteral]
-				terms_2 := selection.fTerms
-				value_4 = terms_2
-				value = lsfAppend(seen, lsfCons[string](lsfOwnText(value_4), (*lsfList[string])(nil)))
 			} else {
 				value = seen
 			}
-			next_2 := value
+			next_3 := value
 			rs = next
-			seen = next_2
+			line = next_2
+			seen = next_3
 			continue
 		}
 	}
 }
 
-// traceBefore — laws/haskell_cpp.lawspec:360.
+// termsIn — laws/haskell_cpp.lawspec:602.
+func lsfTermsIn(rs *lsfList[*lsfRow], seen *lsfList[string]) *lsfList[string] {
+	return lsfTermsFrom(rs, lsfSetNames(rs, false), lsfSetNames(rs, true), lsfSmall(1), seen)
+}
+
+// traceBefore — laws/haskell_cpp.lawspec:627.
 func lsfTraceBefore(a *lsfList[lsfInt], b *lsfList[lsfInt]) bool {
 	for {
 		it := a
@@ -16077,8 +18214,8 @@ func lsfTraceBefore(a *lsfList[lsfInt], b *lsfList[lsfInt]) bool {
 	}
 }
 
-// traceOf — laws/haskell_cpp.lawspec:345.
-func lsfTraceOf(rs *lsfList[*lsfRow], full *lsfMap[string, lsfInt], seen *lsfList[string]) *lsfList[lsfInt] {
+// traceFrom — laws/haskell_cpp.lawspec:607.
+func lsfTraceFrom(rs *lsfList[*lsfRow], w *lsfWalk, full *lsfMap[string, lsfInt], line lsfInt, seen *lsfList[string]) *lsfList[lsfInt] {
 	for {
 		it := rs
 		if it == nil {
@@ -16086,41 +18223,63 @@ func lsfTraceOf(rs *lsfList[*lsfRow], full *lsfMap[string, lsfInt], seen *lsfLis
 		} else {
 			selection := it.head
 			selection_2 := it.tail
-			var logic bool
-			if lsfReached(full, selection) {
+			it_2 := lsfAssayxportHaskellCppReadingAt(w, selection, line)
+			switch variant := it_2.(type) {
+			case *lsfReading_NotRead:
+				next := selection_2
+				next_2 := lsfAssayxportHaskellCppAfter(w, selection, false)
+				next_3 := line.Add(lsfSmall(int64(1)))
+				rs = next
+				w = next_2
+				line = next_3
+				continue
+			case *lsfReading_ByFile:
+				matchSelection := variant.fValue
+				next_4 := selection_2
+				next_5 := lsfAssayxportHaskellCppAfter(w, selection, matchSelection)
+				next_6 := line.Add(lsfSmall(int64(1)))
+				rs = next_4
+				w = next_5
+				line = next_6
+				continue
+			case *lsfReading_ByTerm:
+				matchSelection_2 := variant.fValue
 				all := true
 				for cell := seen; cell != nil; cell = cell.tail {
 					item := cell.head
-					var value *lsfList[*lsfLiteral]
-					terms := selection.fTerms
-					value = terms
-					if !(!((item) == (lsfOwnText(value)))) {
+					var value string
+					text := matchSelection_2.fText
+					value = text
+					if !(!((item) == (value))) {
 						all = false
 						break
 					}
 				}
-				logic = !(!(all))
-			} else {
-				logic = false
-			}
-			if logic {
-				var value_2 *lsfList[*lsfLiteral]
-				terms_2 := selection.fTerms
-				value_2 = terms_2
-				var value_3 *lsfList[*lsfLiteral]
-				terms_3 := selection.fTerms
-				value_3 = terms_3
-				return lsfAppend(lsfCons[lsfInt](lsfValueIn_2(full, lsfOwnText(value_2)), (*lsfList[lsfInt])(nil)), lsfTraceOf(selection_2, full, lsfAppend(seen, lsfCons[string](lsfOwnText(value_3), (*lsfList[string])(nil)))))
-			} else {
-				next := selection_2
-				rs = next
-				continue
+				if !(all) {
+					next_7 := selection_2
+					next_8 := lsfAssayxportHaskellCppAfter(w, selection, lsfAssayxportHaskellCppLitTrue(full, matchSelection_2))
+					next_9 := line.Add(lsfSmall(int64(1)))
+					rs = next_7
+					w = next_8
+					line = next_9
+					continue
+				} else {
+					var value_2 string
+					text_2 := matchSelection_2.fText
+					value_2 = text_2
+					var value_3 string
+					text_3 := matchSelection_2.fText
+					value_3 = text_3
+					return lsfAppend(lsfCons[lsfInt](lsfValueIn_2(full, value_2), (*lsfList[lsfInt])(nil)), lsfTraceFrom(selection_2, lsfAssayxportHaskellCppAfter(w, selection, lsfAssayxportHaskellCppLitTrue(full, matchSelection_2)), full, line.Add(lsfSmall(int64(1))), lsfAppend(seen, lsfCons[string](value_3, (*lsfList[string])(nil)))))
+				}
+			default:
+				panic("unreachable branch reached")
 			}
 		}
 	}
 }
 
-// unread — laws/haskell_cpp.lawspec:435.
+// unread — laws/haskell_cpp.lawspec:755.
 func lsfUnread(ps *lsfList[*lsfPackage]) *lsfList[*lsfPackage] {
 	it := ps
 	if it == nil {
@@ -16147,7 +18306,7 @@ func lsfUnread(ps *lsfList[*lsfPackage]) *lsfList[*lsfPackage] {
 	}
 }
 
-// unreadDecls — laws/haskell_cpp.lawspec:426.
+// unreadDecls — laws/haskell_cpp.lawspec:746.
 func lsfUnreadDecls(ds *lsfList[*lsfDecl]) *lsfList[*lsfDecl] {
 	it := ds
 	if it == nil {
@@ -16191,7 +18350,7 @@ func lsfUnreadDecls(ds *lsfList[*lsfDecl]) *lsfList[*lsfDecl] {
 	}
 }
 
-// valueIn — laws/haskell_cpp.lawspec:339.
+// valueIn — laws/haskell_cpp.lawspec:558.
 func lsfValueIn_2(full *lsfMap[string, lsfInt], t_ string) lsfInt {
 	it := lsfLookup(full, t_, lsfCompareText)
 	if it.ok {
@@ -16202,17 +18361,7 @@ func lsfValueIn_2(full *lsfMap[string, lsfInt], t_ string) lsfInt {
 	}
 }
 
-// valued — laws/haskell_cpp.lawspec:228.
-func lsfValued(asg *lsfMap[string, lsfInt], t_ string) bool {
-	it := lsfLookup(asg, t_, lsfCompareText)
-	if it.ok {
-		return true
-	} else {
-		return false
-	}
-}
-
-// walkedAll — laws/haskell_cpp.lawspec:379.
+// walkedAll — laws/haskell_cpp.lawspec:646.
 func lsfWalkedAll(rs *lsfList[*lsfRow], fulls *lsfList[*lsfMap[string, lsfInt]], acc *lsfList[*lsfWalked]) *lsfList[*lsfWalked] {
 	for {
 		it := fulls
@@ -16223,8 +18372,8 @@ func lsfWalkedAll(rs *lsfList[*lsfRow], fulls *lsfList[*lsfMap[string, lsfInt]],
 			selection_2 := it.tail
 			next := selection_2
 			var value *lsfWalked
-			recordField := lsfTraceOf(rs, selection, (*lsfList[string])(nil))
-			recordField_2 := lsfCopyOf(selection, rs)
+			recordField := lsfTraceFrom(rs, lsfAssayxportHaskellCppStartWalk(lsfUnit{}), selection, lsfSmall(1), (*lsfList[string])(nil))
+			recordField_2 := lsfAssayxportHaskellCppCopyOf(selection, rs)
 			value = &lsfWalked{recordField, recordField_2}
 			next_2 := lsfInsertWalked(value, acc)
 			fulls = next
@@ -16234,7 +18383,7 @@ func lsfWalkedAll(rs *lsfList[*lsfRow], fulls *lsfList[*lsfMap[string, lsfInt]],
 	}
 }
 
-// withValue — laws/haskell_cpp.lawspec:327.
+// withValue — laws/haskell_cpp.lawspec:546.
 func lsfWithValue(t_ string, v lsfInt, as *lsfList[*lsfMap[string, lsfInt]]) *lsfList[*lsfMap[string, lsfInt]] {
 	it := as
 	if it == nil {
@@ -16279,7 +18428,7 @@ func lsfAfterCols(hs *lsfList[*lsfSyntax], acc *lsfMap[lsfInt, lsfInt]) *lsfMap[
 	}
 }
 
-// allDocumented — laws/haskell_extract.lawspec:4313.
+// allDocumented — laws/haskell_extract.lawspec:4693.
 func lsfAllDocumented(ps *lsfList[*lsfPackage], n lsfInt) bool {
 	it := ps
 	if it == nil {
@@ -16817,6 +18966,15 @@ func lsfBadChar(ch *lsfSyntax) bool {
 	return logic
 }
 
+// basePackage — laws/haskell_extract.lawspec:4573.
+func lsfBasePackage(v *lsfList[lsfInt]) lsfBindingLine {
+	var value *lsfSetPackageDetails
+	pkg := "base"
+	version := v
+	value = &lsfSetPackageDetails{pkg, version}
+	return &lsfBindingLine_SetPackage{value}
+}
+
 // beforeProc — laws/haskell_extract.lawspec:1377.
 func lsfBeforeProc(ls *lsfList[string], cur *lsfList[string], best *lsfList[string]) *lsfList[string] {
 	for {
@@ -16845,12 +19003,12 @@ func lsfBeforeProc(ls *lsfList[string], cur *lsfList[string], best *lsfList[stri
 	}
 }
 
-// bigDecl — laws/haskell_extract.lawspec:4303.
+// bigDecl — laws/haskell_extract.lawspec:4683.
 func lsfBigDecl(i lsfInt) string {
 	return (((((((("-- | Doc " + lsfTextOfInt(i)) + ".\x0a-- more of it\x0abig") + lsfTextOfInt(i)) + " :: Int -> Int\x0abig") + lsfTextOfInt(i)) + " x = big") + lsfTextOfInt(i)) + " x\x0a")
 }
 
-// bigDecls — laws/haskell_extract.lawspec:4307.
+// bigDecls — laws/haskell_extract.lawspec:4687.
 func lsfBigDecls(n lsfInt) *lsfList[string] {
 	if lsfCmpInt(n, lsfSmall(int64(0))) <= 0 {
 		return (*lsfList[string])(nil)
@@ -16859,7 +19017,7 @@ func lsfBigDecls(n lsfInt) *lsfList[string] {
 	}
 }
 
-// bigModule — laws/haskell_extract.lawspec:4309.
+// bigModule — laws/haskell_extract.lawspec:4689.
 func lsfBigModule(n lsfInt) string {
 	return ("module Big where\x0a\x0a" + lsfJoin("\x0a", lsfBigDecls(n)))
 }
@@ -16908,7 +19066,7 @@ func lsfBlanksOf(l string) lsfInt {
 	return lsfLeadBlanks(l, lsfSmall(0), lsfSmall(lsfTextLength(l)))
 }
 
-// blockDocIs — laws/haskell_extract.lawspec:3615.
+// blockDocIs — laws/haskell_extract.lawspec:3877.
 func lsfBlockDocIs(raw string, d *lsfDecl) bool {
 	var value string
 	var value_2 *lsfDocText
@@ -17078,7 +19236,7 @@ func lsfBrings(i *lsfImport, n string) bool {
 	return logic_3
 }
 
-// buildTexts — laws/haskell_extract.lawspec:3992.
+// buildTexts — laws/haskell_extract.lawspec:4278.
 func lsfBuildTexts(rs *lsfList[*lsfRow], n lsfInt) *lsfList[string] {
 	if lsfCmpInt(n, lsfSmall(int64(0))) <= 0 {
 		return (*lsfList[string])(nil)
@@ -17108,12 +19266,12 @@ func lsfBundled(loose *lsfMap[string, *lsfList[string]], cs *lsfList[*lsfSyntax]
 	}
 }
 
-// byteOrderMark — laws/haskell_extract.lawspec:2954.
+// byteOrderMark — laws/haskell_extract.lawspec:3216.
 func lsfByteOrderMark(u lsfUnit) string {
 	return "\ufeff"
 }
 
-// callsAre — laws/haskell_extract.lawspec:2872.
+// callsAre — laws/haskell_extract.lawspec:3134.
 func lsfCallsAre(id string, es *lsfList[*lsfCallEdge], d *lsfDecl) bool {
 	var value string
 	id_2 := d.fId
@@ -17130,7 +19288,7 @@ func lsfCallsAre(id string, es *lsfList[*lsfCallEdge], d *lsfDecl) bool {
 	return logic
 }
 
-// charModule — laws/haskell_extract.lawspec:2854.
+// charModule — laws/haskell_extract.lawspec:3116.
 func lsfCharModule(token string) *lsfSyntax {
 	var value *lsfPoint
 	recordField := lsfSmall(1)
@@ -17220,7 +19378,7 @@ func lsfChildrenErrorFree(cs *lsfList[*lsfSyntax]) bool {
 	}
 }
 
-// chosen — laws/haskell_extract.lawspec:3151.
+// chosen — laws/haskell_extract.lawspec:3413.
 func lsfChosen(n lsfInt, ts *lsfList[string], none string) string {
 	if int64(ts.length()) == int64(0) {
 		return none
@@ -17235,7 +19393,7 @@ func lsfChosen(n lsfInt, ts *lsfList[string], none string) string {
 	}
 }
 
-// classColumn — laws/haskell_extract.lawspec:3605.
+// classColumn — laws/haskell_extract.lawspec:3867.
 func lsfClassColumn(ds *lsfList[*lsfDecl], id string) lsfInt {
 	for {
 		it := ds
@@ -17370,7 +19528,7 @@ func lsfClassMethods(d *lsfSyntax) *lsfList[*lsfSyntax] {
 	}
 }
 
-// classicHeader — laws/haskell_extract.lawspec:3006.
+// classicHeader — laws/haskell_extract.lawspec:3268.
 func lsfClassicHeader(u lsfUnit) string {
 	return "-----------\x0a-- |\x0a-- Module : M\x0a--\x0a-- The doc.\x0a--\x0a-----------\x0a\x0amodule M where\x0a\x0a-- TODO: later\x0a-- | Doc of f.\x0af = 1\x0a\x0a-- | Doc of g.\x0a-----------\x0ag = 2\x0a"
 }
@@ -17794,7 +19952,7 @@ func lsfConNameOf(shape *lsfSyntax) string {
 	}
 }
 
-// condHolds — laws/haskell_extract.lawspec:4096.
+// condHolds — laws/haskell_extract.lawspec:4390.
 func lsfCondHolds(env *lsfEnv, cond string) bool {
 	return ((lsfTextLength(cond) == int64(0)) || (lsfEqualOutcome(lsfEvalCondition(env, cond), &lsfOutcome_Known{lsfSmall(1)})))
 }
@@ -18038,7 +20196,7 @@ func lsfContextOf(root *lsfSyntax, base *lsfList[*lsfDecl]) *lsfCtx {
 	return &lsfCtx{recordField, recordField_2, recordField_3, recordField_4, recordField_5, recordField_6}
 }
 
-// copyEnv — laws/haskell_extract.lawspec:3847.
+// copyEnv — laws/haskell_extract.lawspec:4133.
 func lsfCopyEnv(i lsfInt) *lsfEnv {
 	return lsfAssayxportConditionsPolicyCompleted(lsfAssayxportConditionsPolicyEnvFrom(lsfAssayxportConditionsPolicyEmptyEnv(lsfUnit{}), lsfAppend(lsfFirstArms(lsfUnit{}), lsfFurtherArms(i))))
 }
@@ -18117,7 +20275,7 @@ func lsfCoreType(t_ *lsfSyntax) *lsfSyntax {
 	}
 }
 
-// cpp2BuildHolds — laws/haskell_extract.lawspec:3898.
+// cpp2BuildHolds — laws/haskell_extract.lawspec:4184.
 func lsfCpp2BuildHolds(symbols map[string]*LawSpecSymbol, i lsfInt) bool {
 	it := lsfAtList(lsfAssayxportHaskellPolicyFixtureCpp2Copies(lsfUnit{}), lsfIndex(i))
 	if it.ok {
@@ -18158,7 +20316,7 @@ func lsfCpp2BuildHolds(symbols map[string]*LawSpecSymbol, i lsfInt) bool {
 	}
 }
 
-// cpp2BuildsHold — laws/haskell_extract.lawspec:3908.
+// cpp2BuildsHold — laws/haskell_extract.lawspec:4194.
 func lsfCpp2BuildsHold(symbols map[string]*LawSpecSymbol, n lsfInt) bool {
 	if lsfCmpInt(n, lsfSmall(int64(0))) <= 0 {
 		return true
@@ -18167,7 +20325,7 @@ func lsfCpp2BuildsHold(symbols map[string]*LawSpecSymbol, n lsfInt) bool {
 	}
 }
 
-// cpp2Filtered — laws/haskell_extract.lawspec:3956.
+// cpp2Filtered — laws/haskell_extract.lawspec:4242.
 func lsfCpp2Filtered(symbols map[string]*LawSpecSymbol, lines *lsfList[lsfBindingLine]) *lsfFiltered {
 	var value *lsfSourceFile
 	recordField := "Cpp2.hs"
@@ -18176,7 +20334,7 @@ func lsfCpp2Filtered(symbols map[string]*LawSpecSymbol, lines *lsfList[lsfBindin
 	return lsfApplyWhen(lsfAssayxportConditionsPolicyEnvFrom(lsfAssayxportConditionsPolicyEmptyEnv(lsfUnit{}), lines), lsfExtractFiles(symbols, lsfCons[*lsfSourceFile](value, (*lsfList[*lsfSourceFile])(nil))))
 }
 
-// cpp2Lines — laws/haskell_extract.lawspec:3887.
+// cpp2Lines — laws/haskell_extract.lawspec:4173.
 func lsfCpp2Lines(i lsfInt) *lsfList[lsfBindingLine] {
 	if lsfCmpInt(i, lsfSmall(int64(16))) < 0 {
 		var value *lsfSetPackageDetails
@@ -18215,14 +20373,14 @@ func lsfCpp2Lines(i lsfInt) *lsfList[lsfBindingLine] {
 	}
 }
 
-// cppCopies — laws/haskell_extract.lawspec:2552.
+// cppCopies — laws/haskell_extract.lawspec:2808.
 func lsfCppCopies(source string) *lsfList[string] {
 	matched_ := lsfCppPlan(source)
 	copies := matched_.fCopies
 	return copies
 }
 
-// cppPlan — laws/haskell_extract.lawspec:2538.
+// cppPlan — laws/haskell_extract.lawspec:2794.
 func lsfCppPlan(source string) *lsfCxPlan {
 	if !(strings.HasPrefix(source, "#") || strings.Contains(source, "\x0a#")) {
 		recordField := lsfCons[string](source, (*lsfList[string])(nil))
@@ -18231,33 +20389,29 @@ func lsfCppPlan(source string) *lsfCxPlan {
 		return &lsfCxPlan{recordField, recordField_2, recordField_3}
 	} else {
 		ls := lsfLinesOf(source)
-		var value *lsfCxState
-		recordField_4 := (*lsfList[*lsfCxOpen])(nil)
-		recordField_5 := lsfSmall(1)
-		value = &lsfCxState{recordField_4, recordField_5}
-		rows := lsfCxScan(lsfCxUnits(ls, lsfSmall(int64(ls.length())).Add(lsfSmall(int64(1)))), value)
+		rows := lsfCxScan(lsfCxUnits(ls, lsfSmall(int64(ls.length())).Add(lsfSmall(int64(1)))), lsfSmall(1))
 		if !(lsfCxHasGroup(rows)) {
-			recordField_6 := lsfCons[string](source, (*lsfList[string])(nil))
-			recordField_7 := (*lsfList[*lsfCxRow])(nil)
-			recordField_8 := false
-			return &lsfCxPlan{recordField_6, recordField_7, recordField_8}
+			recordField_4 := lsfCons[string](source, (*lsfList[string])(nil))
+			recordField_5 := (*lsfList[*lsfCxRow])(nil)
+			recordField_6 := false
+			return &lsfCxPlan{recordField_4, recordField_5, recordField_6}
 		} else {
-			if (lsfCmpInt(lsfCxCount(rows, lsfKeyValOf((*lsfList[*lsfEntry[string, lsfInt]])(nil), lsfCompareText), lsfAssayxportConditionsPolicyBuildCap(lsfUnit{})), lsfAssayxportConditionsPolicyBuildCap(lsfUnit{})) > 0) {
-				recordField_9 := lsfCons[string](lsfCxCopyOf(lsfCxFirstBuild(rows, lsfKeyValOf((*lsfList[*lsfEntry[string, lsfInt]])(nil), lsfCompareText)), rows), (*lsfList[string])(nil))
-				recordField_10 := rows
-				recordField_11 := true
-				return &lsfCxPlan{recordField_9, recordField_10, recordField_11}
+			if (lsfCmpInt(lsfCxCount(rows, lsfCxStart(lsfUnit{}), lsfKeyValOf((*lsfList[*lsfEntry[string, lsfInt]])(nil), lsfCompareText), lsfAssayxportConditionsPolicyBuildCap(lsfUnit{})), lsfAssayxportConditionsPolicyBuildCap(lsfUnit{})) > 0) {
+				recordField_7 := lsfCons[string](lsfCxCopyOf(lsfCxFirstBuild(rows, lsfCxStart(lsfUnit{}), lsfKeyValOf((*lsfList[*lsfEntry[string, lsfInt]])(nil), lsfCompareText)), rows), (*lsfList[string])(nil))
+				recordField_8 := rows
+				recordField_9 := true
+				return &lsfCxPlan{recordField_7, recordField_8, recordField_9}
 			} else {
-				recordField_12 := lsfCxCopiesOf(rows, lsfCxBuilds(rows, lsfKeyValOf((*lsfList[*lsfEntry[string, lsfInt]])(nil), lsfCompareText)))
-				recordField_13 := rows
-				recordField_14 := false
-				return &lsfCxPlan{recordField_12, recordField_13, recordField_14}
+				recordField_10 := lsfCxCopiesOf(rows, lsfCxBuilds(rows, lsfCxStart(lsfUnit{}), lsfKeyValOf((*lsfList[*lsfEntry[string, lsfInt]])(nil), lsfCompareText)))
+				recordField_11 := rows
+				recordField_12 := false
+				return &lsfCxPlan{recordField_10, recordField_11, recordField_12}
 			}
 		}
 	}
 }
 
-// cxAddDecl — laws/haskell_extract.lawspec:2645.
+// cxAddDecl — laws/haskell_extract.lawspec:2907.
 func lsfCxAddDecl(d *lsfDecl, i lsfInt, book *lsfCxBook) *lsfCxBook {
 	var value *lsfDecl
 	replacement := (*lsfList[*lsfCallEdge])(nil)
@@ -18320,7 +20474,7 @@ func lsfCxAddDecl(d *lsfDecl, i lsfInt, book *lsfCxBook) *lsfCxBook {
 	}
 }
 
-// cxAddDecls — laws/haskell_extract.lawspec:2654.
+// cxAddDecls — laws/haskell_extract.lawspec:2916.
 func lsfCxAddDecls(ds *lsfList[*lsfDecl], i lsfInt, book *lsfCxBook) *lsfCxBook {
 	for {
 		it := ds
@@ -18338,7 +20492,7 @@ func lsfCxAddDecls(ds *lsfList[*lsfDecl], i lsfInt, book *lsfCxBook) *lsfCxBook 
 	}
 }
 
-// cxAddEdge — laws/haskell_extract.lawspec:2624.
+// cxAddEdge — laws/haskell_extract.lawspec:2886.
 func lsfCxAddEdge(e *lsfCallEdge, i lsfInt, es *lsfList[*lsfCxEdge]) *lsfList[*lsfCxEdge] {
 	it := es
 	if it == nil {
@@ -18368,7 +20522,7 @@ func lsfCxAddEdge(e *lsfCallEdge, i lsfInt, es *lsfList[*lsfCxEdge]) *lsfList[*l
 	}
 }
 
-// cxAddEdges — laws/haskell_extract.lawspec:2632.
+// cxAddEdges — laws/haskell_extract.lawspec:2894.
 func lsfCxAddEdges(es *lsfList[*lsfCallEdge], i lsfInt, acc *lsfList[*lsfCxEdge]) *lsfList[*lsfCxEdge] {
 	for {
 		it := es
@@ -18386,7 +20540,7 @@ func lsfCxAddEdges(es *lsfList[*lsfCallEdge], i lsfInt, acc *lsfList[*lsfCxEdge]
 	}
 }
 
-// cxAddSym — laws/haskell_extract.lawspec:2636.
+// cxAddSym — laws/haskell_extract.lawspec:2898.
 func lsfCxAddSym(form *lsfDecl, es *lsfList[*lsfCallEdge], i lsfInt, syms *lsfList[*lsfCxSym]) *lsfList[*lsfCxSym] {
 	it := syms
 	if it == nil {
@@ -18427,21 +20581,59 @@ func lsfCxAddSym(form *lsfDecl, es *lsfList[*lsfCallEdge], i lsfInt, syms *lsfLi
 	}
 }
 
-// cxAllHold — laws/haskell_extract.lawspec:2461.
-func lsfCxAllHold(asg *lsfMap[string, lsfInt], ls *lsfList[*lsfCxTerm]) bool {
-	anyItem := asg
-	all := true
-	for cell := ls; cell != nil; cell = cell.tail {
-		anyItem_2 := cell.head
-		if !(lsfCxLitHolds(anyItem, anyItem_2)) {
-			all = false
-			break
-		}
+// cxAfter — laws/haskell_extract.lawspec:2640.
+func lsfCxAfter(w *lsfCxPass, r *lsfCxRow, v bool) *lsfCxPass {
+	var value *lsfList[*lsfCxFrame]
+	stack := w.fStack
+	value = stack
+	recordField := lsfCxStepped(value, r, v)
+	var value_2 *lsfMap[string, lsfCxSets]
+	var value_3 bool
+	var value_4 lsfCxSets
+	sets := r.fSets
+	value_4 = sets
+	it := value_4
+	switch it.(type) {
+	case *lsfCxSets_XNothing:
+		value_3 = true
+	case *lsfCxSets_XInt:
+		value_3 = false
+	case *lsfCxSets_XOther:
+		value_3 = false
+	case *lsfCxSets_XUnset:
+		value_3 = false
+	default:
+		panic("unreachable branch reached")
 	}
-	return all
+	var logic bool
+	if !(value_3) {
+		var value_5 *lsfList[*lsfCxFrame]
+		stack_2 := w.fStack
+		value_5 = stack_2
+		logic = lsfCxLiveOf(value_5)
+	} else {
+		logic = false
+	}
+	if logic {
+		var value_6 string
+		name := r.fName
+		value_6 = name
+		var value_7 lsfCxSets
+		sets_2 := r.fSets
+		value_7 = sets_2
+		var value_8 *lsfMap[string, lsfCxSets]
+		sets_3 := w.fSets
+		value_8 = sets_3
+		value_2 = lsfPut(value_8, value_6, value_7, lsfCompareText)
+	} else {
+		sets_4 := w.fSets
+		value_2 = sets_4
+	}
+	recordField_2 := value_2
+	return &lsfCxPass{recordField, recordField_2}
 }
 
-// cxBlanks — laws/haskell_extract.lawspec:2510.
+// cxBlanks — laws/haskell_extract.lawspec:2766.
 func lsfCxBlanks(n lsfInt) *lsfList[string] {
 	if lsfCmpInt(n, lsfSmall(int64(0))) <= 0 {
 		return (*lsfList[string])(nil)
@@ -18450,13 +20642,77 @@ func lsfCxBlanks(n lsfInt) *lsfList[string] {
 	}
 }
 
-// cxBodyOf — laws/haskell_extract.lawspec:2341.
+// cxBlocks — laws/haskell_extract.lawspec:2655.
+func lsfCxBlocks(sets *lsfMap[string, lsfCxSets], vals *lsfList[string], n string) bool {
+	it := lsfLookup(sets, n, lsfCompareText)
+	if it.ok {
+		selection := it.v
+		var logic_2 bool
+		if !(lsfAssayxportHaskellCppSpecial(n)) {
+			var value bool
+			it_2 := selection
+			switch it_2.(type) {
+			case *lsfCxSets_XOther:
+				value = true
+			case *lsfCxSets_XNothing:
+				value = false
+			case *lsfCxSets_XInt:
+				value = false
+			case *lsfCxSets_XUnset:
+				value = false
+			default:
+				panic("unreachable branch reached")
+			}
+			var logic bool
+			if value {
+				all := true
+				for cell := vals; cell != nil; cell = cell.tail {
+					item := cell.head
+					if !(!((item) == (n))) {
+						all = false
+						break
+					}
+				}
+				logic = !(all)
+			} else {
+				logic = false
+			}
+			logic_2 = logic
+		} else {
+			logic_2 = true
+		}
+		return logic_2
+	} else {
+		return true
+	}
+}
+
+// cxBodyOf — laws/haskell_extract.lawspec:2351.
 func lsfCxBodyOf(joined string) string {
 	rest := lsfCxSkipBlanks(lsfSliceText(joined, int64(1), lsfIndex(lsfSmall(9223372036854775807))), lsfSmall(lsfTextLength(joined)))
 	return lsfCxTrim(lsfSliceText(rest, lsfIndex(lsfCxWordLen(rest, lsfSmall(0), lsfSmall(lsfTextLength(rest)))), lsfIndex(lsfSmall(9223372036854775807))))
 }
 
-// cxBookOf — laws/haskell_extract.lawspec:2682.
+// cxBodySets — laws/haskell_extract.lawspec:2452.
+func lsfCxBodySets(rest string) lsfCxSets {
+	if strings.HasPrefix(rest, "(") {
+		return &lsfCxSets_XOther{}
+	} else {
+		it := lsfCxLitValue(lsfCxTrim(rest))
+		if it.ok {
+			selection := it.v
+			if lsfCmpInt(selection, lsfFromBig(lsInt("18446744073709551615"))) > 0 {
+				return &lsfCxSets_XOther{}
+			} else {
+				return &lsfCxSets_XInt{selection}
+			}
+		} else {
+			return &lsfCxSets_XOther{}
+		}
+	}
+}
+
+// cxBookOf — laws/haskell_extract.lawspec:2944.
 func lsfCxBookOf(live *lsfList[*lsfCxCopyPkg], book *lsfCxBook) *lsfCxBook {
 	for {
 		it := live
@@ -18484,8 +20740,8 @@ func lsfCxBookOf(live *lsfList[*lsfCxCopyPkg], book *lsfCxBook) *lsfCxBook {
 	}
 }
 
-// cxBuilds — laws/haskell_extract.lawspec:2493.
-func lsfCxBuilds(rs *lsfList[*lsfCxRow], asg *lsfMap[string, lsfInt]) *lsfList[*lsfMap[string, lsfInt]] {
+// cxBuilds — laws/haskell_extract.lawspec:2736.
+func lsfCxBuilds(rs *lsfList[*lsfCxRow], w *lsfCxPass, asg *lsfMap[string, lsfInt]) *lsfList[*lsfMap[string, lsfInt]] {
 	for {
 		it := rs
 		if it == nil {
@@ -18493,38 +20749,102 @@ func lsfCxBuilds(rs *lsfList[*lsfCxRow], asg *lsfMap[string, lsfInt]) *lsfList[*
 		} else {
 			selection := it.head
 			selection_2 := it.tail
-			if lsfCxChoiceAt(asg, selection) {
-				var value *lsfList[*lsfCxTerm]
-				terms := selection.fTerms
-				value = terms
-				var value_2 *lsfList[*lsfCxTerm]
-				terms_2 := selection.fTerms
-				value_2 = terms_2
-				return lsfAppend(lsfCxBuilds(selection_2, lsfPut(asg, lsfCxOwnText(value), lsfSmall(1), lsfCompareText)), lsfCxBuilds(selection_2, lsfPut(asg, lsfCxOwnText(value_2), lsfSmall(0), lsfCompareText)))
-			} else {
+			it_2 := lsfCxReadingAt(w, selection)
+			switch variant := it_2.(type) {
+			case *lsfCxReading_XNotRead:
 				next := selection_2
+				next_2 := lsfCxAfter(w, selection, false)
 				rs = next
+				w = next_2
 				continue
+			case *lsfCxReading_XByFile:
+				matchSelection := variant.fValue
+				next_3 := selection_2
+				next_4 := lsfCxAfter(w, selection, matchSelection)
+				rs = next_3
+				w = next_4
+				continue
+			case *lsfCxReading_XByTerm:
+				matchSelection_2 := variant.fValue
+				var value string
+				text := matchSelection_2.fText
+				value = text
+				if lsfAssayxportHaskellCppValued(asg, value) {
+					next_5 := selection_2
+					next_6 := lsfCxAfter(w, selection, lsfAssayxportHaskellCppLitTrue(asg, matchSelection_2))
+					rs = next_5
+					w = next_6
+					continue
+				} else {
+					var value_2 bool
+					negated := matchSelection_2.fNegated
+					value_2 = negated
+					var value_3 string
+					text_2 := matchSelection_2.fText
+					value_3 = text_2
+					var value_4 bool
+					negated_2 := matchSelection_2.fNegated
+					value_4 = negated_2
+					var value_5 string
+					text_3 := matchSelection_2.fText
+					value_5 = text_3
+					return lsfAppend(lsfCxBuilds(selection_2, lsfCxAfter(w, selection, !(value_2)), lsfPut(asg, value_3, lsfSmall(1), lsfCompareText)), lsfCxBuilds(selection_2, lsfCxAfter(w, selection, value_4), lsfPut(asg, value_5, lsfSmall(0), lsfCompareText)))
+				}
+			default:
+				panic("unreachable branch reached")
 			}
 		}
 	}
 }
 
-// cxChoiceAt — laws/haskell_extract.lawspec:2478.
-func lsfCxChoiceAt(asg *lsfMap[string, lsfInt], r *lsfCxRow) bool {
-	var logic bool
-	if lsfCxReached(asg, r) {
-		var value *lsfList[*lsfCxTerm]
-		terms := r.fTerms
-		value = terms
-		logic = !(lsfValued(asg, lsfCxOwnText(value)))
-	} else {
-		logic = false
+// cxCommentOpen — laws/haskell_extract.lawspec:2363.
+func lsfCxCommentOpen(t_ string, i lsfInt, n lsfInt, inside bool, fuel lsfInt) bool {
+	for {
+		if (lsfCmpInt(fuel, lsfSmall(int64(0))) <= 0) || (lsfCmpInt(i, n) >= 0) {
+			return inside
+		} else {
+			if inside {
+				if (lsfSliceText(lsfSliceText(t_, lsfIndex(i), lsfIndex(lsfSmall(9223372036854775807))), int64(0), int64(2))) == ("*/") {
+					next := i.Add(lsfSmall(int64(2)))
+					next_2 := false
+					next_3 := fuel.Sub(lsfSmall(int64(1)))
+					i = next
+					inside = next_2
+					fuel = next_3
+					continue
+				} else {
+					next_4 := i.Add(lsfSmall(int64(1)))
+					next_5 := true
+					next_6 := fuel.Sub(lsfSmall(int64(1)))
+					i = next_4
+					inside = next_5
+					fuel = next_6
+					continue
+				}
+			} else {
+				if (lsfSliceText(lsfSliceText(t_, lsfIndex(i), lsfIndex(lsfSmall(9223372036854775807))), int64(0), int64(2))) == ("/*") {
+					next_7 := i.Add(lsfSmall(int64(2)))
+					next_8 := true
+					next_9 := fuel.Sub(lsfSmall(int64(1)))
+					i = next_7
+					inside = next_8
+					fuel = next_9
+					continue
+				} else {
+					next_10 := i.Add(lsfSmall(int64(1)))
+					next_11 := false
+					next_12 := fuel.Sub(lsfSmall(int64(1)))
+					i = next_10
+					inside = next_11
+					fuel = next_12
+					continue
+				}
+			}
+		}
 	}
-	return logic
 }
 
-// cxCondText — laws/haskell_extract.lawspec:2599.
+// cxCondText — laws/haskell_extract.lawspec:2861.
 func lsfCxCondText(plan *lsfCxPlan, j *lsfList[lsfInt]) string {
 	var value bool
 	unread := plan.fUnread
@@ -18542,7 +20862,7 @@ func lsfCxCondText(plan *lsfCxPlan, j *lsfList[lsfInt]) string {
 			var value_4 *lsfList[*lsfCxRow]
 			rows := plan.fRows
 			value_4 = rows
-			matched_ := lsfCxWalk_2(value_4, lsfKeyValOf((*lsfList[*lsfEntry[string, lsfInt]])(nil), lsfCompareText), lsfSmall(0), j)
+			matched_ := lsfCxWalk_2(value_4, lsfCxStart(lsfUnit{}), lsfKeyValOf((*lsfList[*lsfEntry[string, lsfInt]])(nil), lsfCompareText), lsfSmall(0), j)
 			cubes := matched_.fCubes
 			value_3 = cubes
 			return lsfAssayxportConditionsPolicyConditionText(lsfCxCubeLits(value_3))
@@ -18550,7 +20870,7 @@ func lsfCxCondText(plan *lsfCxPlan, j *lsfList[lsfInt]) string {
 	}
 }
 
-// cxCopiesOf — laws/haskell_extract.lawspec:2525.
+// cxCopiesOf — laws/haskell_extract.lawspec:2781.
 func lsfCxCopiesOf(rows *lsfList[*lsfCxRow], builds *lsfList[*lsfMap[string, lsfInt]]) *lsfList[string] {
 	it := builds
 	if it == nil {
@@ -18562,8 +20882,8 @@ func lsfCxCopiesOf(rows *lsfList[*lsfCxRow], builds *lsfList[*lsfMap[string, lsf
 	}
 }
 
-// cxCopyLines — laws/haskell_extract.lawspec:2514.
-func lsfCxCopyLines(asg *lsfMap[string, lsfInt], rows *lsfList[*lsfCxRow]) *lsfList[string] {
+// cxCopyLines — laws/haskell_extract.lawspec:2770.
+func lsfCxCopyLines(w *lsfCxPass, asg *lsfMap[string, lsfInt], rows *lsfList[*lsfCxRow]) *lsfList[string] {
 	it := rows
 	if it == nil {
 		return (*lsfList[string])(nil)
@@ -18571,29 +20891,20 @@ func lsfCxCopyLines(asg *lsfMap[string, lsfInt], rows *lsfList[*lsfCxRow]) *lsfL
 		selection := it.head
 		selection_2 := it.tail
 		var value *lsfList[string]
-		var value_2 bool
-		directive := selection.fDirective
-		value_2 = directive
-		if value_2 {
+		var value_2 string
+		word := selection.fWord
+		value_2 = word
+		if lsfTextLength(value_2) > int64(0) {
 			var value_3 lsfInt
 			nlines := selection.fNlines
 			value_3 = nlines
 			value = lsfCxBlanks(value_3)
 		} else {
 			var value_4 string
-			var value_5 bool
-			dead := selection.fDead
-			value_5 = dead
-			var logic bool
-			if !(value_5) {
-				var value_6 *lsfList[*lsfCxTerm]
-				terms := selection.fTerms
-				value_6 = terms
-				logic = lsfCxAllHold(asg, value_6)
-			} else {
-				logic = false
-			}
-			if logic {
+			var value_5 *lsfList[*lsfCxFrame]
+			stack := w.fStack
+			value_5 = stack
+			if lsfCxLiveOf(value_5) {
 				text := selection.fText
 				value_4 = text
 			} else {
@@ -18601,17 +20912,17 @@ func lsfCxCopyLines(asg *lsfMap[string, lsfInt], rows *lsfList[*lsfCxRow]) *lsfL
 			}
 			value = lsfCons[string](value_4, (*lsfList[string])(nil))
 		}
-		return lsfAppend(value, lsfCxCopyLines(asg, selection_2))
+		return lsfAppend(value, lsfCxCopyLines(lsfCxAfter(w, selection, lsfCxTruthAt(w, asg, selection)), asg, selection_2))
 	}
 }
 
-// cxCopyOf — laws/haskell_extract.lawspec:2523.
+// cxCopyOf — laws/haskell_extract.lawspec:2779.
 func lsfCxCopyOf(asg *lsfMap[string, lsfInt], rows *lsfList[*lsfCxRow]) string {
-	return lsfJoin("\x0a", lsfCxCopyLines(asg, rows))
+	return lsfJoin("\x0a", lsfCxCopyLines(lsfCxStart(lsfUnit{}), asg, rows))
 }
 
-// cxCount — laws/haskell_extract.lawspec:2482.
-func lsfCxCount(rs *lsfList[*lsfCxRow], asg *lsfMap[string, lsfInt], budget lsfInt) lsfInt {
+// cxCount — laws/haskell_extract.lawspec:2719.
+func lsfCxCount(rs *lsfList[*lsfCxRow], w *lsfCxPass, asg *lsfMap[string, lsfInt], budget lsfInt) lsfInt {
 	for {
 		it := rs
 		if it == nil {
@@ -18619,29 +20930,60 @@ func lsfCxCount(rs *lsfList[*lsfCxRow], asg *lsfMap[string, lsfInt], budget lsfI
 		} else {
 			selection := it.head
 			selection_2 := it.tail
-			if lsfCxChoiceAt(asg, selection) {
-				var value *lsfList[*lsfCxTerm]
-				terms := selection.fTerms
-				value = terms
-				a := lsfCxCount(selection_2, lsfPut(asg, lsfCxOwnText(value), lsfSmall(1), lsfCompareText), budget)
-				if lsfCmpInt(a, budget) > 0 {
-					return a
-				} else {
-					var value_2 *lsfList[*lsfCxTerm]
-					terms_2 := selection.fTerms
-					value_2 = terms_2
-					return a.Add(lsfCxCount(selection_2, lsfPut(asg, lsfCxOwnText(value_2), lsfSmall(0), lsfCompareText), budget.Sub(a)))
-				}
-			} else {
+			it_2 := lsfCxReadingAt(w, selection)
+			switch variant := it_2.(type) {
+			case *lsfCxReading_XNotRead:
 				next := selection_2
+				next_2 := lsfCxAfter(w, selection, false)
 				rs = next
+				w = next_2
 				continue
+			case *lsfCxReading_XByFile:
+				matchSelection := variant.fValue
+				next_3 := selection_2
+				next_4 := lsfCxAfter(w, selection, matchSelection)
+				rs = next_3
+				w = next_4
+				continue
+			case *lsfCxReading_XByTerm:
+				matchSelection_2 := variant.fValue
+				var value string
+				text := matchSelection_2.fText
+				value = text
+				if lsfAssayxportHaskellCppValued(asg, value) {
+					next_5 := selection_2
+					next_6 := lsfCxAfter(w, selection, lsfAssayxportHaskellCppLitTrue(asg, matchSelection_2))
+					rs = next_5
+					w = next_6
+					continue
+				} else {
+					var value_2 bool
+					negated := matchSelection_2.fNegated
+					value_2 = negated
+					var value_3 string
+					text_2 := matchSelection_2.fText
+					value_3 = text_2
+					a := lsfCxCount(selection_2, lsfCxAfter(w, selection, !(value_2)), lsfPut(asg, value_3, lsfSmall(1), lsfCompareText), budget)
+					if lsfCmpInt(a, budget) > 0 {
+						return a
+					} else {
+						var value_4 bool
+						negated_2 := matchSelection_2.fNegated
+						value_4 = negated_2
+						var value_5 string
+						text_3 := matchSelection_2.fText
+						value_5 = text_3
+						return a.Add(lsfCxCount(selection_2, lsfCxAfter(w, selection, value_4), lsfPut(asg, value_5, lsfSmall(0), lsfCompareText), budget.Sub(a)))
+					}
+				}
+			default:
+				panic("unreachable branch reached")
 			}
 		}
 	}
 }
 
-// cxCubeLits — laws/haskell_extract.lawspec:2593.
+// cxCubeLits — laws/haskell_extract.lawspec:2855.
 func lsfCxCubeLits(cs *lsfList[*lsfList[*lsfCxTerm]]) *lsfList[*lsfList[*lsfLiteral]] {
 	it := cs
 	if it == nil {
@@ -18653,151 +20995,143 @@ func lsfCxCubeLits(cs *lsfList[*lsfList[*lsfCxTerm]]) *lsfList[*lsfList[*lsfLite
 	}
 }
 
-// cxDeadOf — laws/haskell_extract.lawspec:2404.
-func lsfCxDeadOf(stack *lsfList[*lsfCxOpen]) bool {
-	it := stack
-	if it == nil {
-		return false
-	} else {
-		selection := it.head
-		dead := selection.fDead
-		return dead
+// cxDecidedBy — laws/haskell_extract.lawspec:2685.
+func lsfCxDecidedBy(sets *lsfMap[string, lsfCxSets], r *lsfCxRow) lsfCxReading {
+	var value bool
+	anyItem := sets
+	var value_2 *lsfList[string]
+	names := r.fNames
+	value_2 = names
+	all := true
+	for cell := value_2; cell != nil; cell = cell.tail {
+		anyItem_2 := cell.head
+		if !(!(lsfCxIsSet(anyItem, anyItem_2))) {
+			all = false
+			break
+		}
 	}
-}
-
-// cxDirective — laws/haskell_extract.lawspec:2420.
-func lsfCxDirective(word string, body string, st *lsfCxState) *lsfCxEffect {
-	if (((word) == ("if")) || ((word) == ("ifdef"))) || ((word) == ("ifndef")) {
-		var value *lsfCxOpen
-		var value_2 *lsfList[*lsfCxOpen]
-		stack := st.fStack
-		value_2 = stack
-		recordField := lsfCxPathOf(value_2)
-		recordField_2 := (*lsfList[*lsfCxTerm])(nil)
-		var value_3 lsfInt
-		line := st.fLine
-		value_3 = line
-		recordField_3 := lsfCxTermOf(word, body, value_3)
-		recordField_4 := false
-		var value_4 *lsfList[*lsfCxOpen]
-		stack_2 := st.fStack
-		value_4 = stack_2
-		recordField_5 := lsfCxDeadOf(value_4)
-		value = &lsfCxOpen{recordField, recordField_2, recordField_3, recordField_4, recordField_5}
-		o := value
-		var value_5 *lsfList[*lsfCxOpen]
-		stack_3 := st.fStack
-		value_5 = stack_3
-		var value_6 bool
-		dead := o.fDead
-		value_6 = dead
-		return lsfCxTopEffect(o, value_5, !(value_6))
+	value = !(all)
+	if !(value) {
+		var value_3 *lsfLiteral
+		own := r.fOwn
+		value_3 = own
+		return &lsfCxReading_XByTerm{value_3}
 	} else {
-		if (((word) == ("elif")) || ((word) == ("else"))) || ((word) == ("endif")) {
-			var value_7 *lsfList[*lsfCxOpen]
-			stack_4 := st.fStack
-			value_7 = stack_4
-			it := value_7
-			if it == nil {
-				recordField_6 := (*lsfList[*lsfCxOpen])(nil)
-				recordField_7 := (*lsfList[*lsfCxTerm])(nil)
-				recordField_8 := false
-				return &lsfCxEffect{recordField_6, recordField_7, recordField_8}
-			} else {
-				selection := it.head
-				selection_2 := it.tail
-				if (word) == ("endif") {
-					recordField_9 := selection_2
-					recordField_10 := lsfCxPathOf(selection_2)
-					recordField_11 := false
-					return &lsfCxEffect{recordField_9, recordField_10, recordField_11}
-				} else {
-					var value_8 bool
-					hasElse := selection.fHasElse
-					value_8 = hasElse
-					var logic bool
-					if !(value_8) {
-						var value_9 bool
-						dead_2 := selection.fDead
-						value_9 = dead_2
-						logic = value_9
-					} else {
-						logic = true
-					}
-					if logic {
-						var value_10 *lsfCxOpen
-						replacement := true
-						outer := selection.fOuter
-						before := selection.fBefore
-						own := selection.fOwn
-						hasElse_2 := selection.fHasElse
-						value_10 = &lsfCxOpen{outer, before, own, hasElse_2, replacement}
-						return lsfCxTopEffect(value_10, selection_2, false)
-					} else {
-						var value_11 *lsfList[*lsfCxTerm]
-						before_2 := selection.fBefore
-						value_11 = before_2
-						var value_12 *lsfCxTerm
-						own_2 := selection.fOwn
-						value_12 = own_2
-						before2 := lsfAppend(value_11, lsfCons[*lsfCxTerm](lsfCxNegate(value_12), (*lsfList[*lsfCxTerm])(nil)))
-						if (word) == ("elif") {
-							var value_13 *lsfCxOpen
-							var value_14 lsfInt
-							line_2 := st.fLine
-							value_14 = line_2
-							replacement_2 := lsfCxTermOf("elif", body, value_14)
-							var value_15 *lsfCxOpen
-							replacement_3 := before2
-							outer_2 := selection.fOuter
-							own_3 := selection.fOwn
-							hasElse_3 := selection.fHasElse
-							dead_3 := selection.fDead
-							value_15 = &lsfCxOpen{outer_2, replacement_3, own_3, hasElse_3, dead_3}
-							matched_ := value_15
-							outer_3 := matched_.fOuter
-							before_3 := matched_.fBefore
-							hasElse_4 := matched_.fHasElse
-							dead_4 := matched_.fDead
-							value_13 = &lsfCxOpen{outer_3, before_3, replacement_2, hasElse_4, dead_4}
-							return lsfCxTopEffect(value_13, selection_2, true)
-						} else {
-							var value_16 *lsfCxOpen
-							replacement_4 := true
-							var value_17 *lsfCxOpen
-							replacement_5 := before2
-							outer_4 := selection.fOuter
-							own_4 := selection.fOwn
-							hasElse_5 := selection.fHasElse
-							dead_5 := selection.fDead
-							value_17 = &lsfCxOpen{outer_4, replacement_5, own_4, hasElse_5, dead_5}
-							matched__2 := value_17
-							outer_5 := matched__2.fOuter
-							before_4 := matched__2.fBefore
-							own_5 := matched__2.fOwn
-							dead_6 := matched__2.fDead
-							value_16 = &lsfCxOpen{outer_5, before_4, own_5, replacement_4, dead_6}
-							return lsfCxTopEffect(value_16, selection_2, false)
-						}
-					}
+		var value_4 bool
+		parsed := r.fParsed
+		value_4 = parsed
+		var logic bool
+		if !(!(value_4)) {
+			var value_5 bool
+			anyItem_3 := sets
+			var value_6 *lsfList[string]
+			vals := r.fVals
+			value_6 = vals
+			anyItem_4 := value_6
+			var value_7 *lsfList[string]
+			names_2 := r.fNames
+			value_7 = names_2
+			all_2 := true
+			for cell_2 := value_7; cell_2 != nil; cell_2 = cell_2.tail {
+				anyItem_5 := cell_2.head
+				if !(!(lsfCxBlocks(anyItem_3, anyItem_4, anyItem_5))) {
+					all_2 = false
+					break
 				}
 			}
+			value_5 = !(all_2)
+			logic = value_5
 		} else {
-			var value_18 *lsfList[*lsfCxOpen]
-			stack_5 := st.fStack
-			value_18 = stack_5
-			recordField_12 := value_18
-			var value_19 *lsfList[*lsfCxOpen]
-			stack_6 := st.fStack
-			value_19 = stack_6
-			recordField_13 := lsfCxPathOf(value_19)
-			recordField_14 := false
-			return &lsfCxEffect{recordField_12, recordField_13, recordField_14}
+			logic = true
+		}
+		if logic {
+			var value_8 lsfInt
+			line := r.fLine
+			value_8 = line
+			var value_9 *lsfLiteral
+			own_2 := r.fOwn
+			value_9 = own_2
+			return &lsfCxReading_XByTerm{lsfCxFileTerm(value_8, value_9)}
+		} else {
+			var value_10 *lsfEnv
+			var value_11 *lsfList[string]
+			names_3 := r.fNames
+			value_11 = names_3
+			replacement := lsfCxFileNames(sets, value_11, lsfKeyValOf((*lsfList[*lsfEntry[string, lsfBinding]])(nil), lsfCompareText))
+			matched_ := lsfAssayxportConditionsPolicyEmptyEnv(lsfUnit{})
+			versions := matched_.fVersions
+			complete := matched_.fComplete
+			value_10 = &lsfEnv{replacement, versions, complete}
+			var value_12 lsfCExpr
+			var value_13 *lsfLiteral
+			own_3 := r.fOwn
+			value_13 = own_3
+			matched__2 := value_13
+			expr := matched__2.fExpr
+			value_12 = expr
+			it := lsfAssayxportConditionsPolicyRefEval(lsfAssayxportConditionsPolicyCompleted(value_10), value_12)
+			switch variant := it.(type) {
+			case *lsfOutcome_Known:
+				selection := variant.fValue
+				var value_14 bool
+				var value_15 *lsfLiteral
+				own_4 := r.fOwn
+				value_15 = own_4
+				matched__3 := value_15
+				negated := matched__3.fNegated
+				value_14 = negated
+				return &lsfCxReading_XByFile{!((lsfCmpInt(selection, lsfSmall(int64(0))) != 0) == (value_14))}
+			case *lsfOutcome_Unknown:
+				var value_16 lsfInt
+				line_2 := r.fLine
+				value_16 = line_2
+				var value_17 *lsfLiteral
+				own_5 := r.fOwn
+				value_17 = own_5
+				return &lsfCxReading_XByTerm{lsfCxFileTerm(value_16, value_17)}
+			case *lsfOutcome_Bad:
+				var value_18 lsfInt
+				line_3 := r.fLine
+				value_18 = line_3
+				var value_19 *lsfLiteral
+				own_6 := r.fOwn
+				value_19 = own_6
+				return &lsfCxReading_XByTerm{lsfCxFileTerm(value_18, value_19)}
+			default:
+				panic("unreachable branch reached")
+			}
 		}
 	}
 }
 
-// cxEdgesCond — laws/haskell_extract.lawspec:2692.
+// cxDefinition — laws/haskell_extract.lawspec:2464.
+func lsfCxDefinition(word string, body string) *lsfCxDef {
+	if ((word) == ("define")) || ((word) == ("undef")) {
+		b := lsfCxTrim(lsfCxStrip(body, lsfSmall(lsfTextLength(body))))
+		id := lsfCxIdent(b)
+		if lsfTextLength(id) == int64(0) {
+			recordField := ""
+			recordField_2 := &lsfCxSets_XNothing{}
+			return &lsfCxDef{recordField, recordField_2}
+		} else {
+			if (word) == ("undef") {
+				recordField_3 := id
+				recordField_4 := &lsfCxSets_XUnset{}
+				return &lsfCxDef{recordField_3, recordField_4}
+			} else {
+				recordField_5 := id
+				recordField_6 := lsfCxBodySets(lsfSliceText(b, lsfTextLength(id), lsfIndex(lsfSmall(9223372036854775807))))
+				return &lsfCxDef{recordField_5, recordField_6}
+			}
+		}
+	} else {
+		recordField_7 := ""
+		recordField_8 := &lsfCxSets_XNothing{}
+		return &lsfCxDef{recordField_7, recordField_8}
+	}
+}
+
+// cxEdgesCond — laws/haskell_extract.lawspec:2954.
 func lsfCxEdgesCond(plan *lsfCxPlan, es *lsfList[*lsfCxEdge]) *lsfList[*lsfCallEdge] {
 	it := es
 	if it == nil {
@@ -18825,7 +21159,7 @@ func lsfCxEdgesCond(plan *lsfCxPlan, es *lsfList[*lsfCxEdge]) *lsfList[*lsfCallE
 	}
 }
 
-// cxEmit — laws/haskell_extract.lawspec:2707.
+// cxEmit — laws/haskell_extract.lawspec:2969.
 func lsfCxEmit(plan *lsfCxPlan, book *lsfCxBook, ids *lsfList[string]) *lsfList[*lsfDecl] {
 	it := ids
 	if it == nil {
@@ -18848,7 +21182,7 @@ func lsfCxEmit(plan *lsfCxPlan, book *lsfCxBook, ids *lsfList[string]) *lsfList[
 	}
 }
 
-// cxEmitSyms — laws/haskell_extract.lawspec:2699.
+// cxEmitSyms — laws/haskell_extract.lawspec:2961.
 func lsfCxEmitSyms(plan *lsfCxPlan, syms *lsfList[*lsfCxSym]) *lsfList[*lsfDecl] {
 	it := syms
 	if it == nil {
@@ -18899,8 +21233,83 @@ func lsfCxEmitSyms(plan *lsfCxPlan, syms *lsfList[*lsfCxSym]) *lsfList[*lsfDecl]
 	}
 }
 
-// cxFirstBuild — laws/haskell_extract.lawspec:2503.
-func lsfCxFirstBuild(rs *lsfList[*lsfCxRow], asg *lsfMap[string, lsfInt]) *lsfMap[string, lsfInt] {
+// cxExprOf — laws/haskell_extract.lawspec:2493.
+func lsfCxExprOf(text string) lsfMaybe[lsfCExpr] {
+	if lsfPaired(text) {
+		return lsfParseWhen(text)
+	} else {
+		return lsfAbsent[lsfCExpr]()
+	}
+}
+
+// cxFileNames — laws/haskell_extract.lawspec:2663.
+func lsfCxFileNames(sets *lsfMap[string, lsfCxSets], ns *lsfList[string], acc *lsfMap[string, lsfBinding]) *lsfMap[string, lsfBinding] {
+	for {
+		it := ns
+		if it == nil {
+			return acc
+		} else {
+			selection := it.head
+			selection_2 := it.tail
+			next := selection_2
+			var value *lsfMap[string, lsfBinding]
+			it_2 := lsfLookup(sets, selection, lsfCompareText)
+			if it_2.ok {
+				matchSelection := it_2.v
+				switch variant := matchSelection.(type) {
+				case *lsfCxSets_XInt:
+					selection_3 := variant.fValue
+					value = lsfPut(acc, selection, lsfAssayxportConditionsPolicyDefinedAs(selection_3), lsfCompareText)
+				case *lsfCxSets_XUnset:
+					value = lsfPut(acc, selection, lsfAssayxportConditionsPolicyNotDefined(lsfUnit{}), lsfCompareText)
+				case *lsfCxSets_XOther:
+					value = lsfPut(acc, selection, lsfAssayxportConditionsPolicyDefinedAs(lsfSmall(1)), lsfCompareText)
+				case *lsfCxSets_XNothing:
+					value = acc
+				default:
+					panic("unreachable branch reached")
+				}
+			} else {
+				value = acc
+			}
+			next_2 := value
+			ns = next
+			acc = next_2
+			continue
+		}
+	}
+}
+
+// cxFileTerm — laws/haskell_extract.lawspec:2680.
+func lsfCxFileTerm(line lsfInt, l *lsfLiteral) *lsfLiteral {
+	var value bool
+	negated := l.fNegated
+	value = negated
+	recordField := value
+	recordField_2 := lsfFileDefinedTerm(line)
+	recordField_3 := &lsfCExpr_Lit{lsfSmall(0)}
+	return &lsfLiteral{recordField, recordField_2, recordField_3}
+}
+
+// cxFindOpen — laws/haskell_extract.lawspec:2423.
+func lsfCxFindOpen(t_ string, i lsfInt, n lsfInt) lsfInt {
+	for {
+		if lsfCmpInt(i.Add(lsfSmall(int64(1))), n) >= 0 {
+			return lsfSmall(int64(0)).Sub(lsfSmall(int64(1)))
+		} else {
+			if (lsfSliceText(lsfSliceText(t_, lsfIndex(i), lsfIndex(lsfSmall(9223372036854775807))), int64(0), int64(2))) == ("/*") {
+				return i
+			} else {
+				next := i.Add(lsfSmall(int64(1)))
+				i = next
+				continue
+			}
+		}
+	}
+}
+
+// cxFirstBuild — laws/haskell_extract.lawspec:2752.
+func lsfCxFirstBuild(rs *lsfList[*lsfCxRow], w *lsfCxPass, asg *lsfMap[string, lsfInt]) *lsfMap[string, lsfInt] {
 	for {
 		it := rs
 		if it == nil {
@@ -18908,25 +21317,55 @@ func lsfCxFirstBuild(rs *lsfList[*lsfCxRow], asg *lsfMap[string, lsfInt]) *lsfMa
 		} else {
 			selection := it.head
 			selection_2 := it.tail
-			next := selection_2
-			var value *lsfMap[string, lsfInt]
-			if lsfCxChoiceAt(asg, selection) {
-				var value_2 *lsfList[*lsfCxTerm]
-				terms := selection.fTerms
-				value_2 = terms
-				value = lsfPut(asg, lsfCxOwnText(value_2), lsfSmall(1), lsfCompareText)
-			} else {
-				value = asg
+			it_2 := lsfCxReadingAt(w, selection)
+			switch variant := it_2.(type) {
+			case *lsfCxReading_XNotRead:
+				next := selection_2
+				next_2 := lsfCxAfter(w, selection, false)
+				rs = next
+				w = next_2
+				continue
+			case *lsfCxReading_XByFile:
+				matchSelection := variant.fValue
+				next_3 := selection_2
+				next_4 := lsfCxAfter(w, selection, matchSelection)
+				rs = next_3
+				w = next_4
+				continue
+			case *lsfCxReading_XByTerm:
+				matchSelection_2 := variant.fValue
+				var value string
+				text := matchSelection_2.fText
+				value = text
+				if lsfAssayxportHaskellCppValued(asg, value) {
+					next_5 := selection_2
+					next_6 := lsfCxAfter(w, selection, lsfAssayxportHaskellCppLitTrue(asg, matchSelection_2))
+					rs = next_5
+					w = next_6
+					continue
+				} else {
+					next_7 := selection_2
+					var value_2 bool
+					negated := matchSelection_2.fNegated
+					value_2 = negated
+					next_8 := lsfCxAfter(w, selection, !(value_2))
+					var value_3 string
+					text_2 := matchSelection_2.fText
+					value_3 = text_2
+					next_9 := lsfPut(asg, value_3, lsfSmall(1), lsfCompareText)
+					rs = next_7
+					w = next_8
+					asg = next_9
+					continue
+				}
+			default:
+				panic("unreachable branch reached")
 			}
-			next_2 := value
-			rs = next
-			asg = next_2
-			continue
 		}
 	}
 }
 
-// cxFirstId — laws/haskell_extract.lawspec:2675.
+// cxFirstId — laws/haskell_extract.lawspec:2937.
 func lsfCxFirstId(pks *lsfList[*lsfList[*lsfPackage]]) lsfMaybe[*lsfPackage] {
 	for {
 		it := pks
@@ -18948,7 +21387,7 @@ func lsfCxFirstId(pks *lsfList[*lsfList[*lsfPackage]]) lsfMaybe[*lsfPackage] {
 	}
 }
 
-// cxHasGroup — laws/haskell_extract.lawspec:2532.
+// cxHasGroup — laws/haskell_extract.lawspec:2788.
 func lsfCxHasGroup(rs *lsfList[*lsfCxRow]) bool {
 	it := rs
 	if it == nil {
@@ -18956,14 +21395,14 @@ func lsfCxHasGroup(rs *lsfList[*lsfCxRow]) bool {
 	} else {
 		selection := it.head
 		selection_2 := it.tail
-		var value bool
-		reads := selection.fReads
-		value = reads
-		return (value || lsfCxHasGroup(selection_2))
+		var value string
+		word := selection.fWord
+		value = word
+		return (lsfCxReadsWord(value) || lsfCxHasGroup(selection_2))
 	}
 }
 
-// cxIdent — laws/haskell_extract.lawspec:2382.
+// cxIdent — laws/haskell_extract.lawspec:2418.
 func lsfCxIdent(t_ string) string {
 	if lsfRegexMatches("[A-Za-z_]", lsfSliceText(t_, int64(0), int64(1))) {
 		return lsfSliceText(t_, int64(0), lsfIndex(lsfCxWordLen(t_, lsfSmall(0), lsfSmall(lsfTextLength(t_)))))
@@ -18972,12 +21411,99 @@ func lsfCxIdent(t_ string) string {
 	}
 }
 
-// cxIsBlank — laws/haskell_extract.lawspec:2311.
+// cxIdents — laws/haskell_extract.lawspec:2542.
+func lsfCxIdents(t_ string, fuel lsfInt) *lsfList[string] {
+	for {
+		if (lsfCmpInt(fuel, lsfSmall(int64(0))) <= 0) || (lsfTextLength(t_) == int64(0)) {
+			return (*lsfList[string])(nil)
+		} else {
+			n := lsfSmall(lsfTextLength(t_))
+			ch := lsfSliceText(t_, int64(0), int64(1))
+			if (lsfSliceText(t_, int64(0), int64(2))) == ("/*") {
+				e := lsfCommentEnd(t_, lsfSmall(2), n)
+				if lsfCmpInt(e, lsfSmall(int64(0))) < 0 {
+					return (*lsfList[string])(nil)
+				} else {
+					next := lsfSliceText(t_, lsfIndex(e), lsfIndex(lsfSmall(9223372036854775807)))
+					next_2 := fuel.Sub(lsfSmall(int64(1)))
+					t_ = next
+					fuel = next_2
+					continue
+				}
+			} else {
+				if lsfIsDigitCh(ch) {
+					next_3 := lsfSliceText(t_, lsfIndex(lsfNumLen(t_, lsfSmall(0), n)), lsfIndex(lsfSmall(9223372036854775807)))
+					next_4 := fuel.Sub(lsfSmall(int64(1)))
+					t_ = next_3
+					fuel = next_4
+					continue
+				} else {
+					if lsfIsIdStart(ch) {
+						e_2 := lsfIdLen(t_, lsfSmall(0), n)
+						var value *lsfList[string]
+						if (lsfSliceText(t_, int64(0), lsfIndex(e_2))) == ("defined") {
+							value = (*lsfList[string])(nil)
+						} else {
+							value = lsfCons[string](lsfSliceText(t_, int64(0), lsfIndex(e_2)), (*lsfList[string])(nil))
+						}
+						return lsfAppend(value, lsfCxIdents(lsfSliceText(t_, lsfIndex(e_2), lsfIndex(lsfSmall(9223372036854775807))), fuel.Sub(lsfSmall(int64(1)))))
+					} else {
+						if (ch) == ("'") {
+							e_3 := lsfQuoteEnd(t_, lsfSmall(1), n, false)
+							if lsfCmpInt(e_3, lsfSmall(int64(0))) < 0 {
+								return (*lsfList[string])(nil)
+							} else {
+								next_5 := lsfSliceText(t_, lsfIndex(e_3), lsfIndex(lsfSmall(9223372036854775807)))
+								next_6 := fuel.Sub(lsfSmall(int64(1)))
+								t_ = next_5
+								fuel = next_6
+								continue
+							}
+						} else {
+							next_7 := lsfSliceText(t_, int64(1), lsfIndex(lsfSmall(9223372036854775807)))
+							next_8 := fuel.Sub(lsfSmall(int64(1)))
+							t_ = next_7
+							fuel = next_8
+							continue
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+// cxIsBlank — laws/haskell_extract.lawspec:2321.
 func lsfCxIsBlank(ch string) bool {
 	return (((ch) == (" ")) || ((ch) == ("\x09")))
 }
 
-// cxJoin — laws/haskell_extract.lawspec:2354.
+// cxIsDefForm — laws/haskell_extract.lawspec:2485.
+func lsfCxIsDefForm(word string) bool {
+	return (((((word) == ("ifdef")) || ((word) == ("ifndef"))) || ((word) == ("elifdef"))) || ((word) == ("elifndef")))
+}
+
+// cxIsElifWord — laws/haskell_extract.lawspec:2476.
+func lsfCxIsElifWord(w string) bool {
+	return ((((w) == ("elif")) || ((w) == ("elifdef"))) || ((w) == ("elifndef")))
+}
+
+// cxIsIfWord — laws/haskell_extract.lawspec:2475.
+func lsfCxIsIfWord(w string) bool {
+	return ((((w) == ("if")) || ((w) == ("ifdef"))) || ((w) == ("ifndef")))
+}
+
+// cxIsSet — laws/haskell_extract.lawspec:2645.
+func lsfCxIsSet(sets *lsfMap[string, lsfCxSets], n string) bool {
+	it := lsfLookup(sets, n, lsfCompareText)
+	if it.ok {
+		return true
+	} else {
+		return false
+	}
+}
+
+// cxJoin — laws/haskell_extract.lawspec:2395.
 func lsfCxJoin_2(ls *lsfList[string]) *lsfCxJoin {
 	it := ls
 	if it == nil {
@@ -18987,43 +21513,77 @@ func lsfCxJoin_2(ls *lsfList[string]) *lsfCxJoin {
 	} else {
 		selection := it.head
 		selection_2 := it.tail
-		if strings.HasSuffix(selection, "\\") && (int64(selection_2.length()) > int64(0)) {
-			j := lsfCxJoin_2(selection_2)
-			var value lsfInt
-			nlines := j.fNlines
-			value = nlines
-			recordField_3 := value.Add(lsfSmall(int64(1)))
-			var value_2 string
-			text := j.fText
-			value_2 = text
-			recordField_4 := (lsfSliceText(selection, int64(0), lsfIndex(lsfSmall(lsfTextLength(selection)).Sub(lsfSmall(int64(1))))) + value_2)
-			return &lsfCxJoin{recordField_3, recordField_4}
+		return lsfCxJoinMore(selection, lsfSmall(1), selection_2, lsfSmall(int64(selection_2.length())).Add(lsfSmall(int64(1))))
+	}
+}
+
+// cxJoinMore — laws/haskell_extract.lawspec:2382.
+func lsfCxJoinMore(acc string, n lsfInt, rest *lsfList[string], fuel lsfInt) *lsfCxJoin {
+	for {
+		if lsfCmpInt(fuel, lsfSmall(int64(0))) <= 0 {
+			recordField := n
+			recordField_2 := acc
+			return &lsfCxJoin{recordField, recordField_2}
 		} else {
-			recordField_5 := lsfSmall(1)
-			recordField_6 := selection
-			return &lsfCxJoin{recordField_5, recordField_6}
+			it := rest
+			if it == nil {
+				recordField_3 := n
+				recordField_4 := acc
+				return &lsfCxJoin{recordField_3, recordField_4}
+			} else {
+				selection := it.head
+				selection_2 := it.tail
+				if lsfCxSpliced(acc) {
+					next := (lsfCxUnsplice(acc) + selection)
+					next_2 := n.Add(lsfSmall(int64(1)))
+					next_3 := selection_2
+					next_4 := fuel.Sub(lsfSmall(int64(1)))
+					acc = next
+					n = next_2
+					rest = next_3
+					fuel = next_4
+					continue
+				} else {
+					if lsfCxCommentOpen(acc, lsfSmall(0), lsfSmall(lsfTextLength(acc)), false, lsfSmall(lsfTextLength(acc)).Add(lsfSmall(int64(1)))) {
+						next_5 := ((acc + " ") + selection)
+						next_6 := n.Add(lsfSmall(int64(1)))
+						next_7 := selection_2
+						next_8 := fuel.Sub(lsfSmall(int64(1)))
+						acc = next_5
+						n = next_6
+						rest = next_7
+						fuel = next_8
+						continue
+					} else {
+						recordField_5 := n
+						recordField_6 := acc
+						return &lsfCxJoin{recordField_5, recordField_6}
+					}
+				}
+			}
 		}
 	}
 }
 
-// cxLitHolds — laws/haskell_extract.lawspec:2454.
-func lsfCxLitHolds(asg *lsfMap[string, lsfInt], l *lsfCxTerm) bool {
-	var value string
-	text := l.fText
-	value = text
-	it := lsfLookup(asg, value, lsfCompareText)
-	if it.ok {
-		selection := it.v
-		var value_2 bool
-		negated := l.fNegated
-		value_2 = negated
-		return !((lsfCmpInt(selection, lsfSmall(int64(0))) != 0) == (value_2))
+// cxLitValue — laws/haskell_extract.lawspec:2441.
+func lsfCxLitValue(s string) lsfMaybe[lsfInt] {
+	n := lsfSmall(lsfTextLength(s))
+	if lsfRegexMatches("0[xX][0-9a-fA-F]+(ll|LL|l|L)?", s) {
+		return lsfPresent[lsfInt](lsfNumValue(s, lsfSmall(16), lsfSmall(2), lsfDigitRun(s, lsfSmall(2), n, true), lsfSmall(0)))
 	} else {
-		return false
+		if lsfRegexMatches("[1-9][0-9]*(ll|LL|l|L)?", s) {
+			return lsfPresent[lsfInt](lsfNumValue(s, lsfSmall(10), lsfSmall(0), lsfDigitRun(s, lsfSmall(0), n, false), lsfSmall(0)))
+		} else {
+			if lsfRegexMatches("0[0-7]*(ll|LL|l|L)?", s) {
+				return lsfPresent[lsfInt](lsfNumValue(s, lsfSmall(8), lsfSmall(0), lsfDigitRun(s, lsfSmall(0), n, false), lsfSmall(0)))
+			} else {
+				return lsfAbsent[lsfInt]()
+			}
+		}
 	}
 }
 
-// cxLits — laws/haskell_extract.lawspec:2586.
+// cxLits — laws/haskell_extract.lawspec:2848.
 func lsfCxLits(ts *lsfList[*lsfCxTerm]) *lsfList[*lsfLiteral] {
 	it := ts
 	if it == nil {
@@ -19046,7 +21606,7 @@ func lsfCxLits(ts *lsfList[*lsfCxTerm]) *lsfList[*lsfLiteral] {
 	}
 }
 
-// cxLive — laws/haskell_extract.lawspec:2664.
+// cxLive — laws/haskell_extract.lawspec:2926.
 func lsfCxLive(pks *lsfList[*lsfList[*lsfPackage]], i lsfInt, id string) *lsfList[*lsfCxCopyPkg] {
 	it := pks
 	if it == nil {
@@ -19077,58 +21637,27 @@ func lsfCxLive(pks *lsfList[*lsfList[*lsfPackage]], i lsfInt, id string) *lsfLis
 	}
 }
 
-// cxNegate — laws/haskell_extract.lawspec:2379.
-func lsfCxNegate(t_ *lsfCxTerm) *lsfCxTerm {
-	var value bool
-	negated := t_.fNegated
-	value = negated
-	replacement := !(value)
-	text := t_.fText
-	return &lsfCxTerm{replacement, text}
-}
-
-// cxOwnText — laws/haskell_extract.lawspec:2463.
-func lsfCxOwnText(ls *lsfList[*lsfCxTerm]) string {
-	it := lsfAtList(ls, lsfIndex(lsfSmall(int64(ls.length())).Sub(lsfSmall(int64(1)))))
-	if it.ok {
-		selection := it.v
-		text := selection.fText
-		return text
-	} else {
-		return ""
-	}
-}
-
-// cxPathOf — laws/haskell_extract.lawspec:2397.
-func lsfCxPathOf(stack *lsfList[*lsfCxOpen]) *lsfList[*lsfCxTerm] {
+// cxLiveOf — laws/haskell_extract.lawspec:2611.
+func lsfCxLiveOf(stack *lsfList[*lsfCxFrame]) bool {
 	it := stack
 	if it == nil {
-		return (*lsfList[*lsfCxTerm])(nil)
+		return true
 	} else {
 		selection := it.head
-		var value *lsfList[*lsfCxTerm]
-		outer := selection.fOuter
-		value = outer
-		var value_2 *lsfList[*lsfCxTerm]
-		before := selection.fBefore
-		value_2 = before
-		var value_3 *lsfList[*lsfCxTerm]
-		var value_4 bool
-		hasElse := selection.fHasElse
-		value_4 = hasElse
-		if value_4 {
-			value_3 = (*lsfList[*lsfCxTerm])(nil)
-		} else {
-			var value_5 *lsfCxTerm
-			own := selection.fOwn
-			value_5 = own
-			value_3 = lsfCons[*lsfCxTerm](value_5, (*lsfList[*lsfCxTerm])(nil))
-		}
-		return lsfAppend(lsfAppend(value, value_2), value_3)
+		live := selection.fLive
+		return live
 	}
 }
 
-// cxPrefixed — laws/haskell_extract.lawspec:2566.
+// cxNoTerm — laws/haskell_extract.lawspec:2560.
+func lsfCxNoTerm(u lsfUnit) *lsfLiteral {
+	recordField := false
+	recordField_2 := ""
+	recordField_3 := &lsfCExpr_Lit{lsfSmall(0)}
+	return &lsfLiteral{recordField, recordField_2, recordField_3}
+}
+
+// cxPrefixed — laws/haskell_extract.lawspec:2823.
 func lsfCxPrefixed(l *lsfCxTerm, cs *lsfList[*lsfList[*lsfCxTerm]]) *lsfList[*lsfList[*lsfCxTerm]] {
 	it := cs
 	if it == nil {
@@ -19140,107 +21669,196 @@ func lsfCxPrefixed(l *lsfCxTerm, cs *lsfList[*lsfList[*lsfCxTerm]]) *lsfList[*ls
 	}
 }
 
-// cxReached — laws/haskell_extract.lawspec:2469.
-func lsfCxReached(asg *lsfMap[string, lsfInt], r *lsfCxRow) bool {
-	var value bool
-	reads := r.fReads
-	value = reads
-	var logic bool
-	if value {
-		var value_2 *lsfList[*lsfCxTerm]
-		terms := r.fTerms
-		value_2 = terms
-		var value_3 *lsfList[*lsfCxTerm]
-		terms_2 := r.fTerms
-		value_3 = terms_2
-		logic = lsfCxAllHold(asg, lsfSliceList(value_2, int64(0), lsfIndex(lsfSmall(int64(value_3.length())).Sub(lsfSmall(int64(1))))))
+// cxReachedIn — laws/haskell_extract.lawspec:2616.
+func lsfCxReachedIn(stack *lsfList[*lsfCxFrame], r *lsfCxRow) bool {
+	var value string
+	word := r.fWord
+	value = word
+	if lsfCxIsIfWord(value) {
+		return lsfCxLiveOf(stack)
 	} else {
-		logic = false
+		var value_2 string
+		word_2 := r.fWord
+		value_2 = word_2
+		if lsfCxIsElifWord(value_2) {
+			it := stack
+			if it == nil {
+				return false
+			} else {
+				selection := it.head
+				selection_2 := it.tail
+				var logic bool
+				if lsfCxLiveOf(selection_2) {
+					var value_3 bool
+					done := selection.fDone
+					value_3 = done
+					logic = !(value_3)
+				} else {
+					logic = false
+				}
+				return logic
+			}
+		} else {
+			return false
+		}
 	}
-	return logic
 }
 
-// cxScan — laws/haskell_extract.lawspec:2437.
-func lsfCxScan(us *lsfList[*lsfCxUnit], st *lsfCxState) *lsfList[*lsfCxRow] {
+// cxReadingAt — laws/haskell_extract.lawspec:2697.
+func lsfCxReadingAt(w *lsfCxPass, r *lsfCxRow) lsfCxReading {
+	var value *lsfList[*lsfCxFrame]
+	stack := w.fStack
+	value = stack
+	if !(lsfCxReachedIn(value, r)) {
+		return &lsfCxReading_XNotRead{}
+	} else {
+		var value_2 *lsfMap[string, lsfCxSets]
+		sets := w.fSets
+		value_2 = sets
+		return lsfCxDecidedBy(value_2, r)
+	}
+}
+
+// cxReadsWord — laws/haskell_extract.lawspec:2477.
+func lsfCxReadsWord(w string) bool {
+	return (lsfCxIsIfWord(w) || lsfCxIsElifWord(w))
+}
+
+// cxRowOf — laws/haskell_extract.lawspec:2562.
+func lsfCxRowOf(u *lsfCxUnit, line lsfInt) *lsfCxRow {
+	var value string
+	word := u.fWord
+	value = word
+	if lsfTextLength(value) == int64(0) {
+		recordField := lsfSmall(1)
+		recordField_2 := line
+		recordField_3 := ""
+		var value_2 string
+		text := u.fText
+		value_2 = text
+		recordField_4 := value_2
+		recordField_5 := lsfCxNoTerm(lsfUnit{})
+		recordField_6 := (*lsfList[string])(nil)
+		recordField_7 := (*lsfList[string])(nil)
+		recordField_8 := true
+		recordField_9 := ""
+		recordField_10 := &lsfCxSets_XNothing{}
+		return &lsfCxRow{recordField, recordField_2, recordField_3, recordField_4, recordField_5, recordField_6, recordField_7, recordField_8, recordField_9, recordField_10}
+	} else {
+		var value_3 string
+		word_2 := u.fWord
+		value_3 = word_2
+		var value_4 string
+		body := u.fBody
+		value_4 = body
+		d := lsfCxDefinition(value_3, value_4)
+		var value_5 string
+		word_3 := u.fWord
+		value_5 = word_3
+		var value_6 string
+		body_2 := u.fBody
+		value_6 = body_2
+		t_ := lsfCxTermOf(value_5, value_6, line)
+		var value_7 string
+		word_4 := u.fWord
+		value_7 = word_4
+		var value_8 string
+		body_3 := u.fBody
+		value_8 = body_3
+		e := lsfCxExprOf(lsfCxTextOf(value_7, value_8))
+		var value_9 string
+		word_5 := u.fWord
+		value_9 = word_5
+		if lsfCxReadsWord(value_9) {
+			it := e
+			if it.ok {
+				selection := it.v
+				var value_10 lsfInt
+				nlines := u.fNlines
+				value_10 = nlines
+				recordField_11 := value_10
+				recordField_12 := line
+				var value_11 string
+				word_6 := u.fWord
+				value_11 = word_6
+				recordField_13 := value_11
+				recordField_14 := ""
+				recordField_15 := t_
+				recordField_16 := lsfAssayxportHaskellCppNamesOf(selection)
+				recordField_17 := lsfAssayxportHaskellCppValueNames(selection)
+				recordField_18 := true
+				recordField_19 := ""
+				recordField_20 := &lsfCxSets_XNothing{}
+				return &lsfCxRow{recordField_11, recordField_12, recordField_13, recordField_14, recordField_15, recordField_16, recordField_17, recordField_18, recordField_19, recordField_20}
+			} else {
+				var value_12 lsfInt
+				nlines_2 := u.fNlines
+				value_12 = nlines_2
+				recordField_21 := value_12
+				recordField_22 := line
+				var value_13 string
+				word_7 := u.fWord
+				value_13 = word_7
+				recordField_23 := value_13
+				recordField_24 := ""
+				recordField_25 := t_
+				var value_14 string
+				body_4 := u.fBody
+				value_14 = body_4
+				var value_15 string
+				body_5 := u.fBody
+				value_15 = body_5
+				recordField_26 := lsfCxIdents(value_14, lsfSmall(lsfTextLength(value_15)).Add(lsfSmall(int64(1))))
+				recordField_27 := (*lsfList[string])(nil)
+				recordField_28 := false
+				recordField_29 := ""
+				recordField_30 := &lsfCxSets_XNothing{}
+				return &lsfCxRow{recordField_21, recordField_22, recordField_23, recordField_24, recordField_25, recordField_26, recordField_27, recordField_28, recordField_29, recordField_30}
+			}
+		} else {
+			var value_16 lsfInt
+			nlines_3 := u.fNlines
+			value_16 = nlines_3
+			recordField_31 := value_16
+			recordField_32 := line
+			var value_17 string
+			word_8 := u.fWord
+			value_17 = word_8
+			recordField_33 := value_17
+			recordField_34 := ""
+			recordField_35 := lsfCxNoTerm(lsfUnit{})
+			recordField_36 := (*lsfList[string])(nil)
+			recordField_37 := (*lsfList[string])(nil)
+			recordField_38 := true
+			var value_18 string
+			name := d.fName
+			value_18 = name
+			recordField_39 := value_18
+			var value_19 lsfCxSets
+			sets := d.fSets
+			value_19 = sets
+			recordField_40 := value_19
+			return &lsfCxRow{recordField_31, recordField_32, recordField_33, recordField_34, recordField_35, recordField_36, recordField_37, recordField_38, recordField_39, recordField_40}
+		}
+	}
+}
+
+// cxScan — laws/haskell_extract.lawspec:2585.
+func lsfCxScan(us *lsfList[*lsfCxUnit], line lsfInt) *lsfList[*lsfCxRow] {
 	it := us
 	if it == nil {
 		return (*lsfList[*lsfCxRow])(nil)
 	} else {
 		selection := it.head
 		selection_2 := it.tail
-		var value string
-		word := selection.fWord
-		value = word
-		if lsfTextLength(value) == int64(0) {
-			var value_2 *lsfCxRow
-			recordField := lsfSmall(1)
-			recordField_2 := false
-			recordField_3 := false
-			var value_3 *lsfList[*lsfCxOpen]
-			stack := st.fStack
-			value_3 = stack
-			recordField_4 := lsfCxDeadOf(value_3)
-			var value_4 *lsfList[*lsfCxOpen]
-			stack_2 := st.fStack
-			value_4 = stack_2
-			recordField_5 := lsfCxPathOf(value_4)
-			var value_5 string
-			text := selection.fText
-			value_5 = text
-			recordField_6 := value_5
-			value_2 = &lsfCxRow{recordField, recordField_2, recordField_3, recordField_4, recordField_5, recordField_6}
-			var value_6 *lsfCxState
-			var value_7 lsfInt
-			line := st.fLine
-			value_7 = line
-			replacement := value_7.Add(lsfSmall(int64(1)))
-			stack_3 := st.fStack
-			value_6 = &lsfCxState{stack_3, replacement}
-			return lsfAppend(lsfCons[*lsfCxRow](value_2, (*lsfList[*lsfCxRow])(nil)), lsfCxScan(selection_2, value_6))
-		} else {
-			var value_8 string
-			word_2 := selection.fWord
-			value_8 = word_2
-			var value_9 string
-			body := selection.fBody
-			value_9 = body
-			e := lsfCxDirective(value_8, value_9, st)
-			var value_10 *lsfCxRow
-			var value_11 lsfInt
-			nlines := selection.fNlines
-			value_11 = nlines
-			recordField_7 := value_11
-			recordField_8 := true
-			var value_12 bool
-			reads := e.fReads
-			value_12 = reads
-			recordField_9 := value_12
-			recordField_10 := false
-			var value_13 *lsfList[*lsfCxTerm]
-			terms := e.fTerms
-			value_13 = terms
-			recordField_11 := value_13
-			recordField_12 := ""
-			value_10 = &lsfCxRow{recordField_7, recordField_8, recordField_9, recordField_10, recordField_11, recordField_12}
-			var value_14 *lsfCxState
-			var value_15 *lsfList[*lsfCxOpen]
-			stack_4 := e.fStack
-			value_15 = stack_4
-			recordField_13 := value_15
-			var value_16 lsfInt
-			line_2 := st.fLine
-			value_16 = line_2
-			var value_17 lsfInt
-			nlines_2 := selection.fNlines
-			value_17 = nlines_2
-			recordField_14 := value_16.Add(value_17)
-			value_14 = &lsfCxState{recordField_13, recordField_14}
-			return lsfAppend(lsfCons[*lsfCxRow](value_10, (*lsfList[*lsfCxRow])(nil)), lsfCxScan(selection_2, value_14))
-		}
+		var value lsfInt
+		nlines := selection.fNlines
+		value = nlines
+		return lsfAppend(lsfCons[*lsfCxRow](lsfCxRowOf(selection, line), (*lsfList[*lsfCxRow])(nil)), lsfCxScan(selection_2, line.Add(value)))
 	}
 }
 
-// cxSkipBlanks — laws/haskell_extract.lawspec:2313.
+// cxSkipBlanks — laws/haskell_extract.lawspec:2323.
 func lsfCxSkipBlanks(t_ string, fuel lsfInt) string {
 	for {
 		if lsfCmpInt(fuel, lsfSmall(int64(0))) <= 0 {
@@ -19259,47 +21877,153 @@ func lsfCxSkipBlanks(t_ string, fuel lsfInt) string {
 	}
 }
 
-// cxTermOf — laws/haskell_extract.lawspec:2390.
-func lsfCxTermOf(word string, body string, line lsfInt) *lsfCxTerm {
-	id := lsfCxIdent(body)
+// cxSpliced — laws/haskell_extract.lawspec:2371.
+func lsfCxSpliced(t_ string) bool {
+	return strings.HasSuffix(lsfCxTrimEnd(t_, lsfSmall(lsfTextLength(t_))), "\\")
+}
+
+// cxStart — laws/haskell_extract.lawspec:2609.
+func lsfCxStart(u lsfUnit) *lsfCxPass {
+	recordField := (*lsfList[*lsfCxFrame])(nil)
+	recordField_2 := lsfKeyValOf((*lsfList[*lsfEntry[string, lsfCxSets]])(nil), lsfCompareText)
+	return &lsfCxPass{recordField, recordField_2}
+}
+
+// cxStepped — laws/haskell_extract.lawspec:2625.
+func lsfCxStepped(stack *lsfList[*lsfCxFrame], r *lsfCxRow, v bool) *lsfList[*lsfCxFrame] {
 	var value string
-	if ((word) == ("ifdef")) || ((word) == ("ifndef")) {
-		var value_2 string
-		if lsfTextLength(id) == int64(0) {
-			value_2 = body
+	word := r.fWord
+	value = word
+	if lsfCxIsIfWord(value) {
+		var value_2 *lsfCxFrame
+		recordField := (lsfCxLiveOf(stack) && v)
+		recordField_2 := (!(lsfCxLiveOf(stack)) || v)
+		value_2 = &lsfCxFrame{recordField, recordField_2}
+		return lsfAppend(lsfCons[*lsfCxFrame](value_2, (*lsfList[*lsfCxFrame])(nil)), stack)
+	} else {
+		var value_3 string
+		word_2 := r.fWord
+		value_3 = word_2
+		if lsfCxIsElifWord(value_3) {
+			it := stack
+			if it == nil {
+				return (*lsfList[*lsfCxFrame])(nil)
+			} else {
+				selection := it.head
+				selection_2 := it.tail
+				var value_4 *lsfCxFrame
+				var value_5 bool
+				done := selection.fDone
+				value_5 = done
+				recordField_3 := (!(value_5) && v)
+				var value_6 bool
+				done_2 := selection.fDone
+				value_6 = done_2
+				recordField_4 := (value_6 || v)
+				value_4 = &lsfCxFrame{recordField_3, recordField_4}
+				return lsfAppend(lsfCons[*lsfCxFrame](value_4, (*lsfList[*lsfCxFrame])(nil)), selection_2)
+			}
 		} else {
-			value_2 = id
+			var value_7 string
+			word_3 := r.fWord
+			value_7 = word_3
+			if (value_7) == ("else") {
+				it_2 := stack
+				if it_2 == nil {
+					return (*lsfList[*lsfCxFrame])(nil)
+				} else {
+					selection_3 := it_2.head
+					selection_4 := it_2.tail
+					var value_8 *lsfCxFrame
+					var value_9 bool
+					done_3 := selection_3.fDone
+					value_9 = done_3
+					recordField_5 := !(value_9)
+					recordField_6 := true
+					value_8 = &lsfCxFrame{recordField_5, recordField_6}
+					return lsfAppend(lsfCons[*lsfCxFrame](value_8, (*lsfList[*lsfCxFrame])(nil)), selection_4)
+				}
+			} else {
+				var value_10 string
+				word_4 := r.fWord
+				value_10 = word_4
+				if (value_10) == ("endif") {
+					return lsfSliceList(stack, int64(1), lsfIndex(lsfSmall(9223372036854775807)))
+				} else {
+					return stack
+				}
+			}
 		}
-		value = (("defined(" + value_2) + ")")
-	} else {
-		value = body
 	}
-	text := value
-	recordField := ((word) == ("ifndef"))
-	var value_3 string
+}
+
+// cxStrip — laws/haskell_extract.lawspec:2427.
+func lsfCxStrip(t_ string, fuel lsfInt) string {
+	if lsfCmpInt(fuel, lsfSmall(int64(0))) <= 0 {
+		return t_
+	} else {
+		n := lsfSmall(lsfTextLength(t_))
+		i := lsfCxFindOpen(t_, lsfSmall(0), n)
+		if lsfCmpInt(i, lsfSmall(int64(0))) < 0 {
+			return t_
+		} else {
+			e := lsfCommentEnd(t_, i.Add(lsfSmall(int64(2))), n)
+			var value string
+			if lsfCmpInt(e, lsfSmall(int64(0))) < 0 {
+				value = ""
+			} else {
+				value = lsfCxStrip(lsfSliceText(t_, lsfIndex(e), lsfIndex(lsfSmall(9223372036854775807))), fuel.Sub(lsfSmall(int64(1))))
+			}
+			return ((lsfSliceText(t_, int64(0), lsfIndex(i)) + " ") + value)
+		}
+	}
+}
+
+// cxTermOf — laws/haskell_extract.lawspec:2495.
+func lsfCxTermOf(word string, body string, line lsfInt) *lsfLiteral {
+	text := lsfCxTextOf(word, body)
+	recordField := (((word) == ("ifndef")) || ((word) == ("elifndef")))
+	var value string
 	if lsfPaired(text) {
-		value_3 = text
+		value = text
 	} else {
-		value_3 = lsfUnreadableTerm(line)
+		value = lsfUnreadableTerm(line)
 	}
-	recordField_2 := value_3
-	return &lsfCxTerm{recordField, recordField_2}
+	recordField_2 := value
+	var value_2 lsfCExpr
+	it := lsfCxExprOf(text)
+	if it.ok {
+		selection := it.v
+		value_2 = selection
+	} else {
+		value_2 = &lsfCExpr_Lit{lsfSmall(0)}
+	}
+	recordField_3 := value_2
+	return &lsfLiteral{recordField, recordField_2, recordField_3}
 }
 
-// cxTopEffect — laws/haskell_extract.lawspec:2416.
-func lsfCxTopEffect(top *lsfCxOpen, rest *lsfList[*lsfCxOpen], reads bool) *lsfCxEffect {
-	recordField := lsfAppend(lsfCons[*lsfCxOpen](top, (*lsfList[*lsfCxOpen])(nil)), rest)
-	recordField_2 := lsfCxPathOf(lsfCons[*lsfCxOpen](top, (*lsfList[*lsfCxOpen])(nil)))
-	recordField_3 := reads
-	return &lsfCxEffect{recordField, recordField_2, recordField_3}
+// cxTextOf — laws/haskell_extract.lawspec:2487.
+func lsfCxTextOf(word string, body string) string {
+	id := lsfCxIdent(body)
+	if lsfCxIsDefForm(word) {
+		var value string
+		if lsfTextLength(id) == int64(0) {
+			value = body
+		} else {
+			value = id
+		}
+		return (("defined(" + value) + ")")
+	} else {
+		return body
+	}
 }
 
-// cxTrim — laws/haskell_extract.lawspec:2322.
+// cxTrim — laws/haskell_extract.lawspec:2332.
 func lsfCxTrim(t_ string) string {
 	return lsfCxTrimEnd(lsfCxSkipBlanks(t_, lsfSmall(lsfTextLength(t_))), lsfSmall(lsfTextLength(t_)))
 }
 
-// cxTrimEnd — laws/haskell_extract.lawspec:2317.
+// cxTrimEnd — laws/haskell_extract.lawspec:2327.
 func lsfCxTrimEnd(t_ string, fuel lsfInt) string {
 	for {
 		if lsfCmpInt(fuel, lsfSmall(int64(0))) <= 0 {
@@ -19318,7 +22042,24 @@ func lsfCxTrimEnd(t_ string, fuel lsfInt) string {
 	}
 }
 
-// cxUnits — laws/haskell_extract.lawspec:2364.
+// cxTruthAt — laws/haskell_extract.lawspec:2710.
+func lsfCxTruthAt(w *lsfCxPass, asg *lsfMap[string, lsfInt], r *lsfCxRow) bool {
+	it := lsfCxReadingAt(w, r)
+	switch variant := it.(type) {
+	case *lsfCxReading_XNotRead:
+		return false
+	case *lsfCxReading_XByFile:
+		selection := variant.fValue
+		return selection
+	case *lsfCxReading_XByTerm:
+		selection_2 := variant.fValue
+		return lsfAssayxportHaskellCppLitTrue(asg, selection_2)
+	default:
+		panic("unreachable branch reached")
+	}
+}
+
+// cxUnits — laws/haskell_extract.lawspec:2402.
 func lsfCxUnits(ls *lsfList[string], fuel lsfInt) *lsfList[*lsfCxUnit] {
 	if lsfCmpInt(fuel, lsfSmall(int64(0))) <= 0 {
 		return (*lsfList[*lsfCxUnit])(nil)
@@ -19364,7 +22105,7 @@ func lsfCxUnits(ls *lsfList[string], fuel lsfInt) *lsfList[*lsfCxUnit] {
 	}
 }
 
-// cxUnreadDecls — laws/haskell_extract.lawspec:2724.
+// cxUnreadDecls — laws/haskell_extract.lawspec:2986.
 func lsfCxUnreadDecls(ds *lsfList[*lsfDecl]) *lsfList[*lsfDecl] {
 	it := ds
 	if it == nil {
@@ -19408,7 +22149,7 @@ func lsfCxUnreadDecls(ds *lsfList[*lsfDecl]) *lsfList[*lsfDecl] {
 	}
 }
 
-// cxUnreadEdges — laws/haskell_extract.lawspec:2720.
+// cxUnreadEdges — laws/haskell_extract.lawspec:2982.
 func lsfCxUnreadEdges(es *lsfList[*lsfCallEdge]) *lsfList[*lsfCallEdge] {
 	it := es
 	if it == nil {
@@ -19429,7 +22170,7 @@ func lsfCxUnreadEdges(es *lsfList[*lsfCallEdge]) *lsfList[*lsfCallEdge] {
 	}
 }
 
-// cxUnreadPkgs — laws/haskell_extract.lawspec:2731.
+// cxUnreadPkgs — laws/haskell_extract.lawspec:2993.
 func lsfCxUnreadPkgs(ps *lsfList[*lsfPackage]) *lsfList[*lsfPackage] {
 	it := ps
 	if it == nil {
@@ -19456,8 +22197,14 @@ func lsfCxUnreadPkgs(ps *lsfList[*lsfPackage]) *lsfList[*lsfPackage] {
 	}
 }
 
-// cxWalk — laws/haskell_extract.lawspec:2570.
-func lsfCxWalk_2(rs *lsfList[*lsfCxRow], asg *lsfMap[string, lsfInt], k lsfInt, j *lsfList[lsfInt]) *lsfCxWalk {
+// cxUnsplice — laws/haskell_extract.lawspec:2373.
+func lsfCxUnsplice(t_ string) string {
+	s := lsfCxTrimEnd(t_, lsfSmall(lsfTextLength(t_)))
+	return lsfSliceText(s, int64(0), lsfIndex(lsfSmall(lsfTextLength(s)).Sub(lsfSmall(int64(1)))))
+}
+
+// cxWalk — laws/haskell_extract.lawspec:2827.
+func lsfCxWalk_2(rs *lsfList[*lsfCxRow], w *lsfCxPass, asg *lsfMap[string, lsfInt], k lsfInt, j *lsfList[lsfInt]) *lsfCxWalk {
 	for {
 		it := rs
 		if it == nil {
@@ -19481,70 +22228,101 @@ func lsfCxWalk_2(rs *lsfList[*lsfCxRow], asg *lsfMap[string, lsfInt], k lsfInt, 
 		} else {
 			selection := it.head
 			selection_2 := it.tail
-			if lsfCxChoiceAt(asg, selection) {
-				var value_2 *lsfList[*lsfCxTerm]
-				terms := selection.fTerms
-				value_2 = terms
-				t_ := lsfCxOwnText(value_2)
-				a := lsfCxWalk_2(selection_2, lsfPut(asg, t_, lsfSmall(1), lsfCompareText), k, j)
-				var value_3 lsfInt
-				count := a.fCount
-				value_3 = count
-				b := lsfCxWalk_2(selection_2, lsfPut(asg, t_, lsfSmall(0), lsfCompareText), k.Add(value_3), j)
-				var value_4 *lsfList[*lsfList[*lsfCxTerm]]
-				cubes := a.fCubes
-				value_4 = cubes
-				var value_5 *lsfList[*lsfList[*lsfCxTerm]]
-				cubes_2 := b.fCubes
-				value_5 = cubes_2
-				if lsfEqualListListCxTerm(value_4, value_5) {
-					var value_6 *lsfList[*lsfList[*lsfCxTerm]]
-					cubes_3 := a.fCubes
-					value_6 = cubes_3
-					recordField_3 := value_6
-					var value_7 lsfInt
-					count_2 := a.fCount
-					value_7 = count_2
-					var value_8 lsfInt
-					count_3 := b.fCount
-					value_8 = count_3
-					recordField_4 := value_7.Add(value_8)
-					return &lsfCxWalk{recordField_3, recordField_4}
-				} else {
-					var value_9 *lsfCxTerm
-					recordField_5 := false
-					recordField_6 := t_
-					value_9 = &lsfCxTerm{recordField_5, recordField_6}
-					var value_10 *lsfList[*lsfList[*lsfCxTerm]]
-					cubes_4 := a.fCubes
-					value_10 = cubes_4
-					var value_11 *lsfCxTerm
-					recordField_7 := true
-					recordField_8 := t_
-					value_11 = &lsfCxTerm{recordField_7, recordField_8}
-					var value_12 *lsfList[*lsfList[*lsfCxTerm]]
-					cubes_5 := b.fCubes
-					value_12 = cubes_5
-					recordField_9 := lsfAppend(lsfCxPrefixed(value_9, value_10), lsfCxPrefixed(value_11, value_12))
-					var value_13 lsfInt
-					count_4 := a.fCount
-					value_13 = count_4
-					var value_14 lsfInt
-					count_5 := b.fCount
-					value_14 = count_5
-					recordField_10 := value_13.Add(value_14)
-					return &lsfCxWalk{recordField_9, recordField_10}
-				}
-			} else {
+			it_2 := lsfCxReadingAt(w, selection)
+			switch variant := it_2.(type) {
+			case *lsfCxReading_XNotRead:
 				next := selection_2
+				next_2 := lsfCxAfter(w, selection, false)
 				rs = next
+				w = next_2
 				continue
+			case *lsfCxReading_XByFile:
+				matchSelection := variant.fValue
+				next_3 := selection_2
+				next_4 := lsfCxAfter(w, selection, matchSelection)
+				rs = next_3
+				w = next_4
+				continue
+			case *lsfCxReading_XByTerm:
+				matchSelection_2 := variant.fValue
+				var value_2 string
+				text := matchSelection_2.fText
+				value_2 = text
+				if lsfAssayxportHaskellCppValued(asg, value_2) {
+					next_5 := selection_2
+					next_6 := lsfCxAfter(w, selection, lsfAssayxportHaskellCppLitTrue(asg, matchSelection_2))
+					rs = next_5
+					w = next_6
+					continue
+				} else {
+					var value_3 string
+					text_2 := matchSelection_2.fText
+					value_3 = text_2
+					t_ := value_3
+					var value_4 bool
+					negated := matchSelection_2.fNegated
+					value_4 = negated
+					a := lsfCxWalk_2(selection_2, lsfCxAfter(w, selection, !(value_4)), lsfPut(asg, t_, lsfSmall(1), lsfCompareText), k, j)
+					var value_5 bool
+					negated_2 := matchSelection_2.fNegated
+					value_5 = negated_2
+					var value_6 lsfInt
+					count := a.fCount
+					value_6 = count
+					b := lsfCxWalk_2(selection_2, lsfCxAfter(w, selection, value_5), lsfPut(asg, t_, lsfSmall(0), lsfCompareText), k.Add(value_6), j)
+					var value_7 *lsfList[*lsfList[*lsfCxTerm]]
+					cubes := a.fCubes
+					value_7 = cubes
+					var value_8 *lsfList[*lsfList[*lsfCxTerm]]
+					cubes_2 := b.fCubes
+					value_8 = cubes_2
+					if lsfEqualListListCxTerm(value_7, value_8) {
+						var value_9 *lsfList[*lsfList[*lsfCxTerm]]
+						cubes_3 := a.fCubes
+						value_9 = cubes_3
+						recordField_3 := value_9
+						var value_10 lsfInt
+						count_2 := a.fCount
+						value_10 = count_2
+						var value_11 lsfInt
+						count_3 := b.fCount
+						value_11 = count_3
+						recordField_4 := value_10.Add(value_11)
+						return &lsfCxWalk{recordField_3, recordField_4}
+					} else {
+						var value_12 *lsfCxTerm
+						recordField_5 := false
+						recordField_6 := t_
+						value_12 = &lsfCxTerm{recordField_5, recordField_6}
+						var value_13 *lsfList[*lsfList[*lsfCxTerm]]
+						cubes_4 := a.fCubes
+						value_13 = cubes_4
+						var value_14 *lsfCxTerm
+						recordField_7 := true
+						recordField_8 := t_
+						value_14 = &lsfCxTerm{recordField_7, recordField_8}
+						var value_15 *lsfList[*lsfList[*lsfCxTerm]]
+						cubes_5 := b.fCubes
+						value_15 = cubes_5
+						recordField_9 := lsfAppend(lsfCxPrefixed(value_12, value_13), lsfCxPrefixed(value_14, value_15))
+						var value_16 lsfInt
+						count_4 := a.fCount
+						value_16 = count_4
+						var value_17 lsfInt
+						count_5 := b.fCount
+						value_17 = count_5
+						recordField_10 := value_16.Add(value_17)
+						return &lsfCxWalk{recordField_9, recordField_10}
+					}
+				}
+			default:
+				panic("unreachable branch reached")
 			}
 		}
 	}
 }
 
-// cxWordLen — laws/haskell_extract.lawspec:2324.
+// cxWordLen — laws/haskell_extract.lawspec:2334.
 func lsfCxWordLen(t_ string, i lsfInt, n lsfInt) lsfInt {
 	for {
 		if lsfCmpInt(i, n) >= 0 {
@@ -19561,12 +22339,12 @@ func lsfCxWordLen(t_ string, i lsfInt, n lsfInt) lsfInt {
 	}
 }
 
-// cxWordOf — laws/haskell_extract.lawspec:2331.
+// cxWordOf — laws/haskell_extract.lawspec:2341.
 func lsfCxWordOf(l string) string {
 	if strings.HasPrefix(l, "#") {
 		rest := lsfCxSkipBlanks(lsfSliceText(l, int64(1), lsfIndex(lsfSmall(9223372036854775807))), lsfSmall(lsfTextLength(l)))
 		w := lsfSliceText(rest, int64(0), lsfIndex(lsfCxWordLen(rest, lsfSmall(0), lsfSmall(lsfTextLength(rest)))))
-		if lsfRegexMatches("if|ifdef|ifndef|elif|else|endif|define|undef|include|error|warning|line|pragma", w) {
+		if lsfRegexMatches("if|ifdef|ifndef|elif|elifdef|elifndef|else|endif|define|undef|include|error|warning|line|pragma", w) {
 			return w
 		} else {
 			return ""
@@ -19576,7 +22354,7 @@ func lsfCxWordOf(l string) string {
 	}
 }
 
-// damaged — laws/haskell_extract.lawspec:3509.
+// damaged — laws/haskell_extract.lawspec:3771.
 func lsfDamaged(seed_ lsfInt, cs *lsfList[*lsfSyntax]) *lsfList[*lsfSyntax] {
 	it := cs
 	if it == nil {
@@ -19676,7 +22454,7 @@ func lsfDamaged(seed_ lsfInt, cs *lsfList[*lsfSyntax]) *lsfList[*lsfSyntax] {
 	}
 }
 
-// damagedTree — laws/haskell_extract.lawspec:3523.
+// damagedTree — laws/haskell_extract.lawspec:3785.
 func lsfDamagedTree(seed_ lsfInt, root *lsfSyntax) *lsfSyntax {
 	var value *lsfList[*lsfSyntax]
 	children := root.fChildren
@@ -19915,7 +22693,7 @@ func lsfDataWild(items *lsfList[*lsfSyntax]) bool {
 	}
 }
 
-// declFacts — laws/haskell_extract.lawspec:4132.
+// declFacts — laws/haskell_extract.lawspec:4426.
 func lsfDeclFacts(ds *lsfList[*lsfDecl]) *lsfList[string] {
 	it := ds
 	if it == nil {
@@ -19962,7 +22740,7 @@ func lsfDeclFacts(ds *lsfList[*lsfDecl]) *lsfList[string] {
 	}
 }
 
-// declImplies — laws/haskell_extract.lawspec:4100.
+// declImplies — laws/haskell_extract.lawspec:4394.
 func lsfDeclImplies(env *lsfEnv, d *lsfDecl) bool {
 	anyItem := env
 	anyItem_2 := d
@@ -20129,7 +22907,7 @@ func lsfDirectName(s *lsfSyntax) string {
 	}
 }
 
-// distinctTexts — laws/haskell_extract.lawspec:3996.
+// distinctTexts — laws/haskell_extract.lawspec:4282.
 func lsfDistinctTexts(ts *lsfList[string], seen *lsfList[string]) *lsfList[string] {
 	for {
 		it := ts
@@ -20218,7 +22996,7 @@ func lsfDocBetweenAt(ix *lsfIx, from lsfInt, until lsfInt, col lsfInt) *lsfDocTe
 	}
 }
 
-// docIs — laws/haskell_extract.lawspec:3004.
+// docIs — laws/haskell_extract.lawspec:3266.
 func lsfDocIs(id string, raw string, d *lsfDecl) bool {
 	var value string
 	id_2 := d.fId
@@ -20387,7 +23165,7 @@ func lsfDocsOf(hs *lsfList[*lsfSyntax], code_ *lsfMap[lsfInt, bool], fuel lsfInt
 	}
 }
 
-// documented — laws/haskell_extract.lawspec:4311.
+// documented — laws/haskell_extract.lawspec:4691.
 func lsfDocumented(d *lsfDecl) bool {
 	var value lsfDocFormat
 	var value_2 *lsfDocText
@@ -20455,7 +23233,7 @@ func lsfDropLead(t_ string, n lsfInt) string {
 	}
 }
 
-// edgeFacts — laws/haskell_extract.lawspec:4128.
+// edgeFacts — laws/haskell_extract.lawspec:4422.
 func lsfEdgeFacts(id string, es *lsfList[*lsfCallEdge]) *lsfList[string] {
 	it := es
 	if it == nil {
@@ -20473,7 +23251,7 @@ func lsfEdgeFacts(id string, es *lsfList[*lsfCallEdge]) *lsfList[string] {
 	}
 }
 
-// edgeImplies — laws/haskell_extract.lawspec:4098.
+// edgeImplies — laws/haskell_extract.lawspec:4392.
 func lsfEdgeImplies(env *lsfEnv, d *lsfDecl, e *lsfCallEdge) bool {
 	var value string
 	condition := e.fCondition
@@ -20840,7 +23618,7 @@ func lsfExportedOf(root *lsfSyntax, decls *lsfList[*lsfDecl]) lsfMaybe[*lsfMap[s
 	}
 }
 
-// extractEach — laws/haskell_extract.lawspec:4003.
+// extractEach — laws/haskell_extract.lawspec:4289.
 func lsfExtractEach(symbols map[string]*LawSpecSymbol, ts *lsfList[string]) *lsfList[*lsfList[*lsfPackage]] {
 	it := ts
 	if it == nil {
@@ -20856,7 +23634,7 @@ func lsfExtractEach(symbols map[string]*LawSpecSymbol, ts *lsfList[string]) *lsf
 	}
 }
 
-// extractFiles — laws/haskell_extract.lawspec:2769.
+// extractFiles — laws/haskell_extract.lawspec:3031.
 func lsfExtractFiles(symbols map[string]*LawSpecSymbol, files *lsfList[*lsfSourceFile]) *lsfList[*lsfPackage] {
 	it := files
 	if it == nil {
@@ -20873,7 +23651,7 @@ func lsfExtractFiles(symbols map[string]*LawSpecSymbol, files *lsfList[*lsfSourc
 			var value_3 string
 			path_2 := selection.fPath
 			value_3 = path_2
-			logic = !(lsfSkippedPath(value_3))
+			logic = !(lsfAssayxportHaskellExtractSkippedPath(value_3))
 		} else {
 			logic = false
 		}
@@ -20903,7 +23681,7 @@ func lsfExtractModule(path string, root *lsfSyntax) *lsfPackage {
 	return lsfPackageOf(path, root, ix, lsfWithVisibility(lsfExportedOf(root, base), lsfWithCalls(lsfContextOf(root, base), ix, base)))
 }
 
-// factsOf — laws/haskell_extract.lawspec:4146.
+// factsOf — laws/haskell_extract.lawspec:4440.
 func lsfFactsOf(symbols map[string]*LawSpecSymbol, source string) *lsfMap[string, lsfUnit] {
 	var value *lsfSourceFile
 	recordField := "M.hs"
@@ -20912,7 +23690,7 @@ func lsfFactsOf(symbols map[string]*LawSpecSymbol, source string) *lsfMap[string
 	return lsfSetOf(lsfPackageFacts(lsfExtractFiles(symbols, lsfCons[*lsfSourceFile](value, (*lsfList[*lsfSourceFile])(nil)))), lsfCompareText)
 }
 
-// factsWith — laws/haskell_extract.lawspec:4150.
+// factsWith — laws/haskell_extract.lawspec:4444.
 func lsfFactsWith(symbols map[string]*LawSpecSymbol, lines *lsfList[lsfBindingLine], source string) *lsfMap[string, lsfUnit] {
 	var value *lsfList[*lsfPackage]
 	var value_2 *lsfSourceFile
@@ -20925,7 +23703,7 @@ func lsfFactsWith(symbols map[string]*LawSpecSymbol, lines *lsfList[lsfBindingLi
 	return lsfSetOf(lsfPackageFacts(value), lsfCompareText)
 }
 
-// failingEnv — laws/haskell_extract.lawspec:4026.
+// failingEnv — laws/haskell_extract.lawspec:4312.
 func lsfFailingEnv(rs *lsfList[*lsfRow], whole *lsfList[*lsfPackage], texts *lsfList[string], read *lsfList[*lsfList[*lsfPackage]], n lsfInt) lsfInt {
 	for {
 		if lsfCmpInt(n, lsfSmall(int64(0))) <= 0 {
@@ -21066,7 +23844,7 @@ func lsfFamsIn(ix *lsfIx, owner string, cs *lsfList[*lsfSyntax]) *lsfList[*lsfDe
 	}
 }
 
-// farTree — laws/haskell_extract.lawspec:3562.
+// farTree — laws/haskell_extract.lawspec:3824.
 func lsfFarTree(last lsfInt) *lsfSyntax {
 	var value *lsfPoint
 	recordField := lsfSmall(1)
@@ -21270,7 +24048,7 @@ func lsfFieldPatNames(fps *lsfList[*lsfSyntax]) *lsfList[string] {
 	}
 }
 
-// fieldsIn — laws/haskell_extract.lawspec:3252.
+// fieldsIn — laws/haskell_extract.lawspec:3514.
 func lsfFieldsIn(cs *lsfList[*lsfSyntax]) *lsfList[string] {
 	it := cs
 	if it == nil {
@@ -21324,7 +24102,7 @@ func lsfFindAll(k string, cs *lsfList[*lsfSyntax]) *lsfList[*lsfSyntax] {
 	}
 }
 
-// firstArms — laws/haskell_extract.lawspec:3827.
+// firstArms — laws/haskell_extract.lawspec:4113.
 func lsfFirstArms(u lsfUnit) *lsfList[lsfBindingLine] {
 	var value *lsfSetPackageDetails
 	pkg := "base"
@@ -21403,7 +24181,7 @@ func lsfFirstOp(cs *lsfList[*lsfSyntax]) *lsfList[*lsfSyntax] {
 	}
 }
 
-// fixtureBuildHolds — laws/haskell_extract.lawspec:3849.
+// fixtureBuildHolds — laws/haskell_extract.lawspec:4135.
 func lsfFixtureBuildHolds(symbols map[string]*LawSpecSymbol, i lsfInt) bool {
 	it := lsfAtList(lsfAssayxportHaskellPolicyFixtureCppCopies(lsfUnit{}), lsfIndex(i))
 	if it.ok {
@@ -21444,7 +24222,7 @@ func lsfFixtureBuildHolds(symbols map[string]*LawSpecSymbol, i lsfInt) bool {
 	}
 }
 
-// fixtureFiltered — laws/haskell_extract.lawspec:3935.
+// fixtureFiltered — laws/haskell_extract.lawspec:4221.
 func lsfFixtureFiltered(symbols map[string]*LawSpecSymbol, lines *lsfList[lsfBindingLine]) *lsfFiltered {
 	var value *lsfSourceFile
 	recordField := "Cpp.hs"
@@ -21453,7 +24231,7 @@ func lsfFixtureFiltered(symbols map[string]*LawSpecSymbol, lines *lsfList[lsfBin
 	return lsfApplyWhen(lsfAssayxportConditionsPolicyEnvFrom(lsfAssayxportConditionsPolicyEmptyEnv(lsfUnit{}), lines), lsfExtractFiles(symbols, lsfCons[*lsfSourceFile](value, (*lsfList[*lsfSourceFile])(nil))))
 }
 
-// fixtureMoreHolds — laws/haskell_extract.lawspec:3873.
+// fixtureMoreHolds — laws/haskell_extract.lawspec:4159.
 func lsfFixtureMoreHolds(symbols map[string]*LawSpecSymbol, i lsfInt) bool {
 	it := lsfAtList(lsfAssayxportHaskellPolicyFixtureCppMoreBuilds(lsfUnit{}), lsfIndex(i))
 	if it.ok {
@@ -21494,7 +24272,7 @@ func lsfFixtureMoreHolds(symbols map[string]*LawSpecSymbol, i lsfInt) bool {
 	}
 }
 
-// focusForest — laws/haskell_extract.lawspec:3291.
+// focusForest — laws/haskell_extract.lawspec:3553.
 func lsfFocusForest(n lsfInt) *lsfList[*lsfSyntax] {
 	if lsfCmpInt(n, lsfSmall(int64(0))) <= 0 {
 		return (*lsfList[*lsfSyntax])(nil)
@@ -21511,7 +24289,7 @@ func lsfFocusForest(n lsfInt) *lsfList[*lsfSyntax] {
 	}
 }
 
-// focusKind — laws/haskell_extract.lawspec:3267.
+// focusKind — laws/haskell_extract.lawspec:3529.
 func lsfFocusKind(g *lsfGrammar, s lsfInt) string {
 	var value *lsfList[*lsfProd]
 	prods := g.fProds
@@ -21536,7 +24314,7 @@ func lsfFocusKind(g *lsfGrammar, s lsfInt) string {
 	}
 }
 
-// focusModule — laws/haskell_extract.lawspec:3283.
+// focusModule — laws/haskell_extract.lawspec:3545.
 func lsfFocusModule(source string, name string, p *lsfPoint, q *lsfPoint, asDecl *lsfSyntax, asPattern *lsfSyntax, asBody *lsfSyntax) *lsfSyntax {
 	replacement := source
 	matched_ := lsfNode_2("haskell", "", p, q, lsfCons[*lsfSyntax](lsfNode_2("declarations", "declarations", p, q, lsfCons[*lsfSyntax](asDecl, lsfCons[*lsfSyntax](lsfNode_2("function", "", p, q, lsfCons[*lsfSyntax](lsfLeaf_2("variable", "name", name, p, q), lsfCons[*lsfSyntax](lsfNode_2("patterns", "patterns", p, q, lsfCons[*lsfSyntax](asPattern, (*lsfList[*lsfSyntax])(nil))), lsfCons[*lsfSyntax](lsfNode_2("match", "match", p, q, lsfCons[*lsfSyntax](asBody, (*lsfList[*lsfSyntax])(nil))), (*lsfList[*lsfSyntax])(nil))))), (*lsfList[*lsfSyntax])(nil)))), (*lsfList[*lsfSyntax])(nil)))
@@ -21549,7 +24327,7 @@ func lsfFocusModule(source string, name string, p *lsfPoint, q *lsfPoint, asDecl
 	return &lsfSyntax{kind, field, replacement, from, to, isError, children}
 }
 
-// focusTree — laws/haskell_extract.lawspec:3272.
+// focusTree — laws/haskell_extract.lawspec:3534.
 func lsfFocusTree(seed_ lsfInt, p *lsfPoint, q *lsfPoint) *lsfSyntax {
 	var value lsfInt
 	if lsfCmpInt(seed_, lsfSmall(int64(0))) < 0 {
@@ -21707,7 +24485,7 @@ func lsfForeignDecls(ix *lsfIx, d *lsfSyntax) *lsfList[*lsfDecl] {
 	}
 }
 
-// furtherArms — laws/haskell_extract.lawspec:3833.
+// furtherArms — laws/haskell_extract.lawspec:4119.
 func lsfFurtherArms(i lsfInt) *lsfList[lsfBindingLine] {
 	it := i
 	if lsfCmpInt(it, lsfSmall(int64(1))) == 0 {
@@ -21843,7 +24621,7 @@ func lsfGadtsOf(d *lsfSyntax) *lsfList[*lsfSyntax] {
 	}
 }
 
-// grammarForest — laws/haskell_extract.lawspec:3257.
+// grammarForest — laws/haskell_extract.lawspec:3519.
 func lsfGrammarForest(n lsfInt) *lsfList[*lsfSyntax] {
 	if lsfCmpInt(n, lsfSmall(int64(0))) <= 0 {
 		return (*lsfList[*lsfSyntax])(nil)
@@ -21860,22 +24638,22 @@ func lsfGrammarForest(n lsfInt) *lsfList[*lsfSyntax] {
 	}
 }
 
-// grammarGroups — laws/haskell_extract.lawspec:3444.
+// grammarGroups — laws/haskell_extract.lawspec:3706.
 func lsfGrammarGroups(u lsfUnit) *lsfList[*lsfSlot] {
 	return lsfCons[*lsfSlot](lsfSl("@class_decl", true, true, lsfCons[string]("data_family", lsfCons[string]("bind", lsfCons[string]("function", lsfCons[string]("signature", lsfCons[string]("default_signature", lsfCons[string]("fixity", lsfCons[string]("type_family", lsfCons[string]("type_instance", (*lsfList[string])(nil)))))))))), lsfCons[*lsfSlot](lsfSl("@constraint", true, true, lsfCons[string]("apply", lsfCons[string]("infix", lsfCons[string]("literal", lsfCons[string]("name", lsfCons[string]("parens", lsfCons[string]("prefix_id", lsfCons[string]("prefix_tuple", lsfCons[string]("prefix_unboxed_sum", lsfCons[string]("prefix_unboxed_tuple", lsfCons[string]("promoted", lsfCons[string]("qualified", lsfCons[string]("quasiquote", lsfCons[string]("splice", lsfCons[string]("tuple", lsfCons[string]("unboxed_unit", lsfCons[string]("unit", lsfCons[string]("variable", lsfCons[string]("wildcard", (*lsfList[string])(nil)))))))))))))))))))), lsfCons[*lsfSlot](lsfSl("@constraints", true, true, lsfCons[string]("apply", lsfCons[string]("infix", lsfCons[string]("literal", lsfCons[string]("name", lsfCons[string]("parens", lsfCons[string]("prefix_id", lsfCons[string]("prefix_tuple", lsfCons[string]("prefix_unboxed_sum", lsfCons[string]("prefix_unboxed_tuple", lsfCons[string]("promoted", lsfCons[string]("qualified", lsfCons[string]("quasiquote", lsfCons[string]("splice", lsfCons[string]("tuple", lsfCons[string]("unboxed_unit", lsfCons[string]("unit", lsfCons[string]("variable", lsfCons[string]("wildcard", lsfCons[string]("context", lsfCons[string]("forall", lsfCons[string]("implicit_parameter", lsfCons[string]("signature", (*lsfList[string])(nil)))))))))))))))))))))))), lsfCons[*lsfSlot](lsfSl("@decl", true, true, lsfCons[string]("bind", lsfCons[string]("function", lsfCons[string]("signature", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("@declaration", true, true, lsfCons[string]("class", lsfCons[string]("data_family", lsfCons[string]("data_instance", lsfCons[string]("data_type", lsfCons[string]("bind", lsfCons[string]("function", lsfCons[string]("signature", lsfCons[string]("default_types", lsfCons[string]("deriving_instance", lsfCons[string]("fixity", lsfCons[string]("foreign_export", lsfCons[string]("foreign_import", lsfCons[string]("instance", lsfCons[string]("kind_signature", lsfCons[string]("newtype", lsfCons[string]("pattern_synonym", lsfCons[string]("role_annotation", lsfCons[string]("top_splice", lsfCons[string]("type_family", lsfCons[string]("type_instance", lsfCons[string]("type_synomym", (*lsfList[string])(nil))))))))))))))))))))))), lsfCons[*lsfSlot](lsfSl("@expression", true, true, lsfCons[string]("apply", lsfCons[string]("arithmetic_sequence", lsfCons[string]("arrow_form", lsfCons[string]("case", lsfCons[string]("conditional", lsfCons[string]("constructor", lsfCons[string]("do", lsfCons[string]("implicit_variable", lsfCons[string]("infix", lsfCons[string]("label", lsfCons[string]("lambda", lsfCons[string]("lambda_case", lsfCons[string]("lambda_cases", lsfCons[string]("left_section", lsfCons[string]("let_in", lsfCons[string]("list", lsfCons[string]("list_comprehension", lsfCons[string]("literal", lsfCons[string]("multi_way_if", lsfCons[string]("negation", lsfCons[string]("parens", lsfCons[string]("prefix_id", lsfCons[string]("prefix_tuple", lsfCons[string]("prefix_unboxed_sum", lsfCons[string]("prefix_unboxed_tuple", lsfCons[string]("proc", lsfCons[string]("projection", lsfCons[string]("projection_selector", lsfCons[string]("qualified", lsfCons[string]("quasiquote", lsfCons[string]("quote", lsfCons[string]("record", lsfCons[string]("right_section", lsfCons[string]("splice", lsfCons[string]("th_quoted_name", lsfCons[string]("tuple", lsfCons[string]("typed_quote", lsfCons[string]("unboxed_sum", lsfCons[string]("unboxed_tuple", lsfCons[string]("unboxed_unit", lsfCons[string]("unit", lsfCons[string]("variable", (*lsfList[string])(nil)))))))))))))))))))))))))))))))))))))))))))), lsfCons[*lsfSlot](lsfSl("@guard", true, true, lsfCons[string]("boolean", lsfCons[string]("let", lsfCons[string]("pattern_guard", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("@instance_decl", true, true, lsfCons[string]("data_instance", lsfCons[string]("bind", lsfCons[string]("function", lsfCons[string]("signature", lsfCons[string]("type_instance", (*lsfList[string])(nil))))))), lsfCons[*lsfSlot](lsfSl("@pattern", true, true, lsfCons[string]("apply", lsfCons[string]("as", lsfCons[string]("constructor", lsfCons[string]("infix", lsfCons[string]("irrefutable", lsfCons[string]("list", lsfCons[string]("literal", lsfCons[string]("negation", lsfCons[string]("parens", lsfCons[string]("prefix_id", lsfCons[string]("prefix_tuple", lsfCons[string]("prefix_unboxed_sum", lsfCons[string]("prefix_unboxed_tuple", lsfCons[string]("qualified", lsfCons[string]("quasiquote", lsfCons[string]("record", lsfCons[string]("splice", lsfCons[string]("strict", lsfCons[string]("tuple", lsfCons[string]("unboxed_sum", lsfCons[string]("unboxed_tuple", lsfCons[string]("unboxed_unit", lsfCons[string]("unit", lsfCons[string]("variable", lsfCons[string]("wildcard", (*lsfList[string])(nil))))))))))))))))))))))))))), lsfCons[*lsfSlot](lsfSl("@qualifier", true, true, lsfCons[string]("boolean", lsfCons[string]("generator", lsfCons[string]("group", lsfCons[string]("let", lsfCons[string]("transform", (*lsfList[string])(nil))))))), lsfCons[*lsfSlot](lsfSl("@quantified_type", true, true, lsfCons[string]("context", lsfCons[string]("forall", lsfCons[string]("forall_required", lsfCons[string]("function", lsfCons[string]("implicit_parameter", lsfCons[string]("linear_function", lsfCons[string]("apply", lsfCons[string]("infix", lsfCons[string]("list", lsfCons[string]("literal", lsfCons[string]("name", lsfCons[string]("parens", lsfCons[string]("prefix_id", lsfCons[string]("prefix_list", lsfCons[string]("prefix_tuple", lsfCons[string]("prefix_unboxed_sum", lsfCons[string]("prefix_unboxed_tuple", lsfCons[string]("promoted", lsfCons[string]("qualified", lsfCons[string]("quasiquote", lsfCons[string]("splice", lsfCons[string]("star", lsfCons[string]("tuple", lsfCons[string]("unboxed_sum", lsfCons[string]("unboxed_tuple", lsfCons[string]("unboxed_unit", lsfCons[string]("unit", lsfCons[string]("variable", lsfCons[string]("wildcard", (*lsfList[string])(nil))))))))))))))))))))))))))))))), lsfCons[*lsfSlot](lsfSl("@statement", true, true, lsfCons[string]("bind", lsfCons[string]("exp", lsfCons[string]("let", lsfCons[string]("rec", (*lsfList[string])(nil)))))), lsfCons[*lsfSlot](lsfSl("@type", true, true, lsfCons[string]("apply", lsfCons[string]("infix", lsfCons[string]("list", lsfCons[string]("literal", lsfCons[string]("name", lsfCons[string]("parens", lsfCons[string]("prefix_id", lsfCons[string]("prefix_list", lsfCons[string]("prefix_tuple", lsfCons[string]("prefix_unboxed_sum", lsfCons[string]("prefix_unboxed_tuple", lsfCons[string]("promoted", lsfCons[string]("qualified", lsfCons[string]("quasiquote", lsfCons[string]("splice", lsfCons[string]("star", lsfCons[string]("tuple", lsfCons[string]("unboxed_sum", lsfCons[string]("unboxed_tuple", lsfCons[string]("unboxed_unit", lsfCons[string]("unit", lsfCons[string]("variable", lsfCons[string]("wildcard", (*lsfList[string])(nil))))))))))))))))))))))))), lsfCons[*lsfSlot](lsfSl("@type_param", true, true, lsfCons[string]("invisible", lsfCons[string]("parens", lsfCons[string]("variable", lsfCons[string]("wildcard", (*lsfList[string])(nil)))))), (*lsfList[*lsfSlot])(nil)))))))))))))))
 }
 
-// grammarProds — laws/haskell_extract.lawspec:3297.
+// grammarProds — laws/haskell_extract.lawspec:3559.
 func lsfGrammarProds(u lsfUnit) *lsfList[*lsfProd] {
 	return lsfCons[*lsfProd](lsfPr("alternative", lsfCons[*lsfSlot](lsfSl("binds", false, false, lsfCons[string]("local_binds", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("match", true, true, lsfCons[string]("match", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("pattern", false, false, lsfCons[string]("or_pattern", lsfCons[string]("@pattern", lsfCons[string]("signature", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("patterns", false, false, lsfCons[string]("patterns", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))))), lsfCons[*lsfProd](lsfPr("alternatives", lsfCons[*lsfSlot](lsfSl("alternative", true, false, lsfCons[string]("alternative", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("annotated", lsfCons[*lsfSlot](lsfSl("kind", false, true, lsfCons[string]("@quantified_type", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("@type_param", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("apply", lsfCons[*lsfSlot](lsfSl("argument", false, true, lsfCons[string]("explicit_type", lsfCons[string]("@expression", lsfCons[string]("kind_application", lsfCons[string]("@pattern", lsfCons[string]("@type", lsfCons[string]("type_application", lsfCons[string]("type_binder", (*lsfList[string])(nil))))))))), lsfCons[*lsfSlot](lsfSl("constructor", false, false, lsfCons[string]("@constraint", lsfCons[string]("@type", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("function", false, false, lsfCons[string]("@expression", lsfCons[string]("@pattern", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))))), lsfCons[*lsfProd](lsfPr("arithmetic_sequence", lsfCons[*lsfSlot](lsfSl("from", false, true, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("step", false, false, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("to", false, false, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))))), lsfCons[*lsfProd](lsfPr("arrow_form", lsfCons[*lsfSlot](lsfSl("expression", false, true, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("as", lsfCons[*lsfSlot](lsfSl("bind", false, true, lsfCons[string]("variable", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("pattern", false, true, lsfCons[string]("@pattern", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("associated_data", lsfCons[*lsfSlot](lsfSl("name", false, true, lsfCons[string]("constructor", lsfCons[string]("prefix_id", lsfCons[string]("qualified", lsfCons[string]("variable", (*lsfList[string])(nil)))))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("associated_type", lsfCons[*lsfSlot](lsfSl("type", false, true, lsfCons[string]("name", lsfCons[string]("qualified", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("bind", lsfCons[*lsfSlot](lsfSl("binds", false, false, lsfCons[string]("local_binds", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("expression", false, false, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("implicit", false, false, lsfCons[string]("implicit_variable", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("match", true, false, lsfCons[string]("match", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("multiplicity", false, false, lsfCons[string]("modifier", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("prefix_id", lsfCons[string]("variable", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("pattern", false, false, lsfCons[string]("@pattern", lsfCons[string]("signature", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))))))))), lsfCons[*lsfProd](lsfPr("binding_list", lsfCons[*lsfSlot](lsfSl("name", true, true, lsfCons[string]("constructor", lsfCons[string]("prefix_id", lsfCons[string]("variable", (*lsfList[string])(nil))))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("boolean", lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("case", lsfCons[*lsfSlot](lsfSl("alternatives", false, false, lsfCons[string]("alternatives", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("children", lsfCons[*lsfSlot](lsfSl("element", true, false, lsfCons[string]("all_names", lsfCons[string]("associated_data", lsfCons[string]("associated_type", lsfCons[string]("constructor", lsfCons[string]("prefix_id", lsfCons[string]("qualified", lsfCons[string]("variable", (*lsfList[string])(nil))))))))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("class", lsfCons[*lsfSlot](lsfSl("context", false, false, lsfCons[string]("context", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("declarations", false, false, lsfCons[string]("class_declarations", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("fundeps", false, false, lsfCons[string]("fundeps", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("name", lsfCons[string]("prefix_id", lsfCons[string]("prefix_list", lsfCons[string]("unit", (*lsfList[string])(nil)))))), lsfCons[*lsfSlot](lsfSl("patterns", false, false, lsfCons[string]("type_params", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("", false, false, lsfCons[string]("infix", lsfCons[string]("parens", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil)))))))), lsfCons[*lsfProd](lsfPr("class_declarations", lsfCons[*lsfSlot](lsfSl("declaration", true, false, lsfCons[string]("@class_decl", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("conditional", lsfCons[*lsfSlot](lsfSl("else", false, true, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("if", false, true, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("then", false, true, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))))), lsfCons[*lsfProd](lsfPr("constructor_synonym", lsfCons[*lsfSlot](lsfSl("binds", false, false, lsfCons[string]("local_binds", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("implicit", false, false, lsfCons[string]("implicit_variable", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("match", true, true, lsfCons[string]("match", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("multiplicity", false, false, lsfCons[string]("modifier", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("prefix_id", lsfCons[string]("variable", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("pattern", false, false, lsfCons[string]("@pattern", lsfCons[string]("signature", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil)))))))), lsfCons[*lsfProd](lsfPr("constructor_synonyms", lsfCons[*lsfSlot](lsfSl("", true, false, lsfCons[string]("constructor_synonym", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("context", lsfCons[*lsfSlot](lsfSl("constraint", false, false, lsfCons[string]("@constraints", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("context", false, true, lsfCons[string]("@constraint", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("type", false, false, lsfCons[string]("@quantified_type", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))))), lsfCons[*lsfProd](lsfPr("data_constructor", lsfCons[*lsfSlot](lsfSl("constructor", false, true, lsfCons[string]("infix", lsfCons[string]("prefix", lsfCons[string]("record", lsfCons[string]("special", (*lsfList[string])(nil)))))), lsfCons[*lsfSlot](lsfSl("context", false, false, lsfCons[string]("context", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("forall", false, false, lsfCons[string]("forall", lsfCons[string]("forall_required", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))))), lsfCons[*lsfProd](lsfPr("data_constructors", lsfCons[*lsfSlot](lsfSl("constructor", true, true, lsfCons[string]("data_constructor", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("data_family", lsfCons[*lsfSlot](lsfSl("kind", false, false, lsfCons[string]("@quantified_type", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("name", lsfCons[string]("prefix_id", lsfCons[string]("prefix_list", lsfCons[string]("unit", (*lsfList[string])(nil)))))), lsfCons[*lsfSlot](lsfSl("patterns", false, false, lsfCons[string]("type_params", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("", false, false, lsfCons[string]("infix", lsfCons[string]("parens", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil)))))), lsfCons[*lsfProd](lsfPr("data_instance", lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("data_type", lsfCons[string]("newtype", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("data_type", lsfCons[*lsfSlot](lsfSl("constructors", false, false, lsfCons[string]("data_constructors", lsfCons[string]("gadt_constructors", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("context", false, false, lsfCons[string]("context", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("deriving", true, false, lsfCons[string]("deriving", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("forall", false, false, lsfCons[string]("forall", lsfCons[string]("forall_required", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("kind", false, false, lsfCons[string]("@quantified_type", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("name", lsfCons[string]("prefix_id", lsfCons[string]("prefix_list", lsfCons[string]("qualified", lsfCons[string]("unit", (*lsfList[string])(nil))))))), lsfCons[*lsfSlot](lsfSl("patterns", false, false, lsfCons[string]("type_params", lsfCons[string]("type_patterns", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("", false, false, lsfCons[string]("infix", lsfCons[string]("parens", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil)))))))))), lsfCons[*lsfProd](lsfPr("declarations", lsfCons[*lsfSlot](lsfSl("", true, true, lsfCons[string]("@declaration", lsfCons[string]("import", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("default_signature", lsfCons[*lsfSlot](lsfSl("signature", false, true, lsfCons[string]("signature", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("default_types", lsfCons[*lsfSlot](lsfSl("class", false, false, lsfCons[string]("name", lsfCons[string]("qualified", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("type", true, false, lsfCons[string]("@quantified_type", lsfCons[string]("signature", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("deriving", lsfCons[*lsfSlot](lsfSl("classes", false, true, lsfCons[string]("@constraint", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("strategy", false, false, lsfCons[string]("deriving_strategy", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("via", false, false, lsfCons[string]("via", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))))), lsfCons[*lsfProd](lsfPr("deriving_instance", lsfCons[*lsfSlot](lsfSl("context", false, false, lsfCons[string]("context", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("forall", false, false, lsfCons[string]("forall", lsfCons[string]("forall_required", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("name", lsfCons[string]("prefix_id", lsfCons[string]("qualified", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("patterns", false, false, lsfCons[string]("type_patterns", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("strategy", false, false, lsfCons[string]("deriving_strategy", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("via", false, false, lsfCons[string]("via", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("", false, false, lsfCons[string]("infix", lsfCons[string]("parens", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))))))))), lsfCons[*lsfProd](lsfPr("do", lsfCons[*lsfSlot](lsfSl("statement", true, false, lsfCons[string]("@statement", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("", false, false, lsfCons[string]("do_module", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("do_module", lsfCons[*lsfSlot](lsfSl("module", false, true, lsfCons[string]("module", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("entity", lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("string", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("equation", lsfCons[*lsfSlot](lsfSl("constructors", false, false, lsfCons[string]("constructor_synonyms", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("forall", false, false, lsfCons[string]("forall", lsfCons[string]("forall_required", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("name", lsfCons[string]("prefix_id", lsfCons[string]("qualified", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("pattern", false, false, lsfCons[string]("@pattern", lsfCons[string]("signature", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("patterns", false, false, lsfCons[string]("type_patterns", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("synonym", false, false, lsfCons[string]("@pattern", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("", true, false, lsfCons[string]("infix", lsfCons[string]("parens", lsfCons[string]("@quantified_type", (*lsfList[string])(nil))))), (*lsfList[*lsfSlot])(nil))))))))), lsfCons[*lsfProd](lsfPr("equations", lsfCons[*lsfSlot](lsfSl("equation", true, false, lsfCons[string]("equation", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("exp", lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("explicit_type", lsfCons[*lsfSlot](lsfSl("type", false, true, lsfCons[string]("@type", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("export", lsfCons[*lsfSlot](lsfSl("children", false, false, lsfCons[string]("children", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("namespace", false, false, lsfCons[string]("namespace", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("operator", false, false, lsfCons[string]("prefix_id", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("type", false, false, lsfCons[string]("name", lsfCons[string]("qualified", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("variable", false, false, lsfCons[string]("qualified", lsfCons[string]("variable", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))))))), lsfCons[*lsfProd](lsfPr("exports", lsfCons[*lsfSlot](lsfSl("export", true, false, lsfCons[string]("export", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("", true, false, lsfCons[string]("module_export", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("field", lsfCons[*lsfSlot](lsfSl("multiplicity", false, false, lsfCons[string]("modifier", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("name", true, false, lsfCons[string]("field_name", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("parameter", false, false, lsfCons[string]("lazy_field", lsfCons[string]("@quantified_type", lsfCons[string]("strict_field", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("type", false, false, lsfCons[string]("lazy_field", lsfCons[string]("@quantified_type", lsfCons[string]("strict_field", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("", false, false, lsfCons[string]("@type", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))))))), lsfCons[*lsfProd](lsfPr("field_name", lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("prefix_id", lsfCons[string]("variable", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("field_path", lsfCons[*lsfSlot](lsfSl("field", false, true, lsfCons[string]("field_name", lsfCons[string]("qualified", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("subfield", true, true, lsfCons[string]("field_name", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("field_pattern", lsfCons[*lsfSlot](lsfSl("field", false, false, lsfCons[string]("field_name", lsfCons[string]("qualified", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("pattern", false, false, lsfCons[string]("@pattern", lsfCons[string]("signature", lsfCons[string]("view_pattern", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("", false, false, lsfCons[string]("wildcard", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))))), lsfCons[*lsfProd](lsfPr("field_update", lsfCons[*lsfSlot](lsfSl("expression", false, false, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("field", false, false, lsfCons[string]("field_name", lsfCons[string]("field_path", lsfCons[string]("qualified", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("", false, false, lsfCons[string]("wildcard", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))))), lsfCons[*lsfProd](lsfPr("fields", lsfCons[*lsfSlot](lsfSl("field", true, false, lsfCons[string]("field", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("fixity", lsfCons[*lsfSlot](lsfSl("namespace", false, false, lsfCons[string]("namespace", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("operator", true, true, lsfCons[string]("constructor_operator", lsfCons[string]("infix_id", lsfCons[string]("operator", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("precedence", false, false, lsfCons[string]("integer", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))))), lsfCons[*lsfProd](lsfPr("forall", lsfCons[*lsfSlot](lsfSl("constraint", false, false, lsfCons[string]("@constraints", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("type", false, false, lsfCons[string]("@quantified_type", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("variables", false, false, lsfCons[string]("quantified_variables", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))))), lsfCons[*lsfProd](lsfPr("forall_required", lsfCons[*lsfSlot](lsfSl("type", false, false, lsfCons[string]("@quantified_type", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("variables", false, false, lsfCons[string]("quantified_variables", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("foreign_export", lsfCons[*lsfSlot](lsfSl("calling_convention", false, true, lsfCons[string]("calling_convention", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("entity", false, false, lsfCons[string]("entity", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("signature", false, true, lsfCons[string]("signature", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))))), lsfCons[*lsfProd](lsfPr("foreign_import", lsfCons[*lsfSlot](lsfSl("calling_convention", false, true, lsfCons[string]("calling_convention", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("entity", false, false, lsfCons[string]("entity", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("safety", false, false, lsfCons[string]("safety", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("signature", false, true, lsfCons[string]("signature", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))))), lsfCons[*lsfProd](lsfPr("function", lsfCons[*lsfSlot](lsfSl("binds", false, false, lsfCons[string]("local_binds", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("match", true, false, lsfCons[string]("match", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("prefix_id", lsfCons[string]("variable", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("parameter", false, false, lsfCons[string]("lazy_field", lsfCons[string]("@quantified_type", lsfCons[string]("strict_field", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("parens", false, false, lsfCons[string]("function_head_parens", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("patterns", false, false, lsfCons[string]("patterns", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("result", false, false, lsfCons[string]("@quantified_type", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("", false, false, lsfCons[string]("infix", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))))))))), lsfCons[*lsfProd](lsfPr("function_head_parens", lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("prefix_id", lsfCons[string]("variable", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("parens", false, false, lsfCons[string]("function_head_parens", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("patterns", false, false, lsfCons[string]("patterns", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("", false, false, lsfCons[string]("infix", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))))), lsfCons[*lsfProd](lsfPr("fundep", lsfCons[*lsfSlot](lsfSl("determined", true, true, lsfCons[string]("variable", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("matched", true, true, lsfCons[string]("variable", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("fundeps", lsfCons[*lsfSlot](lsfSl("fundep", true, true, lsfCons[string]("fundep", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("gadt_constructor", lsfCons[*lsfSlot](lsfSl("context", false, false, lsfCons[string]("context", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("forall", false, false, lsfCons[string]("forall", lsfCons[string]("forall_required", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("constructor", lsfCons[string]("prefix_id", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("names", false, false, lsfCons[string]("binding_list", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("type", false, true, lsfCons[string]("prefix", lsfCons[string]("record", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))))))), lsfCons[*lsfProd](lsfPr("gadt_constructors", lsfCons[*lsfSlot](lsfSl("constructor", true, false, lsfCons[string]("gadt_constructor", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("generator", lsfCons[*lsfSlot](lsfSl("expression", false, true, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("pattern", false, true, lsfCons[string]("@pattern", lsfCons[string]("signature", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("group", lsfCons[*lsfSlot](lsfSl("classifier", false, true, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("key", false, false, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("guards", lsfCons[*lsfSlot](lsfSl("guard", true, true, lsfCons[string]("@guard", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("haskell", lsfCons[*lsfSlot](lsfSl("declarations", false, false, lsfCons[string]("declarations", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("imports", false, false, lsfCons[string]("imports", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("", false, false, lsfCons[string]("header", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))))), lsfCons[*lsfProd](lsfPr("header", lsfCons[*lsfSlot](lsfSl("exports", false, false, lsfCons[string]("exports", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("module", false, true, lsfCons[string]("module", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("implicit_parameter", lsfCons[*lsfSlot](lsfSl("name", false, true, lsfCons[string]("implicit_variable", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("type", false, true, lsfCons[string]("@quantified_type", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("import", lsfCons[*lsfSlot](lsfSl("alias", false, false, lsfCons[string]("module", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("module", false, true, lsfCons[string]("module", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("names", false, false, lsfCons[string]("import_list", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("package", false, false, lsfCons[string]("import_package", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))))), lsfCons[*lsfProd](lsfPr("import_list", lsfCons[*lsfSlot](lsfSl("name", true, false, lsfCons[string]("import_name", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("import_name", lsfCons[*lsfSlot](lsfSl("children", false, false, lsfCons[string]("children", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("namespace", false, false, lsfCons[string]("namespace", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("operator", false, false, lsfCons[string]("prefix_id", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("type", false, false, lsfCons[string]("name", lsfCons[string]("qualified", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("variable", false, false, lsfCons[string]("qualified", lsfCons[string]("variable", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))))))), lsfCons[*lsfProd](lsfPr("imports", lsfCons[*lsfSlot](lsfSl("import", true, true, lsfCons[string]("import", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("inferred", lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("annotated", lsfCons[string]("@type_param", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("infix", lsfCons[*lsfSlot](lsfSl("left_operand", false, true, lsfCons[string]("@expression", lsfCons[string]("lazy_field", lsfCons[string]("@pattern", lsfCons[string]("strict_field", lsfCons[string]("@type", lsfCons[string]("@type_param", (*lsfList[string])(nil)))))))), lsfCons[*lsfSlot](lsfSl("operator", true, true, lsfCons[string]("constructor_operator", lsfCons[string]("infix_id", lsfCons[string]("operator", lsfCons[string]("promoted", lsfCons[string]("qualified", (*lsfList[string])(nil))))))), lsfCons[*lsfSlot](lsfSl("right_operand", false, true, lsfCons[string]("@expression", lsfCons[string]("lazy_field", lsfCons[string]("@pattern", lsfCons[string]("strict_field", lsfCons[string]("@type", lsfCons[string]("@type_param", (*lsfList[string])(nil)))))))), (*lsfList[*lsfSlot])(nil))))), lsfCons[*lsfProd](lsfPr("infix_id", lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("constructor", lsfCons[string]("name", lsfCons[string]("qualified", lsfCons[string]("variable", (*lsfList[string])(nil)))))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("instance", lsfCons[*lsfSlot](lsfSl("context", false, false, lsfCons[string]("context", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("declarations", false, false, lsfCons[string]("instance_declarations", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("forall", false, false, lsfCons[string]("forall", lsfCons[string]("forall_required", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("name", lsfCons[string]("prefix_id", lsfCons[string]("qualified", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("patterns", false, false, lsfCons[string]("type_patterns", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("", false, false, lsfCons[string]("infix", lsfCons[string]("parens", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil)))))))), lsfCons[*lsfProd](lsfPr("instance_declarations", lsfCons[*lsfSlot](lsfSl("declaration", true, false, lsfCons[string]("@instance_decl", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("invisible", lsfCons[*lsfSlot](lsfSl("bind", false, true, lsfCons[string]("@type_param", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("irrefutable", lsfCons[*lsfSlot](lsfSl("pattern", false, true, lsfCons[string]("@pattern", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("kind_application", lsfCons[*lsfSlot](lsfSl("type", false, true, lsfCons[string]("@type", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("kind_signature", lsfCons[*lsfSlot](lsfSl("kind", false, true, lsfCons[string]("@quantified_type", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("name", lsfCons[string]("prefix_id", lsfCons[string]("prefix_list", lsfCons[string]("unit", (*lsfList[string])(nil)))))), lsfCons[*lsfSlot](lsfSl("patterns", false, false, lsfCons[string]("type_params", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("", false, false, lsfCons[string]("infix", lsfCons[string]("parens", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil)))))), lsfCons[*lsfProd](lsfPr("lambda", lsfCons[*lsfSlot](lsfSl("expression", false, true, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("patterns", false, true, lsfCons[string]("patterns", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("lambda_case", lsfCons[*lsfSlot](lsfSl("alternatives", false, false, lsfCons[string]("alternatives", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("lambda_cases", lsfCons[*lsfSlot](lsfSl("alternatives", false, false, lsfCons[string]("alternatives", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("lazy_field", lsfCons[*lsfSlot](lsfSl("type", false, true, lsfCons[string]("@type", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("left_section", lsfCons[*lsfSlot](lsfSl("left_operand", false, true, lsfCons[string]("@expression", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("operator", false, true, lsfCons[string]("constructor_operator", lsfCons[string]("infix_id", lsfCons[string]("operator", lsfCons[string]("qualified", (*lsfList[string])(nil)))))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("let", lsfCons[*lsfSlot](lsfSl("binds", false, false, lsfCons[string]("local_binds", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("let_in", lsfCons[*lsfSlot](lsfSl("binds", false, false, lsfCons[string]("local_binds", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("expression", false, true, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("linear_function", lsfCons[*lsfSlot](lsfSl("multiplicity", false, false, lsfCons[string]("modifier", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("parameter", false, true, lsfCons[string]("lazy_field", lsfCons[string]("@quantified_type", lsfCons[string]("strict_field", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("result", false, true, lsfCons[string]("@quantified_type", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))))), lsfCons[*lsfProd](lsfPr("list", lsfCons[*lsfSlot](lsfSl("element", true, false, lsfCons[string]("@expression", lsfCons[string]("@pattern", lsfCons[string]("@quantified_type", lsfCons[string]("signature", lsfCons[string]("view_pattern", (*lsfList[string])(nil))))))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("list_comprehension", lsfCons[*lsfSlot](lsfSl("expression", false, true, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("qualifiers", true, true, lsfCons[string]("qualifiers", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("literal", lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("char", lsfCons[string]("float", lsfCons[string]("integer", lsfCons[string]("string", (*lsfList[string])(nil)))))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("local_binds", lsfCons[*lsfSlot](lsfSl("decl", true, false, lsfCons[string]("@decl", lsfCons[string]("fixity", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("match", lsfCons[*lsfSlot](lsfSl("expression", false, true, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("guards", false, false, lsfCons[string]("guards", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("modifier", lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("@type", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("module", lsfCons[*lsfSlot](lsfSl("", true, true, lsfCons[string]("module_id", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("module_export", lsfCons[*lsfSlot](lsfSl("module", false, true, lsfCons[string]("module", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("multi_way_if", lsfCons[*lsfSlot](lsfSl("match", true, false, lsfCons[string]("match", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("negation", lsfCons[*lsfSlot](lsfSl("expression", false, false, lsfCons[string]("@expression", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("number", false, false, lsfCons[string]("float", lsfCons[string]("integer", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("newtype", lsfCons[*lsfSlot](lsfSl("constructor", false, false, lsfCons[string]("newtype_constructor", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("constructors", false, false, lsfCons[string]("gadt_constructors", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("context", false, false, lsfCons[string]("context", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("deriving", true, false, lsfCons[string]("deriving", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("forall", false, false, lsfCons[string]("forall", lsfCons[string]("forall_required", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("kind", false, false, lsfCons[string]("@quantified_type", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("name", lsfCons[string]("prefix_id", lsfCons[string]("prefix_list", lsfCons[string]("qualified", lsfCons[string]("unit", (*lsfList[string])(nil))))))), lsfCons[*lsfSlot](lsfSl("patterns", false, false, lsfCons[string]("type_params", lsfCons[string]("type_patterns", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("", false, false, lsfCons[string]("infix", lsfCons[string]("parens", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))))))))))), lsfCons[*lsfProd](lsfPr("newtype_constructor", lsfCons[*lsfSlot](lsfSl("field", false, true, lsfCons[string]("field", lsfCons[string]("record", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("name", false, true, lsfCons[string]("constructor", lsfCons[string]("prefix_id", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("or_pattern", lsfCons[*lsfSlot](lsfSl("element", true, true, lsfCons[string]("@pattern", lsfCons[string]("signature", lsfCons[string]("view_pattern", (*lsfList[string])(nil))))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("parens", lsfCons[*lsfSlot](lsfSl("expression", false, false, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("kind", false, false, lsfCons[string]("@quantified_type", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("name", lsfCons[string]("prefix_id", lsfCons[string]("prefix_list", lsfCons[string]("qualified", lsfCons[string]("unit", (*lsfList[string])(nil))))))), lsfCons[*lsfSlot](lsfSl("pattern", false, false, lsfCons[string]("or_pattern", lsfCons[string]("@pattern", lsfCons[string]("signature", lsfCons[string]("view_pattern", (*lsfList[string])(nil)))))), lsfCons[*lsfSlot](lsfSl("patterns", false, false, lsfCons[string]("type_params", lsfCons[string]("type_patterns", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("type", false, false, lsfCons[string]("@quantified_type", lsfCons[string]("signature", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("", false, false, lsfCons[string]("annotated", lsfCons[string]("@constraints", lsfCons[string]("infix", lsfCons[string]("@type_param", (*lsfList[string])(nil)))))), (*lsfList[*lsfSlot])(nil))))))))), lsfCons[*lsfProd](lsfPr("pattern_guard", lsfCons[*lsfSlot](lsfSl("expression", false, true, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("pattern", false, true, lsfCons[string]("@pattern", lsfCons[string]("signature", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("pattern_synonym", lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("equation", lsfCons[string]("signature", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("patterns", lsfCons[*lsfSlot](lsfSl("", true, true, lsfCons[string]("explicit_type", lsfCons[string]("@pattern", lsfCons[string]("type_binder", (*lsfList[string])(nil))))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("prefix", lsfCons[*lsfSlot](lsfSl("field", true, false, lsfCons[string]("lazy_field", lsfCons[string]("strict_field", lsfCons[string]("@type", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("constructor", lsfCons[string]("prefix_id", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("type", false, false, lsfCons[string]("@quantified_type", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))))), lsfCons[*lsfProd](lsfPr("prefix_id", lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("constructor_operator", lsfCons[string]("operator", lsfCons[string]("qualified", (*lsfList[string])(nil))))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("proc", lsfCons[*lsfSlot](lsfSl("expression", false, true, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("pattern", false, true, lsfCons[string]("@pattern", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("projection", lsfCons[*lsfSlot](lsfSl("expression", false, true, lsfCons[string]("@expression", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("field", false, true, lsfCons[string]("field_name", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("projection_selector", lsfCons[*lsfSlot](lsfSl("field", true, true, lsfCons[string]("variable", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("promoted", lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("constructor", lsfCons[string]("constructor_operator", lsfCons[string]("empty_list", lsfCons[string]("infix_id", lsfCons[string]("list", lsfCons[string]("operator", lsfCons[string]("prefix_id", lsfCons[string]("prefix_tuple", lsfCons[string]("qualified", lsfCons[string]("tuple", lsfCons[string]("unit", lsfCons[string]("variable", (*lsfList[string])(nil)))))))))))))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("qualified", lsfCons[*lsfSlot](lsfSl("id", false, true, lsfCons[string]("constructor", lsfCons[string]("constructor_operator", lsfCons[string]("field_name", lsfCons[string]("name", lsfCons[string]("operator", lsfCons[string]("variable", (*lsfList[string])(nil)))))))), lsfCons[*lsfSlot](lsfSl("module", false, true, lsfCons[string]("module", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("qualifiers", lsfCons[*lsfSlot](lsfSl("qualifier", true, true, lsfCons[string]("@qualifier", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("quantified_variables", lsfCons[*lsfSlot](lsfSl("", true, true, lsfCons[string]("inferred", lsfCons[string]("@type_param", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("quasiquote", lsfCons[*lsfSlot](lsfSl("body", false, false, lsfCons[string]("quasiquote_body", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("quoter", false, true, lsfCons[string]("quoter", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("quote", lsfCons[*lsfSlot](lsfSl("", false, false, lsfCons[string]("quoted_decls", lsfCons[string]("quoted_expression", lsfCons[string]("quoted_pattern", lsfCons[string]("quoted_type", (*lsfList[string])(nil)))))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("quoted_decls", lsfCons[*lsfSlot](lsfSl("declaration", true, false, lsfCons[string]("@declaration", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("quoted_expression", lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("quoted_pattern", lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("@pattern", lsfCons[string]("signature", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("quoted_type", lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("@quantified_type", lsfCons[string]("signature", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("quoter", lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("qualified", lsfCons[string]("variable", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("rec", lsfCons[*lsfSlot](lsfSl("statement", true, false, lsfCons[string]("@statement", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("record", lsfCons[*lsfSlot](lsfSl("constructor", false, false, lsfCons[string]("@pattern", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("expression", false, false, lsfCons[string]("@expression", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("field", true, false, lsfCons[string]("field", lsfCons[string]("field_pattern", lsfCons[string]("field_update", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("fields", false, false, lsfCons[string]("fields", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("constructor", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("type", false, false, lsfCons[string]("@quantified_type", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))))))), lsfCons[*lsfProd](lsfPr("right_section", lsfCons[*lsfSlot](lsfSl("right_operand", false, true, lsfCons[string]("@expression", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("constructor_operator", lsfCons[string]("infix_id", lsfCons[string]("operator", lsfCons[string]("qualified", (*lsfList[string])(nil)))))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("role_annotation", lsfCons[*lsfSlot](lsfSl("role", true, true, lsfCons[string]("type_role", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("type", false, true, lsfCons[string]("name", lsfCons[string]("prefix_id", lsfCons[string]("qualified", (*lsfList[string])(nil))))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("signature", lsfCons[*lsfSlot](lsfSl("constraint", false, false, lsfCons[string]("@constraints", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("expression", false, false, lsfCons[string]("@expression", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("kind", false, false, lsfCons[string]("@quantified_type", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("prefix_id", lsfCons[string]("variable", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("names", false, false, lsfCons[string]("binding_list", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("pattern", false, false, lsfCons[string]("@pattern", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("synonym", false, false, lsfCons[string]("binding_list", lsfCons[string]("constructor", lsfCons[string]("prefix_id", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("type", false, false, lsfCons[string]("@quantified_type", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))))))))), lsfCons[*lsfProd](lsfPr("special", lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("empty_list", lsfCons[string]("tuple", lsfCons[string]("unboxed_sum", lsfCons[string]("unboxed_tuple", lsfCons[string]("unboxed_unit", lsfCons[string]("unit", (*lsfList[string])(nil)))))))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("splice", lsfCons[*lsfSlot](lsfSl("expression", false, true, lsfCons[string]("constructor", lsfCons[string]("implicit_variable", lsfCons[string]("label", lsfCons[string]("literal", lsfCons[string]("parens", lsfCons[string]("prefix_id", lsfCons[string]("qualified", lsfCons[string]("variable", (*lsfList[string])(nil)))))))))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("strict", lsfCons[*lsfSlot](lsfSl("pattern", false, true, lsfCons[string]("@pattern", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("strict_field", lsfCons[*lsfSlot](lsfSl("type", false, true, lsfCons[string]("@type", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("th_quoted_name", lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("constructor", lsfCons[string]("prefix_id", lsfCons[string]("qualified", lsfCons[string]("variable", (*lsfList[string])(nil)))))), lsfCons[*lsfSlot](lsfSl("type", false, false, lsfCons[string]("@type", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("top_splice", lsfCons[*lsfSlot](lsfSl("", false, true, lsfCons[string]("@expression", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("transform", lsfCons[*lsfSlot](lsfSl("key", false, false, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("transformation", false, true, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("tuple", lsfCons[*lsfSlot](lsfSl("element", true, false, lsfCons[string]("@expression", lsfCons[string]("@pattern", lsfCons[string]("@quantified_type", lsfCons[string]("signature", lsfCons[string]("view_pattern", (*lsfList[string])(nil))))))), lsfCons[*lsfSlot](lsfSl("", true, false, lsfCons[string]("@constraints", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("type_application", lsfCons[*lsfSlot](lsfSl("type", false, true, lsfCons[string]("@type", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("type_binder", lsfCons[*lsfSlot](lsfSl("type", false, true, lsfCons[string]("@type", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("type_family", lsfCons[*lsfSlot](lsfSl("closed_family", false, false, lsfCons[string]("abstract_family", lsfCons[string]("equations", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("kind", false, false, lsfCons[string]("@quantified_type", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("name", lsfCons[string]("prefix_id", lsfCons[string]("prefix_list", lsfCons[string]("unit", (*lsfList[string])(nil)))))), lsfCons[*lsfSlot](lsfSl("patterns", false, false, lsfCons[string]("type_params", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("", true, false, lsfCons[string]("infix", lsfCons[string]("parens", lsfCons[string]("type_family_injectivity", lsfCons[string]("type_family_result", (*lsfList[string])(nil)))))), (*lsfList[*lsfSlot])(nil))))))), lsfCons[*lsfProd](lsfPr("type_family_injectivity", lsfCons[*lsfSlot](lsfSl("determined", true, true, lsfCons[string]("variable", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("result", false, true, lsfCons[string]("variable", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil)))), lsfCons[*lsfProd](lsfPr("type_family_result", lsfCons[*lsfSlot](lsfSl("result", false, true, lsfCons[string]("@quantified_type", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("type_instance", lsfCons[*lsfSlot](lsfSl("forall", false, false, lsfCons[string]("forall", lsfCons[string]("forall_required", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("name", lsfCons[string]("prefix_id", lsfCons[string]("qualified", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("patterns", false, false, lsfCons[string]("type_patterns", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("", true, true, lsfCons[string]("infix", lsfCons[string]("parens", lsfCons[string]("@quantified_type", (*lsfList[string])(nil))))), (*lsfList[*lsfSlot])(nil)))))), lsfCons[*lsfProd](lsfPr("type_params", lsfCons[*lsfSlot](lsfSl("", true, true, lsfCons[string]("@type_param", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("type_patterns", lsfCons[*lsfSlot](lsfSl("", true, true, lsfCons[string]("kind_application", lsfCons[string]("@type", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("type_synomym", lsfCons[*lsfSlot](lsfSl("name", false, false, lsfCons[string]("name", lsfCons[string]("prefix_id", lsfCons[string]("prefix_list", lsfCons[string]("unit", (*lsfList[string])(nil)))))), lsfCons[*lsfSlot](lsfSl("patterns", false, false, lsfCons[string]("type_params", (*lsfList[string])(nil))), lsfCons[*lsfSlot](lsfSl("type", false, true, lsfCons[string]("@quantified_type", lsfCons[string]("signature", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("", false, false, lsfCons[string]("infix", lsfCons[string]("parens", (*lsfList[string])(nil)))), (*lsfList[*lsfSlot])(nil)))))), lsfCons[*lsfProd](lsfPr("typed_quote", lsfCons[*lsfSlot](lsfSl("", false, false, lsfCons[string]("quoted_expression", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("unboxed_sum", lsfCons[*lsfSlot](lsfSl("element", true, true, lsfCons[string]("@expression", lsfCons[string]("@pattern", lsfCons[string]("@quantified_type", lsfCons[string]("signature", lsfCons[string]("view_pattern", (*lsfList[string])(nil))))))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("unboxed_tuple", lsfCons[*lsfSlot](lsfSl("element", true, true, lsfCons[string]("@expression", lsfCons[string]("@pattern", lsfCons[string]("@quantified_type", lsfCons[string]("signature", lsfCons[string]("view_pattern", (*lsfList[string])(nil))))))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("via", lsfCons[*lsfSlot](lsfSl("type", false, true, lsfCons[string]("@quantified_type", (*lsfList[string])(nil))), (*lsfList[*lsfSlot])(nil))), lsfCons[*lsfProd](lsfPr("view_pattern", lsfCons[*lsfSlot](lsfSl("expression", false, true, lsfCons[string]("@expression", lsfCons[string]("signature", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("pattern", false, true, lsfCons[string]("@pattern", lsfCons[string]("signature", lsfCons[string]("view_pattern", (*lsfList[string])(nil))))), (*lsfList[*lsfSlot])(nil)))), (*lsfList[*lsfProd])(nil))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 }
 
-// grammarTexts — laws/haskell_extract.lawspec:3117.
+// grammarTexts — laws/haskell_extract.lawspec:3379.
 func lsfGrammarTexts(u lsfUnit) *lsfList[*lsfSlot] {
 	return lsfCons[*lsfSlot](lsfSl("", true, true, lsfCons[string]("v0", lsfCons[string]("x", lsfCons[string]("", lsfCons[string]("a#b", lsfCons[string]("main", lsfCons[string]("Just", lsfCons[string]("M", lsfCons[string]("fa", lsfCons[string]("map", lsfCons[string]("T", lsfCons[string]("w0", lsfCons[string]("f x", (*lsfList[string])(nil)))))))))))))), lsfCons[*lsfSlot](lsfSl("variable", true, true, lsfCons[string]("v0", lsfCons[string]("x", lsfCons[string]("main", lsfCons[string]("", lsfCons[string]("a#b", lsfCons[string]("fa", lsfCons[string]("map", lsfCons[string]("w0", lsfCons[string]("y", (*lsfList[string])(nil))))))))))), lsfCons[*lsfSlot](lsfSl("constructor", true, true, lsfCons[string]("K", lsfCons[string]("Just", lsfCons[string]("T", lsfCons[string]("", lsfCons[string]("K#", lsfCons[string]("Rc", (*lsfList[string])(nil)))))))), lsfCons[*lsfSlot](lsfSl("name", true, true, lsfCons[string]("T", lsfCons[string]("C", lsfCons[string]("Int", lsfCons[string]("", lsfCons[string]("T#", lsfCons[string]("Show", (*lsfList[string])(nil)))))))), lsfCons[*lsfSlot](lsfSl("operator", true, true, lsfCons[string]("+", lsfCons[string]("<>", lsfCons[string]("-<", lsfCons[string]("-<<", lsfCons[string]("", lsfCons[string]("#", lsfCons[string]("<+>", lsfCons[string]("==", (*lsfList[string])(nil)))))))))), lsfCons[*lsfSlot](lsfSl("constructor_operator", true, true, lsfCons[string](":", lsfCons[string](":+", lsfCons[string](":|", lsfCons[string]("", lsfCons[string](":#", (*lsfList[string])(nil))))))), lsfCons[*lsfSlot](lsfSl("wildcard", true, true, lsfCons[string]("_", lsfCons[string]("..", (*lsfList[string])(nil)))), lsfCons[*lsfSlot](lsfSl("module_id", true, true, lsfCons[string]("M", lsfCons[string]("Prelude", lsfCons[string]("Main", lsfCons[string]("", lsfCons[string]("Q", lsfCons[string]("M#", (*lsfList[string])(nil)))))))), lsfCons[*lsfSlot](lsfSl("module", true, true, lsfCons[string]("M", lsfCons[string]("Data.Map", lsfCons[string]("Prelude", lsfCons[string]("", lsfCons[string]("M#", lsfCons[string]("Main", (*lsfList[string])(nil)))))))), lsfCons[*lsfSlot](lsfSl("namespace", true, true, lsfCons[string]("data", lsfCons[string]("type", lsfCons[string]("pattern", lsfCons[string]("default", lsfCons[string]("", (*lsfList[string])(nil))))))), lsfCons[*lsfSlot](lsfSl("char", true, true, lsfCons[string]("'a'", lsfCons[string]("'\\''", lsfCons[string]("'\\r','\\n'", lsfCons[string]("", (*lsfList[string])(nil)))))), lsfCons[*lsfSlot](lsfSl("prefix_tuple", true, true, lsfCons[string]("(,)", lsfCons[string]("(,,)", lsfCons[string]("", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("comment", true, true, lsfCons[string]("-- x", lsfCons[string]("-- x\x0a-- | d", lsfCons[string]("--", lsfCons[string]("---\x0a-- |\x0a-- d\x0a---", lsfCons[string]("-- x\x0a-- ^ d", lsfCons[string]("", (*lsfList[string])(nil)))))))), lsfCons[*lsfSlot](lsfSl("haddock", true, true, lsfCons[string]("-- | d", lsfCons[string]("-- ^ d", lsfCons[string]("{- | d -}", lsfCons[string]("{-^ d -}", lsfCons[string]("-- |\x0a-- d\x0a---", lsfCons[string]("-- | d\x0a-- e", lsfCons[string]("", (*lsfList[string])(nil))))))))), lsfCons[*lsfSlot](lsfSl("pragma", true, true, lsfCons[string]("{-# LANGUAGE NoImplicitPrelude #-}", lsfCons[string]("{-# LANGUAGE RebindableSyntax #-}", lsfCons[string]("{-# INLINE f #-}", lsfCons[string]("", (*lsfList[string])(nil)))))), lsfCons[*lsfSlot](lsfSl("do", true, true, lsfCons[string]("do", lsfCons[string]("mdo { x }", lsfCons[string]("", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("import", true, true, lsfCons[string]("import M", lsfCons[string]("import qualified M as Q", lsfCons[string]("import M hiding (x)", lsfCons[string]("import Prelude hiding(map)", lsfCons[string]("import M qualified as Q (x)", lsfCons[string]("", (*lsfList[string])(nil)))))))), lsfCons[*lsfSlot](lsfSl("haskell", true, true, lsfCons[string]("module M where\x0ax = 1\x0a", lsfCons[string]("x = 1\x0a", lsfCons[string]("-- c\x0amodule M where\x0a", lsfCons[string]("", (*lsfList[string])(nil)))))), lsfCons[*lsfSlot](lsfSl("data_type", true, true, lsfCons[string]("data T = K", lsfCons[string]("type data T = K", lsfCons[string]("", (*lsfList[string])(nil))))), lsfCons[*lsfSlot](lsfSl("equation", true, true, lsfCons[string]("P x = K x", lsfCons[string]("P x <- K x", lsfCons[string]("K x", lsfCons[string]("", (*lsfList[string])(nil)))))), (*lsfList[*lsfSlot])(nil)))))))))))))))))))))
 }
 
-// grammarTree — laws/haskell_extract.lawspec:3241.
+// grammarTree — laws/haskell_extract.lawspec:3503.
 func lsfGrammarTree(seed_ lsfInt, p *lsfPoint, q *lsfPoint) *lsfSyntax {
 	var value lsfInt
 	if lsfCmpInt(seed_, lsfSmall(int64(0))) < 0 {
@@ -21923,7 +24701,7 @@ func lsfGrammarTree(seed_ lsfInt, p *lsfPoint, q *lsfPoint) *lsfSyntax {
 	}
 }
 
-// grow — laws/haskell_extract.lawspec:3225.
+// grow — laws/haskell_extract.lawspec:3487.
 func lsfGrow(g *lsfGrammar, pk *lsfPick, fuel lsfInt, p *lsfPoint, q *lsfPoint) *lsfSyntax {
 	var value *lsfList[*lsfPick]
 	if lsfCmpInt(fuel, lsfSmall(int64(0))) <= 0 {
@@ -22058,12 +24836,12 @@ func lsfHaddockText(h *lsfSyntax) string {
 	}
 }
 
-// handledFields — laws/haskell_extract.lawspec:3477.
+// handledFields — laws/haskell_extract.lawspec:3739.
 func lsfHandledFields(u lsfUnit) *lsfList[string] {
 	return lsfCons[string]("alias", lsfCons[string]("argument", lsfCons[string]("binds", lsfCons[string]("children", lsfCons[string]("classes", lsfCons[string]("classifier", lsfCons[string]("closed_family", lsfCons[string]("constructor", lsfCons[string]("constructors", lsfCons[string]("context", lsfCons[string]("declarations", lsfCons[string]("deriving", lsfCons[string]("element", lsfCons[string]("export", lsfCons[string]("exports", lsfCons[string]("expression", lsfCons[string]("field", lsfCons[string]("function", lsfCons[string]("guards", lsfCons[string]("id", lsfCons[string]("imports", lsfCons[string]("left_operand", lsfCons[string]("match", lsfCons[string]("module", lsfCons[string]("multiplicity", lsfCons[string]("name", lsfCons[string]("names", lsfCons[string]("namespace", lsfCons[string]("operator", lsfCons[string]("parameter", lsfCons[string]("parens", lsfCons[string]("pattern", lsfCons[string]("patterns", lsfCons[string]("qualifiers", lsfCons[string]("quoter", lsfCons[string]("result", lsfCons[string]("right_operand", lsfCons[string]("signature", lsfCons[string]("synonym", lsfCons[string]("transformation", lsfCons[string]("type", lsfCons[string]("variable", (*lsfList[string])(nil)))))))))))))))))))))))))))))))))))))))))))
 }
 
-// handledKinds — laws/haskell_extract.lawspec:3465.
+// handledKinds — laws/haskell_extract.lawspec:3727.
 func lsfHandledKinds(u lsfUnit) *lsfList[string] {
 	return lsfCons[string]("ERROR", lsfCons[string]("all_names", lsfCons[string]("alternative", lsfCons[string]("apply", lsfCons[string]("arrow_form", lsfCons[string]("associated_data", lsfCons[string]("bind", lsfCons[string]("char", lsfCons[string]("children", lsfCons[string]("class", lsfCons[string]("comment", lsfCons[string]("constructor", lsfCons[string]("constructor_operator", lsfCons[string]("constructor_synonym", lsfCons[string]("context", lsfCons[string]("cpp", lsfCons[string]("data_constructor", lsfCons[string]("data_family", lsfCons[string]("data_instance", lsfCons[string]("data_type", lsfCons[string]("deriving", lsfCons[string]("deriving_instance", lsfCons[string]("do", lsfCons[string]("equation", lsfCons[string]("explicit_type", lsfCons[string]("export", lsfCons[string]("field", lsfCons[string]("field_name", lsfCons[string]("field_pattern", lsfCons[string]("forall", lsfCons[string]("foreign_import", lsfCons[string]("function", lsfCons[string]("gadt_constructor", lsfCons[string]("generator", lsfCons[string]("group", lsfCons[string]("haddock", lsfCons[string]("haskell", lsfCons[string]("header", lsfCons[string]("import", lsfCons[string]("import_name", lsfCons[string]("infix", lsfCons[string]("infix_id", lsfCons[string]("instance", lsfCons[string]("kind_application", lsfCons[string]("lambda", lsfCons[string]("left_section", lsfCons[string]("let", lsfCons[string]("let_in", lsfCons[string]("list_comprehension", lsfCons[string]("match", lsfCons[string]("module", lsfCons[string]("module_export", lsfCons[string]("module_id", lsfCons[string]("name", lsfCons[string]("namespace", lsfCons[string]("newtype", lsfCons[string]("newtype_constructor", lsfCons[string]("operator", lsfCons[string]("or_pattern", lsfCons[string]("parens", lsfCons[string]("pattern_guard", lsfCons[string]("pattern_synonym", lsfCons[string]("patterns", lsfCons[string]("pragma", lsfCons[string]("prefix_id", lsfCons[string]("prefix_tuple", lsfCons[string]("proc", lsfCons[string]("projection", lsfCons[string]("projection_selector", lsfCons[string]("qualified", lsfCons[string]("quasiquote", lsfCons[string]("rec", lsfCons[string]("record", lsfCons[string]("right_section", lsfCons[string]("signature", lsfCons[string]("splice", lsfCons[string]("transform", lsfCons[string]("tuple", lsfCons[string]("type_application", lsfCons[string]("type_binder", lsfCons[string]("type_family", lsfCons[string]("type_instance", lsfCons[string]("type_synomym", lsfCons[string]("variable", lsfCons[string]("view_pattern", lsfCons[string]("wildcard", (*lsfList[string])(nil)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
 }
@@ -22248,7 +25026,7 @@ func lsfHeaderOf(root *lsfSyntax) lsfMaybe[*lsfSyntax] {
 	}
 }
 
-// headerlessTree — laws/haskell_extract.lawspec:2956.
+// headerlessTree — laws/haskell_extract.lawspec:3218.
 func lsfHeaderlessTree(source string) *lsfSyntax {
 	var value *lsfPoint
 	recordField := lsfSmall(1)
@@ -22701,7 +25479,7 @@ func lsfIsEqualsHead(whole string, pat string) bool {
 	return logic
 }
 
-// isMainEntry — laws/haskell_extract.lawspec:2922.
+// isMainEntry — laws/haskell_extract.lawspec:3184.
 func lsfIsMainEntry(d *lsfDecl) bool {
 	var value string
 	name := d.fName
@@ -22757,7 +25535,7 @@ func lsfIsNameNode(nd *lsfSyntax) bool {
 	return logic_3
 }
 
-// isOtherEntry — laws/haskell_extract.lawspec:2923.
+// isOtherEntry — laws/haskell_extract.lawspec:3185.
 func lsfIsOtherEntry(d *lsfDecl) bool {
 	var value string
 	name := d.fName
@@ -23035,7 +25813,7 @@ func lsfItemNames(items *lsfList[*lsfSyntax]) *lsfList[string] {
 	}
 }
 
-// kidsOf — laws/haskell_extract.lawspec:3210.
+// kidsOf — laws/haskell_extract.lawspec:3472.
 func lsfKidsOf(g *lsfGrammar, kind string, seed_ lsfInt, fuel lsfInt) *lsfList[*lsfPick] {
 	var value *lsfList[*lsfProd]
 	prods := g.fProds
@@ -23065,7 +25843,7 @@ func lsfKidsOf(g *lsfGrammar, kind string, seed_ lsfInt, fuel lsfInt) *lsfList[*
 	return lsfSliceList(lsfAppend(value_2, lsfPicksOf(g, lsfTurned(lsfMix(seed_, lsfSmall(12)), ss), seed_, fuel)), int64(0), lsfIndex(value_4))
 }
 
-// kindFor — laws/haskell_extract.lawspec:3169.
+// kindFor — laws/haskell_extract.lawspec:3431.
 func lsfKindFor(g *lsfGrammar, s *lsfSlot, seed_ lsfInt) string {
 	var value *lsfList[string]
 	kinds := s.fKinds
@@ -23081,7 +25859,7 @@ func lsfKindFor(g *lsfGrammar, s *lsfSlot, seed_ lsfInt) string {
 	}
 }
 
-// kindsIn — laws/haskell_extract.lawspec:3248.
+// kindsIn — laws/haskell_extract.lawspec:3510.
 func lsfKindsIn(cs *lsfList[*lsfSyntax]) *lsfList[string] {
 	it := cs
 	if it == nil {
@@ -23099,7 +25877,7 @@ func lsfKindsIn(cs *lsfList[*lsfSyntax]) *lsfList[string] {
 	}
 }
 
-// kindsNamed — laws/haskell_extract.lawspec:3160.
+// kindsNamed — laws/haskell_extract.lawspec:3422.
 func lsfKindsNamed(name string, ss *lsfList[*lsfSlot]) *lsfList[string] {
 	for {
 		it := ss
@@ -23156,6 +25934,27 @@ func lsfLastText(cs *lsfList[*lsfSyntax], acc string) string {
 			value = text
 			next_2 := value
 			cs = next
+			acc = next_2
+			continue
+		}
+	}
+}
+
+// keyValFromItems — <lawspec.collections>:281.
+func lsfLawspecCollectionsKeyValFromItemsListEntryTextCxSetsListEntryTextCxSets(es *lsfList[*lsfEntry[string, lsfCxSets]], acc *lsfList[*lsfEntry[string, lsfCxSets]]) *lsfList[*lsfEntry[string, lsfCxSets]] {
+	for {
+		it := es
+		if it == nil {
+			return acc
+		} else {
+			selection := it.head
+			selection_2 := it.tail
+			it_2 := selection
+			matchSelection := it_2.fKey
+			matchSelection_2 := it_2.fValue
+			next := selection_2
+			next_2 := lsfLawspecCollectionsKeyValPutItemsTextCxSetsListEntryTextCxSets(matchSelection, matchSelection_2, acc)
+			es = next
 			acc = next_2
 			continue
 		}
@@ -23423,6 +26222,35 @@ func lsfLawspecCollectionsKeyValLookupItemsTextListEntryTextListSyntax(k string,
 }
 
 // keyValLookupItems — <lawspec.collections>:268.
+func lsfLawspecCollectionsKeyValLookupItemsTextListEntryTextCxSets(k string, es *lsfList[*lsfEntry[string, lsfCxSets]]) lsfMaybe[lsfCxSets] {
+	for {
+		it := es
+		if it == nil {
+			return lsfAbsent[lsfCxSets]()
+		} else {
+			selection := it.head
+			selection_2 := it.tail
+			it_2 := selection
+			matchSelection := it_2.fKey
+			matchSelection_2 := it_2.fValue
+			it_3 := lsfOrderingOf(lsfCompareText(k, matchSelection))
+			switch it_3 {
+			case lsfOrdering_Less:
+				return lsfAbsent[lsfCxSets]()
+			case lsfOrdering_Equal:
+				return lsfPresent[lsfCxSets](matchSelection_2)
+			case lsfOrdering_Greater:
+				next := selection_2
+				es = next
+				continue
+			default:
+				panic("unreachable branch reached")
+			}
+		}
+	}
+}
+
+// keyValLookupItems — <lawspec.collections>:268.
 func lsfLawspecCollectionsKeyValLookupItemsTextListEntryTextListCxSym(k string, es *lsfList[*lsfEntry[string, *lsfList[*lsfCxSym]]]) lsfMaybe[*lsfList[*lsfCxSym]] {
 	for {
 		it := es
@@ -23631,6 +26459,11 @@ func lsfLawspecCollectionsKeyValLookupIntegerKeyValIntegerInteger(k lsfInt, m_ *
 }
 
 // keyValLookup — <lawspec.collections>:308.
+func lsfLawspecCollectionsKeyValLookupTextKeyValTextCxSets(k string, m_ *lsfMap[string, lsfCxSets]) lsfMaybe[lsfCxSets] {
+	return lsfLookup(m_, k, lsfCompareText)
+}
+
+// keyValLookup — <lawspec.collections>:308.
 func lsfLawspecCollectionsKeyValLookupTextKeyValTextListSyntax(k string, m_ *lsfMap[string, *lsfList[*lsfSyntax]]) lsfMaybe[*lsfList[*lsfSyntax]] {
 	return lsfLookup(m_, k, lsfCompareText)
 }
@@ -23678,6 +26511,11 @@ func lsfLawspecCollectionsKeyValOfListEntryTextListSyntax(es *lsfList[*lsfEntry[
 // keyValOf — <lawspec.collections>:304.
 func lsfLawspecCollectionsKeyValOfListEntryIntegerText(es *lsfList[*lsfEntry[lsfInt, string]]) *lsfMap[lsfInt, string] {
 	return lsfKeyValOf(es, lsfCompareInteger)
+}
+
+// keyValOf — <lawspec.collections>:304.
+func lsfLawspecCollectionsKeyValOfListEntryTextCxSets(es *lsfList[*lsfEntry[string, lsfCxSets]]) *lsfMap[string, lsfCxSets] {
+	return lsfKeyValOf(es, lsfCompareText)
 }
 
 // keyValOf — <lawspec.collections>:304.
@@ -23740,6 +26578,42 @@ func lsfLawspecCollectionsKeyValPutItemsTextTextListEntryTextText(k string, v st
 			return lsfCons[*lsfEntry[string, string]](value_3, selection_2)
 		case lsfOrdering_Greater:
 			return lsfCons[*lsfEntry[string, string]](selection, lsfLawspecCollectionsKeyValPutItemsTextTextListEntryTextText(k, v, selection_2))
+		default:
+			panic("unreachable branch reached")
+		}
+	}
+}
+
+// keyValPutItems — <lawspec.collections>:242.
+func lsfLawspecCollectionsKeyValPutItemsTextCxSetsListEntryTextCxSets(k string, v lsfCxSets, es *lsfList[*lsfEntry[string, lsfCxSets]]) *lsfList[*lsfEntry[string, lsfCxSets]] {
+	it := es
+	if it == nil {
+		var value *lsfEntry[string, lsfCxSets]
+		recordField := k
+		recordField_2 := v
+		value = &lsfEntry[string, lsfCxSets]{recordField, recordField_2}
+		return lsfCons[*lsfEntry[string, lsfCxSets]](value, (*lsfList[*lsfEntry[string, lsfCxSets]])(nil))
+	} else {
+		selection := it.head
+		selection_2 := it.tail
+		it_2 := selection
+		matchSelection := it_2.fKey
+		it_3 := lsfOrderingOf(lsfCompareText(k, matchSelection))
+		switch it_3 {
+		case lsfOrdering_Less:
+			var value_2 *lsfEntry[string, lsfCxSets]
+			recordField_3 := k
+			recordField_4 := v
+			value_2 = &lsfEntry[string, lsfCxSets]{recordField_3, recordField_4}
+			return lsfCons[*lsfEntry[string, lsfCxSets]](value_2, es)
+		case lsfOrdering_Equal:
+			var value_3 *lsfEntry[string, lsfCxSets]
+			recordField_5 := k
+			recordField_6 := v
+			value_3 = &lsfEntry[string, lsfCxSets]{recordField_5, recordField_6}
+			return lsfCons[*lsfEntry[string, lsfCxSets]](value_3, selection_2)
+		case lsfOrdering_Greater:
+			return lsfCons[*lsfEntry[string, lsfCxSets]](selection, lsfLawspecCollectionsKeyValPutItemsTextCxSetsListEntryTextCxSets(k, v, selection_2))
 		default:
 			panic("unreachable branch reached")
 		}
@@ -24035,6 +26909,11 @@ func lsfLawspecCollectionsKeyValPutItemsTextSyntaxListEntryTextSyntax(k string, 
 }
 
 // keyValPut — <lawspec.collections>:312.
+func lsfLawspecCollectionsKeyValPutTextCxSetsKeyValTextCxSets(k string, v lsfCxSets, m_ *lsfMap[string, lsfCxSets]) *lsfMap[string, lsfCxSets] {
+	return lsfPut(m_, k, v, lsfCompareText)
+}
+
+// keyValPut — <lawspec.collections>:312.
 func lsfLawspecCollectionsKeyValPutTextListCxSymKeyValTextListCxSym(k string, v *lsfList[*lsfCxSym], m_ *lsfMap[string, *lsfList[*lsfCxSym]]) *lsfMap[string, *lsfList[*lsfCxSym]] {
 	return lsfPut(m_, k, v, lsfCompareText)
 }
@@ -24096,7 +26975,7 @@ func lsfLeadBlanks(t_ string, i lsfInt, n lsfInt) lsfInt {
 	}
 }
 
-// leaf — laws/haskell_extract.lawspec:3040.
+// leaf — laws/haskell_extract.lawspec:3302.
 func lsfLeaf_2(kind string, field string, text string, p *lsfPoint, q *lsfPoint) *lsfSyntax {
 	recordField := kind
 	recordField_2 := field
@@ -24404,7 +27283,7 @@ func lsfMemberIndex(decls *lsfList[*lsfDecl], acc *lsfMap[string, *lsfList[strin
 	}
 }
 
-// memberRight — laws/haskell_extract.lawspec:3612.
+// memberRight — laws/haskell_extract.lawspec:3874.
 func lsfMemberRight(every *lsfList[*lsfDecl], d *lsfDecl) bool {
 	var value lsfSymbolKind
 	kind := d.fKind
@@ -24482,7 +27361,7 @@ func lsfMemberTexts(cs *lsfList[*lsfSyntax]) *lsfList[string] {
 	}
 }
 
-// membersRight — laws/haskell_extract.lawspec:3616.
+// membersRight — laws/haskell_extract.lawspec:3878.
 func lsfMembersRight(ds *lsfList[*lsfDecl], every *lsfList[*lsfDecl]) bool {
 	anyItem := every
 	all := true
@@ -24606,7 +27485,18 @@ func lsfMethodNames(ix *lsfIx, owner string, s *lsfSyntax, ns *lsfList[string], 
 	}
 }
 
-// mix — laws/haskell_extract.lawspec:3147.
+// missingWith — laws/haskell_extract.lawspec:4575.
+func lsfMissingWith(symbols map[string]*LawSpecSymbol, lines *lsfList[lsfBindingLine], source string) *lsfList[string] {
+	var value *lsfSourceFile
+	recordField := "M.hs"
+	recordField_2 := source
+	value = &lsfSourceFile{recordField, recordField_2}
+	matched_ := lsfApplyWhen(lsfAssayxportConditionsPolicyEnvFrom(lsfAssayxportConditionsPolicyEmptyEnv(lsfUnit{}), lines), lsfExtractFiles(symbols, lsfCons[*lsfSourceFile](value, (*lsfList[*lsfSourceFile])(nil))))
+	missing := matched_.fMissing
+	return missing
+}
+
+// mix — laws/haskell_extract.lawspec:3409.
 func lsfMix(seed_ lsfInt, j lsfInt) lsfInt {
 	return seed_.Mul(lsfSmall(int64(7919)).Add(j.Mul(lsfSmall(int64(2018))))).Add(j.Mul(lsfSmall(int64(104729)))).Add(lsfSmall(int64(12347))).Rem(lsfSmall(int64(1000003)))
 }
@@ -24751,7 +27641,7 @@ func lsfModuleText(m_ lsfMaybe[*lsfSyntax]) string {
 	}
 }
 
-// modulesOfRoots — laws/haskell_extract.lawspec:2755.
+// modulesOfRoots — laws/haskell_extract.lawspec:3017.
 func lsfModulesOfRoots(path string, roots *lsfList[*lsfSyntax]) *lsfList[*lsfList[*lsfPackage]] {
 	it := roots
 	if it == nil {
@@ -24763,7 +27653,7 @@ func lsfModulesOfRoots(path string, roots *lsfList[*lsfSyntax]) *lsfList[*lsfLis
 	}
 }
 
-// moreEnv — laws/haskell_extract.lawspec:3861.
+// moreEnv — laws/haskell_extract.lawspec:4147.
 func lsfMoreEnv(i lsfInt) *lsfEnv {
 	var value *lsfList[lsfBindingLine]
 	it := i
@@ -24904,7 +27794,7 @@ func lsfNameEdges(x *lsfCtx, locals *lsfList[string], os_ *lsfList[*lsfSyntax]) 
 	}
 }
 
-// nameIs — laws/haskell_extract.lawspec:2924.
+// nameIs — laws/haskell_extract.lawspec:3186.
 func lsfNameIs(n string, d *lsfDecl) bool {
 	var value string
 	name := d.fName
@@ -25073,7 +27963,7 @@ func lsfNoPreludePragma(p *lsfSyntax) bool {
 	return logic
 }
 
-// node — laws/haskell_extract.lawspec:3044.
+// node — laws/haskell_extract.lawspec:3306.
 func lsfNode_2(kind string, field string, p *lsfPoint, q *lsfPoint, cs *lsfList[*lsfSyntax]) *lsfSyntax {
 	recordField := kind
 	recordField_2 := field
@@ -25236,7 +28126,7 @@ func lsfNormalized(t_ string) string {
 	return lsfJoin(" ", lsfWords(t_))
 }
 
-// oneFile — laws/haskell_extract.lawspec:4341.
+// oneFile — laws/haskell_extract.lawspec:4721.
 func lsfOneFile(path string, content string) *lsfList[*lsfSourceFile] {
 	var value *lsfSourceFile
 	recordField := path
@@ -25374,7 +28264,7 @@ func lsfOwnerHas(n string, owner string) bool {
 	return !(all)
 }
 
-// packageFacts — laws/haskell_extract.lawspec:4142.
+// packageFacts — laws/haskell_extract.lawspec:4436.
 func lsfPackageFacts(ps *lsfList[*lsfPackage]) *lsfList[string] {
 	it := ps
 	if it == nil {
@@ -25389,7 +28279,7 @@ func lsfPackageFacts(ps *lsfList[*lsfPackage]) *lsfList[string] {
 	}
 }
 
-// packageImplies — laws/haskell_extract.lawspec:4102.
+// packageImplies — laws/haskell_extract.lawspec:4396.
 func lsfPackageImplies(env *lsfEnv, p *lsfPackage) bool {
 	anyItem := env
 	var value *lsfList[*lsfDecl]
@@ -25444,7 +28334,7 @@ func lsfPackageOf(path string, root *lsfSyntax, ix *lsfIx, decls *lsfList[*lsfDe
 	return &lsfPackage{recordField, recordField_2, recordField_3, recordField_4, recordField_5, recordField_6, recordField_7, recordField_8, recordField_11, recordField_14}
 }
 
-// packagesOfCopies — laws/haskell_extract.lawspec:2739.
+// packagesOfCopies — laws/haskell_extract.lawspec:3001.
 func lsfPackagesOfCopies(plan *lsfCxPlan, pks *lsfList[*lsfList[*lsfPackage]]) *lsfList[*lsfPackage] {
 	var value *lsfList[string]
 	copies := plan.fCopies
@@ -25530,7 +28420,7 @@ func lsfParenHead(d *lsfSyntax) string {
 	}
 }
 
-// parseAll — laws/haskell_extract.lawspec:2762.
+// parseAll — laws/haskell_extract.lawspec:3024.
 func lsfParseAll(symbols map[string]*LawSpecSymbol, texts *lsfList[string]) *lsfList[*lsfSyntax] {
 	it := texts
 	if it == nil {
@@ -25683,7 +28573,7 @@ func lsfPatternVars(x *lsfCtx, m_ lsfMaybe[*lsfSyntax]) *lsfList[string] {
 	}
 }
 
-// picksOf — laws/haskell_extract.lawspec:3194.
+// picksOf — laws/haskell_extract.lawspec:3456.
 func lsfPicksOf(g *lsfGrammar, ss *lsfList[*lsfSlot], seed_ lsfInt, fuel lsfInt) *lsfList[*lsfPick] {
 	it := ss
 	if it == nil {
@@ -25695,7 +28585,7 @@ func lsfPicksOf(g *lsfGrammar, ss *lsfList[*lsfSlot], seed_ lsfInt, fuel lsfInt)
 	}
 }
 
-// pointFor — laws/haskell_extract.lawspec:3218.
+// pointFor — laws/haskell_extract.lawspec:3480.
 func lsfPointFor(seed_ lsfInt, p *lsfPoint, q *lsfPoint) *lsfPoint {
 	var value lsfInt
 	if lsfCmpInt(seed_.Rem(lsfSmall(int64(13))), lsfSmall(int64(0))) == 0 {
@@ -25713,7 +28603,7 @@ func lsfPointFor(seed_ lsfInt, p *lsfPoint, q *lsfPoint) *lsfPoint {
 	return &lsfPoint{recordField, recordField_2}
 }
 
-// poolFailure — laws/haskell_extract.lawspec:4033.
+// poolFailure — laws/haskell_extract.lawspec:4319.
 func lsfPoolFailure(symbols map[string]*LawSpecSymbol, rs *lsfList[*lsfRow]) lsfInt {
 	var value *lsfSourceFile
 	recordField := "M.hs"
@@ -25725,7 +28615,7 @@ func lsfPoolFailure(symbols map[string]*LawSpecSymbol, rs *lsfList[*lsfRow]) lsf
 	return lsfFailingEnv(rs, whole, texts, read, lsfSmall(64))
 }
 
-// pr — laws/haskell_extract.lawspec:3108.
+// pr — laws/haskell_extract.lawspec:3370.
 func lsfPr(kind string, slots *lsfList[*lsfSlot]) *lsfProd {
 	recordField := kind
 	recordField_2 := slots
@@ -26040,12 +28930,12 @@ func lsfQualsBound(x *lsfCtx, cs *lsfList[*lsfSyntax]) *lsfList[string] {
 	}
 }
 
-// reachForest — laws/haskell_extract.lawspec:3484.
+// reachForest — laws/haskell_extract.lawspec:3746.
 func lsfReachForest(u lsfUnit) *lsfList[*lsfSyntax] {
 	return lsfAppend(lsfGrammarForest(lsfSmall(64)), lsfFocusForest(lsfSmall(int64(lsfGrammarProds(lsfUnit{}).length()))))
 }
 
-// readOf — laws/haskell_extract.lawspec:4011.
+// readOf — laws/haskell_extract.lawspec:4297.
 func lsfReadOf(t_ string, ts *lsfList[string], read *lsfList[*lsfList[*lsfPackage]]) *lsfList[*lsfPackage] {
 	for {
 		it := ts
@@ -26159,7 +29049,7 @@ func lsfRenderedParses(symbols map[string]*LawSpecSymbol, files *lsfList[*lsfSou
 			var value_3 string
 			path_2 := selection.fPath
 			value_3 = path_2
-			logic = !(lsfSkippedPath(value_3))
+			logic = !(lsfAssayxportHaskellExtractSkippedPath(value_3))
 		} else {
 			logic = false
 		}
@@ -26182,7 +29072,7 @@ func lsfRenderedParses(symbols map[string]*LawSpecSymbol, files *lsfList[*lsfSou
 	}
 }
 
-// repeats — laws/haskell_extract.lawspec:3185.
+// repeats — laws/haskell_extract.lawspec:3447.
 func lsfRepeats(s *lsfSlot, seed_ lsfInt, fuel lsfInt) lsfInt {
 	var value bool
 	many := s.fMany
@@ -26211,12 +29101,12 @@ func lsfRepeats(s *lsfSlot, seed_ lsfInt, fuel lsfInt) lsfInt {
 	}
 }
 
-// reproEither — laws/haskell_extract.lawspec:4164.
+// reproEither — laws/haskell_extract.lawspec:4458.
 func lsfReproEither(u lsfUnit) string {
 	return "module M\x0a  ( f\x0a#if A\x0a  , z\x0a#endif\x0a#if B\x0a  , z\x0a#endif\x0a  ) where\x0af = 1\x0az = 2\x0a"
 }
 
-// reproUnreadable — laws/haskell_extract.lawspec:4169.
+// reproUnreadable — laws/haskell_extract.lawspec:4463.
 func lsfReproUnreadable(u lsfUnit) string {
 	return "module M where\x0a#if G\x0a#if A) || (B\x0aa = 1\x0a#else\x0ab = 2\x0a#endif\x0a#endif\x0ac = 3\x0a"
 }
@@ -26698,12 +29588,7 @@ func lsfSingle(ms *lsfList[string]) lsfMaybe[string] {
 	}
 }
 
-// skippedPath — laws/haskell_extract.lawspec:2247.
-func lsfSkippedPath(p string) bool {
-	return ((((((strings.HasPrefix(p, ".") && strings.Contains(p, "/")) || strings.Contains(p, "/.")) || strings.HasPrefix(p, "dist-newstyle/")) || strings.HasPrefix(p, "dist/")) || strings.Contains(p, "/dist-newstyle/")) || strings.Contains(p, "/dist/"))
-}
-
-// sl — laws/haskell_extract.lawspec:3104.
+// sl — laws/haskell_extract.lawspec:3366.
 func lsfSl(field string, many bool, needed bool, kinds *lsfList[string]) *lsfSlot {
 	recordField := field
 	recordField_2 := many
@@ -26712,7 +29597,7 @@ func lsfSl(field string, many bool, needed bool, kinds *lsfList[string]) *lsfSlo
 	return &lsfSlot{recordField, recordField_2, recordField_3, recordField_4}
 }
 
-// slotPicks — laws/haskell_extract.lawspec:3190.
+// slotPicks — laws/haskell_extract.lawspec:3452.
 func lsfSlotPicks(g *lsfGrammar, s *lsfSlot, n lsfInt, seed_ lsfInt) *lsfList[*lsfPick] {
 	if lsfCmpInt(n, lsfSmall(int64(0))) <= 0 {
 		return (*lsfList[*lsfPick])(nil)
@@ -26729,7 +29614,7 @@ func lsfSlotPicks(g *lsfGrammar, s *lsfSlot, n lsfInt, seed_ lsfInt) *lsfList[*l
 	}
 }
 
-// slotsOf — laws/haskell_extract.lawspec:3156.
+// slotsOf — laws/haskell_extract.lawspec:3418.
 func lsfSlotsOf(k string, ps *lsfList[*lsfProd]) *lsfList[*lsfSlot] {
 	for {
 		it := ps
@@ -27098,7 +29983,7 @@ func lsfSynonymOf(ps *lsfSyntax) lsfMaybe[*lsfSyntax] {
 	}
 }
 
-// textFor — laws/haskell_extract.lawspec:3164.
+// textFor — laws/haskell_extract.lawspec:3426.
 func lsfTextFor(g *lsfGrammar, kind string, seed_ lsfInt) string {
 	var value *lsfList[string]
 	var value_2 *lsfList[*lsfSlot]
@@ -27145,7 +30030,7 @@ func lsfTextsOf(cs *lsfList[*lsfSyntax]) *lsfList[string] {
 	}
 }
 
-// theGrammar — laws/haskell_extract.lawspec:3140.
+// theGrammar — laws/haskell_extract.lawspec:3402.
 func lsfTheGrammar(u lsfUnit) *lsfGrammar {
 	recordField := lsfGrammarProds(lsfUnit{})
 	recordField_2 := lsfGrammarGroups(lsfUnit{})
@@ -27261,7 +30146,7 @@ func lsfTrimEnd(t_ string, n lsfInt) string {
 	}
 }
 
-// turned — laws/haskell_extract.lawspec:3203.
+// turned — laws/haskell_extract.lawspec:3465.
 func lsfTurned(n lsfInt, ss *lsfList[*lsfSlot]) *lsfList[*lsfSlot] {
 	if int64(ss.length()) == int64(0) {
 		return ss
@@ -27563,12 +30448,12 @@ func lsfTypeNode(nd *lsfSyntax) bool {
 	return logic_7
 }
 
-// unreadableAt3 — laws/haskell_extract.lawspec:4173.
+// unreadableAt3 — laws/haskell_extract.lawspec:4467.
 func lsfUnreadableAt3(u lsfUnit) string {
 	return lsfUnreadableTerm(lsfSmall(3))
 }
 
-// unreadableWith — laws/haskell_extract.lawspec:4154.
+// unreadableWith — laws/haskell_extract.lawspec:4448.
 func lsfUnreadableWith(symbols map[string]*LawSpecSymbol, lines *lsfList[lsfBindingLine], source string) *lsfList[string] {
 	var value *lsfSourceFile
 	recordField := "M.hs"
@@ -27946,7 +30831,7 @@ func lsfVarsIn(x *lsfCtx, mode lsfInt, cs *lsfList[*lsfSyntax]) *lsfList[string]
 }
 
 // walk — laws/haskell_extract.lawspec:1414.
-func lsfWalk(x *lsfCtx, locals *lsfList[string], w lsfWhere, cs *lsfList[*lsfSyntax]) *lsfList[*lsfCallEdge] {
+func lsfWalk_2(x *lsfCtx, locals *lsfList[string], w lsfWhere, cs *lsfList[*lsfSyntax]) *lsfList[*lsfCallEdge] {
 	for {
 		it := cs
 		if it == nil {
@@ -28022,7 +30907,7 @@ func lsfWalk(x *lsfCtx, locals *lsfList[string], w lsfWhere, cs *lsfList[*lsfSyn
 					var value_7 *lsfList[*lsfSyntax]
 					children := selection.fChildren
 					value_7 = children
-					return lsfAppend(lsfWalk(x, locals, value_5, value_7), lsfWalk(x, locals, w, selection_2))
+					return lsfAppend(lsfWalk_2(x, locals, value_5, value_7), lsfWalk_2(x, locals, w, selection_2))
 				} else {
 					var logic_7 bool
 					if (lsfEqualWhere(w, lsfWhere_WDo)) {
@@ -28040,7 +30925,7 @@ func lsfWalk(x *lsfCtx, locals *lsfList[string], w lsfWhere, cs *lsfList[*lsfSyn
 						var value_10 *lsfList[*lsfSyntax]
 						children_3 := selection.fChildren
 						value_10 = children_3
-						return lsfAppend(lsfWalk(x, locals, lsfWhere_WPlain, value_9), lsfWalk(x, lsfAppend(locals, lsfPatternVars(x, lsfChildField(value_10, "pattern"))), lsfWhere_WDo, selection_2))
+						return lsfAppend(lsfWalk_2(x, locals, lsfWhere_WPlain, value_9), lsfWalk_2(x, lsfAppend(locals, lsfPatternVars(x, lsfChildField(value_10, "pattern"))), lsfWhere_WDo, selection_2))
 					} else {
 						var logic_8 bool
 						if (lsfEqualWhere(w, lsfWhere_WDo)) {
@@ -28061,7 +30946,7 @@ func lsfWalk(x *lsfCtx, locals *lsfList[string], w lsfWhere, cs *lsfList[*lsfSyn
 							var value_14 *lsfList[*lsfSyntax]
 							children_6 := selection.fChildren
 							value_14 = children_6
-							return lsfAppend(lsfWalk(x, lsfAppend(locals, lsfBindNames(x, lsfChildField(value_12, "binds"))), lsfWhere_WPlain, value_13), lsfWalk(x, lsfAppend(locals, lsfBindNames(x, lsfChildField(value_14, "binds"))), lsfWhere_WDo, selection_2))
+							return lsfAppend(lsfWalk_2(x, lsfAppend(locals, lsfBindNames(x, lsfChildField(value_12, "binds"))), lsfWhere_WPlain, value_13), lsfWalk_2(x, lsfAppend(locals, lsfBindNames(x, lsfChildField(value_14, "binds"))), lsfWhere_WDo, selection_2))
 						} else {
 							var logic_9 bool
 							if (lsfEqualWhere(w, lsfWhere_WDo)) {
@@ -28082,7 +30967,7 @@ func lsfWalk(x *lsfCtx, locals *lsfList[string], w lsfWhere, cs *lsfList[*lsfSyn
 								var value_18 *lsfList[*lsfSyntax]
 								children_9 := selection.fChildren
 								value_18 = children_9
-								return lsfAppend(lsfWalk(x, lsfAppend(locals, lsfRecNames(x, value_16)), lsfWhere_WDo, value_17), lsfWalk(x, lsfAppend(locals, lsfRecNames(x, value_18)), lsfWhere_WDo, selection_2))
+								return lsfAppend(lsfWalk_2(x, lsfAppend(locals, lsfRecNames(x, value_16)), lsfWhere_WDo, value_17), lsfWalk_2(x, lsfAppend(locals, lsfRecNames(x, value_18)), lsfWhere_WDo, selection_2))
 							} else {
 								var logic_10 bool
 								if (lsfEqualWhere(w, lsfWhere_WMatch)) {
@@ -28116,7 +31001,7 @@ func lsfWalk(x *lsfCtx, locals *lsfList[string], w lsfWhere, cs *lsfList[*lsfSyn
 											var value_21 *lsfList[*lsfSyntax]
 											children_10 := selection.fChildren
 											value_21 = children_10
-											return lsfAppend(lsfWalk(x, locals, lsfWhere_WGuard, value_21), lsfWalk(x, locals, w, selection_2))
+											return lsfAppend(lsfWalk_2(x, locals, lsfWhere_WGuard, value_21), lsfWalk_2(x, locals, w, selection_2))
 										} else {
 											var logic_12 bool
 											if (lsfEqualWhere(w, lsfWhere_WQuals)) {
@@ -28150,7 +31035,7 @@ func lsfWalk(x *lsfCtx, locals *lsfList[string], w lsfWhere, cs *lsfList[*lsfSyn
 														var value_24 *lsfList[*lsfSyntax]
 														children_11 := selection.fChildren
 														value_24 = children_11
-														return lsfAppend(lsfWalk(x, locals, lsfWhere_WGuard, value_24), lsfWalk(x, locals, w, selection_2))
+														return lsfAppend(lsfWalk_2(x, locals, lsfWhere_WGuard, value_24), lsfWalk_2(x, locals, w, selection_2))
 													} else {
 														var logic_15 bool
 														if (lsfEqualWhere(w, lsfWhere_WGuard)) {
@@ -28177,7 +31062,7 @@ func lsfWalk(x *lsfCtx, locals *lsfList[string], w lsfWhere, cs *lsfList[*lsfSyn
 															var value_28 *lsfList[*lsfSyntax]
 															children_13 := selection.fChildren
 															value_28 = children_13
-															return lsfAppend(lsfWalk(x, locals, lsfWhere_WPlain, value_27), lsfWalk(x, lsfAppend(locals, lsfPatternVars(x, lsfChildField(value_28, "pattern"))), lsfWhere_WGuard, selection_2))
+															return lsfAppend(lsfWalk_2(x, locals, lsfWhere_WPlain, value_27), lsfWalk_2(x, lsfAppend(locals, lsfPatternVars(x, lsfChildField(value_28, "pattern"))), lsfWhere_WGuard, selection_2))
 														} else {
 															var logic_16 bool
 															if (lsfEqualWhere(w, lsfWhere_WGuard)) {
@@ -28198,7 +31083,7 @@ func lsfWalk(x *lsfCtx, locals *lsfList[string], w lsfWhere, cs *lsfList[*lsfSyn
 																var value_32 *lsfList[*lsfSyntax]
 																children_16 := selection.fChildren
 																value_32 = children_16
-																return lsfAppend(lsfWalk(x, lsfAppend(locals, lsfBindNames(x, lsfChildField(value_30, "binds"))), lsfWhere_WPlain, value_31), lsfWalk(x, lsfAppend(locals, lsfBindNames(x, lsfChildField(value_32, "binds"))), lsfWhere_WGuard, selection_2))
+																return lsfAppend(lsfWalk_2(x, lsfAppend(locals, lsfBindNames(x, lsfChildField(value_30, "binds"))), lsfWhere_WPlain, value_31), lsfWalk_2(x, lsfAppend(locals, lsfBindNames(x, lsfChildField(value_32, "binds"))), lsfWhere_WGuard, selection_2))
 															} else {
 																var value_33 string
 																kind_11 := selection.fKind
@@ -28213,7 +31098,7 @@ func lsfWalk(x *lsfCtx, locals *lsfList[string], w lsfWhere, cs *lsfList[*lsfSyn
 																	var value_36 *lsfList[*lsfSyntax]
 																	children_19 := selection.fChildren
 																	value_36 = children_19
-																	return lsfAppend(lsfAppend(lsfWalk(x, locals, lsfWhere_WGuards, value_34), lsfWalk(x, lsfAppend(locals, lsfGuardsBound(x, lsfChildField(value_35, "guards"))), lsfWhere_WMatch, value_36)), lsfWalk(x, locals, w, selection_2))
+																	return lsfAppend(lsfAppend(lsfWalk_2(x, locals, lsfWhere_WGuards, value_34), lsfWalk_2(x, lsfAppend(locals, lsfGuardsBound(x, lsfChildField(value_35, "guards"))), lsfWhere_WMatch, value_36)), lsfWalk_2(x, locals, w, selection_2))
 																} else {
 																	var value_37 string
 																	kind_12 := selection.fKind
@@ -28228,7 +31113,7 @@ func lsfWalk(x *lsfCtx, locals *lsfList[string], w lsfWhere, cs *lsfList[*lsfSyn
 																		var value_40 *lsfList[*lsfSyntax]
 																		children_22 := selection.fChildren
 																		value_40 = children_22
-																		return lsfAppend(lsfAppend(lsfWalk(x, locals, lsfWhere_WQuals, value_38), lsfWalk(x, lsfAppend(locals, lsfQualsBound(x, value_39)), lsfWhere_WHead, value_40)), lsfWalk(x, locals, w, selection_2))
+																		return lsfAppend(lsfAppend(lsfWalk_2(x, locals, lsfWhere_WQuals, value_38), lsfWalk_2(x, lsfAppend(locals, lsfQualsBound(x, value_39)), lsfWhere_WHead, value_40)), lsfWalk_2(x, locals, w, selection_2))
 																	} else {
 																		var logic_17 bool
 																		if (lsfEqualWhere(w, lsfWhere_WLeft)) {
@@ -28271,7 +31156,7 @@ func lsfWalk(x *lsfCtx, locals *lsfList[string], w lsfWhere, cs *lsfList[*lsfSyn
 																					var value_44 *lsfList[*lsfSyntax]
 																					children_23 := selection.fChildren
 																					value_44 = children_23
-																					return lsfAppend(lsfWalk(x, locals, lsfWhere_WSpine, value_44), lsfWalk(x, locals, w, selection_2))
+																					return lsfAppend(lsfWalk_2(x, locals, lsfWhere_WSpine, value_44), lsfWalk_2(x, locals, w, selection_2))
 																				} else {
 																					var logic_21 bool
 																					if (lsfEqualWhere(w, lsfWhere_WSpine)) {
@@ -28314,9 +31199,9 @@ func lsfWalk(x *lsfCtx, locals *lsfList[string], w lsfWhere, cs *lsfList[*lsfSyn
 																							var value_49 *lsfList[*lsfSyntax]
 																							children_24 := selection.fChildren
 																							value_49 = children_24
-																							value_47 = lsfAppend(lsfNodeEdges(x, outer, false, selection), lsfWalk(x, lsfScoped(x, selection, outer), lsfWhereOf(selection), value_49))
+																							value_47 = lsfAppend(lsfNodeEdges(x, outer, false, selection), lsfWalk_2(x, lsfScoped(x, selection, outer), lsfWhereOf(selection), value_49))
 																						}
-																						return lsfAppend(value_47, lsfWalk(x, locals, w, selection_2))
+																						return lsfAppend(value_47, lsfWalk_2(x, locals, w, selection_2))
 																					} else {
 																						if lsfIsTail(locals, selection) {
 																							var value_50 *lsfList[*lsfCallEdge]
@@ -28357,8 +31242,8 @@ func lsfWalk(x *lsfCtx, locals *lsfList[string], w lsfWhere, cs *lsfList[*lsfSyn
 																							var value_56 *lsfList[*lsfSyntax]
 																							children_27 := selection.fChildren
 																							value_56 = children_27
-																							value_50 = lsfAppend(lsfAppend(value_52, lsfWalk(x, outer_2, lsfWhere_WLeft, value_55)), lsfWalk(x, locals, lsfWhere_WRight, value_56))
-																							return lsfAppend(value_50, lsfWalk(x, locals, w, selection_2))
+																							value_50 = lsfAppend(lsfAppend(value_52, lsfWalk_2(x, outer_2, lsfWhere_WLeft, value_55)), lsfWalk_2(x, locals, lsfWhere_WRight, value_56))
+																							return lsfAppend(value_50, lsfWalk_2(x, locals, w, selection_2))
 																						} else {
 																							var value_57 string
 																							kind_14 := selection.fKind
@@ -28367,12 +31252,12 @@ func lsfWalk(x *lsfCtx, locals *lsfList[string], w lsfWhere, cs *lsfList[*lsfSyn
 																								var value_58 *lsfList[*lsfSyntax]
 																								children_28 := selection.fChildren
 																								value_58 = children_28
-																								return lsfAppend(lsfWalk(x, locals, lsfWhere_WSpine, value_58), lsfWalk(x, locals, w, selection_2))
+																								return lsfAppend(lsfWalk_2(x, locals, lsfWhere_WSpine, value_58), lsfWalk_2(x, locals, w, selection_2))
 																							} else {
 																								var value_59 *lsfList[*lsfSyntax]
 																								children_29 := selection.fChildren
 																								value_59 = children_29
-																								return lsfAppend(lsfAppend(lsfNodeEdges(x, locals, (lsfEqualWhere(w, lsfWhere_WView)), selection), lsfWalk(x, lsfScoped(x, selection, locals), lsfWhereOf(selection), value_59)), lsfWalk(x, locals, w, selection_2))
+																								return lsfAppend(lsfAppend(lsfNodeEdges(x, locals, (lsfEqualWhere(w, lsfWhere_WView)), selection), lsfWalk_2(x, lsfScoped(x, selection, locals), lsfWhereOf(selection), value_59)), lsfWalk_2(x, locals, w, selection_2))
 																							}
 																						}
 																					}
@@ -28398,7 +31283,7 @@ func lsfWalk(x *lsfCtx, locals *lsfList[string], w lsfWhere, cs *lsfList[*lsfSyn
 	}
 }
 
-// whenEnv — laws/haskell_extract.lawspec:2784.
+// whenEnv — laws/haskell_extract.lawspec:3046.
 func lsfWhenEnv(origin string, lines *lsfList[string]) lsfEither[string, *lsfEnv] {
 	it := lsfReadBindings(lines)
 	if !it.right {
@@ -28410,27 +31295,27 @@ func lsfWhenEnv(origin string, lines *lsfList[string]) lsfEither[string, *lsfEnv
 	}
 }
 
-// whenHeader — laws/haskell_extract.lawspec:2800.
+// whenHeader — laws/haskell_extract.lawspec:3062.
 func lsfWhenHeader(u lsfUnit) *lsfList[string] {
 	return lsfAssayxportConditionsPolicyDecisionsHeader(lsfUnit{})
 }
 
-// whenInitNothing — laws/haskell_extract.lawspec:2805.
+// whenInitNothing — laws/haskell_extract.lawspec:3067.
 func lsfWhenInitNothing(root string, f *lsfFiltered) string {
 	return lsfInitNothingText(root, f)
 }
 
-// whenInitWarnings — laws/haskell_extract.lawspec:2804.
+// whenInitWarnings — laws/haskell_extract.lawspec:3066.
 func lsfWhenInitWarnings(f *lsfFiltered) *lsfList[string] {
 	return lsfInitWarnings(f)
 }
 
-// whenPaste — laws/haskell_extract.lawspec:2798.
+// whenPaste — laws/haskell_extract.lawspec:3060.
 func lsfWhenPaste(env *lsfEnv, listed *lsfList[string], ps *lsfList[*lsfPackage]) *lsfList[string] {
 	return lsfDecisionLines(env, listed, ps)
 }
 
-// whenText — laws/haskell_extract.lawspec:4126.
+// whenText — laws/haskell_extract.lawspec:4420.
 func lsfWhenText(cond string) string {
 	if lsfTextLength(cond) == int64(0) {
 		return ""
@@ -28439,12 +31324,12 @@ func lsfWhenText(cond string) string {
 	}
 }
 
-// whenWarnings — laws/haskell_extract.lawspec:2791.
+// whenWarnings — laws/haskell_extract.lawspec:3053.
 func lsfWhenWarnings(f *lsfFiltered) *lsfList[string] {
 	return lsfAssayxportConditionsPolicyWarningsOf(f)
 }
 
-// whenWarningsWith — laws/haskell_extract.lawspec:2797.
+// whenWarningsWith — laws/haskell_extract.lawspec:3059.
 func lsfWhenWarningsWith(f *lsfFiltered, listed *lsfList[string]) *lsfList[string] {
 	return lsfAssayxportConditionsPolicyWarningsWith(f, listed)
 }
@@ -28468,12 +31353,12 @@ func lsfWhereOf(nd *lsfSyntax) lsfWhere {
 	}
 }
 
-// wideEnv — laws/haskell_extract.lawspec:4269.
+// wideEnv — laws/haskell_extract.lawspec:4649.
 func lsfWideEnv(n lsfInt) *lsfEnv {
 	return lsfAssayxportConditionsPolicyCompleted(lsfAssayxportConditionsPolicyEnvFrom(lsfAssayxportConditionsPolicyEmptyEnv(lsfUnit{}), lsfWideLines(n)))
 }
 
-// wideFile — laws/haskell_extract.lawspec:4271.
+// wideFile — laws/haskell_extract.lawspec:4651.
 func lsfWideFile(t_ string) *lsfList[*lsfSourceFile] {
 	var value *lsfSourceFile
 	recordField := "W.hs"
@@ -28482,7 +31367,7 @@ func lsfWideFile(t_ string) *lsfList[*lsfSourceFile] {
 	return lsfCons[*lsfSourceFile](value, (*lsfList[*lsfSourceFile])(nil))
 }
 
-// wideLines — laws/haskell_extract.lawspec:4265.
+// wideLines — laws/haskell_extract.lawspec:4645.
 func lsfWideLines(n lsfInt) *lsfList[lsfBindingLine] {
 	if lsfCmpInt(n, lsfSmall(int64(0))) <= 0 {
 		return (*lsfList[lsfBindingLine])(nil)
@@ -28696,7 +31581,7 @@ func lsfWildKinds(ns string, d *lsfDecl) bool {
 	}
 }
 
-// wildModule — laws/haskell_extract.lawspec:3048.
+// wildModule — laws/haskell_extract.lawspec:3310.
 func lsfWildModule(header string, given string, bad bool, p *lsfPoint, q *lsfPoint) *lsfSyntax {
 	var value string
 	if bad {
@@ -28747,7 +31632,7 @@ func lsfWithCalls(x *lsfCtx, ix *lsfIx, decls *lsfList[*lsfDecl]) *lsfList[*lsfD
 			} else {
 				value_4 = (*lsfList[string])(nil)
 			}
-			replacement := lsfMerged(lsfWalk(x, value_4, lsfWhere_WPlain, nodes))
+			replacement := lsfMerged(lsfWalk_2(x, value_4, lsfWhere_WPlain, nodes))
 			id_2 := selection.fId
 			name := selection.fName
 			kind := selection.fKind
@@ -29000,6 +31885,10 @@ func lsfEqualOutcome(a, b lsfOutcome) bool {
 		return ok && true
 	}
 	return false
+}
+
+func lsfEqualUnOp(a, b lsfUnOp) bool {
+	return a == b
 }
 
 func lsfEqualCallEdge(a, b *lsfCallEdge) bool {
@@ -29410,6 +32299,15 @@ func lsfFromValueListArm(v LawSpecValue) *lsfList[*lsfArm] {
 	return out
 }
 
+func lsfFromValueListFrame(v LawSpecValue) *lsfList[*lsfFrame] {
+	items := v.Data.([]LawSpecValue)
+	var out *lsfList[*lsfFrame]
+	for i := len(items) - 1; i >= 0; i-- {
+		out = lsfCons(lsfFromValueFrame(items[i]), out)
+	}
+	return out
+}
+
 func lsfFromValueListInner(v LawSpecValue) *lsfList[lsfInner] {
 	items := v.Data.([]LawSpecValue)
 	var out *lsfList[lsfInner]
@@ -29464,11 +32362,11 @@ func lsfFromValueListCxEdge(v LawSpecValue) *lsfList[*lsfCxEdge] {
 	return out
 }
 
-func lsfFromValueListCxOpen(v LawSpecValue) *lsfList[*lsfCxOpen] {
+func lsfFromValueListCxFrame(v LawSpecValue) *lsfList[*lsfCxFrame] {
 	items := v.Data.([]LawSpecValue)
-	var out *lsfList[*lsfCxOpen]
+	var out *lsfList[*lsfCxFrame]
 	for i := len(items) - 1; i >= 0; i-- {
-		out = lsfCons(lsfFromValueCxOpen(items[i]), out)
+		out = lsfCons(lsfFromValueCxFrame(items[i]), out)
 	}
 	return out
 }
@@ -29716,6 +32614,24 @@ func lsfFromValueListEntryTextBinding(v LawSpecValue) *lsfList[*lsfEntry[string,
 	return out
 }
 
+func lsfFromValueListEntryTextSets(v LawSpecValue) *lsfList[*lsfEntry[string, lsfSets]] {
+	items := v.Data.([]LawSpecValue)
+	var out *lsfList[*lsfEntry[string, lsfSets]]
+	for i := len(items) - 1; i >= 0; i-- {
+		out = lsfCons(lsfFromValueEntryTextSets(items[i]), out)
+	}
+	return out
+}
+
+func lsfFromValueListEntryTextCxSets(v LawSpecValue) *lsfList[*lsfEntry[string, lsfCxSets]] {
+	items := v.Data.([]LawSpecValue)
+	var out *lsfList[*lsfEntry[string, lsfCxSets]]
+	for i := len(items) - 1; i >= 0; i-- {
+		out = lsfCons(lsfFromValueEntryTextCxSets(items[i]), out)
+	}
+	return out
+}
+
 func lsfFromValueListEntryTextSyntax(v LawSpecValue) *lsfList[*lsfEntry[string, *lsfSyntax]] {
 	items := v.Data.([]LawSpecValue)
 	var out *lsfList[*lsfEntry[string, *lsfSyntax]]
@@ -29912,6 +32828,14 @@ func lsfFromValueMaybeCExpr(v LawSpecValue) lsfMaybe[lsfCExpr] {
 	return lsfAbsent[lsfCExpr]()
 }
 
+func lsfFromValueMaybeLiteral(v LawSpecValue) lsfMaybe[*lsfLiteral] {
+	tag, fields := lsfData(v)
+	if tag == "Maybe::Present" {
+		return lsfPresent[*lsfLiteral](lsfFromValueLiteral(fields[0]))
+	}
+	return lsfAbsent[*lsfLiteral]()
+}
+
 func lsfFromValueMaybeParsed(v LawSpecValue) lsfMaybe[*lsfParsed] {
 	tag, fields := lsfData(v)
 	if tag == "Maybe::Present" {
@@ -29950,6 +32874,22 @@ func lsfFromValueMaybePackage(v LawSpecValue) lsfMaybe[*lsfPackage] {
 		return lsfPresent[*lsfPackage](lsfFromValuePackage(fields[0]))
 	}
 	return lsfAbsent[*lsfPackage]()
+}
+
+func lsfFromValueMaybeSets(v LawSpecValue) lsfMaybe[lsfSets] {
+	tag, fields := lsfData(v)
+	if tag == "Maybe::Present" {
+		return lsfPresent[lsfSets](lsfFromValueSets(fields[0]))
+	}
+	return lsfAbsent[lsfSets]()
+}
+
+func lsfFromValueMaybeCxSets(v LawSpecValue) lsfMaybe[lsfCxSets] {
+	tag, fields := lsfData(v)
+	if tag == "Maybe::Present" {
+		return lsfPresent[lsfCxSets](lsfFromValueCxSets(fields[0]))
+	}
+	return lsfAbsent[lsfCxSets]()
 }
 
 func lsfFromValueMaybeSyntax(v LawSpecValue) lsfMaybe[*lsfSyntax] {
@@ -30047,6 +32987,8 @@ func lsfFromValueBinOp(v LawSpecValue) lsfBinOp {
 		return lsfBinOp_BLand
 	case "assayxport.conditions.policy::type::BinOp::BLor":
 		return lsfBinOp_BLor
+	case "assayxport.conditions.policy::type::BinOp::BComma":
+		return lsfBinOp_BComma
 	}
 	panic("expected BinOp, found " + tag)
 }
@@ -30097,6 +33039,8 @@ func lsfFromValueCExpr(v LawSpecValue) lsfCExpr {
 	switch tag {
 	case "assayxport.conditions.policy::type::CExpr::Lit":
 		return &lsfCExpr_Lit{lsfFromValueInteger(fields[0])}
+	case "assayxport.conditions.policy::type::CExpr::ULit":
+		return &lsfCExpr_ULit{lsfFromValueInteger(fields[0])}
 	case "assayxport.conditions.policy::type::CExpr::Name":
 		return &lsfCExpr_Name{lsfFromValueText(fields[0])}
 	case "assayxport.conditions.policy::type::CExpr::IsDefined":
@@ -30186,6 +33130,23 @@ func lsfFromValueTally(v LawSpecValue) *lsfTally {
 		return &lsfTally{lsfFromValueCallEdge(fields[0]), lsfFromValueInteger(fields[1])}
 	}
 	panic("expected Tally, found " + tag)
+}
+
+func lsfFromValueTok(v LawSpecValue) lsfTok {
+	tag, fields := lsfData(v)
+	switch tag {
+	case "assayxport.conditions::type::Tok::TNum":
+		return &lsfTok_TNum{lsfFromValueInteger(fields[0])}
+	case "assayxport.conditions::type::Tok::TUNum":
+		return &lsfTok_TUNum{lsfFromValueInteger(fields[0])}
+	case "assayxport.conditions::type::Tok::TId":
+		return &lsfTok_TId{lsfFromValueText(fields[0])}
+	case "assayxport.conditions::type::Tok::TOp":
+		return &lsfTok_TOp{lsfFromValueText(fields[0])}
+	case "assayxport.conditions::type::Tok::TUnread":
+		return &lsfTok_TUnread{}
+	}
+	panic("expected Tok, found " + tag)
 }
 
 func lsfFromValueBinary(v LawSpecValue) *lsfBinary {
@@ -30433,13 +33394,50 @@ func lsfFromValueLeaf(v LawSpecValue) *lsfLeaf {
 	panic("expected Leaf, found " + tag)
 }
 
+func lsfFromValueReading(v LawSpecValue) lsfReading {
+	tag, fields := lsfData(v)
+	switch tag {
+	case "assayxport.haskell.cpp::type::Reading::NotRead":
+		return &lsfReading_NotRead{}
+	case "assayxport.haskell.cpp::type::Reading::ByFile":
+		return &lsfReading_ByFile{lsfFromValueBool(fields[0])}
+	case "assayxport.haskell.cpp::type::Reading::ByTerm":
+		return &lsfReading_ByTerm{lsfFromValueLiteral(fields[0])}
+	}
+	panic("expected Reading, found " + tag)
+}
+
 func lsfFromValueRow(v LawSpecValue) *lsfRow {
 	tag, fields := lsfData(v)
 	switch tag {
 	case "assayxport.haskell.cpp::type::Row::Row":
-		return &lsfRow{lsfFromValueText(fields[0]), lsfFromValueListLiteral(fields[1]), lsfFromValueBool(fields[2]), lsfFromValueBool(fields[3]), lsfFromValueText(fields[4])}
+		return &lsfRow{lsfFromValueText(fields[0]), lsfFromValueListLiteral(fields[1]), lsfFromValueBool(fields[2]), lsfFromValueBool(fields[3]), lsfFromValueText(fields[4]), lsfFromValueSets(fields[5])}
 	}
 	panic("expected Row, found " + tag)
+}
+
+func lsfFromValueSets(v LawSpecValue) lsfSets {
+	tag, fields := lsfData(v)
+	switch tag {
+	case "assayxport.haskell.cpp::type::Sets::SetsNothing":
+		return &lsfSets_SetsNothing{}
+	case "assayxport.haskell.cpp::type::Sets::SetsInt":
+		return &lsfSets_SetsInt{lsfFromValueInteger(fields[0])}
+	case "assayxport.haskell.cpp::type::Sets::SetsOther":
+		return &lsfSets_SetsOther{}
+	case "assayxport.haskell.cpp::type::Sets::Unsets":
+		return &lsfSets_Unsets{}
+	}
+	panic("expected Sets, found " + tag)
+}
+
+func lsfFromValueWalk(v LawSpecValue) *lsfWalk {
+	tag, fields := lsfData(v)
+	switch tag {
+	case "assayxport.haskell.cpp::type::Walk::Walk":
+		return &lsfWalk{lsfFromValueListFrame(fields[0]), lsfFromValueKeyValTextSets(fields[1])}
+	}
+	panic("expected Walk, found " + tag)
 }
 
 func lsfFromValueWalked(v LawSpecValue) *lsfWalked {
@@ -30469,13 +33467,13 @@ func lsfFromValueCxBook(v LawSpecValue) *lsfCxBook {
 	panic("expected CxBook, found " + tag)
 }
 
-func lsfFromValueCxEffect(v LawSpecValue) *lsfCxEffect {
+func lsfFromValueCxDef(v LawSpecValue) *lsfCxDef {
 	tag, fields := lsfData(v)
 	switch tag {
-	case "assayxport.haskell.extract::type::CxEffect::CxEffect":
-		return &lsfCxEffect{lsfFromValueListCxOpen(fields[0]), lsfFromValueListCxTerm(fields[1]), lsfFromValueBool(fields[2])}
+	case "assayxport.haskell.extract::type::CxDef::CxDef":
+		return &lsfCxDef{lsfFromValueText(fields[0]), lsfFromValueCxSets(fields[1])}
 	}
-	panic("expected CxEffect, found " + tag)
+	panic("expected CxDef, found " + tag)
 }
 
 func lsfFromValueCxJoin(v LawSpecValue) *lsfCxJoin {
@@ -30487,13 +33485,13 @@ func lsfFromValueCxJoin(v LawSpecValue) *lsfCxJoin {
 	panic("expected CxJoin, found " + tag)
 }
 
-func lsfFromValueCxOpen(v LawSpecValue) *lsfCxOpen {
+func lsfFromValueCxPass(v LawSpecValue) *lsfCxPass {
 	tag, fields := lsfData(v)
 	switch tag {
-	case "assayxport.haskell.extract::type::CxOpen::CxOpen":
-		return &lsfCxOpen{lsfFromValueListCxTerm(fields[0]), lsfFromValueListCxTerm(fields[1]), lsfFromValueCxTerm(fields[2]), lsfFromValueBool(fields[3]), lsfFromValueBool(fields[4])}
+	case "assayxport.haskell.extract::type::CxPass::CxPass":
+		return &lsfCxPass{lsfFromValueListCxFrame(fields[0]), lsfFromValueKeyValTextCxSets(fields[1])}
 	}
-	panic("expected CxOpen, found " + tag)
+	panic("expected CxPass, found " + tag)
 }
 
 func lsfFromValueCxPlan(v LawSpecValue) *lsfCxPlan {
@@ -30505,22 +33503,41 @@ func lsfFromValueCxPlan(v LawSpecValue) *lsfCxPlan {
 	panic("expected CxPlan, found " + tag)
 }
 
+func lsfFromValueCxReading(v LawSpecValue) lsfCxReading {
+	tag, fields := lsfData(v)
+	switch tag {
+	case "assayxport.haskell.extract::type::CxReading::XNotRead":
+		return &lsfCxReading_XNotRead{}
+	case "assayxport.haskell.extract::type::CxReading::XByFile":
+		return &lsfCxReading_XByFile{lsfFromValueBool(fields[0])}
+	case "assayxport.haskell.extract::type::CxReading::XByTerm":
+		return &lsfCxReading_XByTerm{lsfFromValueLiteral(fields[0])}
+	}
+	panic("expected CxReading, found " + tag)
+}
+
 func lsfFromValueCxRow(v LawSpecValue) *lsfCxRow {
 	tag, fields := lsfData(v)
 	switch tag {
 	case "assayxport.haskell.extract::type::CxRow::CxRow":
-		return &lsfCxRow{lsfFromValueInteger(fields[0]), lsfFromValueBool(fields[1]), lsfFromValueBool(fields[2]), lsfFromValueBool(fields[3]), lsfFromValueListCxTerm(fields[4]), lsfFromValueText(fields[5])}
+		return &lsfCxRow{lsfFromValueInteger(fields[0]), lsfFromValueInteger(fields[1]), lsfFromValueText(fields[2]), lsfFromValueText(fields[3]), lsfFromValueLiteral(fields[4]), lsfFromValueListText(fields[5]), lsfFromValueListText(fields[6]), lsfFromValueBool(fields[7]), lsfFromValueText(fields[8]), lsfFromValueCxSets(fields[9])}
 	}
 	panic("expected CxRow, found " + tag)
 }
 
-func lsfFromValueCxState(v LawSpecValue) *lsfCxState {
+func lsfFromValueCxSets(v LawSpecValue) lsfCxSets {
 	tag, fields := lsfData(v)
 	switch tag {
-	case "assayxport.haskell.extract::type::CxState::CxState":
-		return &lsfCxState{lsfFromValueListCxOpen(fields[0]), lsfFromValueInteger(fields[1])}
+	case "assayxport.haskell.extract::type::CxSets::XNothing":
+		return &lsfCxSets_XNothing{}
+	case "assayxport.haskell.extract::type::CxSets::XInt":
+		return &lsfCxSets_XInt{lsfFromValueInteger(fields[0])}
+	case "assayxport.haskell.extract::type::CxSets::XOther":
+		return &lsfCxSets_XOther{}
+	case "assayxport.haskell.extract::type::CxSets::XUnset":
+		return &lsfCxSets_XUnset{}
 	}
-	panic("expected CxState, found " + tag)
+	panic("expected CxSets, found " + tag)
 }
 
 func lsfFromValueCxTerm(v LawSpecValue) *lsfCxTerm {
@@ -30530,6 +33547,15 @@ func lsfFromValueCxTerm(v LawSpecValue) *lsfCxTerm {
 		return &lsfCxTerm{lsfFromValueBool(fields[0]), lsfFromValueText(fields[1])}
 	}
 	panic("expected CxTerm, found " + tag)
+}
+
+func lsfFromValueCxUnit(v LawSpecValue) *lsfCxUnit {
+	tag, fields := lsfData(v)
+	switch tag {
+	case "assayxport.haskell.extract::type::CxUnit::CxUnit":
+		return &lsfCxUnit{lsfFromValueInteger(fields[0]), lsfFromValueText(fields[1]), lsfFromValueText(fields[2]), lsfFromValueText(fields[3])}
+	}
+	panic("expected CxUnit, found " + tag)
 }
 
 func lsfFromValueCxWalk(v LawSpecValue) *lsfCxWalk {
@@ -31079,6 +34105,24 @@ func lsfFromValueKeyValTextBinding(v LawSpecValue) *lsfMap[string, lsfBinding] {
 	return out
 }
 
+func lsfFromValueKeyValTextSets(v LawSpecValue) *lsfMap[string, lsfSets] {
+	var out *lsfMap[string, lsfSets]
+	for _, item := range lsfItems(v) {
+		_, fields := lsfData(item)
+		out = lsfPut(out, lsfFromValueText(fields[0]), lsfFromValueSets(fields[1]), lsfCompareText)
+	}
+	return out
+}
+
+func lsfFromValueKeyValTextCxSets(v LawSpecValue) *lsfMap[string, lsfCxSets] {
+	var out *lsfMap[string, lsfCxSets]
+	for _, item := range lsfItems(v) {
+		_, fields := lsfData(item)
+		out = lsfPut(out, lsfFromValueText(fields[0]), lsfFromValueCxSets(fields[1]), lsfCompareText)
+	}
+	return out
+}
+
 func lsfFromValueKeyValTextSyntax(v LawSpecValue) *lsfMap[string, *lsfSyntax] {
 	var out *lsfMap[string, *lsfSyntax]
 	for _, item := range lsfItems(v) {
@@ -31424,6 +34468,14 @@ func lsfFromNativeListArm(n []Arm) *lsfList[*lsfArm] {
 	return out
 }
 
+func lsfFromNativeListFrame(n []Frame) *lsfList[*lsfFrame] {
+	var out *lsfList[*lsfFrame]
+	for i := len(n) - 1; i >= 0; i-- {
+		out = lsfCons(lsfFromNativeFrame(n[i]), out)
+	}
+	return out
+}
+
 func lsfFromNativeListInner(n []Inner) *lsfList[lsfInner] {
 	var out *lsfList[lsfInner]
 	for i := len(n) - 1; i >= 0; i-- {
@@ -31472,10 +34524,10 @@ func lsfFromNativeListCxEdge(n []CxEdge) *lsfList[*lsfCxEdge] {
 	return out
 }
 
-func lsfFromNativeListCxOpen(n []CxOpen) *lsfList[*lsfCxOpen] {
-	var out *lsfList[*lsfCxOpen]
+func lsfFromNativeListCxFrame(n []CxFrame) *lsfList[*lsfCxFrame] {
+	var out *lsfList[*lsfCxFrame]
 	for i := len(n) - 1; i >= 0; i-- {
-		out = lsfCons(lsfFromNativeCxOpen(n[i]), out)
+		out = lsfCons(lsfFromNativeCxFrame(n[i]), out)
 	}
 	return out
 }
@@ -31696,6 +34748,22 @@ func lsfFromNativeListEntryTextBinding(n []Entry[string, Binding]) *lsfList[*lsf
 	return out
 }
 
+func lsfFromNativeListEntryTextSets(n []Entry[string, Sets]) *lsfList[*lsfEntry[string, lsfSets]] {
+	var out *lsfList[*lsfEntry[string, lsfSets]]
+	for i := len(n) - 1; i >= 0; i-- {
+		out = lsfCons(lsfFromNativeEntryTextSets(n[i]), out)
+	}
+	return out
+}
+
+func lsfFromNativeListEntryTextCxSets(n []Entry[string, CxSets]) *lsfList[*lsfEntry[string, lsfCxSets]] {
+	var out *lsfList[*lsfEntry[string, lsfCxSets]]
+	for i := len(n) - 1; i >= 0; i-- {
+		out = lsfCons(lsfFromNativeEntryTextCxSets(n[i]), out)
+	}
+	return out
+}
+
 func lsfFromNativeListEntryTextSyntax(n []Entry[string, Syntax]) *lsfList[*lsfEntry[string, *lsfSyntax]] {
 	var out *lsfList[*lsfEntry[string, *lsfSyntax]]
 	for i := len(n) - 1; i >= 0; i-- {
@@ -31868,6 +34936,13 @@ func lsfFromNativeMaybeCExpr(n LawSpecMaybe[CExpr]) lsfMaybe[lsfCExpr] {
 	return lsfAbsent[lsfCExpr]()
 }
 
+func lsfFromNativeMaybeLiteral(n LawSpecMaybe[Literal]) lsfMaybe[*lsfLiteral] {
+	if v, ok := n.Value(); ok {
+		return lsfPresent[*lsfLiteral](lsfFromNativeLiteral(v))
+	}
+	return lsfAbsent[*lsfLiteral]()
+}
+
 func lsfFromNativeMaybeParsed(n LawSpecMaybe[Parsed]) lsfMaybe[*lsfParsed] {
 	if v, ok := n.Value(); ok {
 		return lsfPresent[*lsfParsed](lsfFromNativeParsed(v))
@@ -31901,6 +34976,20 @@ func lsfFromNativeMaybePackage(n LawSpecMaybe[Package]) lsfMaybe[*lsfPackage] {
 		return lsfPresent[*lsfPackage](lsfFromNativePackage(v))
 	}
 	return lsfAbsent[*lsfPackage]()
+}
+
+func lsfFromNativeMaybeSets(n LawSpecMaybe[Sets]) lsfMaybe[lsfSets] {
+	if v, ok := n.Value(); ok {
+		return lsfPresent[lsfSets](lsfFromNativeSets(v))
+	}
+	return lsfAbsent[lsfSets]()
+}
+
+func lsfFromNativeMaybeCxSets(n LawSpecMaybe[CxSets]) lsfMaybe[lsfCxSets] {
+	if v, ok := n.Value(); ok {
+		return lsfPresent[lsfCxSets](lsfFromNativeCxSets(v))
+	}
+	return lsfAbsent[lsfCxSets]()
 }
 
 func lsfFromNativeMaybeSyntax(n LawSpecMaybe[Syntax]) lsfMaybe[*lsfSyntax] {
@@ -31993,6 +35082,8 @@ func lsfFromNativeBinOp(n BinOp) lsfBinOp {
 		return lsfBinOp_BLand
 	case BinOpBLor:
 		return lsfBinOp_BLor
+	case BinOpBComma:
+		return lsfBinOp_BComma
 	}
 	panic("unreachable branch reached")
 }
@@ -32035,6 +35126,8 @@ func lsfFromNativeCExpr(n CExpr) lsfCExpr {
 	switch y := n.(type) {
 	case CExprLit:
 		return &lsfCExpr_Lit{lsfFromNativeInteger(y.Value)}
+	case CExprULit:
+		return &lsfCExpr_ULit{lsfFromNativeInteger(y.Value)}
 	case CExprName:
 		return &lsfCExpr_Name{lsfFromNativeText(y.Value)}
 	case CExprIsDefined:
@@ -32097,6 +35190,22 @@ func lsfFromNativeUsePlace(n UsePlace) *lsfUsePlace {
 
 func lsfFromNativeTally(n AssayxportConditionsTally) *lsfTally {
 	return &lsfTally{lsfFromNativeCallEdge(n.Edge), lsfFromNativeInteger(n.Count)}
+}
+
+func lsfFromNativeTok(n Tok) lsfTok {
+	switch y := n.(type) {
+	case TokTNum:
+		return &lsfTok_TNum{lsfFromNativeInteger(y.Value)}
+	case TokTUNum:
+		return &lsfTok_TUNum{lsfFromNativeInteger(y.Value)}
+	case TokTId:
+		return &lsfTok_TId{lsfFromNativeText(y.Value)}
+	case TokTOp:
+		return &lsfTok_TOp{lsfFromNativeText(y.Value)}
+	case TokTUnread:
+		return &lsfTok_TUnread{}
+	}
+	panic("unreachable branch reached")
 }
 
 func lsfFromNativeBinary(n Binary) *lsfBinary {
@@ -32273,8 +35382,38 @@ func lsfFromNativeLeaf(n Leaf) *lsfLeaf {
 	return &lsfLeaf{lsfFromNativeListInteger(n.Forms), lsfFromNativeBool(n.HasElse)}
 }
 
+func lsfFromNativeReading(n Reading) lsfReading {
+	switch y := n.(type) {
+	case ReadingNotRead:
+		return &lsfReading_NotRead{}
+	case ReadingByFile:
+		return &lsfReading_ByFile{lsfFromNativeBool(y.Value)}
+	case ReadingByTerm:
+		return &lsfReading_ByTerm{lsfFromNativeLiteral(y.Value)}
+	}
+	panic("unreachable branch reached")
+}
+
 func lsfFromNativeRow(n Row) *lsfRow {
-	return &lsfRow{lsfFromNativeText(n.Text), lsfFromNativeListLiteral(n.Terms), lsfFromNativeBool(n.Directive), lsfFromNativeBool(n.Reads), lsfFromNativeText(n.Name)}
+	return &lsfRow{lsfFromNativeText(n.Text), lsfFromNativeListLiteral(n.Terms), lsfFromNativeBool(n.Directive), lsfFromNativeBool(n.Reads), lsfFromNativeText(n.Name), lsfFromNativeSets(n.Sets)}
+}
+
+func lsfFromNativeSets(n Sets) lsfSets {
+	switch y := n.(type) {
+	case SetsSetsNothing:
+		return &lsfSets_SetsNothing{}
+	case SetsSetsInt:
+		return &lsfSets_SetsInt{lsfFromNativeInteger(y.Value)}
+	case SetsSetsOther:
+		return &lsfSets_SetsOther{}
+	case SetsUnsets:
+		return &lsfSets_Unsets{}
+	}
+	panic("unreachable branch reached")
+}
+
+func lsfFromNativeWalk(n Walk) *lsfWalk {
+	return &lsfWalk{lsfFromNativeListFrame(n.Stack), lsfFromNativeKeyValTextSets(n.Sets)}
 }
 
 func lsfFromNativeWalked(n Walked) *lsfWalked {
@@ -32289,32 +35428,58 @@ func lsfFromNativeCxBook(n CxBook) *lsfCxBook {
 	return &lsfCxBook{lsfFromNativeKeyValTextListCxSym(n.Buckets), lsfFromNativeListText(n.Order)}
 }
 
-func lsfFromNativeCxEffect(n CxEffect) *lsfCxEffect {
-	return &lsfCxEffect{lsfFromNativeListCxOpen(n.Stack), lsfFromNativeListCxTerm(n.Terms), lsfFromNativeBool(n.Reads)}
+func lsfFromNativeCxDef(n CxDef) *lsfCxDef {
+	return &lsfCxDef{lsfFromNativeText(n.Name), lsfFromNativeCxSets(n.Sets)}
 }
 
 func lsfFromNativeCxJoin(n CxJoin) *lsfCxJoin {
 	return &lsfCxJoin{lsfFromNativeInteger(n.Nlines), lsfFromNativeText(n.Text)}
 }
 
-func lsfFromNativeCxOpen(n CxOpen) *lsfCxOpen {
-	return &lsfCxOpen{lsfFromNativeListCxTerm(n.Outer), lsfFromNativeListCxTerm(n.Before), lsfFromNativeCxTerm(n.Own), lsfFromNativeBool(n.HasElse), lsfFromNativeBool(n.Dead)}
+func lsfFromNativeCxPass(n CxPass) *lsfCxPass {
+	return &lsfCxPass{lsfFromNativeListCxFrame(n.Stack), lsfFromNativeKeyValTextCxSets(n.Sets)}
 }
 
 func lsfFromNativeCxPlan(n CxPlan) *lsfCxPlan {
 	return &lsfCxPlan{lsfFromNativeListText(n.Copies), lsfFromNativeListCxRow(n.Rows), lsfFromNativeBool(n.Unread)}
 }
 
-func lsfFromNativeCxRow(n CxRow) *lsfCxRow {
-	return &lsfCxRow{lsfFromNativeInteger(n.Nlines), lsfFromNativeBool(n.Directive), lsfFromNativeBool(n.Reads), lsfFromNativeBool(n.Dead), lsfFromNativeListCxTerm(n.Terms), lsfFromNativeText(n.Text)}
+func lsfFromNativeCxReading(n CxReading) lsfCxReading {
+	switch y := n.(type) {
+	case CxReadingXNotRead:
+		return &lsfCxReading_XNotRead{}
+	case CxReadingXByFile:
+		return &lsfCxReading_XByFile{lsfFromNativeBool(y.Value)}
+	case CxReadingXByTerm:
+		return &lsfCxReading_XByTerm{lsfFromNativeLiteral(y.Value)}
+	}
+	panic("unreachable branch reached")
 }
 
-func lsfFromNativeCxState(n CxState) *lsfCxState {
-	return &lsfCxState{lsfFromNativeListCxOpen(n.Stack), lsfFromNativeInteger(n.Line)}
+func lsfFromNativeCxRow(n CxRow) *lsfCxRow {
+	return &lsfCxRow{lsfFromNativeInteger(n.Nlines), lsfFromNativeInteger(n.Line), lsfFromNativeText(n.Word), lsfFromNativeText(n.Text), lsfFromNativeLiteral(n.Own), lsfFromNativeListText(n.Names), lsfFromNativeListText(n.Vals), lsfFromNativeBool(n.Parsed), lsfFromNativeText(n.Name), lsfFromNativeCxSets(n.Sets)}
+}
+
+func lsfFromNativeCxSets(n CxSets) lsfCxSets {
+	switch y := n.(type) {
+	case CxSetsXNothing:
+		return &lsfCxSets_XNothing{}
+	case CxSetsXInt:
+		return &lsfCxSets_XInt{lsfFromNativeInteger(y.Value)}
+	case CxSetsXOther:
+		return &lsfCxSets_XOther{}
+	case CxSetsXUnset:
+		return &lsfCxSets_XUnset{}
+	}
+	panic("unreachable branch reached")
 }
 
 func lsfFromNativeCxTerm(n CxTerm) *lsfCxTerm {
 	return &lsfCxTerm{lsfFromNativeBool(n.Negated), lsfFromNativeText(n.Text)}
+}
+
+func lsfFromNativeCxUnit(n CxUnit) *lsfCxUnit {
+	return &lsfCxUnit{lsfFromNativeInteger(n.Nlines), lsfFromNativeText(n.Text), lsfFromNativeText(n.Word), lsfFromNativeText(n.Body)}
 }
 
 func lsfFromNativeCxWalk(n CxWalk) *lsfCxWalk {
@@ -32739,6 +35904,22 @@ func lsfFromNativeKeyValTextBinding(n []Entry[string, Binding]) *lsfMap[string, 
 	return out
 }
 
+func lsfFromNativeKeyValTextSets(n []Entry[string, Sets]) *lsfMap[string, lsfSets] {
+	var out *lsfMap[string, lsfSets]
+	for _, e := range n {
+		out = lsfPut(out, lsfFromNativeText(e.Key), lsfFromNativeSets(e.Value), lsfCompareText)
+	}
+	return out
+}
+
+func lsfFromNativeKeyValTextCxSets(n []Entry[string, CxSets]) *lsfMap[string, lsfCxSets] {
+	var out *lsfMap[string, lsfCxSets]
+	for _, e := range n {
+		out = lsfPut(out, lsfFromNativeText(e.Key), lsfFromNativeCxSets(e.Value), lsfCompareText)
+	}
+	return out
+}
+
 func lsfFromNativeKeyValTextSyntax(n []Entry[string, Syntax]) *lsfMap[string, *lsfSyntax] {
 	var out *lsfMap[string, *lsfSyntax]
 	for _, e := range n {
@@ -33032,6 +36213,14 @@ func lsfToValueListArm(x *lsfList[*lsfArm]) LawSpecValue {
 	return LawSpecValue{"List assayxport.haskell.cpp::type::Arm", items}
 }
 
+func lsfToValueListFrame(x *lsfList[*lsfFrame]) LawSpecValue {
+	items := make([]LawSpecValue, 0, x.length())
+	for c := x; c != nil; c = c.tail {
+		items = append(items, lsfToValueFrame(c.head))
+	}
+	return LawSpecValue{"List assayxport.haskell.cpp::type::Frame", items}
+}
+
 func lsfToValueListInner(x *lsfList[lsfInner]) LawSpecValue {
 	items := make([]LawSpecValue, 0, x.length())
 	for c := x; c != nil; c = c.tail {
@@ -33080,12 +36269,12 @@ func lsfToValueListCxEdge(x *lsfList[*lsfCxEdge]) LawSpecValue {
 	return LawSpecValue{"List assayxport.haskell.extract::type::CxEdge", items}
 }
 
-func lsfToValueListCxOpen(x *lsfList[*lsfCxOpen]) LawSpecValue {
+func lsfToValueListCxFrame(x *lsfList[*lsfCxFrame]) LawSpecValue {
 	items := make([]LawSpecValue, 0, x.length())
 	for c := x; c != nil; c = c.tail {
-		items = append(items, lsfToValueCxOpen(c.head))
+		items = append(items, lsfToValueCxFrame(c.head))
 	}
-	return LawSpecValue{"List assayxport.haskell.extract::type::CxOpen", items}
+	return LawSpecValue{"List assayxport.haskell.extract::type::CxFrame", items}
 }
 
 func lsfToValueListCxRow(x *lsfList[*lsfCxRow]) LawSpecValue {
@@ -33304,6 +36493,22 @@ func lsfToValueListEntryTextBinding(x *lsfList[*lsfEntry[string, lsfBinding]]) L
 	return LawSpecValue{"List lawspec.collections::type::Entry (Text) (assayxport.conditions.policy::type::Binding)", items}
 }
 
+func lsfToValueListEntryTextSets(x *lsfList[*lsfEntry[string, lsfSets]]) LawSpecValue {
+	items := make([]LawSpecValue, 0, x.length())
+	for c := x; c != nil; c = c.tail {
+		items = append(items, lsfToValueEntryTextSets(c.head))
+	}
+	return LawSpecValue{"List lawspec.collections::type::Entry (Text) (assayxport.haskell.cpp::type::Sets)", items}
+}
+
+func lsfToValueListEntryTextCxSets(x *lsfList[*lsfEntry[string, lsfCxSets]]) LawSpecValue {
+	items := make([]LawSpecValue, 0, x.length())
+	for c := x; c != nil; c = c.tail {
+		items = append(items, lsfToValueEntryTextCxSets(c.head))
+	}
+	return LawSpecValue{"List lawspec.collections::type::Entry (Text) (assayxport.haskell.extract::type::CxSets)", items}
+}
+
 func lsfToValueListEntryTextSyntax(x *lsfList[*lsfEntry[string, *lsfSyntax]]) LawSpecValue {
 	items := make([]LawSpecValue, 0, x.length())
 	for c := x; c != nil; c = c.tail {
@@ -33476,6 +36681,13 @@ func lsfToValueMaybeCExpr(x lsfMaybe[lsfCExpr]) LawSpecValue {
 	return lsfDataValue("Maybe assayxport.conditions.policy::type::CExpr", "Maybe::Absent")
 }
 
+func lsfToValueMaybeLiteral(x lsfMaybe[*lsfLiteral]) LawSpecValue {
+	if x.ok {
+		return lsfDataValue("Maybe assayxport.conditions.policy::type::Literal", "Maybe::Present", lsfToValueLiteral(x.v))
+	}
+	return lsfDataValue("Maybe assayxport.conditions.policy::type::Literal", "Maybe::Absent")
+}
+
 func lsfToValueMaybeParsed(x lsfMaybe[*lsfParsed]) LawSpecValue {
 	if x.ok {
 		return lsfDataValue("Maybe assayxport.conditions::type::Parsed", "Maybe::Present", lsfToValueParsed(x.v))
@@ -33509,6 +36721,20 @@ func lsfToValueMaybePackage(x lsfMaybe[*lsfPackage]) LawSpecValue {
 		return lsfDataValue("Maybe assayxport.contract::type::Package", "Maybe::Present", lsfToValuePackage(x.v))
 	}
 	return lsfDataValue("Maybe assayxport.contract::type::Package", "Maybe::Absent")
+}
+
+func lsfToValueMaybeSets(x lsfMaybe[lsfSets]) LawSpecValue {
+	if x.ok {
+		return lsfDataValue("Maybe assayxport.haskell.cpp::type::Sets", "Maybe::Present", lsfToValueSets(x.v))
+	}
+	return lsfDataValue("Maybe assayxport.haskell.cpp::type::Sets", "Maybe::Absent")
+}
+
+func lsfToValueMaybeCxSets(x lsfMaybe[lsfCxSets]) LawSpecValue {
+	if x.ok {
+		return lsfDataValue("Maybe assayxport.haskell.extract::type::CxSets", "Maybe::Present", lsfToValueCxSets(x.v))
+	}
+	return lsfDataValue("Maybe assayxport.haskell.extract::type::CxSets", "Maybe::Absent")
 }
 
 func lsfToValueMaybeSyntax(x lsfMaybe[*lsfSyntax]) LawSpecValue {
@@ -33601,6 +36827,8 @@ func lsfToValueBinOp(x lsfBinOp) LawSpecValue {
 		return lsfDataValue("assayxport.conditions.policy::type::BinOp", "assayxport.conditions.policy::type::BinOp::BLand")
 	case lsfBinOp_BLor:
 		return lsfDataValue("assayxport.conditions.policy::type::BinOp", "assayxport.conditions.policy::type::BinOp::BLor")
+	case lsfBinOp_BComma:
+		return lsfDataValue("assayxport.conditions.policy::type::BinOp", "assayxport.conditions.policy::type::BinOp::BComma")
 	}
 	panic("unreachable branch reached")
 }
@@ -33643,6 +36871,8 @@ func lsfToValueCExpr(x lsfCExpr) LawSpecValue {
 	switch y := x.(type) {
 	case *lsfCExpr_Lit:
 		return lsfDataValue("assayxport.conditions.policy::type::CExpr", "assayxport.conditions.policy::type::CExpr::Lit", lsfToValueInteger(y.fValue))
+	case *lsfCExpr_ULit:
+		return lsfDataValue("assayxport.conditions.policy::type::CExpr", "assayxport.conditions.policy::type::CExpr::ULit", lsfToValueInteger(y.fValue))
 	case *lsfCExpr_Name:
 		return lsfDataValue("assayxport.conditions.policy::type::CExpr", "assayxport.conditions.policy::type::CExpr::Name", lsfToValueText(y.fValue))
 	case *lsfCExpr_IsDefined:
@@ -33705,6 +36935,22 @@ func lsfToValueUsePlace(x *lsfUsePlace) LawSpecValue {
 
 func lsfToValueTally(x *lsfTally) LawSpecValue {
 	return lsfDataValue("assayxport.conditions::type::Tally", "assayxport.conditions::type::Tally::Tally", lsfToValueCallEdge(x.fEdge), lsfToValueInteger(x.fCount))
+}
+
+func lsfToValueTok(x lsfTok) LawSpecValue {
+	switch y := x.(type) {
+	case *lsfTok_TNum:
+		return lsfDataValue("assayxport.conditions::type::Tok", "assayxport.conditions::type::Tok::TNum", lsfToValueInteger(y.fValue))
+	case *lsfTok_TUNum:
+		return lsfDataValue("assayxport.conditions::type::Tok", "assayxport.conditions::type::Tok::TUNum", lsfToValueInteger(y.fValue))
+	case *lsfTok_TId:
+		return lsfDataValue("assayxport.conditions::type::Tok", "assayxport.conditions::type::Tok::TId", lsfToValueText(y.fValue))
+	case *lsfTok_TOp:
+		return lsfDataValue("assayxport.conditions::type::Tok", "assayxport.conditions::type::Tok::TOp", lsfToValueText(y.fValue))
+	case *lsfTok_TUnread:
+		return lsfDataValue("assayxport.conditions::type::Tok", "assayxport.conditions::type::Tok::TUnread")
+	}
+	panic("unreachable branch reached")
 }
 
 func lsfToValueBinary(x *lsfBinary) LawSpecValue {
@@ -33881,8 +37127,38 @@ func lsfToValueLeaf(x *lsfLeaf) LawSpecValue {
 	return lsfDataValue("assayxport.haskell.cpp::type::Leaf", "assayxport.haskell.cpp::type::Leaf::Leaf", lsfToValueListInteger(x.fForms), lsfToValueBool(x.fHasElse))
 }
 
+func lsfToValueReading(x lsfReading) LawSpecValue {
+	switch y := x.(type) {
+	case *lsfReading_NotRead:
+		return lsfDataValue("assayxport.haskell.cpp::type::Reading", "assayxport.haskell.cpp::type::Reading::NotRead")
+	case *lsfReading_ByFile:
+		return lsfDataValue("assayxport.haskell.cpp::type::Reading", "assayxport.haskell.cpp::type::Reading::ByFile", lsfToValueBool(y.fValue))
+	case *lsfReading_ByTerm:
+		return lsfDataValue("assayxport.haskell.cpp::type::Reading", "assayxport.haskell.cpp::type::Reading::ByTerm", lsfToValueLiteral(y.fValue))
+	}
+	panic("unreachable branch reached")
+}
+
 func lsfToValueRow(x *lsfRow) LawSpecValue {
-	return lsfDataValue("assayxport.haskell.cpp::type::Row", "assayxport.haskell.cpp::type::Row::Row", lsfToValueText(x.fText), lsfToValueListLiteral(x.fTerms), lsfToValueBool(x.fDirective), lsfToValueBool(x.fReads), lsfToValueText(x.fName))
+	return lsfDataValue("assayxport.haskell.cpp::type::Row", "assayxport.haskell.cpp::type::Row::Row", lsfToValueText(x.fText), lsfToValueListLiteral(x.fTerms), lsfToValueBool(x.fDirective), lsfToValueBool(x.fReads), lsfToValueText(x.fName), lsfToValueSets(x.fSets))
+}
+
+func lsfToValueSets(x lsfSets) LawSpecValue {
+	switch y := x.(type) {
+	case *lsfSets_SetsNothing:
+		return lsfDataValue("assayxport.haskell.cpp::type::Sets", "assayxport.haskell.cpp::type::Sets::SetsNothing")
+	case *lsfSets_SetsInt:
+		return lsfDataValue("assayxport.haskell.cpp::type::Sets", "assayxport.haskell.cpp::type::Sets::SetsInt", lsfToValueInteger(y.fValue))
+	case *lsfSets_SetsOther:
+		return lsfDataValue("assayxport.haskell.cpp::type::Sets", "assayxport.haskell.cpp::type::Sets::SetsOther")
+	case *lsfSets_Unsets:
+		return lsfDataValue("assayxport.haskell.cpp::type::Sets", "assayxport.haskell.cpp::type::Sets::Unsets")
+	}
+	panic("unreachable branch reached")
+}
+
+func lsfToValueWalk(x *lsfWalk) LawSpecValue {
+	return lsfDataValue("assayxport.haskell.cpp::type::Walk", "assayxport.haskell.cpp::type::Walk::Walk", lsfToValueListFrame(x.fStack), lsfToValueKeyValTextSets(x.fSets))
 }
 
 func lsfToValueWalked(x *lsfWalked) LawSpecValue {
@@ -33897,32 +37173,58 @@ func lsfToValueCxBook(x *lsfCxBook) LawSpecValue {
 	return lsfDataValue("assayxport.haskell.extract::type::CxBook", "assayxport.haskell.extract::type::CxBook::CxBook", lsfToValueKeyValTextListCxSym(x.fBuckets), lsfToValueListText(x.fOrder))
 }
 
-func lsfToValueCxEffect(x *lsfCxEffect) LawSpecValue {
-	return lsfDataValue("assayxport.haskell.extract::type::CxEffect", "assayxport.haskell.extract::type::CxEffect::CxEffect", lsfToValueListCxOpen(x.fStack), lsfToValueListCxTerm(x.fTerms), lsfToValueBool(x.fReads))
+func lsfToValueCxDef(x *lsfCxDef) LawSpecValue {
+	return lsfDataValue("assayxport.haskell.extract::type::CxDef", "assayxport.haskell.extract::type::CxDef::CxDef", lsfToValueText(x.fName), lsfToValueCxSets(x.fSets))
 }
 
 func lsfToValueCxJoin(x *lsfCxJoin) LawSpecValue {
 	return lsfDataValue("assayxport.haskell.extract::type::CxJoin", "assayxport.haskell.extract::type::CxJoin::CxJoin", lsfToValueInteger(x.fNlines), lsfToValueText(x.fText))
 }
 
-func lsfToValueCxOpen(x *lsfCxOpen) LawSpecValue {
-	return lsfDataValue("assayxport.haskell.extract::type::CxOpen", "assayxport.haskell.extract::type::CxOpen::CxOpen", lsfToValueListCxTerm(x.fOuter), lsfToValueListCxTerm(x.fBefore), lsfToValueCxTerm(x.fOwn), lsfToValueBool(x.fHasElse), lsfToValueBool(x.fDead))
+func lsfToValueCxPass(x *lsfCxPass) LawSpecValue {
+	return lsfDataValue("assayxport.haskell.extract::type::CxPass", "assayxport.haskell.extract::type::CxPass::CxPass", lsfToValueListCxFrame(x.fStack), lsfToValueKeyValTextCxSets(x.fSets))
 }
 
 func lsfToValueCxPlan(x *lsfCxPlan) LawSpecValue {
 	return lsfDataValue("assayxport.haskell.extract::type::CxPlan", "assayxport.haskell.extract::type::CxPlan::CxPlan", lsfToValueListText(x.fCopies), lsfToValueListCxRow(x.fRows), lsfToValueBool(x.fUnread))
 }
 
-func lsfToValueCxRow(x *lsfCxRow) LawSpecValue {
-	return lsfDataValue("assayxport.haskell.extract::type::CxRow", "assayxport.haskell.extract::type::CxRow::CxRow", lsfToValueInteger(x.fNlines), lsfToValueBool(x.fDirective), lsfToValueBool(x.fReads), lsfToValueBool(x.fDead), lsfToValueListCxTerm(x.fTerms), lsfToValueText(x.fText))
+func lsfToValueCxReading(x lsfCxReading) LawSpecValue {
+	switch y := x.(type) {
+	case *lsfCxReading_XNotRead:
+		return lsfDataValue("assayxport.haskell.extract::type::CxReading", "assayxport.haskell.extract::type::CxReading::XNotRead")
+	case *lsfCxReading_XByFile:
+		return lsfDataValue("assayxport.haskell.extract::type::CxReading", "assayxport.haskell.extract::type::CxReading::XByFile", lsfToValueBool(y.fValue))
+	case *lsfCxReading_XByTerm:
+		return lsfDataValue("assayxport.haskell.extract::type::CxReading", "assayxport.haskell.extract::type::CxReading::XByTerm", lsfToValueLiteral(y.fValue))
+	}
+	panic("unreachable branch reached")
 }
 
-func lsfToValueCxState(x *lsfCxState) LawSpecValue {
-	return lsfDataValue("assayxport.haskell.extract::type::CxState", "assayxport.haskell.extract::type::CxState::CxState", lsfToValueListCxOpen(x.fStack), lsfToValueInteger(x.fLine))
+func lsfToValueCxRow(x *lsfCxRow) LawSpecValue {
+	return lsfDataValue("assayxport.haskell.extract::type::CxRow", "assayxport.haskell.extract::type::CxRow::CxRow", lsfToValueInteger(x.fNlines), lsfToValueInteger(x.fLine), lsfToValueText(x.fWord), lsfToValueText(x.fText), lsfToValueLiteral(x.fOwn), lsfToValueListText(x.fNames), lsfToValueListText(x.fVals), lsfToValueBool(x.fParsed), lsfToValueText(x.fName), lsfToValueCxSets(x.fSets))
+}
+
+func lsfToValueCxSets(x lsfCxSets) LawSpecValue {
+	switch y := x.(type) {
+	case *lsfCxSets_XNothing:
+		return lsfDataValue("assayxport.haskell.extract::type::CxSets", "assayxport.haskell.extract::type::CxSets::XNothing")
+	case *lsfCxSets_XInt:
+		return lsfDataValue("assayxport.haskell.extract::type::CxSets", "assayxport.haskell.extract::type::CxSets::XInt", lsfToValueInteger(y.fValue))
+	case *lsfCxSets_XOther:
+		return lsfDataValue("assayxport.haskell.extract::type::CxSets", "assayxport.haskell.extract::type::CxSets::XOther")
+	case *lsfCxSets_XUnset:
+		return lsfDataValue("assayxport.haskell.extract::type::CxSets", "assayxport.haskell.extract::type::CxSets::XUnset")
+	}
+	panic("unreachable branch reached")
 }
 
 func lsfToValueCxTerm(x *lsfCxTerm) LawSpecValue {
 	return lsfDataValue("assayxport.haskell.extract::type::CxTerm", "assayxport.haskell.extract::type::CxTerm::CxTerm", lsfToValueBool(x.fNegated), lsfToValueText(x.fText))
+}
+
+func lsfToValueCxUnit(x *lsfCxUnit) LawSpecValue {
+	return lsfDataValue("assayxport.haskell.extract::type::CxUnit", "assayxport.haskell.extract::type::CxUnit::CxUnit", lsfToValueInteger(x.fNlines), lsfToValueText(x.fText), lsfToValueText(x.fWord), lsfToValueText(x.fBody))
 }
 
 func lsfToValueCxWalk(x *lsfCxWalk) LawSpecValue {
@@ -34347,6 +37649,22 @@ func lsfToValueKeyValTextBinding(x *lsfMap[string, lsfBinding]) LawSpecValue {
 	return lsfDataValue("lawspec.collections::type::KeyVal (Text) (assayxport.conditions.policy::type::Binding)", "lawspec.collections::type::KeyVal::KeyValEntries", LawSpecValue{"List lawspec.collections::type::Entry (Text) (assayxport.conditions.policy::type::Binding)", entries})
 }
 
+func lsfToValueKeyValTextSets(x *lsfMap[string, lsfSets]) LawSpecValue {
+	entries := make([]LawSpecValue, 0, x.size())
+	lsfEach(x, func(k string, v lsfSets) {
+		entries = append(entries, lsfDataValue("lawspec.collections::type::Entry (Text) (assayxport.haskell.cpp::type::Sets)", "lawspec.collections::type::Entry::Entry", lsfToValueText(k), lsfToValueSets(v)))
+	})
+	return lsfDataValue("lawspec.collections::type::KeyVal (Text) (assayxport.haskell.cpp::type::Sets)", "lawspec.collections::type::KeyVal::KeyValEntries", LawSpecValue{"List lawspec.collections::type::Entry (Text) (assayxport.haskell.cpp::type::Sets)", entries})
+}
+
+func lsfToValueKeyValTextCxSets(x *lsfMap[string, lsfCxSets]) LawSpecValue {
+	entries := make([]LawSpecValue, 0, x.size())
+	lsfEach(x, func(k string, v lsfCxSets) {
+		entries = append(entries, lsfDataValue("lawspec.collections::type::Entry (Text) (assayxport.haskell.extract::type::CxSets)", "lawspec.collections::type::Entry::Entry", lsfToValueText(k), lsfToValueCxSets(v)))
+	})
+	return lsfDataValue("lawspec.collections::type::KeyVal (Text) (assayxport.haskell.extract::type::CxSets)", "lawspec.collections::type::KeyVal::KeyValEntries", LawSpecValue{"List lawspec.collections::type::Entry (Text) (assayxport.haskell.extract::type::CxSets)", entries})
+}
+
 func lsfToValueKeyValTextSyntax(x *lsfMap[string, *lsfSyntax]) LawSpecValue {
 	entries := make([]LawSpecValue, 0, x.size())
 	lsfEach(x, func(k string, v *lsfSyntax) {
@@ -34640,6 +37958,14 @@ func lsfToNativeListArm(x *lsfList[*lsfArm]) []Arm {
 	return out
 }
 
+func lsfToNativeListFrame(x *lsfList[*lsfFrame]) []Frame {
+	out := make([]Frame, 0, x.length())
+	for c := x; c != nil; c = c.tail {
+		out = append(out, lsfToNativeFrame(c.head))
+	}
+	return out
+}
+
 func lsfToNativeListInner(x *lsfList[lsfInner]) []Inner {
 	out := make([]Inner, 0, x.length())
 	for c := x; c != nil; c = c.tail {
@@ -34688,10 +38014,10 @@ func lsfToNativeListCxEdge(x *lsfList[*lsfCxEdge]) []CxEdge {
 	return out
 }
 
-func lsfToNativeListCxOpen(x *lsfList[*lsfCxOpen]) []CxOpen {
-	out := make([]CxOpen, 0, x.length())
+func lsfToNativeListCxFrame(x *lsfList[*lsfCxFrame]) []CxFrame {
+	out := make([]CxFrame, 0, x.length())
 	for c := x; c != nil; c = c.tail {
-		out = append(out, lsfToNativeCxOpen(c.head))
+		out = append(out, lsfToNativeCxFrame(c.head))
 	}
 	return out
 }
@@ -34912,6 +38238,22 @@ func lsfToNativeListEntryTextBinding(x *lsfList[*lsfEntry[string, lsfBinding]]) 
 	return out
 }
 
+func lsfToNativeListEntryTextSets(x *lsfList[*lsfEntry[string, lsfSets]]) []Entry[string, Sets] {
+	out := make([]Entry[string, Sets], 0, x.length())
+	for c := x; c != nil; c = c.tail {
+		out = append(out, lsfToNativeEntryTextSets(c.head))
+	}
+	return out
+}
+
+func lsfToNativeListEntryTextCxSets(x *lsfList[*lsfEntry[string, lsfCxSets]]) []Entry[string, CxSets] {
+	out := make([]Entry[string, CxSets], 0, x.length())
+	for c := x; c != nil; c = c.tail {
+		out = append(out, lsfToNativeEntryTextCxSets(c.head))
+	}
+	return out
+}
+
 func lsfToNativeListEntryTextSyntax(x *lsfList[*lsfEntry[string, *lsfSyntax]]) []Entry[string, Syntax] {
 	out := make([]Entry[string, Syntax], 0, x.length())
 	for c := x; c != nil; c = c.tail {
@@ -35084,6 +38426,13 @@ func lsfToNativeMaybeCExpr(x lsfMaybe[lsfCExpr]) LawSpecMaybe[CExpr] {
 	return LawSpecAbsent[CExpr]()
 }
 
+func lsfToNativeMaybeLiteral(x lsfMaybe[*lsfLiteral]) LawSpecMaybe[Literal] {
+	if x.ok {
+		return LawSpecPresent[Literal](lsfToNativeLiteral(x.v))
+	}
+	return LawSpecAbsent[Literal]()
+}
+
 func lsfToNativeMaybeParsed(x lsfMaybe[*lsfParsed]) LawSpecMaybe[Parsed] {
 	if x.ok {
 		return LawSpecPresent[Parsed](lsfToNativeParsed(x.v))
@@ -35117,6 +38466,20 @@ func lsfToNativeMaybePackage(x lsfMaybe[*lsfPackage]) LawSpecMaybe[Package] {
 		return LawSpecPresent[Package](lsfToNativePackage(x.v))
 	}
 	return LawSpecAbsent[Package]()
+}
+
+func lsfToNativeMaybeSets(x lsfMaybe[lsfSets]) LawSpecMaybe[Sets] {
+	if x.ok {
+		return LawSpecPresent[Sets](lsfToNativeSets(x.v))
+	}
+	return LawSpecAbsent[Sets]()
+}
+
+func lsfToNativeMaybeCxSets(x lsfMaybe[lsfCxSets]) LawSpecMaybe[CxSets] {
+	if x.ok {
+		return LawSpecPresent[CxSets](lsfToNativeCxSets(x.v))
+	}
+	return LawSpecAbsent[CxSets]()
 }
 
 func lsfToNativeMaybeSyntax(x lsfMaybe[*lsfSyntax]) LawSpecMaybe[Syntax] {
@@ -35209,6 +38572,8 @@ func lsfToNativeBinOp(x lsfBinOp) BinOp {
 		return BinOpBLand{}
 	case lsfBinOp_BLor:
 		return BinOpBLor{}
+	case lsfBinOp_BComma:
+		return BinOpBComma{}
 	}
 	panic("unreachable branch reached")
 }
@@ -35251,6 +38616,8 @@ func lsfToNativeCExpr(x lsfCExpr) CExpr {
 	switch y := x.(type) {
 	case *lsfCExpr_Lit:
 		return CExprLit{lsfToNativeInteger(y.fValue)}
+	case *lsfCExpr_ULit:
+		return CExprULit{lsfToNativeInteger(y.fValue)}
 	case *lsfCExpr_Name:
 		return CExprName{lsfToNativeText(y.fValue)}
 	case *lsfCExpr_IsDefined:
@@ -35313,6 +38680,22 @@ func lsfToNativeUsePlace(x *lsfUsePlace) UsePlace {
 
 func lsfToNativeTally(x *lsfTally) AssayxportConditionsTally {
 	return AssayxportConditionsTally{lsfToNativeCallEdge(x.fEdge), lsfToNativeInteger(x.fCount)}
+}
+
+func lsfToNativeTok(x lsfTok) Tok {
+	switch y := x.(type) {
+	case *lsfTok_TNum:
+		return TokTNum{lsfToNativeInteger(y.fValue)}
+	case *lsfTok_TUNum:
+		return TokTUNum{lsfToNativeInteger(y.fValue)}
+	case *lsfTok_TId:
+		return TokTId{lsfToNativeText(y.fValue)}
+	case *lsfTok_TOp:
+		return TokTOp{lsfToNativeText(y.fValue)}
+	case *lsfTok_TUnread:
+		return TokTUnread{}
+	}
+	panic("unreachable branch reached")
 }
 
 func lsfToNativeBinary(x *lsfBinary) Binary {
@@ -35489,8 +38872,38 @@ func lsfToNativeLeaf(x *lsfLeaf) Leaf {
 	return Leaf{lsfToNativeListInteger(x.fForms), lsfToNativeBool(x.fHasElse)}
 }
 
+func lsfToNativeReading(x lsfReading) Reading {
+	switch y := x.(type) {
+	case *lsfReading_NotRead:
+		return ReadingNotRead{}
+	case *lsfReading_ByFile:
+		return ReadingByFile{lsfToNativeBool(y.fValue)}
+	case *lsfReading_ByTerm:
+		return ReadingByTerm{lsfToNativeLiteral(y.fValue)}
+	}
+	panic("unreachable branch reached")
+}
+
 func lsfToNativeRow(x *lsfRow) Row {
-	return Row{lsfToNativeText(x.fText), lsfToNativeListLiteral(x.fTerms), lsfToNativeBool(x.fDirective), lsfToNativeBool(x.fReads), lsfToNativeText(x.fName)}
+	return Row{lsfToNativeText(x.fText), lsfToNativeListLiteral(x.fTerms), lsfToNativeBool(x.fDirective), lsfToNativeBool(x.fReads), lsfToNativeText(x.fName), lsfToNativeSets(x.fSets)}
+}
+
+func lsfToNativeSets(x lsfSets) Sets {
+	switch y := x.(type) {
+	case *lsfSets_SetsNothing:
+		return SetsSetsNothing{}
+	case *lsfSets_SetsInt:
+		return SetsSetsInt{lsfToNativeInteger(y.fValue)}
+	case *lsfSets_SetsOther:
+		return SetsSetsOther{}
+	case *lsfSets_Unsets:
+		return SetsUnsets{}
+	}
+	panic("unreachable branch reached")
+}
+
+func lsfToNativeWalk(x *lsfWalk) Walk {
+	return Walk{lsfToNativeListFrame(x.fStack), lsfToNativeKeyValTextSets(x.fSets)}
 }
 
 func lsfToNativeWalked(x *lsfWalked) Walked {
@@ -35505,32 +38918,58 @@ func lsfToNativeCxBook(x *lsfCxBook) CxBook {
 	return CxBook{lsfToNativeKeyValTextListCxSym(x.fBuckets), lsfToNativeListText(x.fOrder)}
 }
 
-func lsfToNativeCxEffect(x *lsfCxEffect) CxEffect {
-	return CxEffect{lsfToNativeListCxOpen(x.fStack), lsfToNativeListCxTerm(x.fTerms), lsfToNativeBool(x.fReads)}
+func lsfToNativeCxDef(x *lsfCxDef) CxDef {
+	return CxDef{lsfToNativeText(x.fName), lsfToNativeCxSets(x.fSets)}
 }
 
 func lsfToNativeCxJoin(x *lsfCxJoin) CxJoin {
 	return CxJoin{lsfToNativeInteger(x.fNlines), lsfToNativeText(x.fText)}
 }
 
-func lsfToNativeCxOpen(x *lsfCxOpen) CxOpen {
-	return CxOpen{lsfToNativeListCxTerm(x.fOuter), lsfToNativeListCxTerm(x.fBefore), lsfToNativeCxTerm(x.fOwn), lsfToNativeBool(x.fHasElse), lsfToNativeBool(x.fDead)}
+func lsfToNativeCxPass(x *lsfCxPass) CxPass {
+	return CxPass{lsfToNativeListCxFrame(x.fStack), lsfToNativeKeyValTextCxSets(x.fSets)}
 }
 
 func lsfToNativeCxPlan(x *lsfCxPlan) CxPlan {
 	return CxPlan{lsfToNativeListText(x.fCopies), lsfToNativeListCxRow(x.fRows), lsfToNativeBool(x.fUnread)}
 }
 
-func lsfToNativeCxRow(x *lsfCxRow) CxRow {
-	return CxRow{lsfToNativeInteger(x.fNlines), lsfToNativeBool(x.fDirective), lsfToNativeBool(x.fReads), lsfToNativeBool(x.fDead), lsfToNativeListCxTerm(x.fTerms), lsfToNativeText(x.fText)}
+func lsfToNativeCxReading(x lsfCxReading) CxReading {
+	switch y := x.(type) {
+	case *lsfCxReading_XNotRead:
+		return CxReadingXNotRead{}
+	case *lsfCxReading_XByFile:
+		return CxReadingXByFile{lsfToNativeBool(y.fValue)}
+	case *lsfCxReading_XByTerm:
+		return CxReadingXByTerm{lsfToNativeLiteral(y.fValue)}
+	}
+	panic("unreachable branch reached")
 }
 
-func lsfToNativeCxState(x *lsfCxState) CxState {
-	return CxState{lsfToNativeListCxOpen(x.fStack), lsfToNativeInteger(x.fLine)}
+func lsfToNativeCxRow(x *lsfCxRow) CxRow {
+	return CxRow{lsfToNativeInteger(x.fNlines), lsfToNativeInteger(x.fLine), lsfToNativeText(x.fWord), lsfToNativeText(x.fText), lsfToNativeLiteral(x.fOwn), lsfToNativeListText(x.fNames), lsfToNativeListText(x.fVals), lsfToNativeBool(x.fParsed), lsfToNativeText(x.fName), lsfToNativeCxSets(x.fSets)}
+}
+
+func lsfToNativeCxSets(x lsfCxSets) CxSets {
+	switch y := x.(type) {
+	case *lsfCxSets_XNothing:
+		return CxSetsXNothing{}
+	case *lsfCxSets_XInt:
+		return CxSetsXInt{lsfToNativeInteger(y.fValue)}
+	case *lsfCxSets_XOther:
+		return CxSetsXOther{}
+	case *lsfCxSets_XUnset:
+		return CxSetsXUnset{}
+	}
+	panic("unreachable branch reached")
 }
 
 func lsfToNativeCxTerm(x *lsfCxTerm) CxTerm {
 	return CxTerm{lsfToNativeBool(x.fNegated), lsfToNativeText(x.fText)}
+}
+
+func lsfToNativeCxUnit(x *lsfCxUnit) CxUnit {
+	return CxUnit{lsfToNativeInteger(x.fNlines), lsfToNativeText(x.fText), lsfToNativeText(x.fWord), lsfToNativeText(x.fBody)}
 }
 
 func lsfToNativeCxWalk(x *lsfCxWalk) CxWalk {
@@ -35951,6 +39390,22 @@ func lsfToNativeKeyValTextBinding(x *lsfMap[string, lsfBinding]) []Entry[string,
 	out := make([]Entry[string, Binding], 0, x.size())
 	lsfEach(x, func(k string, v lsfBinding) {
 		out = append(out, Entry[string, Binding]{lsfToNativeText(k), lsfToNativeBinding(v)})
+	})
+	return out
+}
+
+func lsfToNativeKeyValTextSets(x *lsfMap[string, lsfSets]) []Entry[string, Sets] {
+	out := make([]Entry[string, Sets], 0, x.size())
+	lsfEach(x, func(k string, v lsfSets) {
+		out = append(out, Entry[string, Sets]{lsfToNativeText(k), lsfToNativeSets(v)})
+	})
+	return out
+}
+
+func lsfToNativeKeyValTextCxSets(x *lsfMap[string, lsfCxSets]) []Entry[string, CxSets] {
+	out := make([]Entry[string, CxSets], 0, x.size())
+	lsfEach(x, func(k string, v lsfCxSets) {
+		out = append(out, Entry[string, CxSets]{lsfToNativeText(k), lsfToNativeCxSets(v)})
 	})
 	return out
 }
@@ -36419,21 +39874,6 @@ func lsfFromValueParsed(v LawSpecValue) *lsfParsed {
 	panic("expected Parsed, found " + tag)
 }
 
-func lsfFromValueTok(v LawSpecValue) lsfTok {
-	tag, fields := lsfData(v)
-	switch tag {
-	case "assayxport.conditions::type::Tok::TNum":
-		return &lsfTok_TNum{lsfFromValueInteger(fields[0])}
-	case "assayxport.conditions::type::Tok::TId":
-		return &lsfTok_TId{lsfFromValueText(fields[0])}
-	case "assayxport.conditions::type::Tok::TOp":
-		return &lsfTok_TOp{lsfFromValueText(fields[0])}
-	case "assayxport.conditions::type::Tok::TUnread":
-		return &lsfTok_TUnread{}
-	}
-	panic("expected Tok, found " + tag)
-}
-
 func lsfFromValueUseNote(v LawSpecValue) *lsfUseNote {
 	tag, fields := lsfData(v)
 	switch tag {
@@ -36479,6 +39919,15 @@ func lsfFromValueArm(v LawSpecValue) *lsfArm {
 	panic("expected Arm, found " + tag)
 }
 
+func lsfFromValueFrame(v LawSpecValue) *lsfFrame {
+	tag, fields := lsfData(v)
+	switch tag {
+	case "assayxport.haskell.cpp::type::Frame::Frame":
+		return &lsfFrame{lsfFromValueBool(fields[0]), lsfFromValueBool(fields[1])}
+	}
+	panic("expected Frame, found " + tag)
+}
+
 func lsfFromValueInner(v LawSpecValue) lsfInner {
 	tag, fields := lsfData(v)
 	switch tag {
@@ -36519,6 +39968,15 @@ func lsfFromValueCxEdge(v LawSpecValue) *lsfCxEdge {
 	panic("expected CxEdge, found " + tag)
 }
 
+func lsfFromValueCxFrame(v LawSpecValue) *lsfCxFrame {
+	tag, fields := lsfData(v)
+	switch tag {
+	case "assayxport.haskell.extract::type::CxFrame::CxFrame":
+		return &lsfCxFrame{lsfFromValueBool(fields[0]), lsfFromValueBool(fields[1])}
+	}
+	panic("expected CxFrame, found " + tag)
+}
+
 func lsfFromValueCxSym(v LawSpecValue) *lsfCxSym {
 	tag, fields := lsfData(v)
 	switch tag {
@@ -36526,15 +39984,6 @@ func lsfFromValueCxSym(v LawSpecValue) *lsfCxSym {
 		return &lsfCxSym{lsfFromValueDecl(fields[0]), lsfFromValueListInteger(fields[1]), lsfFromValueListCxEdge(fields[2])}
 	}
 	panic("expected CxSym, found " + tag)
-}
-
-func lsfFromValueCxUnit(v LawSpecValue) *lsfCxUnit {
-	tag, fields := lsfData(v)
-	switch tag {
-	case "assayxport.haskell.extract::type::CxUnit::CxUnit":
-		return &lsfCxUnit{lsfFromValueInteger(fields[0]), lsfFromValueText(fields[1]), lsfFromValueText(fields[2]), lsfFromValueText(fields[3])}
-	}
-	panic("expected CxUnit, found " + tag)
 }
 
 func lsfFromValueDocStyle(v LawSpecValue) lsfDocStyle {
@@ -36664,6 +40113,24 @@ func lsfFromValueEntryTextBinding(v LawSpecValue) *lsfEntry[string, lsfBinding] 
 	switch tag {
 	case "lawspec.collections::type::Entry::Entry":
 		return &lsfEntry[string, lsfBinding]{lsfFromValueText(fields[0]), lsfFromValueBinding(fields[1])}
+	}
+	panic("expected Entry, found " + tag)
+}
+
+func lsfFromValueEntryTextSets(v LawSpecValue) *lsfEntry[string, lsfSets] {
+	tag, fields := lsfData(v)
+	switch tag {
+	case "lawspec.collections::type::Entry::Entry":
+		return &lsfEntry[string, lsfSets]{lsfFromValueText(fields[0]), lsfFromValueSets(fields[1])}
+	}
+	panic("expected Entry, found " + tag)
+}
+
+func lsfFromValueEntryTextCxSets(v LawSpecValue) *lsfEntry[string, lsfCxSets] {
+	tag, fields := lsfData(v)
+	switch tag {
+	case "lawspec.collections::type::Entry::Entry":
+		return &lsfEntry[string, lsfCxSets]{lsfFromValueText(fields[0]), lsfFromValueCxSets(fields[1])}
 	}
 	panic("expected Entry, found " + tag)
 }
@@ -36813,20 +40280,6 @@ func lsfFromNativeParsed(n Parsed) *lsfParsed {
 	return &lsfParsed{lsfFromNativeCExpr(n.Expr), lsfFromNativeListTok(n.Rest)}
 }
 
-func lsfFromNativeTok(n Tok) lsfTok {
-	switch y := n.(type) {
-	case TokTNum:
-		return &lsfTok_TNum{lsfFromNativeInteger(y.Value)}
-	case TokTId:
-		return &lsfTok_TId{lsfFromNativeText(y.Value)}
-	case TokTOp:
-		return &lsfTok_TOp{lsfFromNativeText(y.Value)}
-	case TokTUnread:
-		return &lsfTok_TUnread{}
-	}
-	panic("unreachable branch reached")
-}
-
 func lsfFromNativeUseNote(n UseNote) *lsfUseNote {
 	return &lsfUseNote{lsfFromNativeUsePlace(n.Place), lsfFromNativeListText(n.Needs)}
 }
@@ -36845,6 +40298,10 @@ func lsfFromNativeSourceFile(n SourceFile) *lsfSourceFile {
 
 func lsfFromNativeArm(n Arm) *lsfArm {
 	return &lsfArm{lsfFromNativeInteger(n.Form), lsfFromNativeListInner(n.Body)}
+}
+
+func lsfFromNativeFrame(n Frame) *lsfFrame {
+	return &lsfFrame{lsfFromNativeBool(n.Live), lsfFromNativeBool(n.Done)}
 }
 
 func lsfFromNativeInner(n Inner) lsfInner {
@@ -36875,12 +40332,12 @@ func lsfFromNativeCxEdge(n CxEdge) *lsfCxEdge {
 	return &lsfCxEdge{lsfFromNativeCallEdge(n.Edge), lsfFromNativeListInteger(n.Copies)}
 }
 
-func lsfFromNativeCxSym(n CxSym) *lsfCxSym {
-	return &lsfCxSym{lsfFromNativeDecl(n.Form), lsfFromNativeListInteger(n.Copies), lsfFromNativeListCxEdge(n.Calls)}
+func lsfFromNativeCxFrame(n CxFrame) *lsfCxFrame {
+	return &lsfCxFrame{lsfFromNativeBool(n.Live), lsfFromNativeBool(n.Done)}
 }
 
-func lsfFromNativeCxUnit(n CxUnit) *lsfCxUnit {
-	return &lsfCxUnit{lsfFromNativeInteger(n.Nlines), lsfFromNativeText(n.Text), lsfFromNativeText(n.Word), lsfFromNativeText(n.Body)}
+func lsfFromNativeCxSym(n CxSym) *lsfCxSym {
+	return &lsfCxSym{lsfFromNativeDecl(n.Form), lsfFromNativeListInteger(n.Copies), lsfFromNativeListCxEdge(n.Calls)}
 }
 
 func lsfFromNativeDocStyle(n DocStyle) lsfDocStyle {
@@ -36951,6 +40408,14 @@ func lsfFromNativeEntryTextText(n Entry[string, string]) *lsfEntry[string, strin
 
 func lsfFromNativeEntryTextBinding(n Entry[string, Binding]) *lsfEntry[string, lsfBinding] {
 	return &lsfEntry[string, lsfBinding]{lsfFromNativeText(n.Key), lsfFromNativeBinding(n.Value)}
+}
+
+func lsfFromNativeEntryTextSets(n Entry[string, Sets]) *lsfEntry[string, lsfSets] {
+	return &lsfEntry[string, lsfSets]{lsfFromNativeText(n.Key), lsfFromNativeSets(n.Value)}
+}
+
+func lsfFromNativeEntryTextCxSets(n Entry[string, CxSets]) *lsfEntry[string, lsfCxSets] {
+	return &lsfEntry[string, lsfCxSets]{lsfFromNativeText(n.Key), lsfFromNativeCxSets(n.Value)}
 }
 
 func lsfFromNativeEntryTextSyntax(n Entry[string, Syntax]) *lsfEntry[string, *lsfSyntax] {
@@ -37047,20 +40512,6 @@ func lsfToValueParsed(x *lsfParsed) LawSpecValue {
 	return lsfDataValue("assayxport.conditions::type::Parsed", "assayxport.conditions::type::Parsed::Parsed", lsfToValueCExpr(x.fExpr), lsfToValueListTok(x.fRest))
 }
 
-func lsfToValueTok(x lsfTok) LawSpecValue {
-	switch y := x.(type) {
-	case *lsfTok_TNum:
-		return lsfDataValue("assayxport.conditions::type::Tok", "assayxport.conditions::type::Tok::TNum", lsfToValueInteger(y.fValue))
-	case *lsfTok_TId:
-		return lsfDataValue("assayxport.conditions::type::Tok", "assayxport.conditions::type::Tok::TId", lsfToValueText(y.fValue))
-	case *lsfTok_TOp:
-		return lsfDataValue("assayxport.conditions::type::Tok", "assayxport.conditions::type::Tok::TOp", lsfToValueText(y.fValue))
-	case *lsfTok_TUnread:
-		return lsfDataValue("assayxport.conditions::type::Tok", "assayxport.conditions::type::Tok::TUnread")
-	}
-	panic("unreachable branch reached")
-}
-
 func lsfToValueUseNote(x *lsfUseNote) LawSpecValue {
 	return lsfDataValue("assayxport.conditions::type::UseNote", "assayxport.conditions::type::UseNote::UseNote", lsfToValueUsePlace(x.fPlace), lsfToValueListText(x.fNeeds))
 }
@@ -37079,6 +40530,10 @@ func lsfToValueSourceFile(x *lsfSourceFile) LawSpecValue {
 
 func lsfToValueArm(x *lsfArm) LawSpecValue {
 	return lsfDataValue("assayxport.haskell.cpp::type::Arm", "assayxport.haskell.cpp::type::Arm::Arm", lsfToValueInteger(x.fForm), lsfToValueListInner(x.fBody))
+}
+
+func lsfToValueFrame(x *lsfFrame) LawSpecValue {
+	return lsfDataValue("assayxport.haskell.cpp::type::Frame", "assayxport.haskell.cpp::type::Frame::Frame", lsfToValueBool(x.fLive), lsfToValueBool(x.fDone))
 }
 
 func lsfToValueInner(x lsfInner) LawSpecValue {
@@ -37109,12 +40564,12 @@ func lsfToValueCxEdge(x *lsfCxEdge) LawSpecValue {
 	return lsfDataValue("assayxport.haskell.extract::type::CxEdge", "assayxport.haskell.extract::type::CxEdge::CxEdge", lsfToValueCallEdge(x.fEdge), lsfToValueListInteger(x.fCopies))
 }
 
-func lsfToValueCxSym(x *lsfCxSym) LawSpecValue {
-	return lsfDataValue("assayxport.haskell.extract::type::CxSym", "assayxport.haskell.extract::type::CxSym::CxSym", lsfToValueDecl(x.fForm), lsfToValueListInteger(x.fCopies), lsfToValueListCxEdge(x.fCalls))
+func lsfToValueCxFrame(x *lsfCxFrame) LawSpecValue {
+	return lsfDataValue("assayxport.haskell.extract::type::CxFrame", "assayxport.haskell.extract::type::CxFrame::CxFrame", lsfToValueBool(x.fLive), lsfToValueBool(x.fDone))
 }
 
-func lsfToValueCxUnit(x *lsfCxUnit) LawSpecValue {
-	return lsfDataValue("assayxport.haskell.extract::type::CxUnit", "assayxport.haskell.extract::type::CxUnit::CxUnit", lsfToValueInteger(x.fNlines), lsfToValueText(x.fText), lsfToValueText(x.fWord), lsfToValueText(x.fBody))
+func lsfToValueCxSym(x *lsfCxSym) LawSpecValue {
+	return lsfDataValue("assayxport.haskell.extract::type::CxSym", "assayxport.haskell.extract::type::CxSym::CxSym", lsfToValueDecl(x.fForm), lsfToValueListInteger(x.fCopies), lsfToValueListCxEdge(x.fCalls))
 }
 
 func lsfToValueDocStyle(x lsfDocStyle) LawSpecValue {
@@ -37185,6 +40640,14 @@ func lsfToValueEntryTextText(x *lsfEntry[string, string]) LawSpecValue {
 
 func lsfToValueEntryTextBinding(x *lsfEntry[string, lsfBinding]) LawSpecValue {
 	return lsfDataValue("lawspec.collections::type::Entry (Text) (assayxport.conditions.policy::type::Binding)", "lawspec.collections::type::Entry::Entry", lsfToValueText(x.fKey), lsfToValueBinding(x.fValue))
+}
+
+func lsfToValueEntryTextSets(x *lsfEntry[string, lsfSets]) LawSpecValue {
+	return lsfDataValue("lawspec.collections::type::Entry (Text) (assayxport.haskell.cpp::type::Sets)", "lawspec.collections::type::Entry::Entry", lsfToValueText(x.fKey), lsfToValueSets(x.fValue))
+}
+
+func lsfToValueEntryTextCxSets(x *lsfEntry[string, lsfCxSets]) LawSpecValue {
+	return lsfDataValue("lawspec.collections::type::Entry (Text) (assayxport.haskell.extract::type::CxSets)", "lawspec.collections::type::Entry::Entry", lsfToValueText(x.fKey), lsfToValueCxSets(x.fValue))
 }
 
 func lsfToValueEntryTextSyntax(x *lsfEntry[string, *lsfSyntax]) LawSpecValue {
@@ -37281,20 +40744,6 @@ func lsfToNativeParsed(x *lsfParsed) Parsed {
 	return Parsed{lsfToNativeCExpr(x.fExpr), lsfToNativeListTok(x.fRest)}
 }
 
-func lsfToNativeTok(x lsfTok) Tok {
-	switch y := x.(type) {
-	case *lsfTok_TNum:
-		return TokTNum{lsfToNativeInteger(y.fValue)}
-	case *lsfTok_TId:
-		return TokTId{lsfToNativeText(y.fValue)}
-	case *lsfTok_TOp:
-		return TokTOp{lsfToNativeText(y.fValue)}
-	case *lsfTok_TUnread:
-		return TokTUnread{}
-	}
-	panic("unreachable branch reached")
-}
-
 func lsfToNativeUseNote(x *lsfUseNote) UseNote {
 	return UseNote{lsfToNativeUsePlace(x.fPlace), lsfToNativeListText(x.fNeeds)}
 }
@@ -37313,6 +40762,10 @@ func lsfToNativeSourceFile(x *lsfSourceFile) SourceFile {
 
 func lsfToNativeArm(x *lsfArm) Arm {
 	return Arm{lsfToNativeInteger(x.fForm), lsfToNativeListInner(x.fBody)}
+}
+
+func lsfToNativeFrame(x *lsfFrame) Frame {
+	return Frame{lsfToNativeBool(x.fLive), lsfToNativeBool(x.fDone)}
 }
 
 func lsfToNativeInner(x lsfInner) Inner {
@@ -37343,12 +40796,12 @@ func lsfToNativeCxEdge(x *lsfCxEdge) CxEdge {
 	return CxEdge{lsfToNativeCallEdge(x.fEdge), lsfToNativeListInteger(x.fCopies)}
 }
 
-func lsfToNativeCxSym(x *lsfCxSym) CxSym {
-	return CxSym{lsfToNativeDecl(x.fForm), lsfToNativeListInteger(x.fCopies), lsfToNativeListCxEdge(x.fCalls)}
+func lsfToNativeCxFrame(x *lsfCxFrame) CxFrame {
+	return CxFrame{lsfToNativeBool(x.fLive), lsfToNativeBool(x.fDone)}
 }
 
-func lsfToNativeCxUnit(x *lsfCxUnit) CxUnit {
-	return CxUnit{lsfToNativeInteger(x.fNlines), lsfToNativeText(x.fText), lsfToNativeText(x.fWord), lsfToNativeText(x.fBody)}
+func lsfToNativeCxSym(x *lsfCxSym) CxSym {
+	return CxSym{lsfToNativeDecl(x.fForm), lsfToNativeListInteger(x.fCopies), lsfToNativeListCxEdge(x.fCalls)}
 }
 
 func lsfToNativeDocStyle(x lsfDocStyle) DocStyle {
@@ -37419,6 +40872,14 @@ func lsfToNativeEntryTextText(x *lsfEntry[string, string]) Entry[string, string]
 
 func lsfToNativeEntryTextBinding(x *lsfEntry[string, lsfBinding]) Entry[string, Binding] {
 	return Entry[string, Binding]{lsfToNativeText(x.fKey), lsfToNativeBinding(x.fValue)}
+}
+
+func lsfToNativeEntryTextSets(x *lsfEntry[string, lsfSets]) Entry[string, Sets] {
+	return Entry[string, Sets]{lsfToNativeText(x.fKey), lsfToNativeSets(x.fValue)}
+}
+
+func lsfToNativeEntryTextCxSets(x *lsfEntry[string, lsfCxSets]) Entry[string, CxSets] {
+	return Entry[string, CxSets]{lsfToNativeText(x.fKey), lsfToNativeCxSets(x.fValue)}
 }
 
 func lsfToNativeEntryTextSyntax(x *lsfEntry[string, *lsfSyntax]) Entry[string, Syntax] {

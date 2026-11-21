@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"goforge.dev/assayxport/internal/explorer"
+	"goforge.dev/assayxport/internal/extract/haskell"
 	"goforge.dev/assayxport/internal/schema"
 )
 
@@ -82,6 +83,13 @@ func digest(root string) uint64 {
 		}
 		if !watchExts[filepath.Ext(name)] && !watchFiles[name] {
 			return nil
+		}
+		// A Haskell file counts exactly when the Haskell extractor reads it
+		// (N3): the watcher and the walk have one answer.
+		if filepath.Ext(name) == ".hs" {
+			if rel, rerr := filepath.Rel(root, path); rerr != nil || haskell.SkippedPath(filepath.ToSlash(rel)) {
+				return nil
+			}
 		}
 		info, err := d.Info()
 		if err != nil {
@@ -191,7 +199,7 @@ func runServeCmd(args []string) error {
 	noWatch := fs2.Bool("no-watch", false, "serve a single assay; do not re-assay on save")
 	noWasm := fs2.Bool("no-wasm", false, "serve the whole manifest inline instead of the lazy WASM explorer")
 	quiet := fs2.Bool("quiet", false, "suppress progress on stderr")
-	noDiscovery := fs2.Bool("when-no-discovery", false, "do not read <path>/.assayxport/when")
+	noDiscovery := fs2.Bool("when-no-discovery", false, "do not read <path>/assayxport.when")
 	var langs stringsFlag
 	fs2.Var(&langs, "lang", "language to assay (repeatable; default: all)")
 	fs2.Usage = func() {
@@ -292,7 +300,7 @@ func runServeCmd(args []string) error {
 			if lazy && first {
 				g := atomic.AddUint64(&gen, 1)
 				dir := filepath.Join(tmpRoot, fmt.Sprintf("gen-%d", g))
-				err := runProgressive(path, langs, *quiet, dir, cur, fr)
+				err := runProgressive(path, langs, *quiet, *noDiscovery, dir, cur, fr)
 				if err != nil {
 					fmt.Fprintln(os.Stderr, "ax: assay failed:", err)
 					if !watch {
@@ -579,7 +587,7 @@ func runWatchCmd(args []string) error {
 	out := fs2.String("out", "", "output directory (default: assay path)")
 	quiet := fs2.Bool("quiet", false, "suppress progress on stderr")
 	noHTML := fs2.Bool("no-html", false, "skip writing assayxport.html")
-	noDiscovery := fs2.Bool("when-no-discovery", false, "do not read <path>/.assayxport/when")
+	noDiscovery := fs2.Bool("when-no-discovery", false, "do not read <path>/assayxport.when")
 	var langs stringsFlag
 	fs2.Var(&langs, "lang", "language to assay (repeatable; default: all)")
 	fs2.Usage = func() {

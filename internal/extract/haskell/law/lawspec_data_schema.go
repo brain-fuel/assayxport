@@ -368,6 +368,9 @@ func lawSpecDataSchemaRegistry() *lawSpecSchema {
 				{"assayxport.conditions::type::Tok::TNum", []lawSpecFieldSchema{
 					{"value", lsNamed("Integer")},
 				}, nil, nil, 0, nil},
+				{"assayxport.conditions::type::Tok::TUNum", []lawSpecFieldSchema{
+					{"value", lsNamed("Integer")},
+				}, nil, nil, 0, nil},
 				{"assayxport.conditions::type::Tok::TId", []lawSpecFieldSchema{
 					{"value", lsNamed("Text")},
 				}, nil, nil, 0, nil},
@@ -453,9 +456,13 @@ func lawSpecDataSchemaRegistry() *lawSpecSchema {
 				{"assayxport.conditions.policy::type::BinOp::BOr", []lawSpecFieldSchema{}, nil, nil, 0, nil},
 				{"assayxport.conditions.policy::type::BinOp::BLand", []lawSpecFieldSchema{}, nil, nil, 0, nil},
 				{"assayxport.conditions.policy::type::BinOp::BLor", []lawSpecFieldSchema{}, nil, nil, 0, nil},
+				{"assayxport.conditions.policy::type::BinOp::BComma", []lawSpecFieldSchema{}, nil, nil, 0, nil},
 			}},
 			{"assayxport.conditions.policy::type::CExpr", 0, []lawSpecConstructorSchema{
 				{"assayxport.conditions.policy::type::CExpr::Lit", []lawSpecFieldSchema{
+					{"value", lsNamed("Integer")},
+				}, nil, nil, 0, nil},
+				{"assayxport.conditions.policy::type::CExpr::ULit", []lawSpecFieldSchema{
 					{"value", lsNamed("Integer")},
 				}, nil, nil, 0, nil},
 				{"assayxport.conditions.policy::type::CExpr::Name", []lawSpecFieldSchema{
@@ -601,6 +608,14 @@ func lawSpecDataSchemaRegistry() *lawSpecSchema {
 					{"value", lsNamed("lawspec::structural::record::0da2e14ca58604b3fe86a7b98c18b8fc5d80c0dfa11517770dd5008b6ef149d5")},
 				}, nil, nil, 0, nil},
 			}},
+			{"assayxport.haskell.cpp::type::Sets", 0, []lawSpecConstructorSchema{
+				{"assayxport.haskell.cpp::type::Sets::SetsNothing", []lawSpecFieldSchema{}, nil, nil, 0, nil},
+				{"assayxport.haskell.cpp::type::Sets::SetsInt", []lawSpecFieldSchema{
+					{"value", lsNamed("Integer")},
+				}, nil, nil, 0, nil},
+				{"assayxport.haskell.cpp::type::Sets::SetsOther", []lawSpecFieldSchema{}, nil, nil, 0, nil},
+				{"assayxport.haskell.cpp::type::Sets::Unsets", []lawSpecFieldSchema{}, nil, nil, 0, nil},
+			}},
 			{"assayxport.haskell.cpp::type::Row", 0, []lawSpecConstructorSchema{
 				{"assayxport.haskell.cpp::type::Row::Row", []lawSpecFieldSchema{
 					{"text", lsNamed("Text")},
@@ -608,6 +623,28 @@ func lawSpecDataSchemaRegistry() *lawSpecSchema {
 					{"directive", lsNamed("Bool")},
 					{"reads", lsNamed("Bool")},
 					{"name", lsNamed("Text")},
+					{"sets", lsNamed("assayxport.haskell.cpp::type::Sets")},
+				}, nil, nil, 0, nil},
+			}},
+			{"assayxport.haskell.cpp::type::Frame", 0, []lawSpecConstructorSchema{
+				{"assayxport.haskell.cpp::type::Frame::Frame", []lawSpecFieldSchema{
+					{"live", lsNamed("Bool")},
+					{"done", lsNamed("Bool")},
+				}, nil, nil, 0, nil},
+			}},
+			{"assayxport.haskell.cpp::type::Walk", 0, []lawSpecConstructorSchema{
+				{"assayxport.haskell.cpp::type::Walk::Walk", []lawSpecFieldSchema{
+					{"stack", lsNamed("List", lsNamed("assayxport.haskell.cpp::type::Frame"))},
+					{"sets", lsNamed("lawspec.collections::type::KeyVal", lsNamed("Text"), lsNamed("assayxport.haskell.cpp::type::Sets"))},
+				}, nil, nil, 0, nil},
+			}},
+			{"assayxport.haskell.cpp::type::Reading", 0, []lawSpecConstructorSchema{
+				{"assayxport.haskell.cpp::type::Reading::NotRead", []lawSpecFieldSchema{}, nil, nil, 0, nil},
+				{"assayxport.haskell.cpp::type::Reading::ByFile", []lawSpecFieldSchema{
+					{"value", lsNamed("Bool")},
+				}, nil, nil, 0, nil},
+				{"assayxport.haskell.cpp::type::Reading::ByTerm", []lawSpecFieldSchema{
+					{"value", lsNamed("assayxport.conditions.policy::type::Literal")},
 				}, nil, nil, 0, nil},
 			}},
 			{"assayxport.haskell.cpp::type::Walked", 0, []lawSpecConstructorSchema{
@@ -691,21 +728,6 @@ func lawSpecDataSchemaRegistry() *lawSpecSchema {
 					{"text", lsNamed("Text")},
 				}, nil, nil, 0, nil},
 			}},
-			{"assayxport.haskell.extract::type::CxOpen", 0, []lawSpecConstructorSchema{
-				{"assayxport.haskell.extract::type::CxOpen::CxOpen", []lawSpecFieldSchema{
-					{"outer", lsNamed("List", lsNamed("assayxport.haskell.extract::type::CxTerm"))},
-					{"before", lsNamed("List", lsNamed("assayxport.haskell.extract::type::CxTerm"))},
-					{"own", lsNamed("assayxport.haskell.extract::type::CxTerm")},
-					{"hasElse", lsNamed("Bool")},
-					{"dead", lsNamed("Bool")},
-				}, nil, nil, 0, nil},
-			}},
-			{"assayxport.haskell.extract::type::CxState", 0, []lawSpecConstructorSchema{
-				{"assayxport.haskell.extract::type::CxState::CxState", []lawSpecFieldSchema{
-					{"stack", lsNamed("List", lsNamed("assayxport.haskell.extract::type::CxOpen"))},
-					{"line", lsNamed("Integer")},
-				}, nil, nil, 0, nil},
-			}},
 			{"assayxport.haskell.extract::type::CxUnit", 0, []lawSpecConstructorSchema{
 				{"assayxport.haskell.extract::type::CxUnit::CxUnit", []lawSpecFieldSchema{
 					{"nlines", lsNamed("Integer")},
@@ -714,14 +736,32 @@ func lawSpecDataSchemaRegistry() *lawSpecSchema {
 					{"body", lsNamed("Text")},
 				}, nil, nil, 0, nil},
 			}},
+			{"assayxport.haskell.extract::type::CxSets", 0, []lawSpecConstructorSchema{
+				{"assayxport.haskell.extract::type::CxSets::XNothing", []lawSpecFieldSchema{}, nil, nil, 0, nil},
+				{"assayxport.haskell.extract::type::CxSets::XInt", []lawSpecFieldSchema{
+					{"value", lsNamed("Integer")},
+				}, nil, nil, 0, nil},
+				{"assayxport.haskell.extract::type::CxSets::XOther", []lawSpecFieldSchema{}, nil, nil, 0, nil},
+				{"assayxport.haskell.extract::type::CxSets::XUnset", []lawSpecFieldSchema{}, nil, nil, 0, nil},
+			}},
+			{"assayxport.haskell.extract::type::CxDef", 0, []lawSpecConstructorSchema{
+				{"assayxport.haskell.extract::type::CxDef::CxDef", []lawSpecFieldSchema{
+					{"name", lsNamed("Text")},
+					{"sets", lsNamed("assayxport.haskell.extract::type::CxSets")},
+				}, nil, nil, 0, nil},
+			}},
 			{"assayxport.haskell.extract::type::CxRow", 0, []lawSpecConstructorSchema{
 				{"assayxport.haskell.extract::type::CxRow::CxRow", []lawSpecFieldSchema{
 					{"nlines", lsNamed("Integer")},
-					{"directive", lsNamed("Bool")},
-					{"reads", lsNamed("Bool")},
-					{"dead", lsNamed("Bool")},
-					{"terms", lsNamed("List", lsNamed("assayxport.haskell.extract::type::CxTerm"))},
+					{"line", lsNamed("Integer")},
+					{"word", lsNamed("Text")},
 					{"text", lsNamed("Text")},
+					{"own", lsNamed("assayxport.conditions.policy::type::Literal")},
+					{"names", lsNamed("List", lsNamed("Text"))},
+					{"vals", lsNamed("List", lsNamed("Text"))},
+					{"parsed", lsNamed("Bool")},
+					{"name", lsNamed("Text")},
+					{"sets", lsNamed("assayxport.haskell.extract::type::CxSets")},
 				}, nil, nil, 0, nil},
 			}},
 			{"assayxport.haskell.extract::type::CxPlan", 0, []lawSpecConstructorSchema{
@@ -737,11 +777,25 @@ func lawSpecDataSchemaRegistry() *lawSpecSchema {
 					{"text", lsNamed("Text")},
 				}, nil, nil, 0, nil},
 			}},
-			{"assayxport.haskell.extract::type::CxEffect", 0, []lawSpecConstructorSchema{
-				{"assayxport.haskell.extract::type::CxEffect::CxEffect", []lawSpecFieldSchema{
-					{"stack", lsNamed("List", lsNamed("assayxport.haskell.extract::type::CxOpen"))},
-					{"terms", lsNamed("List", lsNamed("assayxport.haskell.extract::type::CxTerm"))},
-					{"reads", lsNamed("Bool")},
+			{"assayxport.haskell.extract::type::CxFrame", 0, []lawSpecConstructorSchema{
+				{"assayxport.haskell.extract::type::CxFrame::CxFrame", []lawSpecFieldSchema{
+					{"live", lsNamed("Bool")},
+					{"done", lsNamed("Bool")},
+				}, nil, nil, 0, nil},
+			}},
+			{"assayxport.haskell.extract::type::CxPass", 0, []lawSpecConstructorSchema{
+				{"assayxport.haskell.extract::type::CxPass::CxPass", []lawSpecFieldSchema{
+					{"stack", lsNamed("List", lsNamed("assayxport.haskell.extract::type::CxFrame"))},
+					{"sets", lsNamed("lawspec.collections::type::KeyVal", lsNamed("Text"), lsNamed("assayxport.haskell.extract::type::CxSets"))},
+				}, nil, nil, 0, nil},
+			}},
+			{"assayxport.haskell.extract::type::CxReading", 0, []lawSpecConstructorSchema{
+				{"assayxport.haskell.extract::type::CxReading::XNotRead", []lawSpecFieldSchema{}, nil, nil, 0, nil},
+				{"assayxport.haskell.extract::type::CxReading::XByFile", []lawSpecFieldSchema{
+					{"value", lsNamed("Bool")},
+				}, nil, nil, 0, nil},
+				{"assayxport.haskell.extract::type::CxReading::XByTerm", []lawSpecFieldSchema{
+					{"value", lsNamed("assayxport.conditions.policy::type::Literal")},
 				}, nil, nil, 0, nil},
 			}},
 			{"assayxport.haskell.extract::type::CxWalk", 0, []lawSpecConstructorSchema{

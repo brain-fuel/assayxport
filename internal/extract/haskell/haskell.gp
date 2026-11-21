@@ -109,6 +109,14 @@ func envOf(w When) law.Env {
 	return env
 }
 
+// SkippedPath says whether the extractor's walk does not read the file at
+// rel, a slash path relative to the root: a dot-directory, dist-newstyle/ or
+// dist/ above it. `ax watch` and `ax serve` follow a changed .hs file exactly
+// when this is false (law HSX-45).
+func SkippedPath(rel string) bool {
+	return law.LawSpecDefinitions.SkippedPath(map[string]*law.LawSpecSymbol{}, rel)
+}
+
 // Language returns "haskell".
 func (*Extractor) Language() string { return "haskell" }
 
@@ -121,6 +129,12 @@ func (e *Extractor) Extract(root string) ([]schema.Package, error) {
 	absRoot, err := filepath.Abs(root)
 	if err != nil {
 		return nil, err
+	}
+	// A root that is a symbolic link to a directory is read as that directory
+	// (law HSX-46): the walk does not follow a root that is a link. Only the
+	// root; links inside the tree are not followed.
+	if resolved, rerr := filepath.EvalSymlinks(absRoot); rerr == nil {
+		absRoot = resolved
 	}
 	var rels []string
 	err = filepath.WalkDir(absRoot, func(path string, d fs.DirEntry, err error) error {
