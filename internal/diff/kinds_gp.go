@@ -50,6 +50,10 @@ func normalizeTypeKind(language, typ string) string {
 		return pythonKind(t)
 	case "java":
 		return javaKind(t)
+	case "haskell":
+		// Haskell types are not classified yet: say so, rather than read
+		// them with TypeScript's rules below.
+		return kindUnknown
 	default: // typescript, javascript, and anything future
 		return tsKind(t)
 	}

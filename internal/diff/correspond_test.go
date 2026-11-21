@@ -35,6 +35,8 @@ func TestNormalizeTypeKind(t *testing.T) {
 		{"typescript", "Map<string, number>", "map"}, {"typescript", "Record<string, unknown>", "map"},
 		{"typescript", "(x: number) => boolean", "func"}, {"typescript", "void", "none"},
 		{"typescript", "any", "unknown"}, {"typescript", "TypeError", "error"}, {"typescript", "Widget", "object"},
+		{"haskell", "Int", "unknown"}, {"haskell", "String", "unknown"}, {"haskell", "[Int]", "unknown"},
+		{"haskell", "Maybe Int", "unknown"}, {"haskell", "IO ()", "unknown"},
 	}
 	for _, tt := range tests {
 		if got := normalizeTypeKind(tt.lang, tt.typ); got != tt.want {

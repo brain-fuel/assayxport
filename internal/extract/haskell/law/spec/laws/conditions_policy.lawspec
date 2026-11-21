@@ -1,0 +1,1826 @@
+unit assayxport.conditions.policy
+-- ref:DR-0035 ref:DR-0040 ref:DR-0046 (LawSpec is the law surface; owner direction 2026-11-13: CPP conditions and `--when`)
+
+-- S1.j, next cycle 2 (docs/contributions/S1.j/next-cycle-2/design.md,
+-- sections 4 to 6). The REFERENCE for conditions: what a C preprocessor
+-- `#if` expression means when only some names have a value.
+--
+-- The reference never reads text. It evaluates a syntax tree (`CExpr`), and
+-- `showExpr` writes a tree as C text in several styles. The evaluator under
+-- law (assayxport.conditions, `evalWhen`) reads text and never sees a tree. A law
+-- that compares the two is a comparison of two different routes.
+--
+-- Nothing here is an implementation stub: an implementer does not edit
+-- this unit.
+
+import assayxport.contract as c (Package, Decl, CallEdge, DocText, EntryPoint, Detail, Complexity, Location, SymbolKind, Visibility, VisibilityIdiom, DocFormat, CallKind, ComplexityMethod, EdgeKey, at, noBinary, edge, edgeKey)
+
+-- ---------------------------------------------------------------------------
+-- Names. A name is `Defined` with an integer value, `Undefined` (the build
+-- is known not to define it: `-U`), or it has no entry: nothing is known.
+-- `versions` holds the packages given by `package P=X.Y.Z`, keyed by the
+-- macro spelling of P (each `-` written `_`, as Cabal writes
+-- `MIN_VERSION_unordered_containers`). `complete` is `--when-complete`: a
+-- name with no entry is then undefined, as the C preprocessor has it.
+--
+-- Next cycle 4 (next-cycle-4/design.md, section 4; review 7, S1 and S2).
+-- A package has three states. GIVEN (`package P=X.Y.Z`): Cabal defines
+-- both VERSION_P and MIN_VERSION_P(a,b,c) for it (Cabal,
+-- Distribution/Simple/Build/Macros.hs: "When using CPP you get
+-- VERSION_<package> MIN_VERSION_<package>(A,B,C) for each package in
+-- build-depends"). SAID ABSENT (`undef MIN_VERSION_P`): the build does not
+-- depend on it, and neither macro is defined; `names` then holds
+-- `MIN_VERSION_P` as Undefined. NOT SAID: nothing is known. A later line
+-- replaces an earlier one, also between these two kinds of line.
+
+type Binding is one of | Defined of type Integer | Undefined end type
+
+type Env is a record{
+  names :: KeyVal Text Binding
+  versions :: KeyVal Text (List Integer)
+  complete :: Bool}
+end type
+
+-- What an expression comes to.
+--   Known v   every build that agrees with the environment gives v.
+--   Bad       no answer. Either every such build is an error in the
+--             preprocessor (a syntax error, a division by zero that is
+--             evaluated, a call of a macro the build does not define), or
+--             the expression holds a form this evaluator does not read,
+--             which the preprocessor may well evaluate (next cycle 7;
+--             review 9, N2): a character constant other than one plain
+--             ASCII character or one of the escapes \n \t \r \0 \\ \' \";
+--             a literal past 2^64 - 1; a call of a macro that is not one
+--             of the two version macros. Bad is never a value: a fact
+--             whose condition is Bad is kept, undecided, and named in a
+--             warning.
+--   Unknown   neither. `missing` lists, sorted and without repeats, the
+--             names whose value would be needed. `risky` says that some
+--             build may be an error (a divisor that is not known), so the
+--             expression cannot be dropped from an `&&` or an `||` by its
+--             other side.
+type OpenInfo is a record{
+  missing :: List Text
+  risky :: Bool}
+end type
+
+type Outcome is one of | Known of type Integer | Unknown of type OpenInfo | Bad end type
+
+type UnOp is one of | UPlus | UMinus | UNot | UCompl end type
+
+type BinOp is one of
+  | BMul | BDiv | BRem | BAdd | BSub | BShl | BShr
+  | BLt | BLe | BGt | BGe | BEq | BNe
+  | BAnd | BXor | BOr | BLand | BLor
+  | BComma
+end type
+
+-- `Lit n` is an integer literal with no `u` suffix, 0 <= n <= 2^64 - 1.
+-- Up to 2^63 - 1 it is its value. Above, the preprocessor as GHC runs it
+-- (`cpp -traditional`) keeps it signed, with a warning, and it wraps:
+-- 18446744073709551615 is -1 (the standard mode makes it unsigned; ax
+-- follows the mode Haskell sources are read in). `ULit n` is a literal
+-- with a `u` or `U` suffix, 0 <= n <= 2^64 - 1: an unsigned value (next
+-- cycle 7; review 9, N2; `unsignedOf`, below). `MinVersion` is Cabal's
+-- MIN_VERSION_pkg(major1, major2, minor); `MinGhc` is GHC's
+-- MIN_VERSION_GLASGOW_HASKELL(major1, major2, patch1, patch2).
+type CExpr is one of
+  | Lit of type Integer
+  | ULit of type Integer
+  | Name of type Text
+  | IsDefined of type Text
+  | Un of type record{ op :: UnOp , arg :: CExpr}
+  | Bin of type record{ op :: BinOp , left :: CExpr , right :: CExpr}
+  | Cond of type record{ test :: CExpr , yes :: CExpr , no :: CExpr}
+  | MinVersion of type record{ pkg :: Text , major1 :: CExpr , major2 :: CExpr , minor :: CExpr}
+  | MinGhc of type record{ major1 :: CExpr , major2 :: CExpr , patch1 :: CExpr , patch2 :: CExpr}
+end type
+
+-- ---------------------------------------------------------------------------
+-- Arithmetic: intmax_t, 64 bits, two's complement, wrapping (GCC's cpp
+-- warns on overflow and wraps).
+
+function toInt64 (x :: Integer) -> Int64 is prelude.wrapping x end function
+function fromInt64 (x :: Int64) -> Integer is x + 0 end function
+function wrap (x :: Integer) -> Integer is fromInt64 (toInt64 x) end function
+
+function pow2 (n :: Integer) -> Integer is if n <= 0 then 1 else 2 * pow2 (n - 1) end if end function
+
+function maxLit (u :: Unit) -> Integer is 9223372036854775807 end function
+function maxULit (u :: Unit) -> Integer is 18446744073709551615 end function
+
+-- The low 64 bits of a value, as a number from 0.
+function unsigned64 (a :: Integer) -> Integer is if a < 0 then a + 18446744073709551616 else a end if end function
+
+-- which: 0 and, 1 or, 2 xor; over `n` bits of two numbers from 0.
+function bitsOf (which :: Integer) (a :: Integer) (b :: Integer) (n :: Integer) -> Integer is
+  if n <= 0 then 0 else
+    (let x = prelude.rem a 2 in let y = prelude.rem b 2 in
+      (if which = 0 then (if x = 1 && y = 1 then 1 else 0 end if)
+       else (if which = 1 then (if x = 1 || y = 1 then 1 else 0 end if)
+       else (if x = y then 0 else 1 end if) end if) end if)
+      + 2 * bitsOf which (prelude.quot a 2) (prelude.quot b 2) (n - 1) end let end let)
+  end if
+end function
+
+function bitwise (which :: Integer) (a :: Integer) (b :: Integer) -> Integer is
+  wrap (bitsOf which (unsigned64 a) (unsigned64 b) 64)
+end function
+
+-- a * 2^n, wrapped: zero from 64 bits on.
+function shiftLeft (a :: Integer) (n :: Integer) -> Integer is if n >= 64 then 0 else wrap (a * pow2 n) end if end function
+
+-- floor (a / 2^n): the sign fills from 64 bits on.
+function halved (a :: Integer) (n :: Integer) -> Integer is
+  if n <= 0 then a else halved (if a >= 0 then prelude.quot a 2 else 0 - 1 - prelude.quot (0 - 1 - a) 2 end if) (n - 1) end if
+end function
+
+function shiftRight (a :: Integer) (n :: Integer) -> Integer is
+  if n >= 64 then (if a < 0 then 0 - 1 else 0 end if) else halved a n end if
+end function
+
+function truth (b :: Bool) -> Integer is if b then 1 else 0 end if end function
+
+-- Unsigned values (next cycle 7; review 9, N2). A value is kept as the 64
+-- bits it has, read as a signed number; whether an operand is unsigned is
+-- a property of the expression (`unsignedOf`), as in C, where it is the
+-- operand's type. `lu` and `ru` say so of the left and the right operand.
+-- With either unsigned, `/`, `%` and the four comparisons work on the
+-- values from 0 (C's usual arithmetic conversions; GCC, The C
+-- Preprocessor, 4.2.2 If: "calculations are done in the widest integer
+-- type known to the compiler"; libcpp's num_binary_op and
+-- num_inequality_op). `+`, `-`, `*`, the bitwise operators, `==` and `!=`
+-- give the same bits either way. A shift takes its kind from its left
+-- operand alone: `>>` of an unsigned value fills with zeros. An unsigned
+-- shift count is never negative.
+
+-- floor (a / 2^n) for a from 0: zero from 64 bits on.
+function halvedU (a :: Integer) (n :: Integer) -> Integer is
+  if n <= 0 then a else halvedU (prelude.quot a 2) (n - 1) end if
+end function
+
+function shiftRightU (a :: Integer) (n :: Integer) -> Integer is
+  if n >= 64 then 0 else wrap (halvedU (unsigned64 a) n) end if
+end function
+
+function shiftRightAs (lu :: Bool) (a :: Integer) (n :: Integer) -> Integer is
+  if lu then shiftRightU a n else shiftRight a n end if
+end function
+
+-- A strict operator on two known values. A negative shift count shifts the
+-- other way (GCC).
+function compute (op :: BinOp) (a :: Integer) (b :: Integer) -> Outcome is computeAs false false op a b end function
+
+function computeAs (lu :: Bool) (ru :: Bool) (op :: BinOp) (a :: Integer) (b :: Integer) -> Outcome is
+  let uns = lu || ru in let ua = unsigned64 a in let ub = unsigned64 b in let n = (if ru then ub else b end if) in
+  (first matching case of op :
+    when BComma then Known b
+    when BMul then Known (wrap (a * b))
+    when BDiv then (if uns then (if ub = 0 then Bad else Known (wrap (prelude.quot ua ub)) end if) else (if b = 0 then Bad else Known (wrap (prelude.quot a b)) end if) end if)
+    when BRem then (if uns then (if ub = 0 then Bad else Known (wrap (prelude.rem ua ub)) end if) else (if b = 0 then Bad else Known (wrap (prelude.rem a b)) end if) end if)
+    when BAdd then Known (wrap (a + b))
+    when BSub then Known (wrap (a - b))
+    when BShl then Known (if n >= 0 then shiftLeft a n else shiftRightAs lu a (0 - n) end if)
+    when BShr then Known (if n >= 0 then shiftRightAs lu a n else shiftLeft a (0 - n) end if)
+    when BLt then Known (truth (if uns then ua < ub else a < b end if))
+    when BLe then Known (truth (if uns then ua <= ub else a <= b end if))
+    when BGt then Known (truth (if uns then ua > ub else a > b end if))
+    when BGe then Known (truth (if uns then ua >= ub else a >= b end if))
+    when BEq then Known (truth (a = b))
+    when BNe then Known (truth (a != b))
+    when BAnd then Known (bitwise 0 a b)
+    when BOr then Known (bitwise 1 a b)
+    when BXor then Known (bitwise 2 a b)
+    when BLand then Known (truth (a != 0 && b != 0))
+    when BLor then Known (truth (a != 0 || b != 0))
+  end case)
+  end let end let end let end let
+end function
+
+-- ---------------------------------------------------------------------------
+-- Outcomes.
+
+function sorted (ns :: List Text) -> List Text is prelude.toList (prelude.sortedSetOf ns) end function
+
+function unknown (ns :: List Text) (risky :: Bool) -> Outcome is Unknown (OpenInfo record{ missing = sorted ns , risky = risky}) end function
+
+function missingOf (o :: Outcome) -> List Text is
+  first matching case of o : when Unknown u then u.missing when Known v then [] when Bad then [] end case
+end function
+
+-- Some build may be an error.
+function riskyOf (o :: Outcome) -> Bool is
+  first matching case of o : when Unknown u then u.risky when Known v then false when Bad then true end case
+end function
+
+function isBad (o :: Outcome) -> Bool is o matches Bad end function
+
+-- `&&` (deciding value 0) and `||` (deciding value 1), as C evaluates
+-- them: the left side always; the right side only when the left does not
+-- decide. A known right side decides for an unknown left side only when
+-- the left side cannot be an error.
+function logical (isAnd :: Bool) (l :: Outcome) (r :: Outcome) -> Outcome is
+  first matching case of l :
+    when Bad then Bad
+    when Known a then
+      (if (a = 0) = isAnd then Known (truth (!isAnd))
+       else (first matching case of r :
+         when Known b then Known (truth (b != 0))
+         when Unknown v then r
+         when Bad then Bad
+       end case) end if)
+    when Unknown u then
+      (first matching case of r :
+        when Known b then (if (b = 0) = isAnd && !u.risky then Known (truth (!isAnd)) else l end if)
+        when Unknown v then unknown (u.missing ++ v.missing) (u.risky || v.risky)
+        when Bad then unknown u.missing true
+      end case)
+  end case
+end function
+
+function isDivision (op :: BinOp) -> Bool is op = BDiv || op = BRem end function
+
+function binary (op :: BinOp) (l :: Outcome) (r :: Outcome) -> Outcome is binaryAs false false op l r end function
+
+-- The comma (next cycle 7; review 9, N2): both sides are evaluated, and
+-- the value is the right side's (GCC evaluates it in `#if`, and warns
+-- only with -pedantic). With the left side unknown the right side's value
+-- stands only when the left side cannot be an error.
+function comma (l :: Outcome) (r :: Outcome) -> Outcome is
+  if isBad l || isBad r then Bad
+  else (first matching case of l :
+    when Known a then r
+    when Unknown u then
+      (first matching case of r :
+        when Known b then (if u.risky then l else r end if)
+        when Unknown v then unknown (u.missing ++ v.missing) (u.risky || v.risky)
+        when Bad then Bad
+      end case)
+    when Bad then Bad
+  end case) end if
+end function
+
+function binaryAs (lu :: Bool) (ru :: Bool) (op :: BinOp) (l :: Outcome) (r :: Outcome) -> Outcome is
+  if op = BLand then logical true l r
+  else (if op = BLor then logical false l r
+  else (if op = BComma then comma l r
+  else (if isBad l || isBad r then Bad
+  else (first matching case of l :
+    when Known a then
+      (first matching case of r :
+        when Known b then computeAs lu ru op a b
+        when Unknown v then unknown v.missing (v.risky || isDivision op)
+        when Bad then Bad
+      end case)
+    when Unknown u then
+      (first matching case of r :
+        when Known b then (if isDivision op && b = 0 then Bad else l end if)
+        when Unknown v then unknown (u.missing ++ v.missing) (u.risky || v.risky || isDivision op)
+        when Bad then Bad
+      end case)
+    when Bad then Bad
+  end case) end if) end if) end if) end if
+end function
+
+function unary (op :: UnOp) (o :: Outcome) -> Outcome is
+  first matching case of o :
+    when Known a then
+      (first matching case of op :
+        when UPlus then Known a
+        when UMinus then Known (wrap (0 - a))
+        when UNot then Known (truth (a = 0))
+        when UCompl then Known (0 - a - 1)
+      end case)
+    when Unknown u then o
+    when Bad then Bad
+  end case
+end function
+
+-- `t ? y : n`. With the test unknown the result is known only when both
+-- branches are known and equal and the test cannot be an error.
+function conditional (t :: Outcome) (y :: Outcome) (n :: Outcome) -> Outcome is
+  first matching case of t :
+    when Bad then Bad
+    when Known a then (if a != 0 then y else n end if)
+    when Unknown u then
+      (if (y matches Known _) && y = n && !u.risky then y
+       else unknown (u.missing ++ missingOf y ++ missingOf n) (u.risky || riskyOf y || riskyOf n) end if)
+  end case
+end function
+
+-- ---------------------------------------------------------------------------
+-- Names.
+
+-- A name used as a value. The name of a function-like macro written with
+-- no argument list is not a call: C leaves it an identifier, and an
+-- identifier is 0. So MIN_VERSION_P alone is 0 once it is known whether
+-- package P is given.
+--
+-- VERSION_P of a given package is a string ("4.18.1"): as a value it is no
+-- integer expression, and the preprocessor rejects the whole directive
+-- (`broken`, below). With the package said absent it is an identifier: 0.
+-- With the package not said, VERSION_P is a name like any other.
+function valueOf (env :: Env) (n :: Text) -> Outcome is
+  if n = "MIN_VERSION_GLASGOW_HASKELL" then
+    (if env.complete || (prelude.lookup "__GLASGOW_HASKELL__" env.names matches Present _) then Known 0 else unknown ["__GLASGOW_HASKELL__"] false end if)
+  else (if prelude.startsWith n "MIN_VERSION_" then
+    (if env.complete || packageState env (prelude.drop 12 n) != 2 then Known 0 else unknown [n] false end if)
+  else (if isVersionName n && packageState env (prelude.drop 8 n) = 1 then Bad
+  else (first matching case of prelude.lookup n env.names :
+    when Present (Defined v) then Known (wrap v)
+    when Present Undefined then Known 0
+    when Absent then (if env.complete || (isVersionName n && packageState env (prelude.drop 8 n) = 0) then Known 0 else unknown [n] false end if)
+  end case) end if) end if) end if
+end function
+
+-- What is known of the package with the macro spelling p: 1 given
+-- (`package P=X.Y.Z`), 0 said absent (`undef MIN_VERSION_p`), 2 not said.
+function packageState (env :: Env) (p :: Text) -> Integer is
+  if prelude.lookup p env.versions matches Present _ then 1
+  else (if prelude.lookup ("MIN_VERSION_" ++ p) env.names matches Present _ then 0 else 2 end if) end if
+end function
+
+function isVersionName (n :: Text) -> Bool is prelude.startsWith n "VERSION_" && prelude.length n > 8 end function
+
+function ghcName (u :: Unit) -> Text is "__GLASGOW_HASKELL__" end function
+
+-- `defined(n)`. A MIN_VERSION_P macro is defined exactly when package P was
+-- given; GHC's own MIN_VERSION_GLASGOW_HASKELL exactly when
+-- __GLASGOW_HASKELL__ is. VERSION_P is defined when package P was given
+-- (review 7, S2); when the package is not said, a line about the name
+-- itself decides (`VERSION_P=1`, `undef VERSION_P`); when the package is
+-- said absent and no such line stands, it is not defined.
+function definedOf (env :: Env) (n :: Text) -> Outcome is
+  if n = "MIN_VERSION_GLASGOW_HASKELL" then definedOf2 env (ghcName unitValue)
+  else (if prelude.startsWith n "MIN_VERSION_" then
+    (first matching case of packageState env (prelude.drop 12 n) :
+      when 1 then Known 1
+      when 0 then Known 0
+      otherwise (if env.complete then Known 0 else unknown [n] false end if)
+    end case)
+  else (if isVersionName n && packageState env (prelude.drop 8 n) = 1 then Known 1
+  else (if isVersionName n && packageState env (prelude.drop 8 n) = 0 && !(prelude.lookup n env.names matches Present _) then Known 0
+  else definedOf2 env n end if) end if) end if) end if
+end function
+
+function definedOf2 (env :: Env) (n :: Text) -> Outcome is
+  first matching case of prelude.lookup n env.names :
+    when Present (Defined v) then Known 1
+    when Present Undefined then Known 0
+    when Absent then (if env.complete then Known 0 else unknown [n] false end if)
+  end case
+end function
+
+-- A version's component, 0 past its end (Cabal pads 1.2 to 1.2.0).
+function component (v :: List Integer) (i :: Integer) -> Integer is
+  first matching case of prelude.at i v : when Present x then x when Absent then 0 end case
+end function
+
+function lessOr (a :: Outcome) (x :: Integer) -> Outcome is binary BLt a (Known x) end function
+function same (a :: Outcome) (x :: Integer) -> Outcome is binary BEq a (Known x) end function
+
+-- Cabal's macro, as cabal_macros.h writes it:
+--   (major1) <  X || (major1) == X && (major2) <  Y
+--   || (major1) == X && (major2) == Y && (minor) <= Z
+function minVersion (v :: List Integer) (a :: Outcome) (b :: Outcome) (m :: Outcome) -> Outcome is
+  let x = component v 0 in let y = component v 1 in let z = component v 2 in
+    logical false (logical false (lessOr a x) (logical true (same a x) (lessOr b y)))
+                  (logical true (logical true (same a x) (same b y)) (binary BLe m (Known z)))
+  end let end let end let
+end function
+
+-- GHC's macro (ghcversion.h):
+--   ((ma)*100+(mi)) <  __GLASGOW_HASKELL__
+--   || ((ma)*100+(mi)) == __GLASGOW_HASKELL__ && (pl1) <  __GLASGOW_HASKELL_PATCHLEVEL1__
+--   || ((ma)*100+(mi)) == __GLASGOW_HASKELL__ && (pl1) == __GLASGOW_HASKELL_PATCHLEVEL1__
+--        && (pl2) <= __GLASGOW_HASKELL_PATCHLEVEL2__
+function minGhc (env :: Env) (ma :: Outcome) (mi :: Outcome) (p1 :: Outcome) (p2 :: Outcome) -> Outcome is
+  let v = binary BAdd (binary BMul ma (Known 100)) mi in
+  let g = valueOf env (ghcName unitValue) in
+  let g1 = valueOf env "__GLASGOW_HASKELL_PATCHLEVEL1__" in
+  let g2 = valueOf env "__GLASGOW_HASKELL_PATCHLEVEL2__" in
+    logical false (logical false (binary BLt v g) (logical true (binary BEq v g) (binary BLt p1 g1)))
+                  (logical true (logical true (binary BEq v g) (binary BEq p1 g1)) (binary BLe p2 g2))
+  end let end let end let end let
+end function
+
+-- A macro's arguments are all written, so one Bad argument makes the call
+-- Bad; an unknown macro is unknown by its own name and its arguments'.
+function unknownCall (name :: Text) (args :: List Outcome) -> Outcome is
+  if prelude.any isBad args then Bad else unknown ([name] ++ missingAll args) (prelude.any riskyOf args) end if
+end function
+
+function missingAll (os :: List Outcome) -> List Text is
+  first matching case of os : when Nil then [] when Cons o rest then missingOf o ++ missingAll rest end case
+end function
+
+-- ---------------------------------------------------------------------------
+-- The reference evaluation.
+
+-- A call of a macro the build does not define is a syntax error in the
+-- preprocessor, wherever it stands: `0 && MIN_VERSION_p(1,2,3)` is an
+-- error too, since a syntax error is not skipped as an unevaluated
+-- division is. So the whole expression is Bad when it calls
+--   MIN_VERSION_p(..) and the environment is complete without package p;
+--   MIN_VERSION_GLASGOW_HASKELL(..) and __GLASGOW_HASKELL__ is undefined
+--   (given so, or not given in a complete environment).
+-- With an environment that is not complete, a called macro is taken to be
+-- one the build defines (Cabal defines MIN_VERSION_p for every dependency,
+-- and the source relies on it): only its value is unknown. A package said
+-- absent (`undef MIN_VERSION_p`) is as one a complete environment lacks.
+-- VERSION_p of a given package, used as a value, is a string where an
+-- integer must stand: an error wherever it stands (checked with cpp:
+-- `#if 0 && VERSION_text` is rejected).
+--
+-- All of this is about ONE directive's expression. A fact's condition is a
+-- path of directives, and the preprocessor never evaluates a directive in
+-- a group it skips: see `refCondition`.
+-- An expression is unsigned (next cycle 7; review 9, N2): C's type of it,
+-- which does not depend on any value. A literal with a `u` suffix is; a
+-- name, `defined` and a version macro are not (an identifier is 0, and a
+-- name's value is given as a signed number); `!`, `&&`, the logical or and
+-- a comparison give a signed 0 or 1; the other unary operators keep their
+-- operand's kind; a shift has its left operand's; the comma its right
+-- operand's; a conditional is unsigned when either branch is, the branch
+-- not taken included (`(0 ? 1u : -1) < 0` is false); every other binary
+-- operator when either operand is.
+function unsignedOf (e :: CExpr) -> Bool is
+  first matching case of e :
+    when Lit n then false
+    when ULit n then true
+    when Name n then false
+    when IsDefined n then false
+    when Un u then u.op != UNot && unsignedOf u.arg
+    when Bin b then
+      (if b.op = BLand || b.op = BLor || b.op = BLt || b.op = BLe || b.op = BGt || b.op = BGe || b.op = BEq || b.op = BNe then false
+       else (if b.op = BShl || b.op = BShr then unsignedOf b.left
+       else (if b.op = BComma then unsignedOf b.right
+       else unsignedOf b.left || unsignedOf b.right end if) end if) end if)
+    when Cond k then unsignedOf k.yes || unsignedOf k.no
+    when MinVersion m then false
+    when MinGhc m then false
+  end case
+end function
+
+function broken (env :: Env) (e :: CExpr) -> Bool is
+  first matching case of e :
+    when Lit n then false
+    when ULit n then false
+    when Name n then isVersionName n && packageState env (prelude.drop 8 n) = 1
+    when IsDefined n then false
+    when Un u then broken env u.arg
+    when Bin b then broken env b.left || broken env b.right
+    when Cond k then broken env k.test || broken env k.yes || broken env k.no
+    when MinVersion m then
+      packageState env m.pkg = 0 || (env.complete && packageState env m.pkg = 2) || broken env m.major1 || broken env m.major2 || broken env m.minor
+    when MinGhc m then
+      (first matching case of prelude.lookup (ghcName unitValue) env.names :
+        when Present (Defined v) then false
+        when Present Undefined then true
+        when Absent then env.complete
+      end case) || broken env m.major1 || broken env m.major2 || broken env m.patch1 || broken env m.patch2
+  end case
+end function
+
+function evalIn (env :: Env) (e :: CExpr) -> Outcome is
+  first matching case of e :
+    when Lit n then (if n < 0 || n > maxULit unitValue then Bad else Known (wrap n) end if)
+    when ULit n then (if n < 0 || n > maxULit unitValue then Bad else Known (wrap n) end if)
+    when Name n then valueOf env n
+    when IsDefined n then definedOf env n
+    when Un u then unary u.op (evalIn env u.arg)
+    when Bin b then binaryAs (unsignedOf b.left) (unsignedOf b.right) b.op (evalIn env b.left) (evalIn env b.right)
+    when Cond k then conditional (evalIn env k.test) (evalIn env k.yes) (evalIn env k.no)
+    when MinVersion m then
+      (let a = evalIn env m.major1 in let b = evalIn env m.major2 in let mn = evalIn env m.minor in
+        (first matching case of prelude.lookup m.pkg env.versions :
+          when Present v then (if isBad a || isBad b || isBad mn then Bad else minVersion v a b mn end if)
+          when Absent then unknownCall ("MIN_VERSION_" ++ m.pkg) [a, b, mn]
+        end case) end let end let end let)
+    when MinGhc m then
+      (let a = evalIn env m.major1 in let b = evalIn env m.major2 in let p = evalIn env m.patch1 in let q = evalIn env m.patch2 in
+        (if isBad a || isBad b || isBad p || isBad q then Bad
+         else (if prelude.lookup (ghcName unitValue) env.names matches Present _ then minGhc env a b p q
+         else unknownCall (ghcName unitValue) [a, b, p, q] end if) end if) end let end let end let end let)
+  end case
+end function
+
+function refEval (env :: Env) (e :: CExpr) -> Outcome is if broken env e then Bad else evalIn env e end if end function
+
+-- ---------------------------------------------------------------------------
+-- A fact's condition (next-cycle-4/design.md, sections 3 and 4).
+--
+-- A TERM is one directive's condition, as written. A LITERAL is a term or
+-- its negation. A CUBE is a list of literals: a set of builds, those in
+-- which every literal holds. A CONDITION is a list of cubes: the builds of
+-- any of them. One cube with no literal is every build; no cube is none.
+--
+-- THE TEXT. A literal is `!(T)` when negated; else T as it is when T is
+-- simple (a name, a name with one argument list that holds no parenthesis,
+-- or digits), and `(T)` when it is not, also when it stands alone. A cube's
+-- literals are joined by ` && `, a condition's cubes by ` || `. So every
+-- `&&` and `||` outside all parentheses is a join, never part of a term,
+-- and the terms can be read back from the text.
+--
+-- THE MEANING is the C preprocessor's, for a path of nested directives. A
+-- cube is read from the left: each term is evaluated as one directive's
+-- expression (`refEval`), and a literal that fails decides the cube before
+-- any later term is read, as an outer `#if` that fails skips the
+-- directives inside it. So `defined(MIN_VERSION_p) && MIN_VERSION_p(1,2,3)`
+-- as two terms is 0 without the package; as one directive's expression it
+-- cannot be evaluated, in C as here. The cubes are read from the left too,
+-- and one that holds decides. What is not known combines as `&&` and `||`
+-- do (`logical`).
+
+type Literal is a record{
+  negated :: Bool
+  text :: Text
+  expr :: CExpr}
+end type
+
+function simple (t :: Text) -> Bool is t matches regex "[A-Za-z_][A-Za-z0-9_]*(\\([^()]*\\))?|[0-9]+" end function
+
+function litText (l :: Literal) -> Text is
+  if l.negated then "!(" ++ l.text ++ ")" else (if simple l.text then l.text else "(" ++ l.text ++ ")" end if) end if
+end function
+
+function cubeText (ls :: List Literal) -> Text is
+  first matching case of ls :
+    when Nil then ""
+    when Cons l rest then litText l ++ (if prelude.length rest = 0 then "" else " && " ++ cubeText rest end if)
+  end case
+end function
+
+function cubesText (cs :: List (List Literal)) -> Text is
+  first matching case of cs :
+    when Nil then ""
+    when Cons k rest then cubeText k ++ (if prelude.length rest = 0 then "" else " || " ++ cubesText rest end if)
+  end case
+end function
+
+function emptyCube (ls :: List Literal) -> Bool is prelude.length ls = 0 end function
+
+-- No text for every build; `0` for no build (no fact has it: a fact is
+-- seen in some build).
+function conditionText (cs :: List (List Literal)) -> Text is
+  if prelude.length cs = 0 then "0" else (if prelude.any emptyCube cs then "" else cubesText cs end if) end if
+end function
+
+-- 1 or 0 for a known value, as a literal is true or false.
+function asTruth (o :: Outcome) -> Outcome is
+  first matching case of o : when Known v then Known (truth (v != 0)) when Unknown u then o when Bad then Bad end case
+end function
+
+function litOutcome (env :: Env) (l :: Literal) -> Outcome is
+  if l.negated then unary UNot (refEval env l.expr) else asTruth (refEval env l.expr) end if
+end function
+
+function cubeFrom (env :: Env) (acc :: Outcome) (ls :: List Literal) -> Outcome is
+  first matching case of ls :
+    when Nil then acc
+    when Cons l rest then (if acc = Known 0 then acc else cubeFrom env (logical true acc (litOutcome env l)) rest end if)
+  end case
+end function
+
+function cubeOutcome (env :: Env) (ls :: List Literal) -> Outcome is cubeFrom env (Known 1) ls end function
+
+function cubesFrom (env :: Env) (acc :: Outcome) (cs :: List (List Literal)) -> Outcome is
+  first matching case of cs :
+    when Nil then acc
+    when Cons k rest then (if acc = Known 1 then acc else cubesFrom env (logical false acc (cubeOutcome env k)) rest end if)
+  end case
+end function
+
+function refCondition (env :: Env) (cs :: List (List Literal)) -> Outcome is cubesFrom env (Known 0) cs end function
+
+-- A file with more builds than are read (design.md, section 3, rule C2):
+-- its facts carry this text. It is a C string, which no preprocessor and
+-- no evaluator can take for a value: the fact is never decided.
+function buildCap (u :: Unit) -> Integer is 256 end function
+function unreadText (u :: Unit) -> Text is "\"unread\"" end function
+
+-- A directive whose parentheses do not pair off cannot stand in a
+-- condition's text (the terms could not be read back). It is written as
+-- this C string, with its line: it cannot be evaluated, in C or here.
+function unreadableTerm (line :: Integer) -> Text is "\"unreadable #if at line " ++ prelude.textOf line ++ "\"" end function
+
+-- Next cycle 7 (next-cycle-7/design.md, section 4, rule C8; review 9, B2).
+-- A directive that reads a name the file itself has defined or undefined,
+-- and that the file's definitions alone do not decide, is no question for
+-- the environment: the environment's value of the name is not the one the
+-- preprocessor reads there. It is written as this C string, with its
+-- line, and is never decided.
+function fileDefinedTerm (line :: Integer) -> Text is "\"#if at line " ++ prelude.textOf line ++ " reads a name the file defines\"" end function
+
+function depthAfter (t :: Text) (i :: Integer) (n :: Integer) (d :: Integer) -> Integer is
+  if i >= n || d < 0 then d
+  else (let ch = prelude.take 1 (prelude.drop i t) in
+    depthAfter t (i + 1) n (if ch = "(" then d + 1 else (if ch = ")" then d - 1 else d end if) end if) end let) end if
+end function
+
+-- The parentheses of a text pair off: every `)` closes an earlier `(`, and
+-- none is left open. Every character counts, in a comment or a quote too.
+function paired (t :: Text) -> Bool is depthAfter t 0 (prelude.length t) 0 = 0 end function
+
+-- What a condition does to a fact: true keeps it and clears the condition,
+-- false drops it, anything else keeps it as it is.
+type Verdict is one of | Holds | Fails | Undecided of type Outcome end type
+
+function verdict (o :: Outcome) -> Verdict is
+  first matching case of o :
+    when Known v then (if v != 0 then Holds else Fails end if)
+    when Unknown u then Undecided o
+    when Bad then Undecided o
+  end case
+end function
+
+-- ---------------------------------------------------------------------------
+-- Writing a tree as C text. A style changes the spelling, never the tree.
+--   space        0 tight, 1 one blank, 2 a blank and a tab around a binary operator
+--   wrapAll      every operand in parentheses
+--   definedForm  0 `defined(X)`, 1 `defined X`, 2 `defined ( X )`
+--   litForm      0 decimal, 1 hexadecimal, 2 octal, 3 decimal with an L suffix
+--   comment      a C comment before each binary operator
+
+type Style is a record{
+  space :: Integer
+  wrapAll :: Bool
+  definedForm :: Integer
+  litForm :: Integer
+  comment :: Bool}
+end type
+
+function plainStyle (u :: Unit) -> Style is
+  Style record{ space = 1 , wrapAll = false , definedForm = 0 , litForm = 0 , comment = false}
+end function
+
+function digit (d :: Integer) -> Text is prelude.take 1 (prelude.drop d "0123456789abcdef") end function
+
+function inBase (base :: Integer) (n :: Integer) (fuel :: Integer) -> Text is
+  if fuel <= 0 || n <= 0 then "" else
+    (if base = 8 then inBase base (prelude.quot n 8) (fuel - 1) ++ digit (prelude.rem n 8)
+     else inBase base (prelude.quot n 16) (fuel - 1) ++ digit (prelude.rem n 16) end if)
+  end if
+end function
+
+function showLit (st :: Style) (n :: Integer) -> Text is
+  if st.litForm = 1 then "0x" ++ (if n = 0 then "0" else inBase 16 n 20 end if)
+  else (if st.litForm = 2 then "0" ++ inBase 8 n 24
+  else (if st.litForm = 3 then prelude.textOf n ++ "L" else prelude.textOf n end if) end if) end if
+end function
+
+function unText (op :: UnOp) -> Text is
+  first matching case of op : when UPlus then "+" when UMinus then "-" when UNot then "!" when UCompl then "~" end case
+end function
+
+-- `||` and `|` are written with prelude.drop: a LawSpec text cannot start
+-- with a bar (LawSpec issue 22).
+function binText (op :: BinOp) -> Text is
+  first matching case of op :
+    when BMul then "*" when BDiv then "/" when BRem then "%" when BAdd then "+" when BSub then "-"
+    when BShl then "<<" when BShr then ">>" when BLt then "<" when BLe then "<=" when BGt then ">" when BGe then ">="
+    when BEq then "==" when BNe then "!=" when BAnd then "&" when BXor then "^"
+    when BOr then prelude.drop 1 " |" when BLand then "&&" when BLor then prelude.drop 1 " ||"
+    when BComma then ","
+  end case
+end function
+
+-- C's precedence: a higher level binds tighter. The comma is the loosest
+-- (0): it stands bare only at the top, in parentheses, and between `?`
+-- and `:`; a macro's argument and a conditional's last branch are written
+-- at level 1, so a comma there is put in parentheses.
+function level (op :: BinOp) -> Integer is
+  first matching case of op :
+    when BComma then 0
+    when BLor then 2 when BLand then 3 when BOr then 4 when BXor then 5 when BAnd then 6
+    when BEq then 7 when BNe then 7 when BLt then 8 when BLe then 8 when BGt then 8 when BGe then 8
+    when BShl then 9 when BShr then 9 when BAdd then 10 when BSub then 10
+    when BMul then 11 when BDiv then 11 when BRem then 11
+  end case
+end function
+
+function gap (st :: Style) -> Text is
+  if st.space = 0 then "" else (if st.space = 1 then " " else " \t" end if) end if
+end function
+
+function parenIf (b :: Bool) (t :: Text) -> Text is if b then "(" ++ t ++ ")" else t end if end function
+
+-- The text between an operator and its right operand: never empty when the
+-- two would lex as one token (`- -1`, `+ +1`).
+function joint (st :: Style) (opText :: Text) (rightText :: Text) -> Text is
+  if st.space = 0 && prelude.take 1 rightText = prelude.drop (prelude.length opText - 1) opText then " " else gap st end if
+end function
+
+-- The text between a left operand and its operator. `0x38e+1` is one
+-- preprocessing number in C (an `e` and a sign continue a number), and an
+-- error; so a sign after a text that ends in `e` is set off by a blank.
+function numberGap (st :: Style) (leftText :: Text) (op :: BinOp) -> Text is
+  if st.space = 0 && !st.comment && prelude.endsWith leftText "e" && (op = BAdd || op = BSub) then " " else gap st end if
+end function
+
+-- `showAt st p e`: e as text where an operand of level p is expected
+-- (0 anything, 1 a conditional's last branch, 12 a unary operand).
+function showAt (st :: Style) (p :: Integer) (e :: CExpr) -> Text is
+  first matching case of e :
+    when Lit n then showLit st n
+    when ULit n then showLit st n ++ (if st.space = 2 then "u" else "U" end if)
+    when Name n then n
+    when IsDefined n then
+      (if st.definedForm = 1 then "defined " ++ n else (if st.definedForm = 2 then "defined ( " ++ n ++ " )" else "defined(" ++ n ++ ")" end if) end if)
+    when Un u then
+      parenIf (p > 12 || st.wrapAll) (unText u.op ++ (let t = showAt st 12 u.arg in (if prelude.take 1 t = unText u.op && (u.op = UPlus || u.op = UMinus) then " " ++ t else t end if) end let))
+    when Bin b then
+      parenIf (p > level b.op || st.wrapAll)
+        (let r = showAt st (level b.op + 1) b.right in
+         let l = showAt st (level b.op) b.left in
+          l ++ (if st.comment then " /* c */" else "" end if) ++ numberGap st l b.op ++ binText b.op ++ joint st (binText b.op) r ++ r end let end let)
+    when Cond k then
+      parenIf (p > 1 || st.wrapAll) (showAt st 2 k.test ++ gap st ++ "?" ++ gap st ++ showAt st 0 k.yes ++ gap st ++ ":" ++ gap st ++ showAt st 1 k.no)
+    when MinVersion m then
+      "MIN_VERSION_" ++ m.pkg ++ "(" ++ showAt st 1 m.major1 ++ "," ++ gap st ++ showAt st 1 m.major2 ++ "," ++ gap st ++ showAt st 1 m.minor ++ ")"
+    when MinGhc m then
+      "MIN_VERSION_GLASGOW_HASKELL(" ++ showAt st 1 m.major1 ++ "," ++ showAt st 1 m.major2 ++ "," ++ gap st ++ showAt st 1 m.patch1 ++ "," ++ showAt st 1 m.patch2 ++ ")"
+  end case
+end function
+
+function showExpr (st :: Style) (e :: CExpr) -> Text is showAt st 0 e end function
+
+-- ---------------------------------------------------------------------------
+-- Drawn values. Total functions of a seed: no filter, no retry.
+
+function mix (seed :: Integer) (k :: Integer) -> Integer is
+  prelude.rem (((if seed < 0 then 0 - seed else seed end if) + k * 7919 + 1) * 1103515245 + 12345) 2147483648
+end function
+
+function pick (seed :: Integer) (k :: Integer) (n :: Integer) -> Integer is
+  if n <= 1 then 0 else prelude.rem (prelude.quot (mix seed k) 8) n end if
+end function
+
+function chosen (i :: Integer) (xs :: List Text) (otherwise_ :: Text) -> Text is
+  first matching case of prelude.at i xs : when Present x then x when Absent then otherwise_ end case
+end function
+
+function namePool (u :: Unit) -> List Text is
+  ["A", "B", "C_d", "__GLASGOW_HASKELL__", "__GLASGOW_HASKELL_PATCHLEVEL1__", "__GLASGOW_HASKELL_PATCHLEVEL2__", "mingw32_HOST_OS", "Zq"]
+end function
+
+-- Names an expression may use as values: the pool, and two macro names
+-- written without arguments.
+function valuePool (u :: Unit) -> List Text is namePool unitValue ++ ["MIN_VERSION_base", "MIN_VERSION_GLASGOW_HASKELL", "VERSION_base"] end function
+
+function packagePool (u :: Unit) -> List Text is ["base", "unordered_containers", "ghc"] end function
+
+function litPool (i :: Integer) -> Integer is
+  first matching case of i :
+    when 0 then 0 when 1 then 1 when 2 then 2 when 3 then 3 when 4 then 4 when 5 then 8 when 6 then 9
+    when 7 then 63 when 8 then 64 when 9 then 65 when 10 then 100 when 11 then 908 when 12 then 910
+    when 13 then 9223372036854775807 when 14 then 4611686018427387904
+    when 16 then 18446744073709551615 when 17 then 9223372036854775808
+    otherwise 7
+  end case
+end function
+
+-- Literals with a `u` suffix (next cycle 7).
+function ulitPool (i :: Integer) -> Integer is
+  first matching case of i :
+    when 0 then 0 when 1 then 1 when 2 then 18446744073709551615 when 3 then 9223372036854775808
+    otherwise 3
+  end case
+end function
+
+function unOpOf (i :: Integer) -> UnOp is
+  first matching case of i : when 0 then UPlus when 1 then UMinus when 2 then UNot otherwise UCompl end case
+end function
+
+function binOpOf (i :: Integer) -> BinOp is
+  first matching case of i :
+    when 0 then BMul when 1 then BDiv when 2 then BRem when 3 then BAdd when 4 then BSub when 5 then BShl when 6 then BShr
+    when 7 then BLt when 8 then BLe when 9 then BGt when 10 then BGe when 11 then BEq when 12 then BNe
+    when 13 then BAnd when 14 then BXor when 15 then BOr when 16 then BLand
+    when 17 then BLor
+    otherwise BComma
+  end case
+end function
+
+function leafOf (seed :: Integer) -> CExpr is
+  let k = pick seed 1 4 in
+    (if k = 0 then (if pick seed 16 5 = 0 then ULit (ulitPool (pick seed 2 5)) else Lit (litPool (pick seed 2 18)) end if)
+     else (if k = 1 then Name (chosen (pick seed 3 (if pick seed 15 8 = 0 then 11 else 8 end if)) (valuePool unitValue) "A")
+     else (if k = 2 then IsDefined (chosen (pick seed 3 11) (valuePool unitValue) "A")
+     else Lit (pick seed 4 4) end if) end if) end if)
+  end let
+end function
+
+-- An expression of at most `depth` operators deep. Half the inner nodes are
+-- `&&`, `||`, `!` or a comparison, as real conditions are.
+function nodeOf (seed :: Integer) (l :: CExpr) (r :: CExpr) (third :: CExpr) -> CExpr is
+  let k = pick seed 5 12 in
+    (if k = 0 then leafOf seed
+     else (if k = 1 then Un record{ op = unOpOf (pick seed 6 4) , arg = l}
+     else (if k = 2 then Un record{ op = UNot , arg = l}
+     else (if k = 3 then Cond record{ test = l , yes = r , no = third}
+     else (if k = 4 then MinVersion record{ pkg = chosen (pick seed 7 3) (packagePool unitValue) "base" , major1 = Lit (pick seed 8 6) , major2 = Lit (pick seed 9 20) , minor = (if pick seed 10 4 = 0 then r else Lit (pick seed 14 3) end if)}
+     else (if k = 5 then MinGhc record{ major1 = Lit (8 + pick seed 8 3) , major2 = Lit (pick seed 9 12) , patch1 = Lit (pick seed 10 3) , patch2 = Lit (pick seed 14 2)}
+     else (if k = 6 then Bin record{ op = BLand , left = l , right = r}
+     else (if k = 7 then Bin record{ op = BLor , left = l , right = r}
+     else (if k = 8 then Bin record{ op = binOpOf (7 + pick seed 6 6) , left = l , right = r}
+     else Bin record{ op = binOpOf (pick seed 6 19) , left = l , right = r} end if) end if) end if) end if) end if) end if) end if) end if) end if)
+  end let
+end function
+
+function exprOf (seed :: Integer) (depth :: Integer) -> CExpr is
+  if depth <= 0 then leafOf seed
+  else nodeOf seed (exprOf (mix seed 11) (depth - 1)) (exprOf (mix seed 12) (depth - 1)) (exprOf (mix seed 13) (depth - 1)) end if
+end function
+
+function styleOf (seed :: Integer) -> Style is
+  Style record{ space = pick seed 21 3 , wrapAll = pick seed 22 5 = 0 , definedForm = pick seed 23 3 , litForm = pick seed 24 4 , comment = pick seed 25 6 = 0}
+end function
+
+-- A drawn literal, cube and condition: up to three cubes of up to three
+-- literals; a term is an expression of at most two operators deep, written
+-- in the style.
+function litOf (st :: Style) (seed :: Integer) -> Literal is
+  let e = exprOf (mix seed 31) 2 in Literal record{ negated = pick seed 32 3 = 0 , text = showExpr st e , expr = e} end let
+end function
+
+function cubeOf (st :: Style) (seed :: Integer) (n :: Integer) -> List Literal is
+  if n <= 0 then [] else [litOf st (mix seed (33 + n))] ++ cubeOf st seed (n - 1) end if
+end function
+
+function cubesOf (st :: Style) (seed :: Integer) (n :: Integer) -> List (List Literal) is
+  if n <= 0 then [] else [cubeOf st (mix seed (36 + n)) (1 + pick seed (39 + n) 3)] ++ cubesOf st seed (n - 1) end if
+end function
+
+function condOf (st :: Style) (seed :: Integer) -> List (List Literal) is cubesOf st seed (1 + pick seed 30 3) end function
+
+function bindingOf (seed :: Integer) (k :: Integer) -> Binding is
+  let c = pick seed (40 + k) 6 in
+    (if c = 0 then Undefined else (if c = 1 then Defined 0 else (if c = 2 then Defined 1 else (if c = 3 then Defined 908 else (if c = 4 then Defined (0 - 3) else Defined (pick seed (60 + k) 1000) end if) end if) end if) end if) end if)
+  end let
+end function
+
+-- Each name of the pool is bound with chance `num` in 4.
+function namesFrom (seed :: Integer) (num :: Integer) (ns :: List Text) (k :: Integer) (acc :: KeyVal Text Binding) -> KeyVal Text Binding is
+  first matching case of ns :
+    when Nil then acc
+    when Cons n rest then
+      namesFrom seed num rest (k + 1) (if pick seed (80 + k) 4 < num && !(prelude.lookup n acc matches Present _) then prelude.put n (bindingOf seed k) acc else acc end if)
+  end case
+end function
+
+function versionOf (seed :: Integer) (k :: Integer) -> List Integer is
+  let c = pick seed (100 + k) 4 in
+    (if c = 0 then [4] else (if c = 1 then [4, 8] else (if c = 2 then [4, 18, 1] else [pick seed (110 + k) 6, pick seed (120 + k) 20, pick seed (130 + k) 3, 7] end if) end if) end if)
+  end let
+end function
+
+function versionsFrom (seed :: Integer) (num :: Integer) (ps :: List Text) (k :: Integer) (acc :: KeyVal Text (List Integer)) -> KeyVal Text (List Integer) is
+  first matching case of ps :
+    when Nil then acc
+    when Cons p rest then
+      versionsFrom seed num rest (k + 1) (if pick seed (140 + k) 4 < num && !(prelude.lookup p acc matches Present _) then prelude.put p (versionOf seed k) acc else acc end if)
+  end case
+end function
+
+-- An environment that knows some of the pool's names.
+function envOf (seed :: Integer) -> Env is
+  Env record{ names = namesFrom seed 2 (namePool unitValue) 0 (prelude.keyValOf []) ,
+              versions = versionsFrom seed 2 (packagePool unitValue) 0 (prelude.keyValOf []) ,
+              complete = false}
+end function
+
+-- The same environment and more: every binding of `env` is kept.
+function extended (env :: Env) (seed :: Integer) -> Env is
+  env with names = namesFrom seed 3 (namePool unitValue) 0 env.names , versions = versionsFrom seed 3 (packagePool unitValue) 0 env.versions
+end function
+
+function completed (env :: Env) -> Env is env with complete = true end function
+
+function emptyEnv (u :: Unit) -> Env is
+  Env record{ names = prelude.keyValOf [] , versions = prelude.keyValOf [] , complete = false}
+end function
+
+-- ---------------------------------------------------------------------------
+-- The reference agrees with itself.
+
+law "|what the reference knows stays so when more names are given| is
+  id: "WHP-1"
+  description :
+    "Soundness and monotonicity of the reference. If an expression is Known
+    under some names, it has that value under every environment that keeps
+    those names and adds more, complete or not; if it is Bad, it stays Bad.
+    A fact made unconditional or dropped is therefore right for every build
+    the given names describe. The names still missing only shrink, but for
+    GHC's two patch-level names, which the version macro asks for only once
+    __GLASGOW_HASKELL__ has a value (WHEN-3b; next-cycle-3/design.md,
+    section 11). The one exception is about ONE directive's expression: an
+    environment that lacks a macro the expression calls (a complete one, or
+    one that says the package absent) makes the whole expression Bad. It is
+    no exception for a path of directives: WHP-10 (review 7, S1)."
+  end description
+  definition :
+    for all (se :: Integer) (sx :: Integer) (more :: Integer) (full :: Bool) =>
+      (let e = exprOf sx 4 in let env = envOf se in
+       let later = (if full then completed (extended env more) else extended env more end if) in
+        (if broken later e then refEval later e = Bad
+         else (first matching case of refEval env e :
+          when Known v then refEval later e = Known v
+          when Bad then refEval later e = Bad
+          when Unknown u then prelude.all (stillMissing u.missing) (missingOf (refEval later e))
+        end case) end if) end let end let end let)
+    end for all
+  end definition
+end law
+
+law "|a complete environment leaves nothing unknown| is
+  id: "WHP-2"
+  definition :
+    for all (se :: Integer) (sx :: Integer) =>
+      !(refEval (completed (envOf se)) (exprOf sx 4) matches Unknown _)
+    end for all
+  end definition
+end law
+
+law "|the missing names are names of the expression that have no value| is
+  id: "WHP-3"
+  description :
+    "Every missing name is unbound in the environment: a bound name is never
+    asked for again."
+  end description
+  definition :
+    for all (se :: Integer) (sx :: Integer) =>
+      prelude.all (unbound (envOf se)) (missingOf (refEval (envOf se) (exprOf sx 4)))
+    end for all
+  end definition
+end law
+
+-- Next cycle 7 (review 9, N2).
+function minusOne (u :: Unit) -> CExpr is Un record{ op = UMinus , arg = Lit 1} end function
+
+function op2 (op :: BinOp) (l :: CExpr) (r :: CExpr) -> CExpr is Bin record{ op = op , left = l , right = r} end function
+
+law "|unsigned values, a literal past 63 bits, and the comma are answered as GHC's preprocessor answers them| is
+  id: "WHP-15"
+  description :
+    "Review 9, N2: forms the evaluator refused and the preprocessor
+    evaluates. A literal with a `u` suffix is unsigned, and so is an
+    operation with an unsigned operand: `-1 < 0u` is false, `-1 / 2u` is
+    2^63 - 1, `-1u >> 1` fills with a zero, and `-1 >> 1u` does not (a
+    shift has its left operand's kind). A conditional is unsigned when
+    either branch is, the one not taken included. An unsigned shift
+    count is never negative. A literal with no suffix past 2^63 - 1 is
+    kept signed and wraps, as `cpp -traditional` has it (the mode GHC
+    reads Haskell sources in; the standard mode makes it unsigned, and
+    the two answer `18446744073709551615 > 0` differently). The comma
+    evaluates both sides and has the right side's value and kind; an
+    error on the left is an error. Every row was run through `cpp -undef
+    -traditional -nostdinc` (GCC 15.2) as `#if <text>`, by
+    next-cycle-7/tools/exprs.py, before this was written."
+  end description
+  definition :
+    refEval (emptyEnv unitValue) (op2 BLt (minusOne unitValue) (ULit 0)) = Known 0
+    && refEval (emptyEnv unitValue) (op2 BLt (minusOne unitValue) (Lit 0)) = Known 1
+    && refEval (emptyEnv unitValue) (op2 BLt (Cond record{ test = Lit 0 , yes = ULit 1 , no = minusOne unitValue}) (Lit 0)) = Known 0
+    && refEval (emptyEnv unitValue) (op2 BLt (Cond record{ test = Lit 1 , yes = minusOne unitValue , no = ULit 0}) (Lit 0)) = Known 0
+    && refEval (emptyEnv unitValue) (op2 BDiv (minusOne unitValue) (ULit 2)) = Known 9223372036854775807
+    && refEval (emptyEnv unitValue) (op2 BDiv (minusOne unitValue) (Lit 2)) = Known 0
+    && refEval (emptyEnv unitValue) (op2 BRem (Un record{ op = UMinus , arg = Lit 7}) (ULit 3)) = Known 0
+    && refEval (emptyEnv unitValue) (op2 BShr (Un record{ op = UMinus , arg = ULit 1}) (Lit 1)) = Known 9223372036854775807
+    && refEval (emptyEnv unitValue) (op2 BShr (minusOne unitValue) (ULit 1)) = Known (0 - 1)
+    && refEval (emptyEnv unitValue) (op2 BShl (Lit 1) (ULit 64)) = Known 0
+    && refEval (emptyEnv unitValue) (op2 BShl (Lit 1) (Un record{ op = UMinus , arg = ULit 1})) = Known 0
+    && refEval (emptyEnv unitValue) (op2 BShr (Lit 4) (Un record{ op = UMinus , arg = ULit 1})) = Known 0
+    && refEval (emptyEnv unitValue) (op2 BGt (op2 BSub (Lit 1) (ULit 2)) (Lit 0)) = Known 1
+    && refEval (emptyEnv unitValue) (op2 BLt (op2 BSub (Un record{ op = UNot , arg = ULit 1}) (Lit 1)) (Lit 0)) = Known 1
+    && refEval (emptyEnv unitValue) (op2 BEq (Un record{ op = UCompl , arg = ULit 0}) (ULit 18446744073709551615)) = Known 1
+    && refEval (emptyEnv unitValue) (ULit 18446744073709551615) = Known (0 - 1)
+    && refEval (emptyEnv unitValue) (ULit 18446744073709551616) = Bad
+    && refEval (emptyEnv unitValue) (Lit 18446744073709551615) = Known (0 - 1)
+    && refEval (emptyEnv unitValue) (op2 BGt (Lit 18446744073709551615) (Lit 0)) = Known 0
+    && refEval (emptyEnv unitValue) (Lit 9223372036854775808) = Known (0 - 9223372036854775808)
+    && refEval (emptyEnv unitValue) (Lit 18446744073709551616) = Bad
+    && refEval (emptyEnv unitValue) (op2 BComma (Lit 1) (Lit 2)) = Known 2
+    && refEval (emptyEnv unitValue) (op2 BComma (Lit 1) (Lit 0)) = Known 0
+    && refEval (emptyEnv unitValue) (op2 BComma (op2 BDiv (Lit 1) (Lit 0)) (Lit 1)) = Bad
+    && refEval (emptyEnv unitValue) (op2 BLt (op2 BComma (ULit 0) (minusOne unitValue)) (Lit 0)) = Known 1
+    && refEval (emptyEnv unitValue) (op2 BLt (op2 BComma (minusOne unitValue) (ULit 0)) (Lit 1)) = Known 1
+    && refEval (emptyEnv unitValue) (op2 BComma (Name "A") (Lit 3)) = Known 3
+    && refEval (emptyEnv unitValue) (op2 BComma (op2 BDiv (Lit 1) (Name "A")) (Lit 3)) = unknown ["A"] true
+    && refEval (emptyEnv unitValue) (op2 BComma (Lit 3) (Name "A")) = unknown ["A"] false
+    && unsignedOf (op2 BAdd (Lit 1) (ULit 1)) && !(unsignedOf (op2 BLt (Lit 1) (ULit 1))) && !(unsignedOf (op2 BShl (Lit 1) (ULit 1)))
+    && unsignedOf (op2 BShr (ULit 1) (Lit 1)) && !(unsignedOf (Un record{ op = UNot , arg = ULit 1})) && unsignedOf (Un record{ op = UCompl , arg = ULit 1})
+    && showExpr (plainStyle unitValue) (op2 BComma (Lit 1) (ULit 2)) = "1 , 2U"
+    && showExpr (plainStyle unitValue) (op2 BAdd (op2 BComma (Lit 1) (Lit 2)) (Lit 3)) = "(1 , 2) + 3"
+    && showExpr (plainStyle unitValue) (Cond record{ test = Lit 1 , yes = op2 BComma (Lit 2) (Lit 0) , no = op2 BComma (Lit 3) (Lit 4)}) = "1 ? 2 , 0 : (3 , 4)"
+    && showExpr (plainStyle unitValue) (MinVersion record{ pkg = "base" , major1 = op2 BComma (Lit 1) (Lit 4) , major2 = Lit 8 , minor = Lit 0})
+         = "MIN_VERSION_base((1 , 4), 8, 0)"
+  end definition
+end law
+
+function inList (xs :: List Text) (n :: Text) -> Bool is xs contains n end function
+
+-- A name still missing was missing before; GHC's patch levels may be asked
+-- for once the GHC version is known.
+function stillMissing (before :: List Text) (n :: Text) -> Bool is
+  (before contains n) || ((before contains "__GLASGOW_HASKELL__") && (n = "__GLASGOW_HASKELL_PATCHLEVEL1__" || n = "__GLASGOW_HASKELL_PATCHLEVEL2__"))
+end function
+
+function unbound (env :: Env) (n :: Text) -> Bool is
+  if prelude.startsWith n "MIN_VERSION_" then packageState env (prelude.drop 12 n) = 2
+  else !(prelude.lookup n env.names matches Present _) end if
+end function
+
+-- ---------------------------------------------------------------------------
+-- The reference for a path of directives (next cycle 4).
+
+function chosenOf (se :: Integer) (full :: Bool) -> Env is if full then completed (envOf se) else envOf se end if end function
+
+function anyBroken (env :: Env) (cs :: List (List Literal)) -> Bool is
+  first matching case of cs : when Nil then false when Cons k rest then cubeBroken env k || anyBroken env rest end case
+end function
+
+function cubeBroken (env :: Env) (ls :: List Literal) -> Bool is
+  first matching case of ls : when Nil then false when Cons l rest then broken env l.expr || cubeBroken env rest end case
+end function
+
+law "|a term that fails decides its path, whatever stands after it| is
+  id: "WHP-10"
+  description :
+    "Review 7, S1. The preprocessor never evaluates a directive inside a
+    group it skips. So in a cube, a literal that is known to fail makes the
+    cube 0 whatever the later literals are: a call of a macro the build
+    does not define, a division by zero, a text that is no expression. And
+    a cube that is known to hold makes the condition 1 whatever the later
+    cubes are. Nothing here is excepted for a complete environment."
+  end description
+  definition :
+    for all (se :: Integer) (sx :: Integer) (sy :: Integer) (full :: Bool) =>
+      (let env = chosenOf se full in let st = plainStyle unitValue in
+       let l = litOf st sx in let after = cubeOf st sy 2 in let k = cubeOf st sx 2 in
+        (litOutcome env l != Known 0 || cubeOutcome env ([l] ++ after) = Known 0)
+          && (cubeOutcome env k != Known 1 || refCondition env ([k] ++ [after]) = Known 1)
+          && (cubeOutcome env k != Known 0 || refCondition env ([k] ++ [after]) = asTruth (cubeOutcome env after))
+      end let end let end let end let end let)
+    end for all
+  end definition
+end law
+
+function thDefined (u :: Unit) -> Literal is Literal record{ negated = false , text = "defined(MIN_VERSION_th)" , expr = IsDefined "MIN_VERSION_th"} end function
+
+function thAtLeast (u :: Unit) -> CExpr is MinVersion record{ pkg = "th" , major1 = Lit 2 , major2 = Lit 16 , minor = Lit 0} end function
+
+function thNew (u :: Unit) -> Literal is Literal record{ negated = false , text = "MIN_VERSION_th(2,16,0)" , expr = thAtLeast unitValue} end function
+
+-- The optional-dependency idiom as nested directives: two terms.
+function idiom (u :: Unit) -> List (List Literal) is [[thDefined unitValue, thNew unitValue]] end function
+
+-- The same text in one directive: one term.
+function idiomInOne (u :: Unit) -> List (List Literal) is
+  [[Literal record{ negated = false , text = "defined(MIN_VERSION_th) && MIN_VERSION_th(2,16,0)" ,
+                expr = Bin record{ op = BLand , left = IsDefined "MIN_VERSION_th" , right = thAtLeast unitValue}}]]
+end function
+
+function nameLit (negated :: Bool) (n :: Text) -> Literal is Literal record{ negated = negated , text = n , expr = Name n} end function
+
+law "|the optional-dependency idiom is decided, with the package given, said absent, or in a complete environment| is
+  id: "WHP-11"
+  description :
+    "Review 7, S1 and S2, on the reference. `#ifdef MIN_VERSION_th` with
+    `#if MIN_VERSION_th(2,16,0)` inside it is a path of two terms: with the
+    package said absent (`undef MIN_VERSION_th`), or not given in a complete
+    environment, the outer term fails and the path is 0; the same text
+    written in one directive cannot be evaluated then, as in C. A later
+    line replaces an earlier one between `package` and `undef
+    MIN_VERSION_`. `package P=V` defines VERSION_P too."
+  end description
+  definition :
+    conditionText (idiom unitValue) = "defined(MIN_VERSION_th) && MIN_VERSION_th(2,16,0)"
+    && conditionText (idiomInOne unitValue) = "(defined(MIN_VERSION_th) && MIN_VERSION_th(2,16,0))"
+    && refCondition (emptyEnv unitValue) (idiom unitValue) = unknown ["MIN_VERSION_th"] false
+    && refCondition (completed (emptyEnv unitValue)) (idiom unitValue) = Known 0
+    && refCondition (envFrom (emptyEnv unitValue) [UnsetPackage "th"]) (idiom unitValue) = Known 0
+    && refCondition (envFrom (emptyEnv unitValue) [SetPackage record{ pkg = "th" , version = [2, 16]}]) (idiom unitValue) = Known 1
+    && refCondition (envFrom (emptyEnv unitValue) [SetPackage record{ pkg = "th" , version = [2, 15, 9]}]) (idiom unitValue) = Known 0
+    && refCondition (envFrom (emptyEnv unitValue) [UnsetPackage "th", SetPackage record{ pkg = "th" , version = [2, 16]}]) (idiom unitValue) = Known 1
+    && refCondition (envFrom (emptyEnv unitValue) [SetPackage record{ pkg = "th" , version = [2, 16]}, UnsetPackage "th"]) (idiom unitValue) = Known 0
+    && refCondition (completed (emptyEnv unitValue)) (idiomInOne unitValue) = Bad
+    && refCondition (envFrom (emptyEnv unitValue) [UnsetPackage "th"]) (idiomInOne unitValue) = Bad
+    && refCondition (envFrom (emptyEnv unitValue) [SetPackage record{ pkg = "th" , version = [2, 16]}]) (idiomInOne unitValue) = Known 1
+    && refEval (envFrom (emptyEnv unitValue) [UnsetPackage "th"]) (thAtLeast unitValue) = Bad
+    && refEval (envFrom (emptyEnv unitValue) [UnsetPackage "th"]) (Name "MIN_VERSION_th") = Known 0
+    && refEval (envFrom (emptyEnv unitValue) [SetPackage record{ pkg = "text" , version = [2, 0]}]) (IsDefined "VERSION_text") = Known 1
+    && refEval (envFrom (emptyEnv unitValue) [SetPackage record{ pkg = "unordered-containers" , version = [0, 2]}]) (IsDefined "VERSION_unordered_containers") = Known 1
+    && refEval (envFrom (emptyEnv unitValue) [UnsetPackage "text"]) (IsDefined "VERSION_text") = Known 0
+    && refEval (envFrom (emptyEnv unitValue) [UnsetPackage "text", FlagName "VERSION_text"]) (IsDefined "VERSION_text") = Known 1
+    && refEval (envFrom (emptyEnv unitValue) [UndefName "VERSION_text"]) (IsDefined "VERSION_text") = Known 0
+    && refEval (emptyEnv unitValue) (IsDefined "VERSION_text") = unknown ["VERSION_text"] false
+    && refEval (completed (emptyEnv unitValue)) (IsDefined "VERSION_text") = Known 0
+    && refEval (envFrom (emptyEnv unitValue) [SetPackage record{ pkg = "text" , version = [2, 0]}]) (Name "VERSION_text") = Bad
+    && refEval (envFrom (emptyEnv unitValue) [SetPackage record{ pkg = "text" , version = [2, 0]}]) (Bin record{ op = BLand , left = Lit 0 , right = Name "VERSION_text"}) = Bad
+    && refEval (envFrom (emptyEnv unitValue) [UnsetPackage "text"]) (Name "VERSION_text") = Known 0
+  end definition
+end law
+
+law "|a condition's text: literals, cubes, every build and no build| is
+  id: "WHP-12"
+  description :
+    "Rule C7 (next-cycle-4/design.md, section 3). A term that is not simple
+    stands in parentheses, also alone; `&&` joins a cube and `||` the
+    cubes, with no parentheses around a cube; a cube with no literal is
+    every build, and its condition has no text."
+  end description
+  definition :
+    conditionText [[nameLit false "A"]] = "A"
+    && conditionText [[nameLit true "A"]] = "!(A)"
+    && conditionText [[nameLit false "A", nameLit true "B"]] = "A && !(B)"
+    && conditionText [[nameLit false "A"], [nameLit true "A", nameLit false "B"]] = "A || !(A) && B"
+    && conditionText [[Literal record{ negated = false , text = "A >= 2" , expr = Bin record{ op = BGe , left = Name "A" , right = Lit 2}}]] = "(A >= 2)"
+    && conditionText [[Literal record{ negated = true , text = "A >= 2" , expr = Bin record{ op = BGe , left = Name "A" , right = Lit 2}}]] = "!(A >= 2)"
+    && conditionText [[Literal record{ negated = false , text = "!defined(B)" , expr = Un record{ op = UNot , arg = IsDefined "B"}}, nameLit false "A"]] = "(!defined(B)) && A"
+    && conditionText [[]] = ""
+    && conditionText [[nameLit false "A"], []] = ""
+    && conditionText [] = "0"
+    && simple "MIN_VERSION_base(4,8,0)" && simple "defined(X)" && simple "x_1" && simple "0" && !(simple "defined X") && !(simple "f(g(1))") && !(simple "!X") && !(simple "A B")
+    && paired "" && paired "(A) && (B || f(1))" && !(paired "A) || (B") && !(paired "(A") && !(paired "A)")
+    && unreadableTerm 3 = "\"unreadable #if at line 3\""
+    && fileDefinedTerm 14 = "\"#if at line 14 reads a name the file defines\""
+    && unreadText unitValue = "\"unread\""
+    && refCondition (emptyEnv unitValue) [] = Known 0
+    && refCondition (emptyEnv unitValue) [[]] = Known 1
+  end definition
+end law
+
+law "|what a condition was known to be stays so when more names are given| is
+  id: "WHP-13"
+  description :
+    "Monotonicity for a path of directives: a condition that is Known under
+    some names has that value under an environment that keeps them and
+    adds more, unless one of its terms then calls a macro the environment
+    lacks."
+  end description
+  definition :
+    for all (se :: Integer) (sx :: Integer) (more :: Integer) (full :: Bool) =>
+      (let k = condOf (plainStyle unitValue) sx in let env = envOf se in
+       let later = (if full then completed (extended env more) else extended env more end if) in
+        (first matching case of refCondition env k :
+          when Known v then anyBroken later k || refCondition later k = Known v
+          when Bad then true
+          when Unknown u then true
+        end case) end let end let end let)
+    end for all
+  end definition
+end law
+
+-- ---------------------------------------------------------------------------
+-- Bindings: the lines of a `--when-file`, and the values of `--when` (each
+-- value is one such line). In order; a later line replaces an earlier one.
+--   NAME=V             NAME is defined with the integer V
+--   NAME               NAME is defined as 1 (as `cc -DNAME`)
+--   undef NAME         NAME is not defined (as `cc -UNAME`)
+--   package P=X.Y.Z    package P at that version: MIN_VERSION_P(a,b,c),
+--                      and VERSION_P is defined
+--   undef MIN_VERSION_P   the build does not depend on package P (P in its
+--                      macro spelling, `-` written `_`): neither macro is
+--                      defined (next cycle 4; review 7, S1)
+--   # ...  or a blank line: skipped
+-- NAME is a C identifier that does not start with MIN_VERSION_ (those
+-- macros come from `package` lines) and is not `defined` (C rejects it as
+-- a macro name). V is a decimal, hexadecimal (0x) or
+-- octal (leading 0) integer, with an optional `-` before it, inside 64
+-- bits. P is a Cabal package name; a version is one or more numbers
+-- joined by dots. Blanks, tabs and carriage returns around a line are
+-- dropped (a line of a file written with CRLF, or with a lone CR at its
+-- end, reads as the same line without it); inside it blanks stand only
+-- where shown, as one blank. An error names the line as given, less any
+-- carriage return at its end.
+
+type BindingLine is one of
+  | SetName of type record{ name :: Text , value :: Integer , form :: Integer}
+  | FlagName of type Text
+  | UndefName of type Text
+  | SetPackage of type record{ pkg :: Text , version :: List Integer}
+  | UnsetPackage of type Text
+  | Remark of type Text
+  | Blank
+end type
+
+type BindingError is a record{
+  line :: Integer
+  text :: Text}
+end type
+
+-- A line as an error names it (next cycle 6; review 8, N5): a carriage
+-- return inside the line is kept by the reader (W2) and, printed raw, makes
+-- a terminal draw the rest of the message over its start. It is written as
+-- the two characters `\r`. Nothing else is changed.
+function shownLine (t :: Text) (fuel :: Integer) -> Text is
+  if fuel <= 0 || prelude.length t = 0 then ""
+  else (if prelude.take 1 t = "\r" then "\\r" else prelude.take 1 t end if) ++ shownLine (prelude.drop 1 t) (fuel - 1) end if
+end function
+
+-- The usage error ax prints (after `ax: `) and exits with status 2.
+-- `origin` is the file's path, or `--when` for a flag's value.
+function bindingErrorText (origin :: Text) (e :: BindingError) -> Text is
+  "when: " ++ origin ++ ":" ++ prelude.textOf e.line ++ ": cannot read \"" ++ shownLine e.text (prelude.length e.text) ++ "\""
+end function
+
+function dotted (v :: List Integer) -> Text is
+  first matching case of v :
+    when Nil then ""
+    when Cons x rest then prelude.textOf x ++ (if prelude.length rest = 0 then "" else "." ++ dotted rest end if)
+  end case
+end function
+
+function showValue (form :: Integer) (v :: Integer) -> Text is
+  (if v < 0 then "-" else "" end if) ++
+    showLit (Style record{ space = 0 , wrapAll = false , definedForm = 0 , litForm = (if form = 1 || form = 2 then form else 0 end if) , comment = false}) (if v < 0 then 0 - v else v end if)
+end function
+
+function lineText (b :: BindingLine) -> Text is
+  first matching case of b :
+    when SetName n then n.name ++ "=" ++ showValue n.form n.value
+    when FlagName n then n
+    when UndefName n then "undef " ++ n
+    when SetPackage k then "package " ++ k.pkg ++ "=" ++ dotted k.version
+    when UnsetPackage p then "undef MIN_VERSION_" ++ p
+    when Remark t then "# " ++ t
+    when Blank then ""
+  end case
+end function
+
+function linesText (bs :: List BindingLine) -> List Text is
+  first matching case of bs : when Nil then [] when Cons b rest then [lineText b] ++ linesText rest end case
+end function
+
+-- Each `-` of a package name is `_` in its macro.
+function macroName (p :: Text) (fuel :: Integer) -> Text is
+  if fuel <= 0 || prelude.length p = 0 then "" else
+    (if prelude.take 1 p = "-" then "_" else prelude.take 1 p end if) ++ macroName (prelude.drop 1 p) (fuel - 1)
+  end if
+end function
+
+-- A constructor passed straight to prelude.put does not compile on the Go
+-- target (LawSpec 0.32.0: the generated call cannot infer the value type);
+-- a function's result does.
+function definedAs (v :: Integer) -> Binding is Defined v end function
+function notDefined (u :: Unit) -> Binding is Undefined end function
+
+function bound (env :: Env) (b :: BindingLine) -> Env is
+  first matching case of b :
+    when SetName n then env with names = prelude.put n.name (definedAs n.value) env.names
+    when FlagName n then env with names = prelude.put n (definedAs 1) env.names
+    when UndefName n then env with names = prelude.put n (notDefined unitValue) env.names
+    when SetPackage k then
+      (let m = macroName k.pkg (prelude.length k.pkg) in
+        env with versions = prelude.put m k.version env.versions , names = prelude.delete ("MIN_VERSION_" ++ m) env.names end let)
+    when UnsetPackage p then env with names = prelude.put ("MIN_VERSION_" ++ p) (notDefined unitValue) env.names , versions = prelude.delete p env.versions
+    when Remark t then env
+    when Blank then env
+  end case
+end function
+
+function envFrom (env :: Env) (bs :: List BindingLine) -> Env is
+  first matching case of bs : when Nil then env when Cons b rest then envFrom (bound env b) rest end case
+end function
+
+function bindingLineOf (seed :: Integer) -> BindingLine is
+  let k = pick seed 201 9 in
+    (if k = 8 then UnsetPackage (chosen (pick seed 203 4) ["base", "unordered_containers", "ghc", "a_b_c9"] "base")
+     else (if k = 0 then FlagName (chosen (pick seed 202 8) (namePool unitValue) "A")
+     else (if k = 1 then UndefName (chosen (pick seed 202 8) (namePool unitValue) "A")
+     else (if k = 2 then SetPackage record{ pkg = chosen (pick seed 203 4) ["base", "unordered-containers", "ghc", "a-b-c9"] "base" , version = versionOf seed 3}
+     else (if k = 3 then Remark (chosen (pick seed 204 3) ["note", "A=1", ""] "")
+     else (if k = 4 then Blank
+     else SetName record{ name = chosen (pick seed 202 9) (namePool unitValue ++ ["_u1"]) "A" ,
+                          value = (if pick seed 205 3 = 0 then 0 - litPool (pick seed 206 16) else litPool (pick seed 206 16) end if) , form = pick seed 207 3} end if) end if) end if) end if) end if) end if)
+  end let
+end function
+
+function bindingLinesOf (seed :: Integer) (n :: Integer) -> List BindingLine is
+  if n <= 0 then [] else [bindingLineOf (mix seed n)] ++ bindingLinesOf seed (n - 1) end if
+end function
+
+-- ---------------------------------------------------------------------------
+-- Filtering a manifest. A fact is a symbol or a call edge; its condition
+-- is the text of its `condition` field ("" for none).
+--   the condition holds     the fact is kept and its condition cleared
+--   the condition fails     the fact is dropped (a symbol with its edges)
+--   neither                 the fact is kept as it is
+-- A kept symbol's edges are judged each on its own. Edges that end up with
+-- one identity (target, kind, ref, condition) become one edge, their counts
+-- added, at the first one's place.
+-- `missing` is every name some kept, undecided fact still needs, sorted,
+-- once each; `unreadable` every condition that cannot be evaluated at all,
+-- sorted, once each. A dropped symbol's edges add to neither.
+
+type Filtered is a record{
+  packages :: List Package
+  missing :: List Text
+  unreadable :: List Text}
+end type
+
+-- What ax writes to stderr, each line after `ax: warning: `
+-- (next-cycle-3/design.md, section 5). `listed` is the names that the
+-- decisions files read in this run already list as undecided (`# NAME=`).
+--   when: no value for A, B              the missing names, as before
+--   when: the call graph is incomplete until these names are decided
+--   when: not yet in a decisions file: B; lines to paste into assayxport.when follow
+--                                        only when some missing name is not listed
+--   when: cannot evaluate: <condition>   as before
+-- The lines to paste (`expectedDecisionLines`) follow the warnings on
+-- stderr, as they are, with no `ax: ` before them.
+function unlisted (missing :: List Text) (listed :: List Text) -> List Text is
+  prelude.toList (prelude.sortedSetDifference (prelude.sortedSetOf missing) (prelude.sortedSetOf listed))
+end function
+
+function warningsWith (f :: Filtered) (listed :: List Text) -> List Text is
+  (if prelude.length f.missing = 0 then []
+   else ["when: no value for " ++ prelude.join ", " f.missing , "when: the call graph is incomplete until these names are decided"]
+          ++ (if prelude.length (unlisted f.missing listed) = 0 then []
+              else ["when: not yet in a decisions file: " ++ prelude.join ", " (unlisted f.missing listed) ++ "; lines to paste into " ++ decisionsPath unitValue ++ " follow"] end if)
+   end if) ++ unreadableLines f.unreadable ++ unreadLines (sorted (unreadPaths f.packages))
+end function
+
+-- With no decisions file read: no name is listed.
+function warningsOf (f :: Filtered) -> List Text is warningsWith f [] end function
+
+-- Next cycle 4: a file with more builds than are read is named in a line
+-- of its own, after the others; its facts' text (`unreadText`) is not
+-- reported as a condition that cannot be evaluated.
+function unreadableLines (ts :: List Text) -> List Text is
+  first matching case of ts :
+    when Nil then []
+    when Cons t rest then (if t = unreadText unitValue then [] else ["when: cannot evaluate: " ++ t] end if) ++ unreadableLines rest
+  end case
+end function
+
+function unreadLine (path :: Text) -> Text is
+  "when: " ++ path ++ ": more than " ++ prelude.textOf (buildCap unitValue) ++ " builds: one is read, and its facts are not decided"
+end function
+
+function unreadLines (paths :: List Text) -> List Text is
+  first matching case of paths : when Nil then [] when Cons p rest then [unreadLine p] ++ unreadLines rest end case
+end function
+
+function unreadEdge (e :: CallEdge) -> Bool is e.condition = unreadText unitValue end function
+
+function unreadDecl (d :: Decl) -> Bool is d.condition = unreadText unitValue || prelude.any unreadEdge d.calls end function
+
+-- The paths of the packages that hold a fact not read in every build.
+function unreadPaths (ps :: List Package) -> List Text is
+  first matching case of ps :
+    when Nil then []
+    when Cons p rest then (if prelude.any unreadDecl p.symbols then [p.path] else [] end if) ++ unreadPaths rest
+  end case
+end function
+
+type Tally is a record{
+  edge :: CallEdge
+  count :: Integer}
+end type
+
+function tallied (es :: List CallEdge) (acc :: KeyVal EdgeKey Tally) -> KeyVal EdgeKey Tally is
+  first matching case of es :
+    when Nil then acc
+    when Cons e rest then
+      tallied rest (first matching case of prelude.lookup (edgeKey e) acc :
+        when Absent then prelude.put (edgeKey e) (Tally record{ edge = e , count = e.count}) acc
+        when Present seen then prelude.put (edgeKey e) (seen with count = seen.count + e.count) acc
+      end case)
+  end case
+end function
+
+function fromTallies (ts :: List (Entry EdgeKey Tally)) -> List CallEdge is
+  first matching case of ts :
+    when Nil then []
+    when Cons en rest then (first matching case of en : when Entry k v then [v.edge with count = v.count] ++ fromTallies rest end case)
+  end case
+end function
+
+-- One edge per identity, counts added.
+function summed (es :: List CallEdge) -> List CallEdge is fromTallies (prelude.entries (tallied es (prelude.keyValOf []))) end function
+
+-- The model: three symbols at most, each with up to three edges; a fact has
+-- no condition one time in three.
+type FactModel is a record{
+  seed :: Integer
+  style :: Style}
+end type
+
+-- Next cycle 4: a fact's condition is a condition in the written form
+-- (cubes of literals), not one expression.
+function hasCond (seed :: Integer) (k :: Integer) -> Bool is pick seed (300 + k) 3 != 0 end function
+function factCond (m :: FactModel) (k :: Integer) -> List (List Literal) is condOf m.style (mix m.seed (310 + k)) end function
+function condTextOf (m :: FactModel) (k :: Integer) -> Text is if hasCond m.seed k then conditionText (factCond m k) else "" end if end function
+
+function plainDecl (id :: Text) (line :: Integer) -> Decl is
+  Decl record{ id = id , name = id , kind = KindFunction , visibility = Exported , idiom = ExportList ,
+    location = at "M.hs" line 1 line , owner = "" , doc = DocText record{ raw = "" , format = NoDoc} ,
+    entry = EntryPoint record{ isEntrypoint = false , invocation = Absent} ,
+    detail = Detail record{ complexity = Complexity record{ time = Absent , space = Absent , method = Deferred} , signature = Absent , typeKind = "" ,
+      underlying = "" , typeText = "" , inAll = Absent , decorators = [] , concerns = [] , binary = noBinary unitValue} ,
+    calls = [] , condition = ""}
+end function
+
+function modelEdges (m :: FactModel) (sym :: Integer) (j :: Integer) -> List CallEdge is
+  if j <= 0 then [] else
+    modelEdges m sym (j - 1) ++
+      [(edge Unresolved (chosen (pick m.seed (330 + sym * 4 + j) 2) ["g", "h"] "g") Absent) with count = 1 + pick m.seed (350 + sym * 4 + j) 2 , condition = condTextOf m (sym * 4 + j)]
+  end if
+end function
+
+function modelDecls (m :: FactModel) (i :: Integer) -> List Decl is
+  if i <= 0 then [] else
+    modelDecls m (i - 1) ++ [(plainDecl ("s" ++ prelude.textOf i) i) with calls = modelEdges m i (pick m.seed (370 + i) 4) , condition = condTextOf m (i * 4)]
+  end if
+end function
+
+function packageWith (ds :: List Decl) -> Package is
+  Package record{ id = "M" , language = "haskell" , path = "M.hs" , name = "M" , doc = "" , level = "module" , members = [] ,
+    isEntrypoint = false , invocation = Absent , symbols = ds}
+end function
+
+function modelPackage (m :: FactModel) -> Package is packageWith (modelDecls m (1 + pick m.seed 390 3)) end function
+
+function factOutcome (env :: Env) (m :: FactModel) (k :: Integer) -> Outcome is
+  if hasCond m.seed k then refCondition env (factCond m k) else Known 1 end if
+end function
+
+function keptEdges (env :: Env) (m :: FactModel) (sym :: Integer) (j :: Integer) -> List CallEdge is
+  if j <= 0 then [] else
+    keptEdges env m sym (j - 1) ++
+      (let e = (edge Unresolved (chosen (pick m.seed (330 + sym * 4 + j) 2) ["g", "h"] "g") Absent) with count = 1 + pick m.seed (350 + sym * 4 + j) 2 in
+        (first matching case of verdict (factOutcome env m (sym * 4 + j)) :
+          when Holds then [e]
+          when Fails then []
+          when Undecided o then [e with condition = condTextOf m (sym * 4 + j)]
+        end case) end let)
+  end if
+end function
+
+function keptDecls (env :: Env) (m :: FactModel) (i :: Integer) -> List Decl is
+  if i <= 0 then [] else
+    keptDecls env m (i - 1) ++
+      (let d = (plainDecl ("s" ++ prelude.textOf i) i) with calls = summed (keptEdges env m i (pick m.seed (370 + i) 4)) in
+        (first matching case of verdict (factOutcome env m (i * 4)) :
+          when Holds then [d]
+          when Fails then []
+          when Undecided o then [d with condition = condTextOf m (i * 4)]
+        end case) end let)
+  end if
+end function
+
+-- The outcomes of the kept, undecided facts.
+function openEdges (env :: Env) (m :: FactModel) (sym :: Integer) (j :: Integer) -> List Integer is
+  if j <= 0 then [] else
+    openEdges env m sym (j - 1) ++ (if verdict (factOutcome env m (sym * 4 + j)) matches Undecided _ then [sym * 4 + j] else [] end if)
+  end if
+end function
+
+function openFacts (env :: Env) (m :: FactModel) (i :: Integer) -> List Integer is
+  if i <= 0 then [] else
+    openFacts env m (i - 1) ++
+      (first matching case of verdict (factOutcome env m (i * 4)) :
+        when Holds then openEdges env m i (pick m.seed (370 + i) 4)
+        when Fails then []
+        when Undecided o then [i * 4] ++ openEdges env m i (pick m.seed (370 + i) 4)
+      end case)
+  end if
+end function
+
+function missingIn (env :: Env) (m :: FactModel) (ks :: List Integer) -> List Text is
+  first matching case of ks : when Nil then [] when Cons k rest then missingOf (factOutcome env m k) ++ missingIn env m rest end case
+end function
+
+function unreadableIn (env :: Env) (m :: FactModel) (ks :: List Integer) -> List Text is
+  first matching case of ks :
+    when Nil then []
+    when Cons k rest then (if isBad (factOutcome env m k) then [condTextOf m k] else [] end if) ++ unreadableIn env m rest
+  end case
+end function
+
+function expectedFiltered (env :: Env) (m :: FactModel) -> Filtered is
+  let n = 1 + pick m.seed 390 3 in
+    Filtered record{ packages = [packageWith (keptDecls env m n)] ,
+                     missing = sorted (missingIn env m (openFacts env m n)) ,
+                     unreadable = sorted (unreadableIn env m (openFacts env m n))}
+  end let
+end function
+
+-- Some fact's condition has a term that the environment makes an error
+-- (`broken`): a call of a macro of a package it lacks, GHC's version macro
+-- with __GLASGOW_HASKELL__ undefined, VERSION_p of a given package as a
+-- value. Facts are numbered up to 4 * 4 + 3.
+function brokenUpTo (env :: Env) (m :: FactModel) (k :: Integer) -> Bool is
+  if k <= 0 then false else (hasCond m.seed k && anyBroken env (factCond m k)) || brokenUpTo env m (k - 1) end if
+end function
+
+function modelBroken (env :: Env) (m :: FactModel) -> Bool is brokenUpTo env m 19 end function
+
+function factModelOf (seed :: Integer) -> FactModel is FactModel record{ seed = seed , style = styleOf (mix seed 399)} end function
+
+-- ---------------------------------------------------------------------------
+-- The decisions file (next-cycle-3/design.md, sections 3 and 4): the file
+-- `ax when init` writes, and the lines `ax assay` prints for a name that
+-- no decisions file lists. One writer serves both.
+--
+-- A BLOCK, for one missing name:
+--   (an empty line)
+--   # NAME is not decided. Facts that depend on it:
+--   #   FILE:LINE: CONDITION        once per fact place and condition
+--   # NAME=                         the undecided line
+-- FILE and LINE are the location of the symbol that carries the condition
+-- (for a call edge, of the symbol that makes the call); CONDITION is the
+-- fact's condition as the manifest has it. A use is a fact that is kept
+-- and undecided under the names given, and whose condition still needs
+-- NAME. The uses stand sorted by file, then line, then condition, each
+-- once: the order does not depend on the order of a symbol's edges, which
+-- filtering may change. For MIN_VERSION_p the undecided line is
+-- `# package P=`, P being p with each `_` written `-` (a Cabal package
+-- name has no `_`).
+-- The blocks stand in the order of the names, sorted as the warning has
+-- them. Every line of a block but the first is a remark of the binding
+-- syntax (W2), so a file of blocks decides nothing until a line is
+-- replaced.
+
+-- Next cycle 7 (next-cycle-7/design.md, section 3; review 9, B1): the file
+-- stands in the root, beside `assayxport.json`, and not under
+-- `.assayxport/`. Every path under `.assayxport/` is a shard's, made from a
+-- source path: a source directory `when/` made `.assayxport/when` a
+-- directory, and the next run failed on it. Nothing ax writes in the root
+-- is named after a source path.
+function decisionsPath (u :: Unit) -> Text is "assayxport.when" end function
+
+function decisionsHeader (u :: Unit) -> List Text is
+  ["# ax decisions file (" ++ decisionsPath unitValue ++ "): one decision per line." ,
+   "# ax reads it on every assay of this root; --when-file and --when replace its values." ,
+   "# Decide a name by replacing its \"# NAME=\" line with one of" ,
+   "#   NAME=<integer>    NAME    undef NAME    package P=X.Y.Z" ,
+   "# Until every name below is decided, the facts that depend on an undecided" ,
+   "# name keep their condition, and the call graph is incomplete."]
+end function
+
+-- The package of a MIN_VERSION_ macro's tail: each `_` is `-`.
+function packageOf (m :: Text) (fuel :: Integer) -> Text is
+  if fuel <= 0 || prelude.length m = 0 then "" else
+    (if prelude.take 1 m = "_" then "-" else prelude.take 1 m end if) ++ packageOf (prelude.drop 1 m) (fuel - 1)
+  end if
+end function
+
+function undecidedLine (name :: Text) -> Text is
+  if prelude.startsWith name "MIN_VERSION_" then "# package " ++ packageOf (prelude.drop 12 name) (prelude.length name) ++ "="
+  else "# " ++ name ++ "=" end if
+end function
+
+-- A use: the place of a fact and its condition. The fields stand in the
+-- order of sorting.
+type UsePlace is a record{
+  file :: Text
+  line :: Integer
+  cond :: Text}
+end type
+
+function useAt (file :: Text) (line :: Integer) (cond :: Text) -> UsePlace is UsePlace record{ file = file , line = line , cond = cond} end function
+
+function useLine (u :: UsePlace) -> Text is
+  "#   " ++ u.file ++ ":" ++ prelude.textOf u.line ++ ": " ++ u.cond
+end function
+
+function useLines (us :: List UsePlace) -> List Text is
+  first matching case of us : when Nil then [] when Cons u rest then [useLine u] ++ useLines rest end case
+end function
+
+-- prelude.sortedSetOf keeps each distinct use once, in the portable order:
+-- by file, then line (as a number), then condition.
+function blockOf (name :: Text) (uses :: List UsePlace) -> List Text is
+  ["" , "# " ++ name ++ " is not decided. Facts that depend on it:"] ++ useLines (prelude.toList (prelude.sortedSetOf uses)) ++ [undecidedLine name]
+end function
+
+-- The reference, over the fact model: fact k belongs to symbol k / 4,
+-- which `plainDecl` puts at M.hs, line k / 4.
+function modelUses (env :: Env) (m :: FactModel) (name :: Text) (ks :: List Integer) -> List UsePlace is
+  first matching case of ks :
+    when Nil then []
+    when Cons k rest then
+      (if missingOf (factOutcome env m k) contains name then [useAt "M.hs" (prelude.quot k 4) (condTextOf m k)] else [] end if) ++ modelUses env m name rest
+  end case
+end function
+
+function modelBlocks (env :: Env) (m :: FactModel) (names :: List Text) (ks :: List Integer) -> List Text is
+  first matching case of names :
+    when Nil then []
+    when Cons n rest then blockOf n (modelUses env m n ks) ++ modelBlocks env m rest ks
+  end case
+end function
+
+-- The lines to paste: a block for every missing name that is not listed.
+function expectedDecisionLines (env :: Env) (listed :: List Text) (m :: FactModel) -> List Text is
+  let ks = openFacts env m (1 + pick m.seed 390 3) in
+    modelBlocks env m (unlisted (missingIn env m ks) listed) ks
+  end let
+end function
+
+-- Names a drawn decisions file lists as undecided: each with chance 1 in 3.
+function listedFrom (seed :: Integer) (ns :: List Text) (k :: Integer) -> List Text is
+  first matching case of ns :
+    when Nil then []
+    when Cons n rest then (if pick seed (400 + k) 3 = 0 then [n] else [] end if) ++ listedFrom seed rest (k + 1)
+  end case
+end function
+
+function listedOf (seed :: Integer) -> List Text is
+  listedFrom seed (namePool unitValue ++ ["MIN_VERSION_base", "MIN_VERSION_unordered_containers", "MIN_VERSION_ghc"]) 0
+end function
+
+-- Filling a file: every undecided line is replaced by a decision the seed
+-- picks; every other line is kept.
+function isUndecidedLine (t :: Text) -> Bool is
+  (t matches regex "# [A-Za-z_][A-Za-z0-9_]*=") || (t matches regex "# package [A-Za-z0-9-]+=")
+end function
+
+function filledLine (seed :: Integer) (k :: Integer) (t :: Text) -> Text is
+  if t matches regex "# package [A-Za-z0-9-]+=" then prelude.drop 2 t ++ chosen (pick seed (500 + k) 3) ["4.18.1", "4.7", "0"] "1"
+  else (if t matches regex "# [A-Za-z_][A-Za-z0-9_]*=" then
+    (let nm = prelude.take (prelude.length t - 3) (prelude.drop 2 t) in
+      chosen (pick seed (520 + k) 4) [nm ++ "=1", nm ++ "=0", "undef " ++ nm, nm] nm end let)
+  else t end if) end if
+end function
+
+function filled (seed :: Integer) (ts :: List Text) (k :: Integer) -> List Text is
+  first matching case of ts : when Nil then [] when Cons t rest then [filledLine seed k t] ++ filled seed rest (k + 1) end case
+end function
+
+function undecidedIn (ts :: List Text) -> List Text is
+  first matching case of ts : when Nil then [] when Cons t rest then (if isUndecidedLine t then [t] else [] end if) ++ undecidedIn rest end case
+end function
+
+function undecidedLines (ns :: List Text) -> List Text is
+  first matching case of ns : when Nil then [] when Cons n rest then [undecidedLine n] ++ undecidedLines rest end case
+end function
+
+-- A small manifest for the literal rows: a symbol with a condition of two
+-- names, an edge under a package macro, an edge that repeats the symbol's
+-- condition, an edge whose condition needs no name, a symbol under a
+-- negation, a symbol with no condition and one whose condition cannot be
+-- read.
+function sampleManifest (u :: Unit) -> List Package is
+  [packageWith
+    [(plainDecl "a" 3) with condition = "defined(X) && Y > 1" ,
+       calls = [(edge Unresolved "g" Absent) with condition = "MIN_VERSION_unordered_containers(0,2,0)" ,
+                (edge Unresolved "h" Absent) with condition = "defined(X) && Y > 1" ,
+                (edge Unresolved "i" Absent) with condition = "0 && Z"] ,
+     (plainDecl "b" 7) with condition = "!(X)" ,
+     plainDecl "c" 9 ,
+     (plainDecl "d" 11) with condition = "1 +"]]
+end function
+
+law "|the warning names the missing names, says the call graph is incomplete, and names the conditions that cannot be read| is
+  id: "WHP-4"
+  description :
+    "Changed in next cycle 3 (the name and the first row): with a name
+    missing, a second line says plainly that the call graph is incomplete
+    until the names are decided, and a third names the names no decisions
+    file lists yet. The first line and the cannot-evaluate lines are as
+    cycle 2 had them."
+  end description
+  definition :
+    warningsOf (Filtered record{ packages = [] , missing = ["A", "MIN_VERSION_base", "__GLASGOW_HASKELL__"] , unreadable = ["1 +", "FOO(1)"]})
+      = ["when: no value for A, MIN_VERSION_base, __GLASGOW_HASKELL__",
+         "when: the call graph is incomplete until these names are decided",
+         "when: not yet in a decisions file: A, MIN_VERSION_base, __GLASGOW_HASKELL__; lines to paste into assayxport.when follow",
+         "when: cannot evaluate: 1 +", "when: cannot evaluate: FOO(1)"]
+    && warningsOf (Filtered record{ packages = [] , missing = [] , unreadable = []}) = []
+    && warningsOf (Filtered record{ packages = [] , missing = [] , unreadable = ["1 +"]}) = ["when: cannot evaluate: 1 +"]
+    && warningsWith (Filtered record{ packages = [packageWith [(plainDecl "s1" 1) with condition = unreadText unitValue]] , missing = ["A"] ,
+                                      unreadable = [unreadText unitValue, "1 +"]}) ["A"]
+         = ["when: no value for A", "when: the call graph is incomplete until these names are decided", "when: cannot evaluate: 1 +",
+            "when: M.hs: more than 256 builds: one is read, and its facts are not decided"]
+    && warningsOf (Filtered record{ packages = [packageWith [(plainDecl "s1" 1) with calls = [(edge Unresolved "g" Absent) with condition = unreadText unitValue]]] ,
+                                    missing = [] , unreadable = [unreadText unitValue]})
+         = ["when: M.hs: more than 256 builds: one is read, and its facts are not decided"]
+  end definition
+end law
+
+-- `ax when init` (next cycle 6; review 8, S2). Init's own output is about
+-- the missing names, so it prints none of the three lines about them; it
+-- prints every other warning line of the filter, each after
+-- `ax: warning: ` as the assay does: a condition that cannot be evaluated,
+-- and a file with more builds than are read. Such a file's facts carry
+-- `"unread"`, which names no name: init cannot list what the file tests.
+-- Where init then finds no name at all it must not say there is none.
+function initWarnings (f :: Filtered) -> List Text is unreadableLines f.unreadable ++ unreadLines (sorted (unreadPaths f.packages)) end function
+
+-- Init's last line where it finds no name to list and writes nothing.
+function initNothingText (root :: Text) (f :: Filtered) -> Text is
+  if prelude.length (unreadPaths f.packages) = 0 then "when: no name to decide under " ++ root ++ ": nothing written"
+  else "when: no name found under " ++ root ++ ": nothing written; the files named above are not read in every build, and the names they test are not known" end if
+end function
+
+law "|init prints the warnings that are not about a missing name, and does not say there is no name where a file was not read| is
+  id: "WHP-14"
+  description :
+    "Review 8, S2 and N5. Of the filter's warnings init prints the
+    cannot-evaluate lines and the line of each file with more builds than
+    are read, and none of the three lines about missing names. Its last
+    line, where it finds no name: `no name to decide` only when every file
+    was read in every build; otherwise it says that the files named above
+    were not, and that their names are not known. And an error that names
+    a line writes a carriage return inside it as `\\r`."
+  end description
+  definition :
+    initWarnings (Filtered record{ packages = [] , missing = ["A", "MIN_VERSION_base"] , unreadable = ["1 +", "FOO(1)"]})
+      = ["when: cannot evaluate: 1 +", "when: cannot evaluate: FOO(1)"]
+    && initWarnings (Filtered record{ packages = [] , missing = ["A"] , unreadable = []}) = []
+    && initWarnings (Filtered record{ packages = [packageWith [(plainDecl "s1" 1) with condition = unreadText unitValue]] , missing = ["A"] ,
+                                     unreadable = [unreadText unitValue, "1 +"]})
+         = ["when: cannot evaluate: 1 +", "when: M.hs: more than 256 builds: one is read, and its facts are not decided"]
+    && initNothingText "src" (Filtered record{ packages = [packageWith [plainDecl "s1" 1]] , missing = [] , unreadable = []})
+         = "when: no name to decide under src: nothing written"
+    && initNothingText "src" (Filtered record{ packages = [packageWith [(plainDecl "s1" 1) with condition = unreadText unitValue]] , missing = [] ,
+                                               unreadable = [unreadText unitValue]})
+         = "when: no name found under src: nothing written; the files named above are not read in every build, and the names they test are not known"
+    && bindingErrorText "f" (BindingError record{ line = 1 , text = "A=1\rB=0"}) = "when: f:1: cannot read \"A=1\\rB=0\""
+    && bindingErrorText "--when" (BindingError record{ line = 2 , text = "B = 2"}) = "when: --when:2: cannot read \"B = 2\""
+  end definition
+end law
+
+law "|a listed name is still missing, and is not asked for again| is
+  id: "WHP-5"
+  description :
+    "A name that a decisions file lists as undecided stays in the first
+    line; the paste line names only the others, and goes when every
+    missing name is listed. A listed name that is not missing changes
+    nothing."
+  end description
+  definition :
+    warningsWith (Filtered record{ packages = [] , missing = ["A", "B", "C"] , unreadable = []}) ["B", "Z"]
+      = ["when: no value for A, B, C", "when: the call graph is incomplete until these names are decided",
+         "when: not yet in a decisions file: A, C; lines to paste into assayxport.when follow"]
+    && warningsWith (Filtered record{ packages = [] , missing = ["A", "B"] , unreadable = ["1 +"]}) ["B", "A"]
+      = ["when: no value for A, B", "when: the call graph is incomplete until these names are decided", "when: cannot evaluate: 1 +"]
+    && warningsWith (Filtered record{ packages = [] , missing = [] , unreadable = []}) ["A"] = []
+  end definition
+end law
+
+law "|the decisions header and a block are written as the rules say| is
+  id: "WHP-6"
+  description :
+    "The exact text: the six header lines; a block's empty line, its head,
+    each distinct use once, sorted by file, line (27 before 100) and
+    condition, and the undecided line; a
+    package macro's undecided line names the package, each `_` a `-`.
+    Every header line is a remark, and none is an undecided line."
+  end description
+  definition :
+    decisionsHeader unitValue
+      = ["# ax decisions file (assayxport.when): one decision per line.",
+         "# ax reads it on every assay of this root; --when-file and --when replace its values.",
+         "# Decide a name by replacing its \"# NAME=\" line with one of",
+         "#   NAME=<integer>    NAME    undef NAME    package P=X.Y.Z",
+         "# Until every name below is decided, the facts that depend on an undecided",
+         "# name keep their condition, and the call graph is incomplete."]
+    && undecidedIn (decisionsHeader unitValue) = []
+    && blockOf "ARG" [useAt "src/Cpp.hs" 29 "!(ARG)", useAt "Cpp.hs" 100 "ARG", useAt "Cpp.hs" 27 "ARG", useAt "Cpp.hs" 27 "!(ARG)", useAt "Cpp.hs" 27 "ARG", useAt "Cpp.hs" 27 "ARG && B"]
+      = ["", "# ARG is not decided. Facts that depend on it:", "#   Cpp.hs:27: !(ARG)", "#   Cpp.hs:27: ARG", "#   Cpp.hs:27: ARG && B", "#   Cpp.hs:100: ARG", "#   src/Cpp.hs:29: !(ARG)", "# ARG="]
+    && blockOf "MIN_VERSION_unordered_containers" [] = ["", "# MIN_VERSION_unordered_containers is not decided. Facts that depend on it:", "# package unordered-containers="]
+    && undecidedLine "MIN_VERSION_base" = "# package base="
+    && undecidedLine "__GLASGOW_HASKELL__" = "# __GLASGOW_HASKELL__="
+    && decisionsPath unitValue = "assayxport.when"
+  end definition
+end law
+
+law "|the reference gives one block to every missing name that is not listed, and to no other| is
+  id: "WHP-7"
+  description :
+    "For any model manifest, names and listed names: the undecided lines
+    among the reference's lines are those of the missing, unlisted names,
+    in the warning's order; and there are lines to paste exactly when the
+    warning says that lines follow."
+  end description
+  definition :
+    for all (seed :: Integer) (se :: Integer) (sl :: Integer) (full :: Bool) =>
+      (let m = factModelOf seed in let env = (if full then completed (envOf se) else envOf se end if) in
+       let f = expectedFiltered env m in
+        undecidedIn (expectedDecisionLines env (listedOf sl) m) = undecidedLines (unlisted f.missing (listedOf sl))
+          && (prelude.length (expectedDecisionLines env (listedOf sl) m) > 0)
+               = (prelude.length (warningsWith f (listedOf sl)) > prelude.length (warningsWith f f.missing))
+      end let end let end let)
+    end for all
+  end definition
+end law
+
+law "|filling replaces every undecided line by a decision and keeps the rest| is
+  id: "WHP-8"
+  definition :
+    for all (seed :: Integer) =>
+      filled seed ["# keep", "", "#   M.hs:3: A=", "# A is not decided. Facts that depend on it:", "A=5"] 0
+        = ["# keep", "", "#   M.hs:3: A=", "# A is not decided. Facts that depend on it:", "A=5"]
+      && (["A=1", "A=0", "undef A", "A"] contains (filledLine seed 0 "# A="))
+      && (["package unordered-containers=4.18.1", "package unordered-containers=4.7", "package unordered-containers=0"] contains (filledLine seed 0 "# package unordered-containers="))
+      && undecidedIn (filled seed ["# A=", "# package base=", "# __GLASGOW_HASKELL__="] 0) = []
+    end for all
+  end definition
+end law
+
+end unit

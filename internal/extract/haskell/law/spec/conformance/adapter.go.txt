@@ -1,0 +1,810 @@
+// User-owned LawSpec adapter (S1.j calibration; throwaway workspace code).
+//
+// The production handler of Extractor runs the ax binary (AX_BIN: the
+// released build, a coverage build, or a mutant build) as a black box and
+// decodes its combined manifest onto the contract's types, every field of
+// schema v2. It imports nothing from ax: the law is about the binary's
+// output, as a user sees it.
+package haskell
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"io/fs"
+	"math/big"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+)
+
+type HaskellExtractorHandler struct{ bin string }
+
+func NewHaskellExtractorHandler() HaskellExtractor {
+	bin := os.Getenv("AX_BIN")
+	if bin == "" {
+		bin = os.ExpandEnv("$HOME/contrib/S1.j/calibration/bin/ax")
+	}
+	return &HaskellExtractorHandler{bin: bin}
+}
+
+func (handler *HaskellExtractorHandler) Language() string { return "haskell" }
+
+// The manifest as ax v0.24.0 writes it (internal/schema/schema.gp).
+type jInvocation struct {
+	Kind string `json:"kind"`
+	How  string `json:"how"`
+}
+type jParam struct {
+	Name          string   `json:"name"`
+	Type          string   `json:"type"`
+	Annotations   []string `json:"annotations"`
+	NameSynthetic bool     `json:"name_synthetic"`
+}
+type jSymbol struct {
+	ID              string `json:"id"`
+	Name            string `json:"name"`
+	Kind            string `json:"kind"`
+	Visibility      string `json:"visibility"`
+	VisibilityIdiom string `json:"visibility_idiom"`
+	Location        struct {
+		File    string `json:"file"`
+		Line    int64  `json:"line"`
+		Col     int64  `json:"col"`
+		EndLine int64  `json:"end_line"`
+	} `json:"location"`
+	Owner string `json:"owner"`
+	Doc   struct {
+		Raw    string `json:"raw"`
+		Format string `json:"format"`
+	} `json:"doc"`
+	IsEntrypoint bool         `json:"is_entrypoint"`
+	Invocation   *jInvocation `json:"invocation"`
+	Complexity   struct {
+		Time   *string `json:"time"`
+		Space  *string `json:"space"`
+		Method string  `json:"method"`
+	} `json:"complexity"`
+	Signature *struct {
+		Params     []jParam `json:"params"`
+		Returns    []jParam `json:"returns"`
+		TypeParams []struct {
+			Name       string `json:"name"`
+			Constraint string `json:"constraint"`
+		} `json:"type_params"`
+		Receiver   *jParam  `json:"receiver"`
+		Variadic   bool     `json:"variadic"`
+		Modifiers  []string `json:"modifiers"`
+		Descriptor string   `json:"descriptor"`
+		Throws     []string `json:"throws"`
+	} `json:"signature"`
+	TypeKind     string   `json:"type_kind"`
+	Underlying   string   `json:"underlying"`
+	Type         string   `json:"type"`
+	BinaryName   string   `json:"binary_name"`
+	Extends      []string `json:"extends"`
+	Implements   []string `json:"implements"`
+	Permits      []string `json:"permits"`
+	Constant     string   `json:"constant"`
+	ConstantKind string   `json:"constant_kind"`
+	Descriptor   string   `json:"descriptor"`
+	Modifiers    []string `json:"modifiers"`
+	DefaultValue string   `json:"default_value"`
+	InAll        *bool    `json:"in_all"`
+	Decorators   []string `json:"decorators"`
+	Annotations  []string `json:"annotations"`
+	Concerns     []string `json:"concerns"`
+	When         string       `json:"when"`
+	Calls        []struct {
+		Target   string    `json:"target"`
+		Kind     string    `json:"kind"`
+		Ref      string    `json:"ref"`
+		Arity    *int64    `json:"arity"`
+		ArgTypes []*string `json:"arg_types"`
+		Count    int64     `json:"count"`
+		When     string    `json:"when"`
+	} `json:"calls"`
+}
+type manifest struct {
+	Index struct {
+		Packages []struct {
+			ID           string       `json:"id"`
+			Language     string       `json:"language"`
+			Path         string       `json:"path"`
+			Name         string       `json:"name"`
+			Doc          string       `json:"doc"`
+			Level        string       `json:"level"`
+			Members      []string     `json:"members"`
+			IsEntrypoint bool         `json:"is_entrypoint"`
+			Invocation   *jInvocation `json:"invocation"`
+			Shard        string       `json:"shard"`
+		} `json:"packages"`
+	} `json:"index"`
+	Shards map[string]struct {
+		Symbols []jSymbol `json:"symbols"`
+	} `json:"shards"`
+}
+
+func (handler *HaskellExtractorHandler) Extract(root string) []Package {
+	cmd := exec.Command(handler.bin, "assay", root, "--lang", "haskell", "--stdout", "--quiet", "--no-html")
+	out, err := cmd.Output()
+	if err != nil {
+		stderr := ""
+		if ee, ok := err.(*exec.ExitError); ok {
+			stderr = string(ee.Stderr)
+			// ax's reported failure: exit 1 and one line "ax: haskell: <cause>"
+			// (cmd/ax; registry.RunOutcome makes it fatal when no package was
+			// produced). It is the contract's ExtractionFailed; anything else
+			// (a crash, a signal, a missing binary) is the harness failing.
+			line := strings.TrimSuffix(stderr, "\n")
+			if cause, found := strings.CutPrefix(line, "ax: haskell: "); ee.ExitCode() == 1 && found && !strings.Contains(cause, "\n") {
+				panic(LawSpecFail{Value: ExtractFailure{Value: ExtractionFailedDetails{Message: cause}}})
+			}
+		}
+		panic(fmt.Sprintf("ax assay failed: %v: %s", err, stderr))
+	}
+	return decodePackages(out)
+}
+
+func decodePackages(out []byte) []Package {
+	var m manifest
+	if err := json.Unmarshal(out, &m); err != nil {
+		panic(fmt.Sprintf("ax manifest does not decode: %v", err))
+	}
+	pkgs := make([]Package, 0, len(m.Index.Packages))
+	for _, e := range m.Index.Packages {
+		shard, ok := m.Shards[e.Shard]
+		if !ok {
+			panic(fmt.Sprintf("index names shard %q, which is missing", e.Shard))
+		}
+		decls := make([]Decl, 0, len(shard.Symbols))
+		for _, s := range shard.Symbols {
+			decls = append(decls, decl(s))
+		}
+		pkgs = append(pkgs, Package{Id: e.ID, Language: e.Language, Path: e.Path, Name: e.Name, Doc: e.Doc, Level: e.Level,
+			Members: list(e.Members), IsEntrypoint: e.IsEntrypoint, Invocation: invocation(e.Invocation), Symbols: decls})
+	}
+	return pkgs
+}
+
+func n(v int64) *big.Int { return big.NewInt(v) }
+
+func list(xs []string) []string {
+	if xs == nil {
+		return []string{}
+	}
+	return xs
+}
+
+func maybeText(p *string) LawSpecMaybe[string] {
+	if p == nil {
+		return LawSpecAbsent[string]()
+	}
+	return LawSpecPresent(*p)
+}
+
+func invocation(i *jInvocation) LawSpecMaybe[Invocation] {
+	if i == nil {
+		return LawSpecAbsent[Invocation]()
+	}
+	return LawSpecPresent(Invocation{Kind: i.Kind, How: i.How})
+}
+
+func param(p jParam) Param {
+	return Param{Name: p.Name, TypeText: p.Type, Annotations: list(p.Annotations), NameSynthetic: p.NameSynthetic}
+}
+
+func params(ps []jParam) []Param {
+	out := []Param{}
+	for _, p := range ps {
+		out = append(out, param(p))
+	}
+	return out
+}
+
+func decl(s jSymbol) Decl {
+	sig := LawSpecAbsent[Signature]()
+	if s.Signature != nil {
+		tps := []TypeParam{}
+		for _, t := range s.Signature.TypeParams {
+			tps = append(tps, TypeParam{Name: t.Name, Constraint: t.Constraint})
+		}
+		recv := LawSpecAbsent[Param]()
+		if s.Signature.Receiver != nil {
+			recv = LawSpecPresent(param(*s.Signature.Receiver))
+		}
+		sig = LawSpecPresent(Signature{Params: params(s.Signature.Params), Returns: params(s.Signature.Returns), TypeParams: tps,
+			Receiver: recv, Variadic: s.Signature.Variadic, Modifiers: list(s.Signature.Modifiers),
+			Descriptor: s.Signature.Descriptor, Throws: list(s.Signature.Throws)})
+	}
+	inAll := LawSpecAbsent[bool]()
+	if s.InAll != nil {
+		inAll = LawSpecPresent(*s.InAll)
+	}
+	calls := []CallEdge{}
+	for _, c := range s.Calls {
+		ref := LawSpecAbsent[string]()
+		if c.Ref != "" {
+			ref = LawSpecPresent(c.Ref)
+		}
+		arity := LawSpecAbsent[*LawSpecBigInt]()
+		if c.Arity != nil {
+			arity = LawSpecPresent(n(*c.Arity))
+		}
+		args := []LawSpecMaybe[string]{}
+		for _, a := range c.ArgTypes {
+			args = append(args, maybeText(a))
+		}
+		calls = append(calls, CallEdge{Kind: callKind(c.Kind), Target: c.Target, Ref: ref, Arity: arity, ArgTypes: args, Count: n(c.Count), Condition: c.When})
+	}
+	return Decl{
+		Id: s.ID, Name: s.Name, Kind: symbolKind(s.Kind), Visibility: visibility(s.Visibility), Idiom: idiom(s.VisibilityIdiom),
+		Location: Location{File: s.Location.File, Line: n(s.Location.Line), Col: n(s.Location.Col), EndLine: n(s.Location.EndLine)},
+		Owner:    s.Owner,
+		Doc:      DocText{Raw: s.Doc.Raw, Format: docFormat(s.Doc.Format)},
+		Entry:    EntryPoint{IsEntrypoint: s.IsEntrypoint, Invocation: invocation(s.Invocation)},
+		Detail: Detail{
+			Complexity: Complexity{Time: maybeText(s.Complexity.Time), Space: maybeText(s.Complexity.Space), Method: method(s.Complexity.Method)},
+			Signature:  sig, TypeKind: s.TypeKind, Underlying: s.Underlying, TypeText: s.Type, InAll: inAll,
+			Decorators: list(s.Decorators), Concerns: list(s.Concerns),
+			Binary: Binary{BinaryName: s.BinaryName, Extends: list(s.Extends), Implements: list(s.Implements), Permits: list(s.Permits),
+				Constant: s.Constant, ConstantKind: s.ConstantKind, Descriptor: s.Descriptor, Modifiers: list(s.Modifiers),
+				DefaultValue: s.DefaultValue, Annotations: list(s.Annotations)},
+		},
+		Calls: calls, Condition: s.When,
+	}
+}
+
+func symbolKind(k string) SymbolKind {
+	switch k {
+	case "type":
+		return SymbolKindKindType{}
+	case "function":
+		return SymbolKindKindFunction{}
+	case "func":
+		return SymbolKindKindFunc{}
+	case "method":
+		return SymbolKindKindMethod{}
+	case "constructor":
+		return SymbolKindKindConstructor{}
+	case "field":
+		return SymbolKindKindField{}
+	case "variable":
+		return SymbolKindKindVariable{}
+	case "var":
+		return SymbolKindKindVar{}
+	case "const":
+		return SymbolKindKindConst{}
+	case "property":
+		return SymbolKindKindProperty{}
+	case "class":
+		return SymbolKindKindClass{}
+	case "enum-constant":
+		return SymbolKindKindEnumConstant{}
+	case "instance":
+		return SymbolKindKindInstance{}
+	}
+	return SymbolKindKindOther{Value: k}
+}
+
+func visibility(v string) Visibility {
+	switch v {
+	case "exported":
+		return VisibilityExported{}
+	case "unexported":
+		return VisibilityUnexported{}
+	case "public":
+		return VisibilityPublic{}
+	case "protected":
+		return VisibilityProtected{}
+	case "private":
+		return VisibilityPrivate{}
+	case "package-private":
+		return VisibilityPackagePrivate{}
+	}
+	return VisibilityVisibilityOther{Value: v}
+}
+
+func idiom(v string) VisibilityIdiom {
+	switch v {
+	case "capitalized":
+		return VisibilityIdiomCapitalized{}
+	case "underscore":
+		return VisibilityIdiomUnderscore{}
+	case "access-modifier":
+		return VisibilityIdiomAccessModifier{}
+	case "export":
+		return VisibilityIdiomExportList{}
+	}
+	return VisibilityIdiomIdiomOther{Value: v}
+}
+
+func docFormat(f string) DocFormat {
+	switch f {
+	case "":
+		return DocFormatNoDoc{}
+	case "godoc":
+		return DocFormatGoDoc{}
+	case "docstring":
+		return DocFormatDocstring{}
+	case "javadoc":
+		return DocFormatJavaDoc{}
+	case "tsdoc":
+		return DocFormatTSDoc{}
+	case "haddock":
+		return DocFormatHaddock{}
+	}
+	return DocFormatDocOther{Value: f}
+}
+
+func method(m string) ComplexityMethod {
+	switch m {
+	case "deferred":
+		return ComplexityMethodDeferred{}
+	case "loop-nesting":
+		return ComplexityMethodLoopNesting{}
+	case "recursive":
+		return ComplexityMethodRecursive{}
+	}
+	return ComplexityMethodMethodOther{Value: m}
+}
+
+func callKind(k string) CallKind {
+	switch k {
+	case "internal":
+		return CallKindInternal{}
+	case "external":
+		return CallKindExternal{}
+	case "builtin":
+		return CallKindBuiltin{}
+	case "dynamic":
+		return CallKindDynamic{}
+	case "unresolved":
+		return CallKindUnresolved{}
+	}
+	return CallKindCallOther{Value: k}
+}
+
+// HaskellWhenHandler runs `ax assay <root> --lang haskell --stdout <args>`
+// (the --when flags are among the args) and returns the packages and the
+// `ax: warning: ` lines of stderr. A non-zero exit is ax's reported failure:
+// its stderr line, without the `ax: ` start (design.md, section 6).
+type HaskellWhenHandler struct{ bin string }
+
+func NewHaskellWhenHandler() HaskellWhen {
+	bin := os.Getenv("AX_BIN")
+	if bin == "" {
+		bin = os.ExpandEnv("$HOME/contrib/S1.j/calibration/bin/ax")
+	}
+	return &HaskellWhenHandler{bin: bin}
+}
+
+func (handler *HaskellWhenHandler) AssayWith(root string, args []string) WhenRun {
+	argv := append([]string{"assay", root, "--lang", "haskell", "--stdout"}, args...)
+	cmd := exec.Command(handler.bin, argv...)
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
+	if err != nil {
+		if _, ok := err.(*exec.ExitError); ok {
+			if cause, found := strings.CutPrefix(strings.TrimSuffix(stderr.String(), "\n"), "ax: "); found {
+				panic(LawSpecFail{Value: ExtractFailure{Value: ExtractionFailedDetails{Message: cause}}})
+			}
+		}
+		panic(fmt.Sprintf("ax assay failed: %v: %s", err, stderr.String()))
+	}
+	warnings := []string{}
+	paste := []string{}
+	for _, line := range stderrLines(stderr.String()) {
+		if w, found := strings.CutPrefix(line, "ax: warning: "); found {
+			warnings = append(warnings, w)
+		} else if !strings.HasPrefix(line, "ax: ") {
+			paste = append(paste, line)
+		}
+	}
+	return WhenRun{Packages: decodePackages(out), Warnings: warnings, Paste: paste}
+}
+
+// stderrLines splits output on newlines, dropping only the piece after the
+// final newline; an empty line is a line.
+func stderrLines(s string) []string {
+	if s == "" {
+		return []string{}
+	}
+	return strings.Split(strings.TrimSuffix(s, "\n"), "\n")
+}
+
+// runAx runs ax, never failing on a non-zero exit: the status, stdout and stderr.
+func (handler *HaskellWhenHandler) runAx(argv []string) (int, string, string) {
+	cmd := exec.Command(handler.bin, argv...)
+	var stdout, stderr strings.Builder
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	status := 0
+	if err := cmd.Run(); err != nil {
+		ee, ok := err.(*exec.ExitError)
+		if !ok {
+			panic(fmt.Sprintf("ax failed to run: %v", err))
+		}
+		status = ee.ExitCode()
+	}
+	return status, stdout.String(), stderr.String()
+}
+
+// notes are the stderr lines that start `ax: `, without that start.
+func notes(stderr string) []string {
+	out := []string{}
+	for _, line := range stderrLines(stderr) {
+		if w, found := strings.CutPrefix(line, "ax: "); found {
+			out = append(out, w)
+		}
+	}
+	return out
+}
+
+// WhenInit runs `ax when init <root> --lang haskell`.
+func (handler *HaskellWhenHandler) WhenInit(root string) InitRun {
+	status, stdout, stderr := handler.runAx([]string{"when", "init", root, "--lang", "haskell"})
+	return InitRun{Status: n(int64(status)), Out: stderrLines(stdout), Notes: notes(stderr)}
+}
+
+// AssayExit runs `ax assay <root> --lang haskell --stdout <args>` and reports
+// the status, stdout as it is and the `ax: ` stderr lines.
+func (handler *HaskellWhenHandler) AssayExit(root string, args []string) ExitRun {
+	status, stdout, stderr := handler.runAx(append([]string{"assay", root, "--lang", "haskell", "--stdout"}, args...))
+	return ExitRun{Status: n(int64(status)), Out: stdout, Errors: notes(stderr)}
+}
+
+
+// AssayInto runs `ax assay <root> --lang haskell --out <out> <args>` with no
+// --stdout (next cycle 5) and reads back the manifest ax wrote: the index
+// <out>/assayxport.json and each shard it names, put together as --stdout
+// prints them. A manifest an earlier run left in <out> is deleted first.
+func (handler *HaskellWhenHandler) AssayInto(root string, out string, args []string) WhenRun {
+	_ = os.Remove(filepath.Join(out, "assayxport.json"))
+	_ = filepath.WalkDir(filepath.Join(out, ".assayxport"), func(p string, d fs.DirEntry, err error) error {
+		if err == nil && !d.IsDir() && strings.HasSuffix(p, ".json") {
+			_ = os.Remove(p)
+		}
+		return nil
+	})
+	argv := append([]string{"assay", root, "--lang", "haskell", "--out", out}, args...)
+	cmd := exec.Command(handler.bin, argv...)
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	if _, err := cmd.Output(); err != nil {
+		if _, ok := err.(*exec.ExitError); ok {
+			if cause, found := strings.CutPrefix(strings.TrimSuffix(stderr.String(), "\n"), "ax: "); found {
+				panic(LawSpecFail{Value: ExtractFailure{Value: ExtractionFailedDetails{Message: cause}}})
+			}
+		}
+		panic(fmt.Sprintf("ax assay failed: %v: %s", err, stderr.String()))
+	}
+	index, err := os.ReadFile(filepath.Join(out, "assayxport.json"))
+	if err != nil {
+		panic(fmt.Sprintf("ax wrote no index: %v", err))
+	}
+	var idx struct {
+		Packages []struct {
+			Shard string `json:"shard"`
+		} `json:"packages"`
+	}
+	if err := json.Unmarshal(index, &idx); err != nil {
+		panic(fmt.Sprintf("ax index does not decode: %v", err))
+	}
+	shards := map[string]json.RawMessage{}
+	for _, p := range idx.Packages {
+		b, err := os.ReadFile(filepath.Join(out, filepath.FromSlash(p.Shard)))
+		if err != nil {
+			panic(fmt.Sprintf("index names shard %q, which was not written: %v", p.Shard, err))
+		}
+		shards[p.Shard] = b
+	}
+	combined, err := json.Marshal(map[string]any{"index": json.RawMessage(index), "shards": shards})
+	if err != nil {
+		panic(fmt.Sprintf("manifest does not combine: %v", err))
+	}
+	warnings := []string{}
+	paste := []string{}
+	for _, line := range stderrLines(stderr.String()) {
+		if w, found := strings.CutPrefix(line, "ax: warning: "); found {
+			warnings = append(warnings, w)
+		} else if !strings.HasPrefix(line, "ax: ") {
+			paste = append(paste, line)
+		}
+	}
+	return WhenRun{Packages: decodePackages(combined), Warnings: warnings, Paste: paste}
+}
+
+// DiffExit runs `ax diff <a> <b> --lang haskell --stdout --quiet <args>` and
+// reports the status, stdout as it is and the `ax: ` stderr lines.
+func (handler *HaskellWhenHandler) DiffExit(a string, b string, args []string) ExitRun {
+	status, stdout, stderr := handler.runAx(append([]string{"diff", a, b, "--lang", "haskell", "--stdout", "--quiet"}, args...))
+	return ExitRun{Status: n(int64(status)), Out: stdout, Errors: notes(stderr)}
+}
+
+// lockedBuffer is a buffer the command writes and the watcher reads.
+type lockedBuffer struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (l *lockedBuffer) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.Write(p)
+}
+
+func (l *lockedBuffer) String() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.String()
+}
+
+// WatchInto runs the first pass of `ax watch <root> --lang haskell --out <out>
+// --no-html <args>`: it deletes a manifest an earlier run left in <out>,
+// starts the command, waits until ax says it is watching (the first pass is
+// done and written) or that the assay failed, stops the command, and reads
+// back the manifest as AssayInto does.
+func (handler *HaskellWhenHandler) WatchInto(root string, out string, args []string) WhenRun {
+	_ = os.Remove(filepath.Join(out, "assayxport.json"))
+	_ = filepath.WalkDir(filepath.Join(out, ".assayxport"), func(p string, d fs.DirEntry, err error) error {
+		if err == nil && !d.IsDir() && strings.HasSuffix(p, ".json") {
+			_ = os.Remove(p)
+		}
+		return nil
+	})
+	cmd := exec.Command(handler.bin, append([]string{"watch", root, "--lang", "haskell", "--out", out, "--no-html"}, args...)...)
+	stderr := &lockedBuffer{}
+	cmd.Stderr = stderr
+	if err := cmd.Start(); err != nil {
+		panic(fmt.Sprintf("ax watch failed to start: %v", err))
+	}
+	done := make(chan struct{})
+	go func() { _ = cmd.Wait(); close(done) }()
+	deadline := time.Now().Add(120 * time.Second)
+	failed := ""
+	for {
+		text := stderr.String()
+		if i := strings.Index(text, "ax: assay failed"); i >= 0 && strings.Contains(text[i:], "\n") {
+			failed = strings.SplitN(text[i:], "\n", 2)[0]
+			break
+		}
+		if strings.Contains(text, "ax: watching ") {
+			break
+		}
+		exited := false
+		select {
+		case <-done:
+			exited = true
+		default:
+		}
+		if exited || time.Now().After(deadline) {
+			_ = cmd.Process.Kill()
+			panic(fmt.Sprintf("ax watch ended or said nothing in time: %s", stderr.String()))
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	_ = cmd.Process.Kill()
+	<-done
+	if failed != "" {
+		cause := strings.TrimPrefix(failed, "ax: assay failed (artifacts unchanged): ")
+		panic(LawSpecFail{Value: ExtractFailure{Value: ExtractionFailedDetails{Message: cause}}})
+	}
+	return written(out, stderr.String())
+}
+
+// written reads back the manifest under out (the index and each shard it
+// names, put together as --stdout prints them) and sorts the run's stderr
+// into warnings and lines to paste.
+func written(out string, stderr string) WhenRun {
+	index, err := os.ReadFile(filepath.Join(out, "assayxport.json"))
+	if err != nil {
+		panic(fmt.Sprintf("ax wrote no index: %v", err))
+	}
+	var idx struct {
+		Packages []struct {
+			Shard string `json:"shard"`
+		} `json:"packages"`
+	}
+	if err := json.Unmarshal(index, &idx); err != nil {
+		panic(fmt.Sprintf("ax index does not decode: %v", err))
+	}
+	shards := map[string]json.RawMessage{}
+	for _, p := range idx.Packages {
+		b, err := os.ReadFile(filepath.Join(out, filepath.FromSlash(p.Shard)))
+		if err != nil {
+			panic(fmt.Sprintf("index names shard %q, which was not written: %v", p.Shard, err))
+		}
+		shards[p.Shard] = b
+	}
+	combined, err := json.Marshal(map[string]any{"index": json.RawMessage(index), "shards": shards})
+	if err != nil {
+		panic(fmt.Sprintf("manifest does not combine: %v", err))
+	}
+	warnings := []string{}
+	paste := []string{}
+	for _, line := range stderrLines(stderr) {
+		if w, found := strings.CutPrefix(line, "ax: warning: "); found {
+			warnings = append(warnings, w)
+		} else if !strings.HasPrefix(line, "ax: ") {
+			paste = append(paste, line)
+		}
+	}
+	return WhenRun{Packages: decodePackages(combined), Warnings: warnings, Paste: paste}
+}
+
+// freePort asks the system for a port nothing listens on.
+func freePort() int {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		panic(fmt.Sprintf("no free port: %v", err))
+	}
+	defer l.Close()
+	return l.Addr().(*net.TCPAddr).Port
+}
+
+func httpGet(u string) (int, []byte) {
+	resp, err := http.Get(u)
+	if err != nil {
+		return 0, nil
+	}
+	defer resp.Body.Close()
+	b, _ := io.ReadAll(resp.Body)
+	return resp.StatusCode, b
+}
+
+// ServeFirst runs the first pass of `ax serve <root> --lang haskell --port
+// <free> <args>`: it waits until /api/status says the assay is complete,
+// reads /api/index and each shard it names, stops the command, and sorts
+// the stderr written up to then into warnings and lines to paste.
+func (handler *HaskellWhenHandler) ServeFirst(root string, args []string) WhenRun {
+	port := freePort()
+	cmd := exec.Command(handler.bin, append([]string{"serve", root, "--lang", "haskell", "--port", fmt.Sprint(port)}, args...)...)
+	stderr := &lockedBuffer{}
+	cmd.Stderr = stderr
+	if err := cmd.Start(); err != nil {
+		panic(fmt.Sprintf("ax serve failed to start: %v", err))
+	}
+	done := make(chan struct{})
+	go func() { _ = cmd.Wait(); close(done) }()
+	stop := func() { _ = cmd.Process.Kill(); <-done }
+	base := fmt.Sprintf("http://127.0.0.1:%d", port)
+	deadline := time.Now().Add(120 * time.Second)
+	for {
+		text := stderr.String()
+		if i := strings.Index(text, "ax: assay failed"); i >= 0 && strings.Contains(text[i:], "\n") {
+			stop()
+			line := strings.SplitN(text[i:], "\n", 2)[0]
+			panic(LawSpecFail{Value: ExtractFailure{Value: ExtractionFailedDetails{Message: strings.TrimPrefix(line, "ax: assay failed: ")}}})
+		}
+		if code, body := httpGet(base + "/api/status"); code == 200 {
+			var st struct {
+				Complete bool `json:"complete"`
+			}
+			if json.Unmarshal(body, &st) == nil && st.Complete {
+				break
+			}
+		}
+		select {
+		case <-done:
+			panic(fmt.Sprintf("ax serve ended: %s", stderr.String()))
+		default:
+		}
+		if time.Now().After(deadline) {
+			stop()
+			panic(fmt.Sprintf("ax serve did not finish its first pass in time: %s", stderr.String()))
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	code, index := httpGet(base + "/api/index")
+	if code != 200 {
+		stop()
+		panic(fmt.Sprintf("ax serve: /api/index gave %d", code))
+	}
+	var idx struct {
+		Packages []struct {
+			Shard string `json:"shard"`
+		} `json:"packages"`
+	}
+	if err := json.Unmarshal(index, &idx); err != nil {
+		stop()
+		panic(fmt.Sprintf("ax serve: the index does not decode: %v", err))
+	}
+	shards := map[string]json.RawMessage{}
+	for _, p := range idx.Packages {
+		c, b := httpGet(base + "/api/shard?path=" + url.QueryEscape(p.Shard))
+		if c != 200 {
+			stop()
+			panic(fmt.Sprintf("ax serve: shard %q gave %d", p.Shard, c))
+		}
+		shards[p.Shard] = b
+	}
+	said := stderr.String()
+	stop()
+	combined, err := json.Marshal(map[string]any{"index": json.RawMessage(index), "shards": shards})
+	if err != nil {
+		panic(fmt.Sprintf("manifest does not combine: %v", err))
+	}
+	warnings, paste := []string{}, []string{}
+	for _, line := range stderrLines(said) {
+		if w, found := strings.CutPrefix(line, "ax: warning: "); found {
+			warnings = append(warnings, w)
+		} else if !strings.HasPrefix(line, "ax: ") {
+			paste = append(paste, line)
+		}
+	}
+	return WhenRun{Packages: decodePackages(combined), Warnings: warnings, Paste: paste}
+}
+
+// passes counts the passes `ax watch` has reported: one line per pass, the
+// line that names the packages written (serve.gp: "ax: <time>  N packages → ...").
+func passes(stderr string) int {
+	k := 0
+	for _, line := range stderrLines(stderr) {
+		if strings.HasPrefix(line, "ax: ") && strings.Contains(line, " packages ") {
+			k++
+		}
+	}
+	return k
+}
+
+// WatchPasses starts `ax watch <root> --lang haskell --out <out> --no-html`,
+// waits for its first pass, and for each path in turn writes a new module
+// there and says whether a pass followed (true at once when one is
+// reported, within 60 s; false when none is in 4 s).
+func (handler *HaskellWhenHandler) WatchPasses(root string, out string, paths []string) []bool {
+	cmd := exec.Command(handler.bin, "watch", root, "--lang", "haskell", "--out", out, "--no-html")
+	stderr := &lockedBuffer{}
+	cmd.Stderr = stderr
+	if err := cmd.Start(); err != nil {
+		panic(fmt.Sprintf("ax watch failed to start: %v", err))
+	}
+	done := make(chan struct{})
+	go func() { _ = cmd.Wait(); close(done) }()
+	defer func() { _ = cmd.Process.Kill(); <-done }()
+	deadline := time.Now().Add(120 * time.Second)
+	for !strings.Contains(stderr.String(), "ax: watching ") {
+		if time.Now().After(deadline) {
+			panic(fmt.Sprintf("ax watch said nothing in time: %s", stderr.String()))
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	result := []bool{}
+	for i, p := range paths {
+		before := passes(stderr.String())
+		full := filepath.Join(root, filepath.FromSlash(p))
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			panic(err)
+		}
+		if err := os.WriteFile(full, []byte(fmt.Sprintf("module W%d where\nw%d = %d\n", i, i, i)), 0o644); err != nil {
+			panic(err)
+		}
+		followed := false
+		quiet := time.Now().Add(4 * time.Second)
+		for time.Now().Before(quiet) {
+			if passes(stderr.String()) > before {
+				followed = true
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+		result = append(result, followed)
+	}
+	return result
+}
+
+// LinkTo makes link a symbolic link to the directory target.
+func (handler *HaskellWhenHandler) LinkTo(link string, target string) {
+	_ = os.Remove(link)
+	if err := os.Symlink(target, link); err != nil {
+		panic(fmt.Sprintf("symlink: %v", err))
+	}
+}

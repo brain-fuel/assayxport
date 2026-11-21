@@ -13,16 +13,17 @@ import (
 
 	"goforge.dev/assayxport/internal/extract"
 	"goforge.dev/assayxport/internal/extract/golang"
+	"goforge.dev/assayxport/internal/extract/haskell"
 	"goforge.dev/assayxport/internal/extract/java"
 	"goforge.dev/assayxport/internal/extract/python"
 	"goforge.dev/assayxport/internal/extract/typescript"
 	"goforge.dev/assayxport/internal/schema"
 )
 
-// All returns every registered extractor (go, java, python, typescript), in a
+// All returns every registered extractor (go, java, python, typescript, haskell), in a
 // stable order.
 func All() []extract.Extractor {
-	return []extract.Extractor{golang.New(), java.New(), python.New(), typescript.New()}
+	return []extract.Extractor{golang.New(), java.New(), python.New(), typescript.New(), haskell.New()}
 }
 
 // langAliases maps the names people actually type to registered extractor
@@ -35,6 +36,7 @@ var langAliases = map[string]string{
 	"node":       "typescript",
 	"golang":     "go",
 	"py":         "python",
+	"hs":         "haskell",
 }
 
 // Select returns the extractors whose Language() is in langs; error if any
