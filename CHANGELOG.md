@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased
+
+- `ax publish` gains target flags `--npm --mvn --pypi --go` (and `--cargo`,
+  registered as the pattern for later: `[TARGET_NOT_IMPLEMENTED]`), plus `--all`
+  for the config's `targets` list, `--npmrc-path` and `--pypirc-path`. With no
+  flag the command behaves exactly as before. With flags, only those targets
+  run (still behind the clean-checkout and tag gates), each checking its own
+  configuration and credentials in one preflight before anything is uploaded.
+- New `Target` abstraction in `internal/publication`. `mvn` wraps the Central
+  flow unchanged; `go` wraps the proxy and pkg.go.dev verification and, with
+  `[go] tag_prefix`, creates and pushes only the annotated tag
+  `<prefix>v<version>` (never forced; `GO_REMOTE_TAG_MISMATCH` if origin has it
+  elsewhere); `npm` publishes through `npm publish` with the terminal attached
+  and compares `dist.integrity`; `pypi` uploads natively to the legacy API and
+  compares sha256 from the JSON API. All are idempotent and resumable, with
+  state in `.assayxport/releases/<version>.<target>.json`.
+- New codes: `NPM_CREDENTIALS_MISSING`, `PYPI_CREDENTIALS_MISSING`,
+  `NPM_VERSION_MISMATCH`, `PYPI_FILE_MISMATCH`, `TARGET_NOT_IMPLEMENTED`, and
+  per-target input codes (`NPM_TARBALL_*`, `PYPI_*`, `GO_*`).
+- Config `schema_version = 2` adds `[npm]`, `[pypi]`, `[go] tag_prefix` and a
+  root `targets` list; schema 1 files parse as before and reject the new keys
+  with `CONFIG_KEY_UNSUPPORTED`. Schema 2 also lets a `maven-repository`
+  release name `go.module`.
+- Credential files keep the owner-only (0600) check on Unix; on Windows the
+  check is skipped with a warning.
+
 ## v0.26.0
 
 - `maven-repository` releases may span several groups: an `artifacts` entry is

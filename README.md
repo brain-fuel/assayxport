@@ -389,6 +389,69 @@ mvn -f hosts/jvm -Prelease,all-platforms -Drevision=0.36.0 -Dgpg.skip -DskipTest
 Remove the staging directory first: it accumulates across builds, and ax
 rejects what it finds.
 
+## Publish to npm, PyPI and Go as well
+
+`ax publish` with no target flag is the Central flow described above, unchanged.
+Target flags publish other channels from the same tagged, clean checkout:
+
+```sh
+ax publish --npm --mvn --pypi --go     # any subset; --cargo is reserved
+ax publish --all                       # every target in the config's `targets` list
+```
+
+Only the selected targets run, in the order npm, mvn, pypi, go (go first when
+the policy is `goplus-dual`, whose Maven bundle must be built from the remote
+Go tag). The clean-checkout and `v<version>` tag gates still apply. Each
+selected target checks its own configuration and credentials in one preflight
+that reports every problem as `[CODE] ... Fix:` before anything is uploaded
+(`--prepare` skips the credential checks and builds only the Maven bundle).
+Every target is idempotent and resumable: it asks its registry what is live,
+skips what matches, fails on what differs, and publishes the rest. Progress is
+recorded, without secrets, in `.assayxport/releases/<version>.<target>.json`
+(Central keeps `<version>.json`); the clean-checkout gate tolerates these files.
+A run stops at the first failing target; rerun it to continue.
+
+The target tables need `schema_version = 2`; schema 1 files parse exactly as
+before and reject the new keys with `CONFIG_KEY_UNSUPPORTED`:
+
+```toml
+schema_version = 2
+version = "0.36.3"
+targets = ["npm", "mvn", "pypi", "go"]       # used by --all, and by orchestrators
+
+[npm]
+registry = "https://registry.npmjs.org"      # default; AX_NPM_REGISTRY_URL overrides
+packages = ["@goforgedev/core=dist/goforgedev-core-0.36.3.tgz",
+            "lawspec=dist/lawspec-0.36.3.tgz@next"]   # publish order; optional @dist-tag
+
+[pypi]
+project = "lawspec"
+files = ["dist/lawspec-0.36.3-py3-none-any.whl", "dist/lawspec-0.36.3.tar.gz"]
+repository = "https://upload.pypi.org/legacy/"   # default; AX_PYPI_URL overrides
+json_url = "https://pypi.org/pypi"               # default; AX_PYPI_JSON_URL overrides
+
+[go]
+module = "goforge.dev/lawspec/hosts/go"
+tag_prefix = "hosts/go/"                     # optional: ax creates and pushes the tag
+```
+
+| Target | Credentials (first found) | Already published? | Publishes by |
+|---|---|---|---|
+| `--mvn` | `MAVEN_CENTRAL_USERNAME`/`PASSWORD`, `maven_settings.xml`, `--maven-settings-path` | Central deployment `PUBLISHED` in saved state | the Central flow above, unchanged |
+| `--npm` | `NPM_TOKEN`, or an `_authToken` for the registry in `--npmrc-path`, the project `.npmrc`, then `~/.npmrc` | `GET <registry>/<name>/<version>`: `dist.integrity` equals the tarball's sha512, else `NPM_VERSION_MISMATCH`; 404 means publish | `npm publish <tgz> --access public --registry <registry> [--tag t]` with your terminal attached, so web login and OTP work; `NPM_TOKEN` reaches npm through its environment only |
+| `--pypi` | `PYPI_API_TOKEN`, or `TWINE_PASSWORD` (`TWINE_USERNAME`, default `__token__`), or `[pypi]` in `--pypirc-path` or `~/.pypirc` | PyPI JSON API lists the file with the same sha256, else `PYPI_FILE_MISMATCH` | a native multipart upload to the legacy API (metadata read from the wheel `METADATA` or sdist `PKG-INFO`, sha256 and blake2-256 digests, basic auth `__token__`) |
+| `--go` | none (git uses your own credentials) | origin's tag peels to `HEAD`, and the module proxy and pkg.go.dev serve `v<version>` | with `tag_prefix`: create annotated `<prefix>v<version>` at `v<version>^{}` if missing, push only that tag (never forced), then verify; without it, verify only |
+| `--cargo` | n/a | n/a | registered, fails with `[TARGET_NOT_IMPLEMENTED]` |
+
+Missing credentials are `NPM_CREDENTIALS_MISSING` and
+`PYPI_CREDENTIALS_MISSING`, plus the Central codes. A credential file that
+holds a literal secret must be readable only by you (mode 0600) on Unix; on
+Windows, where POSIX modes do not apply, the check is skipped with a warning.
+A `${NPM_TOKEN}` reference in an `.npmrc` is not a literal and needs no mode.
+A `--go` tag whose remote counterpart points elsewhere fails with
+`GO_REMOTE_TAG_MISMATCH`; ax never moves a tag. Registries other than loopback
+test servers must be `https`.
+
 ## License
 
 MIT. Third-party components (the tree-sitter runtime and the Python and Java
