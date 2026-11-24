@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -58,7 +59,14 @@ func VerifyGoRelease(ctx context.Context, root string, cfg Config) error {
 	if cfg.Policy != "goplus-dual" {
 		return nil
 	}
-	tag := "v" + cfg.Version
+	return verifyGoTag(ctx, root, cfg, "v"+cfg.Version)
+}
+
+// verifyGoTag checks that origin's tag (which may carry a module-directory
+// prefix such as hosts/go/v1.2.3) points at the release checkout, and that
+// the module proxy and pkg.go.dev serve the module at v<version>.
+func verifyGoTag(ctx context.Context, root string, cfg Config, tag string) error {
+	goVersion := "v" + cfg.Version
 	head := gitOutput(root, "rev-parse", "HEAD")
 	cmd := exec.CommandContext(ctx, "git", "-C", root, "ls-remote", "--tags", "origin", "refs/tags/"+tag, "refs/tags/"+tag+"^{}")
 	out, err := cmd.CombinedOutput()
@@ -85,15 +93,15 @@ func VerifyGoRelease(ctx context.Context, root string, cfg Config) error {
 	if proxy == "" {
 		proxy = "https://proxy.golang.org"
 	}
-	versionURL := proxy + "/" + proxyEscape(cfg.GoModule) + "/@v/" + tag + ".info"
-	if err := requireHTTP(ctx, versionURL, "GO_PROXY_VERSION_MISSING", "Publish "+tag+" first, then wait for proxy.golang.org to cache "+cfg.GoModule+"@"+tag+" before retrying."); err != nil {
+	versionURL := proxy + "/" + proxyEscape(cfg.GoModule) + "/@v/" + goVersion + ".info"
+	if err := requireHTTP(ctx, versionURL, "GO_PROXY_VERSION_MISSING", "Publish "+tag+" first, then wait for proxy.golang.org to cache "+cfg.GoModule+"@"+goVersion+" before retrying."); err != nil {
 		return err
 	}
 	pkgSite := strings.TrimRight(strings.TrimSpace(os.Getenv("AX_PKG_GO_DEV_URL")), "/")
 	if pkgSite == "" {
 		pkgSite = "https://pkg.go.dev"
 	}
-	if err := requireHTTP(ctx, pkgSite+"/"+cfg.GoModule+"@"+tag, "PKG_GO_DEV_NOT_INDEXED", "Request/index "+cfg.GoModule+"@"+tag+" on pkg.go.dev and retry only after its documentation page returns successfully."); err != nil {
+	if err := requireHTTP(ctx, pkgSite+"/"+cfg.GoModule+"@"+goVersion, "PKG_GO_DEV_NOT_INDEXED", "Request/index "+cfg.GoModule+"@"+goVersion+" on pkg.go.dev and retry only after its documentation page returns successfully."); err != nil {
 		return err
 	}
 	return nil
@@ -227,7 +235,7 @@ func centralCredentials(root, configuredPath string) (string, string, error) {
 	if err != nil {
 		return "", "", fmt.Errorf("[MAVEN_SETTINGS_UNREADABLE] cannot read %s: %v\n  Fix: correct --maven-settings-path and file permissions, then rerun `ax publish`", path, err)
 	}
-	if info, statErr := os.Stat(path); statErr == nil && info.Mode().Perm()&0077 != 0 {
+	if info, statErr := os.Stat(path); statErr == nil && credentialFileInsecure(path, runtime.GOOS, info.Mode()) {
 		return "", "", fmt.Errorf("[MAVEN_SETTINGS_PERMISSIONS_INSECURE] %s is readable by group or other users\n  Fix: run `chmod 600 %q`, then rerun `ax publish`", path, path)
 	}
 	servers, err := parseMavenServers(data)

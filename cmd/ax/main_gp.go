@@ -137,11 +137,18 @@ func runPublishCmd(args []string) error {
 	initConfig := fs.Bool("init", false, "write a complete assayxport.toml template without overwriting")
 	mavenSettingsPath := fs.String("maven-settings-path", "", "read Central credentials from this Maven settings XML file")
 	configPath := fs.String("config", "", "read the publication configuration from this file instead of <root>/assayxport.toml (it may live outside the checkout)")
+	npmrcPath := fs.String("npmrc-path", "", "read the npm auth token from this .npmrc (default: the project's, then ~/.npmrc)")
+	pypircPath := fs.String("pypirc-path", "", "read PyPI credentials from this .pypirc (default: ~/.pypirc)")
+	selected := map[string]*bool{}
+	for _, name := range publication.TargetNames {
+		selected[name] = fs.Bool(name, false, "publish the "+name+" target (see the README for its configuration and credentials)")
+	}
+	allTargets := fs.Bool("all", false, "publish every target listed in the configuration's targets")
 	quiet := false
 	fs.BoolVar(&quiet, "q", false, "suppress publication progress")
 	fs.BoolVar(&quiet, "quiet", false, "suppress publication progress")
 	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: ax publish [--prepare] [-q|--quiet] [--config path] [--maven-settings-path path] [root]")
+		fmt.Fprintln(os.Stderr, "usage: ax publish [--prepare] [-q|--quiet] [--config path] [--npm] [--mvn] [--pypi] [--go] [--cargo] [--all] [--maven-settings-path path] [--npmrc-path path] [--pypirc-path path] [root]")
 		fs.PrintDefaults()
 	}
 	if err := fs.Parse(args); err != nil {
@@ -192,6 +199,15 @@ func runPublishCmd(args []string) error {
 			return fmt.Errorf("[PUBLISH_ARGUMENT_INVALID] %v\n  Fix: pass a readable --config path", err)
 		}
 	}
+	names := []string{}
+	for _, name := range publication.TargetNames {
+		if *selected[name] {
+			names = append(names, name)
+		}
+	}
+	if len(names) > 0 || *allTargets {
+		return runPublishTargets(root, configFile, names, *allTargets, *prepare, publication.TargetOptions{NpmrcPath: *npmrcPath, PypircPath: *pypircPath, MavenSettingsPath: *mavenSettingsPath}, progress)
+	}
 	cfg, report := publication.PreflightConfig(root, configFile)
 	if !report.OK() {
 		return report
@@ -224,6 +240,68 @@ func runPublishCmd(args []string) error {
 		fmt.Println(purl)
 	}
 	return nil
+}
+
+// runPublishTargets publishes only the selected targets. Each target's
+// configuration and credentials are checked together before any upload, and
+// every target is idempotent, so rerunning resumes where a run stopped.
+func runPublishTargets(root, configFile string, names []string, all, prepareOnly bool, opts publication.TargetOptions, progress func(string)) error {
+	if all {
+		cfg, issues := publication.LoadConfig(configFile)
+		for _, issue := range issues {
+			if issue.Code == "CONFIG_MISSING" {
+				return publication.Report{Issues: []publication.Issue{issue}}
+			}
+		}
+		names = append(names, cfg.Targets...)
+		if len(names) == 0 {
+			return fmt.Errorf("[TARGETS_EMPTY] --all needs a root targets list in %s\n  Fix: add schema_version = 2 and targets = [\"npm\", \"mvn\"], or name targets with --npm --mvn --pypi --go", configFile)
+		}
+	}
+	progress("checking the configuration, each target's inputs and credentials, and Git release state")
+	cfg, targets, report := publication.PreflightTargets(root, configFile, names, opts, !prepareOnly)
+	if !report.OK() {
+		return report
+	}
+	progress("preflight passed for: " + targetList(targets))
+	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Hour)
+	defer cancel()
+	if prepareOnly {
+		for _, t := range targets {
+			if t.Name() != "mvn" {
+				continue
+			}
+			prepared, err := publication.Prepare(ctx, root, cfg)
+			if err != nil {
+				return fmt.Errorf("[BUNDLE_PREPARATION_FAILED] %v\n  Fix: correct the signing or artifact error, then rerun `ax publish --prepare`; no upload was attempted", err)
+			}
+			fmt.Println("Central bundle:", prepared.Bundle)
+			fmt.Println("OpenPGP fingerprint:", prepared.Fingerprint)
+		}
+		return nil
+	}
+	results, err := publication.RunTargets(ctx, targets, progress)
+	for _, t := range targets {
+		for _, line := range t.Summary() {
+			fmt.Println(line)
+		}
+	}
+	for _, r := range results {
+		detail := ""
+		if r.Detail != "" {
+			detail = "  " + r.Detail
+		}
+		fmt.Printf("%-6s %s%s\n", r.Target, r.Status, detail)
+	}
+	return err
+}
+
+func targetList(targets []publication.Target) string {
+	names := []string{}
+	for _, t := range targets {
+		names = append(names, t.Name())
+	}
+	return strings.Join(names, ", ")
 }
 
 // splitPath pulls an optional leading positional path out of args so

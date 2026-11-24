@@ -25,6 +25,10 @@ import (
 
 type Issue struct{ Code, Problem, Fix string }
 
+// Error lets an Issue travel as an ordinary error in the same
+// "[CODE] problem" and "Fix:" layout that Report prints.
+func (i Issue) Error() string { return fmt.Sprintf("[%s] %s\n  Fix: %s", i.Code, i.Problem, i.Fix) }
+
 type Report struct{ Issues []Issue }
 
 func (r Report) OK() bool { return len(r.Issues) == 0 }
@@ -40,6 +44,16 @@ func (r Report) Error() string {
 type Waiver struct{ Issue, Symbol, Reason, Through string }
 
 type Config struct {
+	// Schema is the schema_version of the file; 2 adds the target tables.
+	Schema int
+	// Targets is the root targets list: the channels an orchestrator
+	// publishes. ax publish --all runs exactly these.
+	Targets                                                                     []string
+	NPMRegistry                                                                 string
+	NPMPackages                                                                 []string
+	PyPIRepository, PyPIJSONURL, PyPIProject                                    string
+	PyPIFiles                                                                   []string
+	GoTagPrefix                                                                 string
 	Version, Policy, GoModule, GoRepository, GroupID, ArtifactID, BuildManifest string
 	Name, Description, URL, LicenseName, LicenseURL                             string
 	DeveloperID, DeveloperName, DeveloperEmail, DeveloperURL                    string
@@ -67,16 +81,26 @@ func PreflightConfig(root, configPath string) (Config, Report) {
 			return cfg, Report{Issues: []Issue{issue}}
 		}
 	}
-	issues = append(issues, validateConfig(cfg)...)
-	if cfg.Policy == PolicyMavenRepository {
-		issues = append(issues, validateRepository(root, cfg)...)
-	} else {
-		issues = append(issues, validateBuild(root, cfg)...)
-	}
+	issues = append(issues, validateTargetNames(cfg)...)
+	issues = append(issues, validateMaven(root, cfg)...)
 	issues = append(issues, validateGitRelease(root, cfg)...)
 	sort.SliceStable(issues, func(i, j int) bool { return issues[i].Code < issues[j].Code })
 	return cfg, Report{Issues: issues}
 }
+
+// validateMaven is the whole Maven Central half of the preflight: metadata,
+// then either the staged repository or the Go+ build manifest.
+func validateMaven(root string, cfg Config) []Issue {
+	issues := validateConfig(cfg)
+	if cfg.Policy == PolicyMavenRepository {
+		return append(issues, validateRepository(root, cfg)...)
+	}
+	return append(issues, validateBuild(root, cfg)...)
+}
+
+// LoadConfig reads and syntax-checks an assayxport.toml without validating
+// the release it describes.
+func LoadConfig(path string) (Config, []Issue) { return loadConfig(path) }
 
 func loadConfig(path string) (Config, []Issue) {
 	f, err := os.Open(path)
@@ -87,6 +111,7 @@ func loadConfig(path string) (Config, []Issue) {
 	cfg, section, schema, waiverIndex := Config{}, "", 0, -1
 	seen := map[string]bool{}
 	issues := []Issue{}
+	schemaKeys := []string{}
 	s := bufio.NewScanner(f)
 	for lineNo := 1; s.Scan(); lineNo++ {
 		line := strings.TrimSpace(strings.SplitN(s.Text(), "#", 2)[0])
@@ -100,8 +125,8 @@ func loadConfig(path string) (Config, []Issue) {
 				waiverIndex = len(cfg.Waivers) - 1
 				continue
 			}
-			if line != "[go]" && line != "[maven]" {
-				issues = append(issues, Issue{"CONFIG_UNKNOWN_TABLE", fmt.Sprintf("%s:%d uses unsupported table %s", path, lineNo, line), "Use only root keys plus [go], [maven], and documented [[documentation.waivers]] entries."})
+			if line != "[go]" && line != "[maven]" && line != "[npm]" && line != "[pypi]" {
+				issues = append(issues, Issue{"CONFIG_UNKNOWN_TABLE", fmt.Sprintf("%s:%d uses unsupported table %s", path, lineNo, line), "Use only root keys plus [go], [maven], [npm], [pypi], and documented [[documentation.waivers]] entries."})
 				continue
 			}
 			section = strings.Trim(line, "[]")
@@ -123,18 +148,23 @@ func loadConfig(path string) (Config, []Issue) {
 		if section == "" && key == "schema_version" {
 			n, e := strconv.Atoi(raw)
 			if e != nil {
-				issues = append(issues, Issue{"CONFIG_SCHEMA_INVALID", "schema_version is not an integer", "Set schema_version = 1."})
+				issues = append(issues, Issue{"CONFIG_SCHEMA_INVALID", "schema_version is not an integer", "Set schema_version = 1, or 2 to use the target tables."})
 			} else {
 				schema = n
 			}
 			continue
 		}
-		if section == "" && key == "artifacts" && strings.HasPrefix(raw, "[") {
+		if newSchemaKeys[qualified] {
+			schemaKeys = append(schemaKeys, qualified)
+		}
+		if strings.HasPrefix(raw, "[") {
 			var list []string
 			if e := json.Unmarshal([]byte(raw), &list); e != nil {
-				issues = append(issues, Issue{"CONFIG_VALUE_INVALID", fmt.Sprintf("%s:%d artifacts must be a single-line array of quoted strings", path, lineNo), "Write artifacts = [\"a\", \"b\"] on one line, or a comma-separated quoted string."})
-			} else {
-				cfg.Artifacts = append(cfg.Artifacts, list...)
+				issues = append(issues, Issue{"CONFIG_VALUE_INVALID", fmt.Sprintf("%s:%d %s must be a single-line array of quoted strings", path, lineNo, key), "Write " + key + " = [\"a\", \"b\"] on one line." + listFix(qualified)})
+				continue
+			}
+			if !setList(&cfg, qualified, list) {
+				issues = append(issues, Issue{"CONFIG_UNKNOWN_KEY", fmt.Sprintf("%s:%d contains unknown array key %s", path, lineNo, qualified), "Remove the key or replace it with a key from the assayxport.toml schema."})
 			}
 			continue
 		}
@@ -156,10 +186,43 @@ func loadConfig(path string) (Config, []Issue) {
 	if err := s.Err(); err != nil {
 		issues = append(issues, Issue{"CONFIG_READ_FAILED", err.Error(), "Make assayxport.toml readable and rerun the preflight."})
 	}
-	if schema != 1 {
-		issues = append(issues, Issue{"CONFIG_SCHEMA_UNSUPPORTED", fmt.Sprintf("schema_version is %d; only 1 is supported", schema), "Set schema_version = 1 and migrate keys to the documented schema."})
+	cfg.Schema = schema
+	if schema != 1 && schema != 2 {
+		issues = append(issues, Issue{"CONFIG_SCHEMA_UNSUPPORTED", fmt.Sprintf("schema_version is %d; only 1 and 2 are supported", schema), "Set schema_version = 1 (Maven and Go release) or 2 (adds [npm], [pypi], [go] tag_prefix and targets) and migrate keys to the documented schema."})
+	}
+	if schema == 1 {
+		for _, name := range schemaKeys {
+			issues = append(issues, Issue{"CONFIG_KEY_UNSUPPORTED", name + " needs schema_version = 2", "Set schema_version = 2 to use " + name + ", or remove it."})
+		}
 	}
 	return cfg, issues
+}
+
+// newSchemaKeys are the settings that exist only in schema_version 2. A
+// schema 1 file that sets one is rejected rather than silently ignored.
+var newSchemaKeys = map[string]bool{".targets": true, "npm.packages": true, "npm.registry": true, "pypi.files": true, "pypi.repository": true, "pypi.json_url": true, "pypi.project": true, "go.tag_prefix": true}
+
+func listFix(key string) string {
+	if key == "npm.packages" {
+		return " Each entry is \"name=path/to.tgz\" or \"name=path/to.tgz@tag\"."
+	}
+	return ""
+}
+
+func setList(c *Config, key string, list []string) bool {
+	switch key {
+	case ".artifacts":
+		c.Artifacts = append(c.Artifacts, list...)
+	case ".targets":
+		c.Targets = append(c.Targets, list...)
+	case "npm.packages":
+		c.NPMPackages = append(c.NPMPackages, list...)
+	case "pypi.files":
+		c.PyPIFiles = append(c.PyPIFiles, list...)
+	default:
+		return false
+	}
+	return true
 }
 
 func setWaiver(w *Waiver, key, value string) bool {
@@ -196,6 +259,16 @@ func set(c *Config, key, value string) bool {
 		c.GoModule = value
 	case "go.repository":
 		c.GoRepository = value
+	case "go.tag_prefix":
+		c.GoTagPrefix = value
+	case "npm.registry":
+		c.NPMRegistry = value
+	case "pypi.repository":
+		c.PyPIRepository = value
+	case "pypi.json_url":
+		c.PyPIJSONURL = value
+	case "pypi.project":
+		c.PyPIProject = value
 	case "maven.group_id":
 		c.GroupID = value
 	case "maven.artifact_id":
@@ -542,7 +615,7 @@ func validateGitRelease(root string, c Config) []Issue {
 	}
 	issues := []Issue{}
 	if releaseCheckoutDirty(root, c.Version) {
-		issues = append(issues, Issue{"GIT_CHECKOUT_DIRTY", "release checkout has uncommitted or untracked files other than ax's resumable release state", "Commit the intended release files and remove or ignore generated scratch files; `git status --short` may contain only .assayxport/releases/" + c.Version + ".json before retrying."})
+		issues = append(issues, Issue{"GIT_CHECKOUT_DIRTY", "release checkout has uncommitted or untracked files other than ax's resumable release state", "Commit the intended release files and remove or ignore generated scratch files; `git status --short` may contain only .assayxport/releases/" + c.Version + ".json and " + c.Version + ".<target>.json before retrying."})
 	}
 	head := gitOutput(root, "rev-parse", "HEAD")
 	tag := "v" + c.Version
@@ -555,12 +628,26 @@ func validateGitRelease(root string, c Config) []Issue {
 	return issues
 }
 func releaseCheckoutDirty(root, version string) bool {
-	allowed := "?? .assayxport/releases/" + version + ".json"
 	status := gitOutput(root, "status", "--porcelain=v1", "--untracked-files=all")
 	for _, line := range strings.Split(status, "\n") {
-		if strings.TrimSpace(line) != "" && line != allowed {
+		if strings.TrimSpace(line) != "" && !releaseStateLine(line, version) {
 			return true
 		}
 	}
 	return false
+}
+
+// releaseStateLine reports whether a porcelain status line is one of ax's own
+// resumable release-state files: <version>.json for Central, or
+// <version>.<target>.json for another target.
+func releaseStateLine(line, version string) bool {
+	base := "?? .assayxport/releases/" + version
+	if line == base+".json" {
+		return true
+	}
+	if !strings.HasPrefix(line, base+".") || !strings.HasSuffix(line, ".json") {
+		return false
+	}
+	target := strings.TrimSuffix(strings.TrimPrefix(line, base+"."), ".json")
+	return target != "" && !strings.ContainsAny(target, "/\\ ")
 }

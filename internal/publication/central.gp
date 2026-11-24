@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -32,7 +33,14 @@ type mavenSettings struct{Servers []mavenServer `xml:"servers>server"`}
 // any credential is read or upload is attempted.
 func VerifyGoRelease(ctx context.Context, root string, cfg Config) error {
 	if cfg.Policy != "goplus-dual" { return nil }
-	tag := "v"+cfg.Version
+	return verifyGoTag(ctx, root, cfg, "v"+cfg.Version)
+}
+
+// verifyGoTag checks that origin's tag (which may carry a module-directory
+// prefix such as hosts/go/v1.2.3) points at the release checkout, and that
+// the module proxy and pkg.go.dev serve the module at v<version>.
+func verifyGoTag(ctx context.Context, root string, cfg Config, tag string) error {
+	goVersion := "v"+cfg.Version
 	head := gitOutput(root,"rev-parse","HEAD")
 	cmd := exec.CommandContext(ctx,"git","-C",root,"ls-remote","--tags","origin","refs/tags/"+tag,"refs/tags/"+tag+"^{}")
 	out,err:=cmd.CombinedOutput();if err!=nil{return fmt.Errorf("[REMOTE_TAG_UNAVAILABLE] cannot read %s from origin: %v: %s\n  Fix: verify the origin remote and network, then push the reviewed tag with `git push origin %s` before retrying",tag,err,strings.TrimSpace(string(out)),tag)}
@@ -40,10 +48,10 @@ func VerifyGoRelease(ctx context.Context, root string, cfg Config) error {
 	if remote==""{return fmt.Errorf("[REMOTE_TAG_MISSING] origin does not contain %s\n  Fix: push the approved immutable Go release first with `git push origin %s`, wait for it to become visible, then rerun `ax publish`",tag,tag)}
 	if remote!=head{return fmt.Errorf("[REMOTE_TAG_COMMIT_MISMATCH] origin %s points to %s but the release checkout is %s\n  Fix: stop publication and reconcile the tag; Maven coordinates must be built from the exact remote Go tag commit",tag,remote,head)}
 	proxy:=strings.TrimRight(strings.TrimSpace(os.Getenv("AX_GO_PROXY_URL")),"/");if proxy==""{proxy="https://proxy.golang.org"}
-	versionURL:=proxy+"/"+proxyEscape(cfg.GoModule)+"/@v/"+tag+".info"
-	if err:=requireHTTP(ctx,versionURL,"GO_PROXY_VERSION_MISSING","Publish "+tag+" first, then wait for proxy.golang.org to cache "+cfg.GoModule+"@"+tag+" before retrying.");err!=nil{return err}
+	versionURL:=proxy+"/"+proxyEscape(cfg.GoModule)+"/@v/"+goVersion+".info"
+	if err:=requireHTTP(ctx,versionURL,"GO_PROXY_VERSION_MISSING","Publish "+tag+" first, then wait for proxy.golang.org to cache "+cfg.GoModule+"@"+goVersion+" before retrying.");err!=nil{return err}
 	pkgSite:=strings.TrimRight(strings.TrimSpace(os.Getenv("AX_PKG_GO_DEV_URL")),"/");if pkgSite==""{pkgSite="https://pkg.go.dev"}
-	if err:=requireHTTP(ctx,pkgSite+"/"+cfg.GoModule+"@"+tag,"PKG_GO_DEV_NOT_INDEXED","Request/index "+cfg.GoModule+"@"+tag+" on pkg.go.dev and retry only after its documentation page returns successfully.");err!=nil{return err}
+	if err:=requireHTTP(ctx,pkgSite+"/"+cfg.GoModule+"@"+goVersion,"PKG_GO_DEV_NOT_INDEXED","Request/index "+cfg.GoModule+"@"+goVersion+" on pkg.go.dev and retry only after its documentation page returns successfully.");err!=nil{return err}
 	return nil
 }
 
@@ -71,7 +79,7 @@ func centralCredentials(root,configuredPath string)(string,string,error){
 	if username!=""||password!=""{if username==""||password==""{return "","",fmt.Errorf("[CENTRAL_ENV_CREDENTIALS_INCOMPLETE] exactly one Maven Central environment variable is set\n  Fix: export both MAVEN_CENTRAL_USERNAME and MAVEN_CENTRAL_PASSWORD, or unset both to use maven_settings.xml")};return username,password,nil}
 	path:=strings.TrimSpace(configuredPath);explicit:=path!="";if path==""{path=filepath.Join(root,"maven_settings.xml")}else if !filepath.IsAbs(path){path=filepath.Join(root,path)}
 	data,err:=os.ReadFile(path);if os.IsNotExist(err)&&!explicit{return "","",fmt.Errorf("[CENTRAL_CREDENTIALS_MISSING] Maven Central credentials are absent and %s does not exist\n  Fix: export MAVEN_CENTRAL_USERNAME and MAVEN_CENTRAL_PASSWORD, create owner-only maven_settings.xml in the repository root, or pass `ax publish --maven-settings-path ./path/to/maven_settings.xml`",path)};if err!=nil{return "","",fmt.Errorf("[MAVEN_SETTINGS_UNREADABLE] cannot read %s: %v\n  Fix: correct --maven-settings-path and file permissions, then rerun `ax publish`",path,err)}
-	if info,statErr:=os.Stat(path);statErr==nil&&info.Mode().Perm()&0077!=0{return "","",fmt.Errorf("[MAVEN_SETTINGS_PERMISSIONS_INSECURE] %s is readable by group or other users\n  Fix: run `chmod 600 %q`, then rerun `ax publish`",path,path)}
+	if info,statErr:=os.Stat(path);statErr==nil&&credentialFileInsecure(path,runtime.GOOS,info.Mode()){return "","",fmt.Errorf("[MAVEN_SETTINGS_PERMISSIONS_INSECURE] %s is readable by group or other users\n  Fix: run `chmod 600 %q`, then rerun `ax publish`",path,path)}
 	servers,err:=parseMavenServers(data);if err!=nil{return "","",fmt.Errorf("[MAVEN_SETTINGS_INVALID] cannot parse %s: %v\n  Fix: provide a <server> document or standard <settings><servers><server> Maven document containing username and password",path,err)}
 	server,err:=selectMavenServer(servers);if err!=nil{return "","",fmt.Errorf("[MAVEN_SETTINGS_INVALID] %s: %v\n  Fix: keep one server entry, or give the Central entry id central, central-portal, or ossrh",path,err)}
 	username,password=strings.TrimSpace(server.Username),strings.TrimSpace(server.Password);if username==""||password==""{return "","",fmt.Errorf("[MAVEN_SETTINGS_CREDENTIALS_MISSING] %s does not contain both username and password\n  Fix: add the Central Portal user-token username and password to its <server> entry",path)};return username,password,nil

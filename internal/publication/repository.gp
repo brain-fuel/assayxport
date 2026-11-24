@@ -139,7 +139,10 @@ func validateRepositoryConfig(c Config) []Issue {
 			issues = append(issues, Issue{"BUNDLE_INSIDE_STAGING", "bundle path is inside the staging directory", "Write the bundle next to the staging directory, not inside it; the staging directory must contain only the build's repository."})
 		}
 	}
+	// Schema 2 lets a maven-repository release also name its Go module, so
+	// `ax publish --go` can verify (and optionally tag) it.
 	for name, value := range map[string]string{"go.module": c.GoModule, "go.repository": c.GoRepository, "maven.artifact_id": c.ArtifactID, "maven.build_manifest": c.BuildManifest} {
+		if c.Schema >= 2 && (name == "go.module" || name == "go.repository") { continue }
 		if value != "" { issues = append(issues, Issue{"CONFIG_KEY_UNSUPPORTED", name + " is not used by policy \"maven-repository\"", "Remove " + name + "; the staged POMs carry all Maven metadata for this policy."}) }
 	}
 	return issues

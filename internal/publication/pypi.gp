@@ -1,0 +1,358 @@
+package publication
+
+import (
+	"archive/tar"
+	"archive/zip"
+	"bufio"
+	"bytes"
+	"compress/gzip"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"net/textproto"
+	"net/url"
+	"os"
+	"path/filepath"
+	"regexp"
+	"runtime"
+	"sort"
+	"strings"
+	"time"
+
+	"golang.org/x/crypto/blake2b"
+)
+
+const (
+	// PyPIUpload is the legacy upload API used when nothing else is set.
+	PyPIUpload = "https://upload.pypi.org/legacy/"
+	// PyPIJSON is the JSON API base used for the published check.
+	PyPIJSON = "https://pypi.org/pypi"
+)
+
+var (
+	pypiPollDelay = 3 * time.Second
+	pypiPollAttempts = 15
+)
+
+// pypiFile is one distribution to publish, with the metadata read from it.
+type pypiFile struct {
+	Path, Name string
+	Metadata textproto.MIMEHeader
+	Description string
+	Kind, PyVersion string
+	SHA256, Blake2 string
+	Size int64
+}
+
+type pypiTarget struct {
+	root string
+	cfg Config
+	opts TargetOptions
+	username, password string
+	http *http.Client
+	lines []string
+}
+
+func newPyPITarget(root string, cfg Config, opts TargetOptions) *pypiTarget {
+	return &pypiTarget{root: root, cfg: cfg, opts: opts, http: &http.Client{Transport: &http.Transport{Proxy: http.ProxyFromEnvironment, TLSHandshakeTimeout: 30 * time.Second, ResponseHeaderTimeout: 10 * time.Minute}}}
+}
+
+func (t *pypiTarget) Name() string { return "pypi" }
+func (t *pypiTarget) Summary() []string { return t.lines }
+
+func (t *pypiTarget) uploadURL() string {
+	if v := strings.TrimSpace(os.Getenv("AX_PYPI_URL")); v != "" { return v }
+	if t.cfg.PyPIRepository != "" { return t.cfg.PyPIRepository }
+	return PyPIUpload
+}
+
+func (t *pypiTarget) jsonURL() string {
+	if v := strings.TrimSpace(os.Getenv("AX_PYPI_JSON_URL")); v != "" { return strings.TrimRight(v, "/") }
+	if t.cfg.PyPIJSONURL != "" { return strings.TrimRight(t.cfg.PyPIJSONURL, "/") }
+	return PyPIJSON
+}
+
+var pypiNormalize = regexp.MustCompile(`[-_.]+`)
+
+// pypiName is the PEP 503 normalised project name.
+func pypiName(name string) string { return strings.ToLower(pypiNormalize.ReplaceAllString(strings.TrimSpace(name), "-")) }
+
+func (t *pypiTarget) Validate(cfg Config) []Issue {
+	issues := validateRelease(cfg)
+	if len(cfg.PyPIFiles) == 0 { issues = append(issues, Issue{"CONFIG_REQUIRED_MISSING", "required setting pypi.files is missing or empty", "Add [pypi] files = [\"dist/name-1.2.3-py3-none-any.whl\", \"dist/name-1.2.3.tar.gz\"] to assayxport.toml (schema_version = 2)."}) }
+	if strings.TrimSpace(cfg.PyPIProject) == "" { issues = append(issues, Issue{"CONFIG_REQUIRED_MISSING", "required setting pypi.project is missing or empty", "Add [pypi] project = \"name\", the PyPI project the files belong to."}) }
+	if u := t.uploadURL(); !httpEndpoint(u) { issues = append(issues, Issue{"PYPI_REPOSITORY_INVALID", "PyPI repository " + u + " is not an https URL", "Set [pypi] repository or AX_PYPI_URL to an https:// upload URL."}) }
+	if u := t.jsonURL(); !httpEndpoint(u) { issues = append(issues, Issue{"PYPI_REPOSITORY_INVALID", "PyPI JSON API " + u + " is not an https URL", "Set [pypi] json_url or AX_PYPI_JSON_URL to an https:// URL such as " + PyPIJSON + "."}) }
+	seen := map[string]bool{}
+	for _, entry := range cfg.PyPIFiles {
+		if seen[entry] { issues = append(issues, Issue{"PYPI_FILE_DUPLICATE", entry + " is listed more than once in pypi.files", "List each file once."}); continue }
+		seen[entry] = true
+		file, ok := safePath(t.root, entry)
+		if !ok { issues = append(issues, Issue{"PYPI_FILE_PATH_INVALID", entry + " escapes the project root", "Use a relative path inside the checkout."}); continue }
+		f, err := readPyPIFile(file)
+		if err != nil { issues = append(issues, Issue{"PYPI_FILE_UNREADABLE", fmt.Sprintf("cannot read distribution %s: %v", entry, err), "Build the wheel or sdist first, and list only .whl and .tar.gz files."}); continue }
+		if cfg.PyPIProject != "" && pypiName(f.Metadata.Get("Name")) != pypiName(cfg.PyPIProject) { issues = append(issues, Issue{"PYPI_METADATA_MISMATCH", fmt.Sprintf("%s is for project %q, not %q", entry, f.Metadata.Get("Name"), cfg.PyPIProject), "Rebuild it for this project, or correct pypi.project."}) }
+		if cfg.Version != "" && f.Metadata.Get("Version") != cfg.Version { issues = append(issues, Issue{"PYPI_METADATA_MISMATCH", fmt.Sprintf("%s is version %s, not the release version %s", entry, f.Metadata.Get("Version"), cfg.Version), "Rebuild it at the release version."}) }
+	}
+	return issues
+}
+
+// readPyPIFile digests a distribution and reads its core metadata: METADATA
+// from a wheel, PKG-INFO from an sdist.
+func readPyPIFile(file string) (pypiFile, error) {
+	f := pypiFile{Path: file, Name: filepath.Base(file)}
+	data, err := os.ReadFile(file)
+	if err != nil { return f, err }
+	s := sha256.Sum256(data)
+	b, _ := blake2b.New256(nil)
+	b.Write(data)
+	f.SHA256, f.Blake2, f.Size = hex.EncodeToString(s[:]), hex.EncodeToString(b.Sum(nil)), int64(len(data))
+	var metadata []byte
+	switch {
+	case strings.HasSuffix(f.Name, ".whl"):
+		f.Kind = "bdist_wheel"
+		parts := strings.Split(strings.TrimSuffix(f.Name, ".whl"), "-")
+		if len(parts) < 5 { return f, fmt.Errorf("%s is not a wheel file name", f.Name) }
+		f.PyVersion = parts[len(parts)-3]
+		zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+		if err != nil { return f, err }
+		for _, entry := range zr.File {
+			parts := strings.Split(entry.Name, "/")
+			if len(parts) == 2 && strings.HasSuffix(parts[0], ".dist-info") && parts[1] == "METADATA" {
+				rc, err := entry.Open()
+				if err != nil { return f, err }
+				metadata, err = io.ReadAll(io.LimitReader(rc, 8<<20))
+				rc.Close()
+				if err != nil { return f, err }
+				break
+			}
+		}
+	case strings.HasSuffix(f.Name, ".tar.gz"):
+		f.Kind, f.PyVersion = "sdist", "source"
+		zr, err := gzip.NewReader(bytes.NewReader(data))
+		if err != nil { return f, err }
+		tr := tar.NewReader(zr)
+		for {
+			h, err := tr.Next()
+			if err == io.EOF { break }
+			if err != nil { return f, err }
+			if parts := strings.Split(h.Name, "/"); h.Typeflag == tar.TypeReg && len(parts) == 2 && parts[1] == "PKG-INFO" {
+				metadata, err = io.ReadAll(io.LimitReader(tr, 8<<20))
+				if err != nil { return f, err }
+				break
+			}
+		}
+	default:
+		return f, fmt.Errorf("%s is neither a .whl nor a .tar.gz", f.Name)
+	}
+	if metadata == nil { return f, fmt.Errorf("no METADATA or PKG-INFO inside %s", f.Name) }
+	br := bufio.NewReader(bytes.NewReader(metadata))
+	header, err := textproto.NewReader(br).ReadMIMEHeader()
+	if err != nil && err != io.EOF { return f, fmt.Errorf("unreadable metadata: %w", err) }
+	f.Metadata = header
+	body, _ := io.ReadAll(br)
+	f.Description = strings.TrimLeft(string(body), "\r\n")
+	if f.Description == "" { f.Description = header.Get("Description") }
+	if header.Get("Name") == "" || header.Get("Version") == "" { return f, fmt.Errorf("metadata lacks Name or Version") }
+	return f, nil
+}
+
+// Credentials finds PyPI credentials: PYPI_API_TOKEN, else TWINE_PASSWORD
+// (with TWINE_USERNAME, default __token__), else [pypi] in ~/.pypirc or
+// --pypirc-path.
+func (t *pypiTarget) Credentials() error {
+	if token := strings.TrimSpace(os.Getenv("PYPI_API_TOKEN")); token != "" {
+		t.username, t.password = "__token__", token
+		return nil
+	}
+	if password := strings.TrimSpace(os.Getenv("TWINE_PASSWORD")); password != "" {
+		t.username, t.password = strings.TrimSpace(os.Getenv("TWINE_USERNAME")), password
+		if t.username == "" { t.username = "__token__" }
+		return nil
+	}
+	file, explicit := strings.TrimSpace(t.opts.PypircPath), true
+	if file == "" {
+		explicit = false
+		if home := homeDirectory(t.opts); home != "" { file = filepath.Join(home, ".pypirc") }
+	} else if !filepath.IsAbs(file) {
+		file = filepath.Join(t.root, file)
+	}
+	missing := Issue{"PYPI_CREDENTIALS_MISSING", "no PyPI credentials: PYPI_API_TOKEN and TWINE_PASSWORD are unset and no ~/.pypirc has a [pypi] password", "Export PYPI_API_TOKEN (a pypi- API token), or add [pypi] username = __token__ and password = pypi-... to ~/.pypirc, or pass `ax publish --pypirc-path ./.pypirc`."}
+	if file == "" { return missing }
+	data, err := os.ReadFile(file)
+	if os.IsNotExist(err) && !explicit { return missing }
+	if err != nil { return Issue{"PYPI_PYPIRC_UNREADABLE", fmt.Sprintf("cannot read %s: %v", file, err), "Correct --pypirc-path and its permissions, or export PYPI_API_TOKEN."} }
+	values := pypircSection(string(data), "pypi")
+	if values["password"] == "" { return missing }
+	if info, statErr := os.Stat(file); statErr == nil && credentialFileInsecure(file, runtime.GOOS, info.Mode()) {
+		return Issue{"PYPI_PYPIRC_PERMISSIONS_INSECURE", file + " holds a password and is readable by group or other users", fmt.Sprintf("Run `chmod 600 %q`, then rerun `ax publish`.", file)}
+	}
+	t.username, t.password = values["username"], values["password"]
+	if t.username == "" { t.username = "__token__" }
+	return nil
+}
+
+// pypircSection reads one section of an INI file such as ~/.pypirc.
+func pypircSection(text, section string) map[string]string {
+	values, current := map[string]string{}, ""
+	for _, line := range strings.Split(text, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || line[0] == '#' || line[0] == ';' { continue }
+		if line[0] == '[' && strings.HasSuffix(line, "]") { current = strings.TrimSpace(line[1 : len(line)-1]); continue }
+		if current != section { continue }
+		key, value, ok := strings.Cut(line, "=")
+		if !ok { key, value, ok = strings.Cut(line, ":") }
+		if ok { values[strings.TrimSpace(key)] = strings.TrimSpace(value) }
+	}
+	return values
+}
+
+func (t *pypiTarget) files() ([]pypiFile, error) {
+	out := []pypiFile{}
+	for _, entry := range t.cfg.PyPIFiles {
+		file, ok := safePath(t.root, entry)
+		if !ok { return nil, Issue{"PYPI_FILE_PATH_INVALID", entry + " escapes the project root", "Use a relative path inside the checkout."} }
+		f, err := readPyPIFile(file)
+		if err != nil { return nil, Issue{"PYPI_FILE_UNREADABLE", fmt.Sprintf("cannot read distribution %s: %v", entry, err), "Build the wheel or sdist first."} }
+		out = append(out, f)
+	}
+	return out, nil
+}
+
+// remoteFiles returns filename to sha256 for the release as PyPI lists it.
+func (t *pypiTarget) remoteFiles(ctx context.Context) (map[string]string, error) {
+	endpoint := t.jsonURL() + "/" + url.PathEscape(pypiName(t.cfg.PyPIProject)) + "/" + url.PathEscape(t.cfg.Version) + "/json"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil { return nil, err }
+	resp, err := t.http.Do(req)
+	if err != nil { return nil, Issue{"PYPI_UNAVAILABLE", fmt.Sprintf("cannot reach %s: %v", endpoint, err), "Check the network and AX_PYPI_JSON_URL, then rerun `ax publish --pypi`."} }
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound { io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20)); return map[string]string{}, nil }
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<10))
+		return nil, Issue{"PYPI_UNAVAILABLE", fmt.Sprintf("%s returned HTTP %d: %s", endpoint, resp.StatusCode, strings.TrimSpace(string(body))), "Rerun `ax publish --pypi` shortly."}
+	}
+	var doc struct{ URLs []struct{ Filename string; Digests struct{ SHA256 string `json:"sha256"` } } `json:"urls"` }
+	if err = json.NewDecoder(io.LimitReader(resp.Body, 32<<20)).Decode(&doc); err != nil { return nil, Issue{"PYPI_UNAVAILABLE", "unreadable JSON from " + endpoint + ": " + err.Error(), "Rerun `ax publish --pypi` shortly."} }
+	out := map[string]string{}
+	for _, u := range doc.URLs { out[u.Filename] = u.Digests.SHA256 }
+	return out, nil
+}
+
+// compare classifies each local file against PyPI's list: true if live.
+func (t *pypiTarget) compare(files []pypiFile, remote map[string]string) (map[string]bool, error) {
+	live := map[string]bool{}
+	for _, f := range files {
+		digest, there := remote[f.Name]
+		if !there { continue }
+		if digest != f.SHA256 { return nil, Issue{"PYPI_FILE_MISMATCH", fmt.Sprintf("%s is already on PyPI with different contents (sha256 %s, local %s)", f.Name, digest, f.SHA256), "PyPI files are immutable: publish a new version, or restore the exact file that was uploaded."} }
+		live[f.Name] = true
+	}
+	return live, nil
+}
+
+func (t *pypiTarget) Published(ctx context.Context) (TargetState, error) {
+	files, err := t.files()
+	if err != nil { return TargetState{}, err }
+	remote, err := t.remoteFiles(ctx)
+	if err != nil { return TargetState{}, err }
+	live, err := t.compare(files, remote)
+	if err != nil { return TargetState{}, err }
+	return TargetState{Done: len(live) == len(files), Detail: fmt.Sprintf("%d file(s) match PyPI", len(live))}, nil
+}
+
+func (t *pypiTarget) Publish(ctx context.Context, progress Progress) error {
+	report := func(message string) { if progress != nil { progress(message) } }
+	files, err := t.files()
+	if err != nil { return err }
+	remote, err := t.remoteFiles(ctx)
+	if err != nil { return err }
+	live, err := t.compare(files, remote)
+	if err != nil { return err }
+	for _, f := range files {
+		if live[f.Name] {
+			report(f.Name + " is already on PyPI with the same contents; skipped")
+			t.lines = append(t.lines, "pypi "+f.Name+": already published")
+			if err = recordItem(t.root, t.cfg, "pypi", f.Name, f.SHA256); err != nil { return err }
+			continue
+		}
+		report("uploading " + f.Name)
+		if err = t.upload(ctx, f); err != nil { return err }
+		if err = t.await(ctx, f); err != nil { return err }
+		if err = recordItem(t.root, t.cfg, "pypi", f.Name, f.SHA256); err != nil { return err }
+		t.lines = append(t.lines, "pypi "+f.Name+": published")
+		report(f.Name + " is live on PyPI")
+	}
+	return nil
+}
+
+func (t *pypiTarget) await(ctx context.Context, f pypiFile) error {
+	for attempt := 1; ; attempt++ {
+		remote, err := t.remoteFiles(ctx)
+		if err != nil { return err }
+		live, err := t.compare([]pypiFile{f}, remote)
+		if err != nil { return err }
+		if live[f.Name] { return nil }
+		if attempt >= pypiPollAttempts { return Issue{"PYPI_PUBLISH_UNVERIFIED", f.Name + " is not visible on PyPI after the upload was accepted", "Wait a minute and rerun `ax publish --pypi`; it verifies and skips what is live."} }
+		select {
+		case <-ctx.Done(): return ctx.Err()
+		case <-time.After(pypiPollDelay):
+		}
+	}
+}
+
+// multiFields are metadata headers that PyPI's upload form names in the
+// plural; every other header maps to its lower-cased, underscored name.
+var multiFields = map[string]string{"classifier": "classifiers", "project-url": "project_urls"}
+
+// uploadFields is the legacy upload form for one distribution, in order.
+func uploadFields(f pypiFile) [][2]string {
+	fields := [][2]string{{":action", "file_upload"}, {"protocol_version", "1"}}
+	keys := []string{}
+	for key := range f.Metadata { keys = append(keys, key) }
+	sort.Strings(keys)
+	for _, key := range keys {
+		lower := strings.ToLower(key)
+		if lower == "description" { continue }
+		name, plural := multiFields[lower]
+		if !plural { name = strings.ReplaceAll(lower, "-", "_") }
+		for _, value := range f.Metadata[key] { fields = append(fields, [2]string{name, value}) }
+	}
+	if f.Description != "" { fields = append(fields, [2]string{"description", f.Description}) }
+	return append(fields, [2]string{"filetype", f.Kind}, [2]string{"pyversion", f.PyVersion}, [2]string{"sha256_digest", f.SHA256}, [2]string{"blake2_256_digest", f.Blake2})
+}
+
+// upload POSTs one file to the legacy API as multipart/form-data with a known
+// Content-Length, streaming the file rather than holding a copy in memory.
+func (t *pypiTarget) upload(ctx context.Context, f pypiFile) error {
+	var head bytes.Buffer
+	w := multipart.NewWriter(&head)
+	for _, field := range uploadFields(f) { if err := w.WriteField(field[0], field[1]); err != nil { return err } }
+	if _, err := w.CreateFormFile("content", f.Name); err != nil { return err }
+	prefix := append([]byte(nil), head.Bytes()...)
+	if err := w.Close(); err != nil { return err }
+	suffix := append([]byte(nil), head.Bytes()[len(prefix):]...)
+	file, err := os.Open(f.Path)
+	if err != nil { return err }
+	defer file.Close()
+	body := io.MultiReader(bytes.NewReader(prefix), file, bytes.NewReader(suffix))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, t.uploadURL(), body)
+	if err != nil { return err }
+	req.ContentLength = int64(len(prefix)) + f.Size + int64(len(suffix))
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	req.SetBasicAuth(t.username, t.password)
+	resp, err := t.http.Do(req)
+	if err != nil { return Issue{"PYPI_UPLOAD_FAILED", fmt.Sprintf("uploading %s: %v", f.Name, err), "Check the network, then rerun `ax publish --pypi`; files already on PyPI are skipped."} }
+	defer resp.Body.Close()
+	out, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<16))
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 { return nil }
+	if resp.StatusCode == http.StatusBadRequest && strings.Contains(strings.ToLower(string(out)), "already exist") { return nil }
+	fix := "Fix the error PyPI reported, then rerun `ax publish --pypi`; files already on PyPI are skipped."
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden { fix = "PyPI rejected the credentials: check the token's scope and project, then rerun `ax publish --pypi`." }
+	return Issue{"PYPI_UPLOAD_FAILED", fmt.Sprintf("uploading %s: HTTP %d: %s", f.Name, resp.StatusCode, strings.TrimSpace(string(out))), fix}
+}
