@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.27.0
 
 - `ax publish` gains target flags `--npm --mvn --pypi --go` (and `--cargo`,
   registered as the pattern for later: `[TARGET_NOT_IMPLEMENTED]`), plus `--all`
