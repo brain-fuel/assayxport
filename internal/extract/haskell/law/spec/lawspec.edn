@@ -1,0 +1,36 @@
+{
+  :manifest-version 1
+  :component {
+    :name "assayxport-haskell-laws"
+    :version "0.1.0"
+  }
+  :language-profile "1.0-rc.2"
+  :verification {
+    :layers [:property :examples]
+  }
+  :sources ["laws"]
+  ;; The shared contract, a LawSpec package (packages as contracts), kept
+  ;; beside the laws.
+  :dependencies {
+    "assayxport.contract" "^0.3.0"
+  }
+  :packages ["contract"]
+  ;; The ax build the conformance unit runs (AX_BIN; by default this file).
+  ;; From the repository root: go build -o internal/extract/haskell/law/spec/bin/ax ./cmd/ax
+  :inputs ["bin/ax"]
+  :targets [
+    {
+      :language :go
+      ;; The generated test root. Only its hand-written files are in the
+      ;; repository (go.mod, go.sum, native/, the adapters); `lawspec
+      ;; generate` writes the rest. The module of lawtests/go.mod is
+      ;; goforge.dev/assayxport/internal/extract/haskell/law/spec/lawtests
+      ;; (next cycle 10, review 12, N4): the import below is under it.
+      :root "lawtests"
+      :native-bindings {
+        :go-imports [{:alias "workspace" :path "goforge.dev/assayxport/internal/extract/haskell/law/spec/lawtests/native/workspace"}]
+        :handlers [{:ability "assayxport.contract::Workspace" :native ["workspace" "NewWorkspace"]}]
+      }
+    }
+  ]
+}

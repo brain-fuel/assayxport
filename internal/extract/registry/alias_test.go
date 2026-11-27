@@ -21,6 +21,10 @@ func TestSelectAliases(t *testing.T) {
 	if len(got) != 1 {
 		t.Errorf("aliases should de-duplicate with their canonical language; got %d extractors", len(got))
 	}
+	hs, err := Select([]string{"hs"})
+	if err != nil || len(hs) != 1 || hs[0].Language() != "haskell" {
+		t.Errorf("Select(hs) = %v, %v; want the haskell extractor", hs, err)
+	}
 	if _, err := Select([]string{"cobol"}); err == nil {
 		t.Error("unknown language should still error")
 	}

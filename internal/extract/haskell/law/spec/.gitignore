@@ -1,0 +1,17 @@
+bin/
+lawtests/**
+!lawtests/go.mod
+!lawtests/go.sum
+!lawtests/native/
+!lawtests/native/**
+!lawtests/assayxport/
+!lawtests/assayxport/haskell/
+!lawtests/assayxport/haskell/adapter.go
+!lawtests/assayxport/haskell/extract/
+!lawtests/assayxport/haskell/extract/adapter.go
+!lawtests/assayxport/haskell/policy/
+!lawtests/assayxport/haskell/policy/adapter.go
+!lawtests/lawspec/
+!lawtests/lawspec/host/
+!lawtests/lawspec/host/adapter.go
+.lawspec/

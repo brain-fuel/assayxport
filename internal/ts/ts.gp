@@ -29,7 +29,20 @@ const (
 	TSX
 	// JavaScript selects the tree-sitter JavaScript grammar (handles JSX, .js/.jsx/.mjs/.cjs).
 	JavaScript
+	// Haskell selects the tree-sitter Haskell grammar (.hs).
+	Haskell
 )
+
+// haskellLang holds the lazily-initialized Haskell grammar.
+var (
+	haskellOnce sync.Once
+	haskellLang *gts.Language
+)
+
+func haskell() *gts.Language {
+	haskellOnce.Do(func() { haskellLang = grammars.HaskellLanguage() })
+	return haskellLang
+}
 
 // pythonLang holds the lazily-initialized Python grammar. Loading the grammar
 // (decoding the embedded grammar blob) is a one-time cost done under sync.Once.
@@ -117,6 +130,8 @@ func Parse(lang Language, src []byte) (*Tree, error) {
 		g = tsx()
 	case JavaScript:
 		g = javascript()
+	case Haskell:
+		g = haskell()
 	default:
 		return nil, fmt.Errorf("ts: unsupported language %d", int(lang))
 	}
@@ -190,6 +205,34 @@ func (n Node) NamedChildren() []Node {
 	return out
 }
 
+// NamedChildrenWithFields returns the named children in order, each with
+// the field name it has in n ("" when none), in one linear pass (see
+// NamedChildren on why index loops are avoided).
+func (n Node) NamedChildrenWithFields() ([]Node, []string) {
+	if n.n == nil {
+		return nil, nil
+	}
+	kids := n.n.Children()
+	nodes := make([]Node, 0, len(kids))
+	fields := make([]string, 0, len(kids))
+	for i, c := range kids {
+		if c != nil && c.IsNamed() {
+			nodes = append(nodes, Node{n: c, lang: n.lang})
+			fields = append(fields, n.n.FieldNameForChild(i, n.lang))
+		}
+	}
+	return nodes, fields
+}
+
+// IsError reports whether the node is an error node or a missing token
+// the parser inserted.
+func (n Node) IsError() bool {
+	if n.n == nil {
+		return false
+	}
+	return n.n.IsError() || n.n.IsMissing()
+}
+
 // ChildByFieldName returns the child under field f (e.g. "name", "parameters",
 // "body", "return_type") and whether it was found.
 func (n Node) ChildByFieldName(f string) (Node, bool) {
@@ -225,6 +268,30 @@ func (n Node) EndLine() int {
 		return 0
 	}
 	return int(n.n.EndPoint().Row) + 1
+}
+
+// StartByte and EndByte return the node's byte offsets in the source, so a
+// caller can slice one shared string instead of copying each node's text.
+func (n Node) StartByte() int {
+	if n.n == nil {
+		return 0
+	}
+	return int(n.n.StartByte())
+}
+
+func (n Node) EndByte() int {
+	if n.n == nil {
+		return 0
+	}
+	return int(n.n.EndByte())
+}
+
+// EndCol returns the 1-based column just past the node's end.
+func (n Node) EndCol() int {
+	if n.n == nil {
+		return 0
+	}
+	return int(n.n.EndPoint().Column) + 1
 }
 
 // Content returns the exact source slice spanning this node.

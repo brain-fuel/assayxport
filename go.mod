@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/ProtonMail/go-crypto v1.4.1
-	github.com/odvcencio/gotreesitter v0.20.7
+	github.com/odvcencio/gotreesitter v0.56.0
 	goforge.dev/cadence v0.4.0
 	goforge.dev/goplus/std v0.207.0
 	golang.org/x/crypto v0.48.0
@@ -21,3 +21,5 @@ require (
 )
 
 tool goforge.dev/goplus/cmd/goplus
+
+replace github.com/odvcencio/gotreesitter => github.com/mlaine1/gotreesitter v0.0.0-20261124004429-ae75a3480e92

@@ -8,7 +8,7 @@
 > reparsing everything.
 
 Part of the [goforge](https://goforge.dev) suite. Supports Go (native
-`go/packages`), Python, Java, TypeScript, and JavaScript source, plus compiled
+`go/packages`), Python, Java, TypeScript, JavaScript, and Haskell source, plus compiled
 JVM artifacts. One scan produces a deterministic manifest through the same
 schema and explorer regardless of how declarations were acquired.
 
@@ -89,16 +89,116 @@ calls, or source-derived complexity are required.
 ### Languages
 
 By default `scan` runs every registered source extractor (Go, Python, Java,
-TypeScript/JavaScript) and merges the results into one manifest whose
+TypeScript/JavaScript, Haskell) and merges the results into one manifest whose
 `languages` field lists what was found. Use
 `--lang` to restrict the run; it is repeatable, so `--lang python --lang go`
 runs only those two. An unregistered language name is an error that lists the
 available ones.
 
-Go extraction is fully semantic via `go/packages`. Python and Java extraction is
+Go extraction is fully semantic via `go/packages`. Python, Java and Haskell extraction is
 syntactic (tree-sitter): names, kinds, visibility, signatures as written, doc
 comments, decorators/annotations, and entrypoints are reliable; imported-name
 resolution and inferred types are not.
+
+### Haskell and CPP conditions
+
+Haskell sources with `#if`/`#ifdef` are read in every build: each combination
+of the conditions a file tests is one build (at most 256 per file; a file with
+more is read in its first build and its facts carry the condition `"unread"`).
+A symbol or call that exists only in some builds carries its condition in
+`when`, in the grammar below.
+
+```
+when      = '"unread"' | cube { " || " cube }
+cube      = literal { " && " literal }
+literal   = simple | "(" directive ")" | "!(" directive ")"
+simple    = NAME | NAME "(" text with no parenthesis ")" | DIGITS
+directive = the expression of one #if or #elif, as written, its parentheses paired
+          | "defined(" NAME ")"          for #ifdef, #ifndef, #elifdef and #elifndef
+          | '"unreadable #if at line ' N '"'          a directive whose parentheses do not pair
+          | '"#if at line ' N ' reads a name the file defines"'   a directive the file's own
+                                                       definitions do not decide
+          | '"line ' N ' names a macro that is not expanded"'   a build that keeps a line
+                                                       ax cannot read as the preprocessor does
+          | '"#if at line ' N ' reads a name the preprocessor defines"'   a directive that reads
+                                                       one of the preprocessor's own names as a value
+          | '"the header is not read past line ' N ' and CPP may be on"'   a header ax cannot
+                                                       be sure it reads as GHC does
+          | '"line ' N ' holds a carriage return alone"'   a carriage return with no line feed
+                                                       after it
+```
+
+- A literal is one directive of the source. `(...)` marks one directive's whole
+  expression. A directive that is a bare name, one macro call or a number stands
+  without them. `!(...)` is the directive failing.
+- A cube is a path of nested directives, read from the left as the preprocessor
+  meets them. A literal that fails ends the cube; the literals after it are not
+  read, and may be expressions that cannot be evaluated in that build.
+- The cubes are alternatives; no two hold in one build. The fact exists in the
+  builds where a cube holds. No field: every build.
+- To read a condition back, cut at each ` || ` outside all parentheses, then each
+  part at each ` && ` outside all parentheses, every `(` and `)` counted.
+- It is not one C expression. `defined(MIN_VERSION_p) && MIN_VERSION_p(2,16,0)`
+  is two nested directives and is false, with no error, where the package is
+  absent. Given to `cpp` after one `#if` it is "missing binary operator before
+  token". To ask a preprocessor, write a cube as nested `#if` lines, one literal
+  each.
+These C strings are never decided: `"unread"` (the file has more builds than ax reads; one was read, and no names decide its facts); `("unreadable #if at line N")` (that directive's parentheses do not pair, and it cannot be read as an expression); `("#if at line N reads a name the file defines")` (the file's own definitions do not decide that directive); `("line N names a macro that is not expanded")` (the build keeps a line ax cannot read as the preprocessor does); `("#if at line N reads a name the preprocessor defines")` (that directive reads one of the preprocessor's own names as a value); `("the header is not read past line N and CPP may be on")` (from that line on ax cannot be sure it reads the file's header as GHC does, and the text after it names CPP); `("line N holds a carriage return alone")` (a carriage return with no line feed after it ends a line for the preprocessor, and ax does not read lines that way). None is valid in an `#if`, so none can be taken for a value.
+
+To read the manifest for one build, decide the names the conditions test:
+
+```
+ax assay . --when A=1 --when B --when "undef C" --when "package base=4.18.2"
+ax assay . --when-file decisions.txt     # the same lines, one per line
+ax assay . --when-complete               # a name not given is undefined (see below)
+```
+
+`--when-complete`: a name the build does not give is undefined, as the C
+preprocessor has it. A name the file itself defines or undefines (`#define`,
+`#undef`) is the file's from that line on, in the builds that keep the line: ax
+reads `#define NAME` and `#define NAME <integer>` as the preprocessor does, and a
+directive that tests only such names is decided with no `--when`. Where a
+directive mixes such a name with one of the build's, or the definition is
+anything but a plain integer, or the name is a version macro, ax does not decide
+it: its facts keep the condition `("#if at line N reads a name the file
+defines")` and a warning names it. Included files are not read: a name that only an `#include`d file defines is undefined to ax, and with `--when-complete` a directive that tests it is decided as if no build defined it.
+`#elifdef` and `#elifndef` are read. A directive continues through a C comment
+it opens. A condition ax cannot evaluate is never taken for true or false.
+A name the file defines as a plain macro (`#define NAME`, `#define NAME body`)
+is replaced in the lines of code after it, as the preprocessor replaces it. A macro with an argument list is never expanded. A build is marked where a line it keeps, after the plain macros are replaced, holds such a macro's name before a `(` or as the last thing of a line that is not the file's last; where it holds one of the preprocessor's own names (`__LINE__`, `__FILE__` and the like); or where it holds a name the file's directives test and the build defines. In a marked build ax reads nothing as certain: the facts of that file keep the condition `("line N names a macro that is not expanded")`, and a warning names it. A name that your `--when` values or decisions file define marks the build that reads it in a line of code, also where no directive names it. A line that ends in a backslash is joined with the next one before anything else is read, as the preprocessor joins them: a string gap is one line, and a `--` comment that ends in a backslash takes the line after it, a directive too. C comments in code are read as the preprocessor reads them: a `/* ... */` over several lines hides the directives inside it.
+
+A file is preprocessed when it has a directive line or the pragma `LANGUAGE CPP` (or `OPTIONS_GHC -cpp`) in its header. The preprocessor's own names (`__FILE__`, `__LINE__` and the like) are never asked for: whether one is defined is decided, and a directive that reads one as a value is not. What ax is not told it does not know: definitions in included files are not read; a name that only the build defines (`-D`) and that is in none of your `--when` values is read as written; and a module that a `.cabal` file alone puts through the preprocessor, with no pragma and no directive of its own, is read as written.
+Beyond errors the preprocessor would also report, ax does not read: a character constant of several characters; a character constant with an octal or hexadecimal escape (but '\0'); a character constant with an escape C does not define; a character constant with a prefix (L, u, U, u8); an integer literal past 2^64 - 1; a call of a macro other than MIN_VERSION_<package> and MIN_VERSION_GLASGOW_HASKELL.
+Integer literals are read as GHC's preprocessor mode reads them.
+A file with more than 256 builds is read under the names given: with
+`--when-complete`, or with enough of the names its `#if` lines test, it is read
+like any other. Until then one build is read and nothing of it is decided.
+One condition written in several ways is one condition: `#ifndef X`,
+`#if !defined(X)` and `#if !(defined X)`.
+
+A line is `NAME=<integer>`, `NAME`, `undef NAME`, `package P=X.Y.Z` (defines
+`MIN_VERSION_p` and `VERSION_p`) or `undef MIN_VERSION_p` (the package is not a
+dependency); `#` starts a remark. Carriage returns around a line are ignored. A value that is zero is not written with a minus sign: `N=-0` is a line that cannot be read.
+A line that cannot be read is a usage error (exit status 2, nothing on stdout).
+
+Names left undecided keep their condition and are reported on stderr, with the
+lines to paste into a decisions file. `ax when init [path]` writes a starter
+`<path>/assayxport.when` listing every name the tree needs (it never overwrites
+an existing file: it prints the blocks for new names, to append with `>>`).
+`ax assay` reads `<path>/assayxport.when` on every run, then `--when-file`
+files, then `--when` values (a later line replaces an earlier one);
+`--when-no-discovery` leaves that file unread. `ax serve` with a decisions file it
+cannot read ends at once, as `ax assay` does. The decisions file is
+`assayxport.when` in the directory assayed, beside `assayxport.json`; a directory
+of that name is not read. It is read only when the path is a directory. `ax watch`, `ax serve` and `ax diff` read it as
+`ax assay` does (`diff`: each source's own), and take `--when-no-discovery`; they
+take no `--when`. `ax when init` lists every name of the files it could read in
+every build. A file that is still over 256 builds under the names given is named in a
+warning and adds no name: nothing decides its facts. `--quiet` silences the `when:` warnings and the
+lines to paste with the progress lines. The manifest and the exit status are the
+same, and a line that cannot be read is still an error. A script that passes
+`--quiet` gets no word that the manifest is incomplete: look for `when` fields in
+it.
 
 ### Node / JavaScript / TypeScript
 
