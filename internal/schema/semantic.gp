@@ -54,14 +54,15 @@ type Language enum {
 	JavaLanguage
 	TypeScriptLanguage
 	JavaScriptLanguage
+	HaskellLanguage
 }
 type SymbolKind enum {
 	TypeSymbol; FunctionSymbol; FuncSymbol; MethodSymbol; ConstructorSymbol; FieldSymbol
-	VariableSymbol; VarSymbol; ConstantSymbol; PropertySymbol; ClassSymbol; EnumConstantSymbol
+	VariableSymbol; VarSymbol; ConstantSymbol; PropertySymbol; ClassSymbol; EnumConstantSymbol; InstanceSymbol
 }
 type Visibility enum { ExportedVisibility; UnexportedVisibility; PublicVisibility; ProtectedVisibility; PrivateVisibility; PackageVisibility }
 type VisibilityIdiom enum { CapitalizedVisibility; UnderscoreVisibility; AccessModifierVisibility; ExportVisibility }
-type DocumentationFormat enum { NoDocumentation; GoDoc; Docstring; JavaDoc; TSDoc }
+type DocumentationFormat enum { NoDocumentation; GoDoc; Docstring; JavaDoc; TSDoc; Haddock }
 type InvocationKind enum { BinaryInvocation; ModuleInvocation; ClassInvocation }
 type HierarchyNodeKind enum { GroupNode; PackageNode }
 type ConcernKind enum {
@@ -180,6 +181,7 @@ func LanguageOf(value string) result.Result[Language, SemanticFailure] {
 	case "java": return result.Ok[Language, SemanticFailure]{Value: JavaLanguage()}
 	case "typescript": return result.Ok[Language, SemanticFailure]{Value: TypeScriptLanguage()}
 	case "javascript": return result.Ok[Language, SemanticFailure]{Value: JavaScriptLanguage()}
+	case "haskell": return result.Ok[Language, SemanticFailure]{Value: HaskellLanguage()}
 	default: return result.Err[Language, SemanticFailure]{Err: InvalidSemantic("language", value)}
 	}
 }
@@ -198,6 +200,7 @@ func SymbolKindOf(value string) result.Result[SymbolKind, SemanticFailure] {
 	case "property": return result.Ok[SymbolKind, SemanticFailure]{Value: PropertySymbol()}
 	case "class": return result.Ok[SymbolKind, SemanticFailure]{Value: ClassSymbol()}
 	case "enum-constant": return result.Ok[SymbolKind, SemanticFailure]{Value: EnumConstantSymbol()}
+	case "instance": return result.Ok[SymbolKind, SemanticFailure]{Value: InstanceSymbol()}
 	default: return result.Err[SymbolKind, SemanticFailure]{Err: InvalidSemantic("symbol kind", value)}
 	}
 }
@@ -231,6 +234,7 @@ func DocumentationFormatOf(value string) result.Result[DocumentationFormat, Sema
 	case "docstring": return result.Ok[DocumentationFormat, SemanticFailure]{Value: Docstring()}
 	case "javadoc": return result.Ok[DocumentationFormat, SemanticFailure]{Value: JavaDoc()}
 	case "tsdoc": return result.Ok[DocumentationFormat, SemanticFailure]{Value: TSDoc()}
+	case "haddock": return result.Ok[DocumentationFormat, SemanticFailure]{Value: Haddock()}
 	default: return result.Err[DocumentationFormat, SemanticFailure]{Err: InvalidSemantic("documentation format", value)}
 	}
 }

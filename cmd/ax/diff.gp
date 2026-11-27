@@ -54,6 +54,7 @@ func runDiffCmd(args []string) error {
 	sameLangOnly := fs.Bool("same-language-only", false, "correspond: drop cross-language candidate pairs")
 	ignoreParamNames := fs.Bool("ignore-param-names", false, "drift: a parameter rename is not signature drift")
 	quiet := fs.Bool("quiet", false, "suppress progress on stderr")
+	noDiscovery := fs.Bool("when-no-discovery", false, "do not read each source's assayxport.when")
 	var langs stringsFlag
 	fs.Var(&langs, "lang", "language to compare (repeatable; default: all)")
 	fs.Usage = func() {
@@ -110,12 +111,12 @@ remote repo (https://github.com/owner/repo#main, git@host:owner/repo.git).`)
 	defer resB.Cleanup()
 
 	progress("assaying " + displayLabel(resA, *labelA))
-	pkgsA, languagesA, moduleA, err := diffScan(resA.Dir, langs, *offline)
+	pkgsA, languagesA, moduleA, err := diffScan(resA.Dir, langs, *offline, *noDiscovery)
 	if err != nil {
 		return diffFailf("source %s: %v", displayLabel(resA, *labelA), err)
 	}
 	progress("assaying " + displayLabel(resB, *labelB))
-	pkgsB, languagesB, moduleB, err := diffScan(resB.Dir, langs, *offline)
+	pkgsB, languagesB, moduleB, err := diffScan(resB.Dir, langs, *offline, *noDiscovery)
 	if err != nil {
 		return diffFailf("source %s: %v", displayLabel(resB, *labelB), err)
 	}
@@ -199,11 +200,16 @@ remote repo (https://github.com/owner/repo#main, git@host:owner/repo.git).`)
 // half-loaded package graph would be confidently wrong, so the only way to
 // skip a failing language is the explicit --lang restriction (which the
 // output header records).
-func diffScan(dir string, langs stringsFlag, offline bool) ([]schema.Package, []string, string, error) {
+func diffScan(dir string, langs stringsFlag, offline bool, noDiscovery bool) ([]schema.Package, []string, string, error) {
 	exts, err := registry.Select(langs)
 	if err != nil {
 		return nil, nil, "", err
 	}
+	// The decisions file of this source's directory travels with the tree (D6).
+	if err := refreshWhen(dir, noDiscovery); err != nil {
+		return nil, nil, "", err
+	}
+	configureWhen(exts)
 	if offline {
 		// Keep the Go loader off the network too: module resolution must
 		// come from the local cache or fail loudly.

@@ -1,0 +1,27 @@
+{
+  :format "lawspec-lock"
+  :version 1
+  :roots {
+    "assayxport.contract" "a059d3ef8095ba7ddccce332f34be632504c0b906f51e58e3d118a6dc5ad93c9"
+  }
+  :selections {
+    "$::assayxport.contract" {
+      :request "^0.3.0"
+      :package "a059d3ef8095ba7ddccce332f34be632504c0b906f51e58e3d118a6dc5ad93c9"
+    }
+  }
+  :packages [
+    {
+      :id "a059d3ef8095ba7ddccce332f34be632504c0b906f51e58e3d118a6dc5ad93c9"
+      :name "assayxport.contract"
+      :version "0.3.0"
+      :source {
+        :kind "path"
+        :path "contract"
+      }
+      :dependencies {
+
+      }
+    }
+  ]
+}

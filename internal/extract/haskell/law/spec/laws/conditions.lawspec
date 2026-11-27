@@ -1,0 +1,2665 @@
+unit assayxport.conditions
+-- ref:DR-0035 ref:DR-0040 ref:DR-0046 (LawSpec is the law surface; owner direction 2026-11-13: CPP conditions and `--when`)
+
+import assayxport.contract as c (Package, Decl, CallEdge, EdgeKey, edgeKey)
+import assayxport.conditions.policy as wp (Env, Binding, Outcome, OpenInfo, CExpr, BinOp, UnOp, Style, Verdict, BindingLine, BindingError, Filtered, FactModel, refEval, broken, showExpr, exprOf, styleOf, envOf, extended, completed, emptyEnv, unknown, missingOf, inList, linesText, envFrom, bindingLinesOf, modelPackage, expectedFiltered, factModelOf, warningsOf, warningsWith, unlisted, decisionsHeader, expectedDecisionLines, listedOf, filled, sampleManifest, macroName, blockOf, UsePlace, useAt, Literal, refCondition, conditionText, condOf, stillMissing, unreadText, packageWith, plainDecl)
+
+-- S1.j, next cycle 2 (docs/contributions/S1.j/next-cycle-2/design.md,
+-- sections 5 and 6): ax's `--when`. Three checked definitions are ax's
+-- production code for it, and are held to the reference in
+-- assayxport.conditions.policy:
+--   evalWhen      a condition's text, under some names
+--   readBindings  the lines of `--when-file` and the values of `--when`
+--   applyWhen     a manifest, filtered
+-- Written before them (laws first): the three are STUBS here, and every
+-- law that names one is red until it is written.
+
+-- ===========================================================================
+-- IMPLEMENTATION. An implementer writes these three definitions, and any
+-- helper they need, between this line and the next double rule. Their
+-- signatures, and everything outside the two rules, are the specification.
+
+-- A condition is the text of a C preprocessor `#if` expression:
+-- integers (decimal, 0x hexadecimal, leading-0 octal, with any of the
+-- suffixes l, L, ll, LL), identifiers, `defined X` and `defined(X)`,
+-- MIN_VERSION_p(a,b,c), MIN_VERSION_GLASGOW_HASKELL(a,b,c,d), parentheses,
+-- the unary operators + - ! ~, the binary operators of C with C's
+-- precedence, and `? :`. Blanks, tabs and C comments separate tokens.
+-- (evalWhen is defined below, with the lexer and parser it needs.)
+
+-- The lexer. A condition's text is cut into tokens; a form this evaluator
+-- does not read is the token `TUnread`, which the parser makes the
+-- literal -1: the reference answers Bad for it when it is evaluated, and
+-- C does not evaluate a decided side. Next cycle 7 (review 9, N2; WHEN-2x,
+-- WHEN-2g): a literal with a `u` suffix, a literal up to 2^64 - 1, a
+-- character constant of one plain character or a simple escape, and the
+-- comma operator ARE read; `TUnread` is left for the other character
+-- constants and for a literal past 2^64 - 1.
+-- Any other character or token C does not accept makes the whole text Bad.
+type Tok is one of | TNum of type Integer | TUNum of type Integer | TId of type Text | TOp of type Text | TUnread end type
+
+type Parsed is a record{
+  expr :: CExpr
+  rest :: List Tok}
+end type
+
+function chAt (t :: Text) (i :: Integer) -> Text is prelude.take 1 (prelude.drop i t) end function
+
+function isDigitCh (ch :: Text) -> Bool is ch matches regex "[0-9]" end function
+function isIdStart (ch :: Text) -> Bool is ch matches regex "[A-Za-z_]" end function
+function isIdCh (ch :: Text) -> Bool is ch matches regex "[A-Za-z0-9_]" end function
+function isBlankCh (ch :: Text) -> Bool is ch = " " || ch = "\t" || ch = "\n" || ch = "\r" end function
+
+function idLen (t :: Text) (i :: Integer) (n :: Integer) -> Integer is
+  if i >= n then i else (if isIdCh (chAt t i) then idLen t (i + 1) n else i end if) end if
+end function
+
+-- A preprocessing number: digits, letters, `_`, `.`, and a sign right after
+-- an `e`, `E`, `p` or `P` (so `0x38e+1` is one token, and an error).
+function numLen (t :: Text) (i :: Integer) (n :: Integer) -> Integer is
+  if i >= n then i
+  else
+    (let ch = chAt t i in let prev = chAt t (i - 1) in
+      (if (ch matches regex "[A-Za-z0-9_.]") || ((ch = "+" || ch = "-") && (prev matches regex "[eEpP]")) then numLen t (i + 1) n else i end if)
+    end let end let)
+  end if
+end function
+
+function commentEnd (t :: Text) (j :: Integer) (n :: Integer) -> Integer is
+  if j + 1 >= n then 0 - 1 else (if prelude.take 2 (prelude.drop j t) = "*/" then j + 2 else commentEnd t (j + 1) n end if) end if
+end function
+
+function quoteEnd (t :: Text) (j :: Integer) (n :: Integer) (esc :: Bool) -> Integer is
+  if j >= n then 0 - 1
+  else
+    (let ch = chAt t j in
+      (if esc then quoteEnd t (j + 1) n false
+       else (if ch = "'" then j + 1 else (if ch = "\\" then quoteEnd t (j + 1) n true else quoteEnd t (j + 1) n false end if) end if) end if)
+    end let)
+  end if
+end function
+
+function idxIn (s :: Text) (ch :: Text) (i :: Integer) (n :: Integer) -> Integer is
+  if i >= n then 99 else (if chAt s i = ch then i else idxIn s ch (i + 1) n end if) end if
+end function
+
+function digitVal (ch :: Text) -> Integer is
+  let k = idxIn "0123456789abcdefABCDEF" ch 0 22 in (if k >= 16 && k < 22 then k - 6 else k end if) end let
+end function
+
+-- The value of the digits of s from i to n, in a base.
+function numValue (s :: Text) (base :: Integer) (i :: Integer) (n :: Integer) (acc :: Integer) -> Integer is
+  if i >= n then acc else numValue s base (i + 1) n (acc * base + digitVal (chAt s i)) end if
+end function
+
+-- The end of a run of digits (hexadecimal ones if `hex`) from i.
+function digitRun (s :: Text) (i :: Integer) (n :: Integer) (hex :: Bool) -> Integer is
+  if i >= n then i
+  else
+    (let ch = chAt s i in
+      (if (if hex then ch matches regex "[0-9a-fA-F]" else isDigitCh ch end if) then digitRun s (i + 1) n hex else i end if)
+    end let)
+  end if
+end function
+
+function unsignedOf (suffix :: Text) -> Bool is (suffix contains "u") || (suffix contains "U") end function
+
+function tokOfNumber (v :: Integer) (unsigned :: Bool) -> Maybe Tok is
+  if unsigned then Present (TUNum v) else Present (TNum v) end if
+end function
+
+-- A character constant of one plain printable ASCII character, or of one
+-- of the escapes \n \t \r \0 \\ \' \" \a \b \f \v \? \e : its code. Any other (several
+-- characters, an octal or hexadecimal escape) is not read.
+function plainCodes (u :: Unit) -> Text is " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~" end function
+
+function charCode (content :: Text) -> Maybe Integer is
+  if prelude.length content = 1 then
+    (if content = "\\" || content = "'" then Absent
+     else (let k = idxIn (plainCodes unitValue) content 0 95 in (if k >= 95 then Absent else Present (k + 32) end if) end let) end if)
+  else (if prelude.length content = 2 && prelude.take 1 content = "\\" then
+    (let c = prelude.drop 1 content in
+      (if c = "n" then Present 10 else (if c = "t" then Present 9 else (if c = "r" then Present 13 else (if c = "0" then Present 0
+       else (if c = "\\" then Present 92 else (if c = "'" then Present 39 else (if c = "\"" then Present 34
+       else (if c = "a" then Present 7 else (if c = "b" then Present 8 else (if c = "f" then Present 12 else (if c = "v" then Present 11
+       else (if c = "?" then Present 63 else (if c = "e" then Present 27 else Absent end if) end if) end if) end if) end if) end if) end if) end if) end if) end if) end if) end if) end if)
+    end let)
+  else Absent end if) end if
+end function
+
+function charTok (content :: Text) -> Tok is
+  first matching case of charCode content : when Present k then TNum k when Absent then TUnread end case
+end function
+
+-- An integer literal as C reads it: decimal, 0x hexadecimal, leading-0
+-- octal, with the suffixes l, L, ll, LL and, unsigned, u or U. Anything
+-- else that starts with a digit is not a number.
+function numberTok (s :: Text) -> Maybe Tok is
+  let n = prelude.length s in
+    (if s matches regex "0[xX][0-9a-fA-F]+(([uU](ll|LL|l|L)?)|((ll|LL|l|L)[uU]?))?" then
+       (let e = digitRun s 2 n true in tokOfNumber (numValue s 16 2 e 0) (unsignedOf (prelude.drop e s)) end let)
+     else (if s matches regex "[1-9][0-9]*(([uU](ll|LL|l|L)?)|((ll|LL|l|L)[uU]?))?" then
+       (let e = digitRun s 0 n false in tokOfNumber (numValue s 10 0 e 0) (unsignedOf (prelude.drop e s)) end let)
+     else (if s matches regex "0[0-7]*(([uU](ll|LL|l|L)?)|((ll|LL|l|L)[uU]?))?" then
+       (let e = digitRun s 0 n false in tokOfNumber (numValue s 8 0 e 0) (unsignedOf (prelude.drop e s)) end let)
+     else Absent end if) end if) end if)
+  end let
+end function
+
+function lexT (t :: Text) (acc :: List Tok) (fuel :: Integer) -> Maybe (List Tok) is
+  if fuel <= 0 then Absent
+  else (if prelude.length t = 0 then Present acc
+  else
+    (let n = prelude.length t in let ch = prelude.take 1 t in let two = prelude.take 2 t in
+      (if isBlankCh ch then lexT (prelude.drop 1 t) acc (fuel - 1)
+       else (if two = "/*" then
+         (let e = commentEnd t 2 n in (if e < 0 then Absent else lexT (prelude.drop e t) acc (fuel - 1) end if) end let)
+       else (if isDigitCh ch then
+         (let e = numLen t 0 n in
+           (first matching case of numberTok (prelude.take e t) :
+             when Absent then Absent
+             when Present tk then lexT (prelude.drop e t) (acc ++ [tk]) (fuel - 1)
+           end case)
+         end let)
+       else (if isIdStart ch then
+         (let e = idLen t 0 n in lexT (prelude.drop e t) (acc ++ [TId (prelude.take e t)]) (fuel - 1) end let)
+       else (if ch = "'" then
+         (let e = quoteEnd t 1 n false in (if e < 0 || e = 2 then Absent else lexT (prelude.drop e t) (acc ++ [charTok (prelude.take (e - 2) (prelude.drop 1 t))]) (fuel - 1) end if) end let)
+       else (if (prelude.take 3 t = "<<=") || (prelude.take 3 t = ">>=") then Absent
+       else (if two matches regex "\\+\\+|--|\\+=|-=|\\*=|/=|%=|&=|[|]=|\\^=|->|##" then Absent
+       else (if two matches regex "<<|>>|<=|>=|==|!=|&&|[|][|]" then lexT (prelude.drop 2 t) (acc ++ [TOp two]) (fuel - 1)
+       else (if ch matches regex "[-+*/%<>&^!~?:(),|]" then lexT (prelude.drop 1 t) (acc ++ [TOp ch]) (fuel - 1)
+       else Absent end if) end if) end if) end if) end if) end if) end if) end if) end if)
+    end let end let end let)
+  end if) end if
+end function
+
+-- The parser: C's grammar for `#if`, one function over a level (1 the
+-- conditional, 2 to 11 the binary operators from `||` to `*`, 12 the
+-- unary ones, 13 the operands, built by `acc` as the left side of a binary
+-- level's loop), with a fuel that every call spends.
+function barText (u :: Unit) -> Text is prelude.drop 1 " |" end function
+function barBarText (u :: Unit) -> Text is prelude.drop 1 " ||" end function
+
+function binLevel (s :: Text) -> Integer is
+  if s = "*" || s = "/" || s = "%" then 11
+  else (if s = "+" || s = "-" then 10
+  else (if s = "<<" || s = ">>" then 9
+  else (if s = "<" || s = "<=" || s = ">" || s = ">=" then 8
+  else (if s = "==" || s = "!=" then 7
+  else (if s = "&" then 6
+  else (if s = "^" then 5
+  else (if s = barText unitValue then 4
+  else (if s = "&&" then 3
+  else (if s = barBarText unitValue then 2 else 0 end if) end if) end if) end if) end if) end if) end if) end if) end if) end if
+end function
+
+function binOpFor (s :: Text) -> BinOp is
+  if s = "*" then BMul else (if s = "/" then BDiv else (if s = "%" then BRem
+  else (if s = "+" then BAdd else (if s = "-" then BSub else (if s = "<<" then BShl else (if s = ">>" then BShr
+  else (if s = "<" then BLt else (if s = "<=" then BLe else (if s = ">" then BGt else (if s = ">=" then BGe
+  else (if s = "==" then BEq else (if s = "!=" then BNe else (if s = "&" then BAnd else (if s = "^" then BXor
+  else (if s = barText unitValue then BOr else (if s = "&&" then BLand else BLor end if) end if) end if) end if) end if) end if) end if)
+  end if) end if) end if) end if) end if) end if) end if) end if) end if) end if
+end function
+
+function unOpFor (s :: Text) -> UnOp is
+  if s = "+" then UPlus else (if s = "-" then UMinus else (if s = "!" then UNot else UCompl end if) end if) end if
+end function
+
+function tokOp (toks :: List Tok) -> Text is
+  first matching case of prelude.at 0 toks :
+    when Present (TOp s) then s
+    otherwise ""
+  end case
+end function
+
+function expectOp (toks :: List Tok) (s :: Text) -> Maybe (List Tok) is
+  if tokOp toks = s then Present (prelude.drop 1 toks) else Absent end if
+end function
+
+function isMinVersionName (name :: Text) -> Bool is prelude.startsWith name "MIN_VERSION_" && prelude.length name > 12 end function
+
+-- The fourth argument of MIN_VERSION_GLASGOW_HASKELL, and the closing
+-- parenthesis of either call.
+function closeCall (name :: Text) (a1 :: CExpr) (a2 :: CExpr) (a3 :: CExpr) (a4 :: CExpr) (rest :: List Tok) -> Maybe Parsed is
+  first matching case of expectOp rest ")" :
+    when Absent then Absent
+    when Present r then
+      Present (Parsed record{ expr = (if name = "MIN_VERSION_GLASGOW_HASKELL"
+                                       then MinGhc record{ major1 = a1 , major2 = a2 , patch1 = a3 , patch2 = a4}
+                                       else MinVersion record{ pkg = prelude.drop 12 name , major1 = a1 , major2 = a2 , minor = a3} end if) ,
+                              rest = r})
+  end case
+end function
+
+function parseLevel (lvl :: Integer) (acc :: Maybe CExpr) (toks :: List Tok) (fuel :: Integer) -> Maybe Parsed is
+  if fuel <= 0 then Absent
+  else (if lvl >= 13 then
+    (first matching case of prelude.at 0 toks :
+      when Absent then Absent
+      when Present tk then
+        (first matching case of tk :
+          when TNum v then Present (Parsed record{ expr = Lit v , rest = prelude.drop 1 toks})
+          when TUNum v then Present (Parsed record{ expr = ULit v , rest = prelude.drop 1 toks})
+          when TUnread then Present (Parsed record{ expr = Lit (0 - 1) , rest = prelude.drop 1 toks})
+          when TOp s then
+            (if s = "(" then
+              (first matching case of parseLevel 0 Absent (prelude.drop 1 toks) (fuel - 1) :
+                when Absent then Absent
+                when Present p then
+                  (first matching case of expectOp p.rest ")" :
+                    when Absent then Absent
+                    when Present r then Present (Parsed record{ expr = p.expr , rest = r})
+                  end case)
+              end case)
+             else Absent end if)
+          when TId name then
+            (if name = "defined" then
+              (first matching case of prelude.at 1 toks :
+                when Present (TId x) then Present (Parsed record{ expr = IsDefined x , rest = prelude.drop 2 toks})
+                when Present (TOp s) then
+                  (if s = "(" then
+                    (first matching case of prelude.at 2 toks :
+                      when Present (TId x) then
+                        (first matching case of expectOp (prelude.drop 3 toks) ")" :
+                          when Absent then Absent
+                          when Present r then Present (Parsed record{ expr = IsDefined x , rest = r})
+                        end case)
+                      otherwise Absent
+                    end case)
+                   else Absent end if)
+                otherwise Absent
+              end case)
+             else (if tokOp (prelude.drop 1 toks) = "(" then
+              (if name = "MIN_VERSION_GLASGOW_HASKELL" || isMinVersionName name then
+                (first matching case of parseLevel 1 Absent (prelude.drop 2 toks) (fuel - 1) :
+                  when Absent then Absent
+                  when Present a1 then
+                    (first matching case of expectOp a1.rest "," :
+                      when Absent then Absent
+                      when Present r1 then
+                        (first matching case of parseLevel 1 Absent r1 (fuel - 1) :
+                          when Absent then Absent
+                          when Present a2 then
+                            (first matching case of expectOp a2.rest "," :
+                              when Absent then Absent
+                              when Present r2 then
+                                (first matching case of parseLevel 1 Absent r2 (fuel - 1) :
+                                  when Absent then Absent
+                                  when Present a3 then
+                                    (if name = "MIN_VERSION_GLASGOW_HASKELL" then
+                                      (first matching case of expectOp a3.rest "," :
+                                        when Absent then Absent
+                                        when Present r3 then
+                                          (first matching case of parseLevel 1 Absent r3 (fuel - 1) :
+                                            when Absent then Absent
+                                            when Present a4 then closeCall name a1.expr a2.expr a3.expr a4.expr a4.rest
+                                          end case)
+                                      end case)
+                                     else closeCall name a1.expr a2.expr a3.expr (Lit 0) a3.rest end if)
+                                end case)
+                            end case)
+                        end case)
+                    end case)
+                end case)
+               else Absent end if)
+             else Present (Parsed record{ expr = Name name , rest = prelude.drop 1 toks}) end if) end if)
+        end case)
+    end case)
+  else (if lvl = 12 then
+    (let s = tokOp toks in
+      (if s = "+" || s = "-" || s = "!" || s = "~" then
+        (first matching case of parseLevel 12 Absent (prelude.drop 1 toks) (fuel - 1) :
+          when Absent then Absent
+          when Present p then Present (Parsed record{ expr = Un record{ op = unOpFor s , arg = p.expr} , rest = p.rest})
+        end case)
+       else parseLevel 13 Absent toks (fuel - 1) end if)
+    end let)
+  else (if lvl >= 2 then
+    (first matching case of acc :
+      when Absent then
+        (first matching case of parseLevel (lvl + 1) Absent toks (fuel - 1) :
+          when Absent then Absent
+          when Present l then parseLevel lvl (Present l.expr) l.rest (fuel - 1)
+        end case)
+      when Present left then
+        (let s = tokOp toks in
+          (if binLevel s = lvl then
+            (first matching case of parseLevel (lvl + 1) Absent (prelude.drop 1 toks) (fuel - 1) :
+              when Absent then Absent
+              when Present r then parseLevel lvl (Present (Bin record{ op = binOpFor s , left = left , right = r.expr})) r.rest (fuel - 1)
+            end case)
+           else Present (Parsed record{ expr = left , rest = toks}) end if)
+        end let)
+    end case)
+  else (if lvl <= 0 then
+    (first matching case of acc :
+      when Absent then
+        (first matching case of parseLevel 1 Absent toks (fuel - 1) :
+          when Absent then Absent
+          when Present l then parseLevel 0 (Present l.expr) l.rest (fuel - 1)
+        end case)
+      when Present left then
+        (if tokOp toks = "," then
+          (first matching case of parseLevel 1 Absent (prelude.drop 1 toks) (fuel - 1) :
+            when Absent then Absent
+            when Present r then parseLevel 0 (Present (Bin record{ op = BComma , left = left , right = r.expr})) r.rest (fuel - 1)
+          end case)
+         else Present (Parsed record{ expr = left , rest = toks}) end if)
+    end case)
+  else
+    (first matching case of parseLevel 2 Absent toks (fuel - 1) :
+      when Absent then Absent
+      when Present t then
+        (if tokOp t.rest = "?" then
+          (first matching case of parseLevel 0 Absent (prelude.drop 1 t.rest) (fuel - 1) :
+            when Absent then Absent
+            when Present y then
+              (first matching case of expectOp y.rest ":" :
+                when Absent then Absent
+                when Present r then
+                  (first matching case of parseLevel 1 Absent r (fuel - 1) :
+                    when Absent then Absent
+                    when Present n then Present (Parsed record{ expr = Cond record{ test = t.expr , yes = y.expr , no = n.expr} , rest = n.rest})
+                  end case)
+              end case)
+          end case)
+         else Present t end if)
+    end case) end if) end if) end if) end if) end if
+end function
+
+function parseWhen (text :: Text) -> Maybe CExpr is
+  first matching case of lexT text [] (prelude.length text + 1) :
+    when Absent then Absent
+    when Present toks then
+      (first matching case of parseLevel 0 Absent toks (16 * (prelude.length toks + 3)) :
+        when Absent then Absent
+        when Present p then (if prelude.length p.rest = 0 then Present p.expr else Absent end if)
+      end case)
+  end case
+end function
+
+-- Next cycle 9 (review 11, S1; rule I1, O144): a second evaluator of a
+-- parsed expression, written for ax on its own, in another way than the
+-- reference's (`wp.refEval`): one pass over the tree; values are Int64
+-- (a preprocessor's intmax_t) and an unsigned operand is read by its bit
+-- pattern; an expression carries its own C type and whether it holds a
+-- form no build can evaluate, so that no second pass is needed. It calls
+-- no function of a reference unit, the shared vocabulary apart (`wp.sorted`
+-- here). WHEN-1 holds it to the reference on drawn trees.
+--   st    0 a value, 1 not known (miss: the names it needs), 2 no answer
+--   uns   the expression is unsigned (C's type of it)
+--   bk    the expression holds a form the build cannot evaluate
+type Iv is a record{
+  st :: Integer
+  v :: Int64
+  miss :: List Text
+  risky :: Bool
+  uns :: Bool
+  bk :: Bool}
+end type
+
+function ivWrapInt (x :: Integer) -> Int64 is prelude.wrapping (x + 0) end function
+function ivUnsignedOf (x :: Int64) -> Integer is if x < 0 then (x + 0) + 18446744073709551616 else x + 0 end if end function
+function ivTruth (b :: Bool) -> Int64 is if !b then 0 else 1 end if end function
+function ivKnown (x :: Int64) -> Iv is Iv record{ st = 0 , v = x , miss = [] , risky = false , uns = false , bk = false} end function
+function ivOpen (m :: List Text) (r :: Bool) -> Iv is Iv record{ st = 1 , v = 0 , miss = m , risky = r , uns = false , bk = false} end function
+function ivBad (u :: Unit) -> Iv is Iv record{ st = 2 , v = 0 , miss = [] , risky = true , uns = false , bk = false} end function
+function ivBroken (u :: Unit) -> Iv is Iv record{ st = 2 , v = 0 , miss = [] , risky = true , uns = false , bk = true} end function
+function ivIsBad (i :: Iv) -> Bool is i.st = 2 end function
+function ivRiskyOf (i :: Iv) -> Bool is i.risky end function
+
+function ivMissAll (xs :: List Iv) -> List Text is
+  first matching case of xs : when Nil then [] when Cons x rest then x.miss ++ ivMissAll rest end case
+end function
+
+function ivPow2From (n :: Integer) (acc :: Integer) -> Integer is if n <= 0 then acc else ivPow2From (n - 1) (acc + acc) end if end function
+
+function ivPow2 (n :: Integer) -> Integer is ivPow2From n 1 end function
+
+-- Bits: which 0 and, 1 or, 2 xor, of two numbers from 0, low bit first.
+function ivBitsAcc (which :: Integer) (x :: Integer) (y :: Integer) (k :: Integer) (acc :: Integer) (w :: Integer) -> Integer is
+  if k <= 0 then acc
+  else
+    (let bx = prelude.rem x 2 in let by = prelude.rem y 2 in
+     let bit = (if which = 0 then bx * by else (if which = 1 then (if bx + by > 0 then 1 else 0 end if) else (if bx = by then 0 else 1 end if) end if) end if) in
+       ivBitsAcc which (prelude.quot x 2) (prelude.quot y 2) (k - 1) (acc + bit * w) (w * 2)
+     end let end let end let)
+  end if
+end function
+
+function ivBitwise (which :: Integer) (a :: Int64) (b :: Int64) -> Int64 is
+  prelude.wrapping (ivBitsAcc which (ivUnsignedOf a) (ivUnsignedOf b) 64 0 1)
+end function
+
+function ivShl (a :: Int64) (n :: Integer) -> Int64 is
+  if n >= 64 then 0 else prelude.wrapping ((a + 0) * ivPow2 n) end if
+end function
+
+-- floor (x / p) of an integer x, p > 0; 0 where p is not.
+function ivFloorDiv (x :: Integer) (p :: Integer) -> Integer is
+  if p <= 0 then 0 else (if x >= 0 then prelude.quot x p else 0 - 1 - prelude.quot (0 - 1 - x) p end if) end if
+end function
+
+function ivShr (lu :: Bool) (a :: Int64) (n :: Integer) -> Int64 is
+  if lu then (if n >= 64 then 0 else prelude.wrapping (ivFloorDiv (ivUnsignedOf a) (ivPow2 n)) end if)
+  else (if n >= 64 then (if a < 0 then 0 - 1 else 0 end if) else prelude.wrapping (ivFloorDiv (a + 0) (ivPow2 n)) end if) end if
+end function
+
+function ivDivides (op :: BinOp) -> Bool is
+  first matching case of op :
+    when BDiv then true
+    when BRem then true
+    otherwise false
+  end case
+end function
+
+-- A strict operator on two values.
+function ivCompute (lu :: Bool) (ru :: Bool) (op :: BinOp) (a :: Int64) (b :: Int64) -> Iv is
+  let uns = lu || ru in let ua = ivUnsignedOf a in let ub = ivUnsignedOf b in let sa = a + 0 in let sb = b + 0 in let cnt = (if ru then ub else sb end if) in
+    (first matching case of op :
+      when BComma then ivKnown b
+      when BMul then ivKnown (prelude.wrapping (a * b))
+      when BAdd then ivKnown (prelude.wrapping (a + b))
+      when BSub then ivKnown (prelude.wrapping (a - b))
+      when BDiv then
+        (if uns then (if ub = 0 then ivBad unitValue else ivKnown (prelude.wrapping (prelude.quot ua ub)) end if)
+         else (if sb = 0 then ivBad unitValue else ivKnown (prelude.wrapping (prelude.quot sa sb)) end if) end if)
+      when BRem then
+        (if uns then (if ub = 0 then ivBad unitValue else ivKnown (prelude.wrapping (prelude.rem ua ub)) end if)
+         else (if sb = 0 then ivBad unitValue else ivKnown (prelude.wrapping (prelude.rem sa sb)) end if) end if)
+      when BShl then ivKnown (if cnt >= 0 then ivShl a cnt else ivShr lu a (0 - cnt) end if)
+      when BShr then ivKnown (if cnt >= 0 then ivShr lu a cnt else ivShl a (0 - cnt) end if)
+      when BLt then ivKnown (ivTruth (if uns then ua < ub else a < b end if))
+      when BLe then ivKnown (ivTruth (if uns then ua <= ub else a <= b end if))
+      when BGt then ivKnown (ivTruth (if uns then ua > ub else a > b end if))
+      when BGe then ivKnown (ivTruth (if uns then ua >= ub else a >= b end if))
+      when BEq then ivKnown (ivTruth (a = b))
+      when BNe then ivKnown (ivTruth (a != b))
+      when BAnd then ivKnown (ivBitwise 0 a b)
+      when BOr then ivKnown (ivBitwise 1 a b)
+      when BXor then ivKnown (ivBitwise 2 a b)
+      when BLand then ivKnown (ivTruth (a != 0 && b != 0))
+      when BLor then ivKnown (ivTruth (a != 0 || b != 0))
+    end case)
+  end let end let end let end let end let end let
+end function
+
+-- `&&` (isAnd) and `||`: the left side decides when it is 0 (and) or not 0
+-- (or); the right side then is not looked at.
+function ivJoin (isAnd :: Bool) (l :: Iv) (r :: Iv) -> Iv is
+  if l.st = 2 then ivBad unitValue
+  else (if l.st = 0 then
+    (if (if isAnd then l.v = 0 else l.v != 0 end if) then ivKnown (ivTruth (!isAnd))
+     else (if r.st = 0 then ivKnown (ivTruth (r.v != 0)) else (if r.st = 1 then r else ivBad unitValue end if) end if) end if)
+  else
+    (if r.st = 0 then (if (if isAnd then r.v = 0 else r.v != 0 end if) && !l.risky then ivKnown (ivTruth (!isAnd)) else l end if)
+     else (if r.st = 1 then ivOpen (l.miss ++ r.miss) (l.risky || r.risky) else ivOpen l.miss true end if) end if) end if) end if
+end function
+
+function ivComma (l :: Iv) (r :: Iv) -> Iv is
+  if l.st = 2 || r.st = 2 then ivBad unitValue
+  else (if l.st = 0 then r
+  else (if r.st = 0 then (if l.risky then l else r end if) else ivOpen (l.miss ++ r.miss) (l.risky || r.risky) end if) end if) end if
+end function
+
+function ivArith (lu :: Bool) (ru :: Bool) (op :: BinOp) (l :: Iv) (r :: Iv) -> Iv is
+  if op = BLand then ivJoin true l r
+  else (if op = BLor then ivJoin false l r
+  else (if op = BComma then ivComma l r
+  else (if l.st = 2 || r.st = 2 then ivBad unitValue
+  else (if l.st = 0 then
+    (if r.st = 0 then ivCompute lu ru op l.v r.v else ivOpen r.miss (r.risky || ivDivides op) end if)
+   else
+    (if r.st = 0 then (if ivDivides op && r.v = 0 then ivBad unitValue else l end if)
+     else ivOpen (l.miss ++ r.miss) (l.risky || r.risky || ivDivides op) end if) end if) end if) end if) end if) end if
+end function
+
+function ivBinUns (op :: BinOp) (l :: Iv) (r :: Iv) -> Bool is
+  if op = BLand || op = BLor || op = BLt || op = BLe || op = BGt || op = BGe || op = BEq || op = BNe then false
+  else (if op = BShl || op = BShr then l.uns else (if op = BComma then r.uns else l.uns || r.uns end if) end if) end if
+end function
+
+function ivBinary (op :: BinOp) (l :: Iv) (r :: Iv) -> Iv is
+  (ivArith l.uns r.uns op l r) with uns = ivBinUns op l r , bk = l.bk || r.bk
+end function
+
+function ivUnary (op :: UnOp) (x :: Iv) -> Iv is
+  (if x.st = 0
+   then ivKnown (first matching case of op :
+                   when UPlus then x.v
+                   when UMinus then prelude.wrapping (0 - x.v)
+                   when UNot then ivTruth (x.v = 0)
+                   when UCompl then prelude.wrapping (0 - x.v - 1)
+                 end case)
+   else x end if) with uns = (op != UNot && x.uns) , bk = x.bk
+end function
+
+function ivCond (t :: Iv) (y :: Iv) (n :: Iv) -> Iv is
+  (if t.st = 2 then ivBad unitValue
+   else (if t.st = 0 then (if t.v != 0 then y else n end if)
+   else (if y.st = 0 && n.st = 0 && y.v = n.v && !t.risky then y
+         else ivOpen (t.miss ++ y.miss ++ n.miss) (t.risky || y.risky || n.risky) end if) end if) end if) with uns = (y.uns || n.uns) , bk = (t.bk || y.bk || n.bk)
+end function
+
+-- What is known of the package with the macro spelling p: 1 given, 0 said
+-- absent, 2 not said.
+function ivPkgState (env :: Env) (p :: Text) -> Integer is
+  first matching case of prelude.lookup p env.versions :
+    when Present given then 1
+    when Absent then
+      (first matching case of prelude.lookup ("MIN_VERSION_" ++ p) env.names :
+        when Present said then 0
+        when Absent then 2
+      end case)
+  end case
+end function
+
+function ivVersionName (n :: Text) -> Bool is prelude.length n > 8 && prelude.startsWith n "VERSION_" end function
+
+function ivName (env :: Env) (n :: Text) -> Iv is
+  if n = "MIN_VERSION_GLASGOW_HASKELL" then
+    (if env.complete || (prelude.lookup "__GLASGOW_HASKELL__" env.names matches Present _) then ivKnown 0 else ivOpen ["__GLASGOW_HASKELL__"] false end if)
+  else (if prelude.startsWith n "MIN_VERSION_" then
+    (if env.complete || ivPkgState env (prelude.drop 12 n) != 2 then ivKnown 0 else ivOpen [n] false end if)
+  else (if ivVersionName n && ivPkgState env (prelude.drop 8 n) = 1 then ivBroken unitValue
+  else
+    (first matching case of prelude.lookup n env.names :
+      when Present (Defined v) then ivKnown (ivWrapInt v)
+      when Present Undefined then ivKnown 0
+      when Absent then (if env.complete || (ivVersionName n && ivPkgState env (prelude.drop 8 n) = 0) then ivKnown 0 else ivOpen [n] false end if)
+    end case) end if) end if) end if
+end function
+
+function ivBare (env :: Env) (n :: Text) -> Iv is
+  first matching case of prelude.lookup n env.names :
+    when Present (Defined v) then ivKnown 1
+    when Present Undefined then ivKnown 0
+    when Absent then (if env.complete then ivKnown 0 else ivOpen [n] false end if)
+  end case
+end function
+
+function ivDefined (env :: Env) (n :: Text) -> Iv is
+  if n = "MIN_VERSION_GLASGOW_HASKELL" then ivBare env "__GLASGOW_HASKELL__"
+  else (if prelude.startsWith n "MIN_VERSION_" then
+    (first matching case of ivPkgState env (prelude.drop 12 n) :
+      when 1 then ivKnown 1
+      when 0 then ivKnown 0
+      otherwise (if env.complete then ivKnown 0 else ivOpen [n] false end if)
+    end case)
+  else (if ivVersionName n && ivPkgState env (prelude.drop 8 n) = 1 then ivKnown 1
+  else (if ivVersionName n && ivPkgState env (prelude.drop 8 n) = 0 && !(prelude.lookup n env.names matches Present _) then ivKnown 0
+  else ivBare env n end if) end if) end if) end if
+end function
+
+function ivCall (name :: Text) (args :: List Iv) -> Iv is
+  if prelude.any ivIsBad args then ivBad unitValue else ivOpen ([name] ++ ivMissAll args) (prelude.any ivRiskyOf args) end if
+end function
+
+function ivRel (op :: BinOp) (l :: Iv) (k :: Integer) -> Iv is ivArith false false op l (ivKnown (ivWrapInt k)) end function
+
+function ivPart (v :: List Integer) (i :: Integer) -> Integer is
+  if i >= prelude.length v then 0 else (first matching case of prelude.at i v : when Present x then x when Absent then 0 end case) end if
+end function
+
+-- Cabal's MIN_VERSION_pkg(a, b, c) against the version v.
+function ivCabal (v :: List Integer) (a :: Iv) (b :: Iv) (m :: Iv) -> Iv is
+  ivJoin false
+    (ivJoin false (ivRel BLt a (ivPart v 0)) (ivJoin true (ivRel BEq a (ivPart v 0)) (ivRel BLt b (ivPart v 1))))
+    (ivJoin true (ivJoin true (ivRel BEq a (ivPart v 0)) (ivRel BEq b (ivPart v 1))) (ivRel BLe m (ivPart v 2)))
+end function
+
+function ivMinVersion (env :: Env) (pkg :: Text) (a :: Iv) (b :: Iv) (m :: Iv) -> Iv is
+  (first matching case of prelude.lookup pkg env.versions :
+     when Present v then (if ivIsBad a || ivIsBad b || ivIsBad m then ivBad unitValue else ivCabal v a b m end if)
+     when Absent then ivCall ("MIN_VERSION_" ++ pkg) [a, b, m]
+   end case) with uns = false , bk = (ivPkgState env pkg = 0 || (env.complete && ivPkgState env pkg = 2) || a.bk || b.bk || m.bk)
+end function
+
+-- GHC's MIN_VERSION_GLASGOW_HASKELL(ma, mi, p1, p2) where __GLASGOW_HASKELL__ is given.
+function ivGhc (env :: Env) (ma :: Iv) (mi :: Iv) (p1 :: Iv) (p2 :: Iv) -> Iv is
+  let v = ivArith false false BAdd (ivArith false false BMul ma (ivKnown 100)) mi in
+  let g = ivName env "__GLASGOW_HASKELL__" in
+  let g1 = ivName env "__GLASGOW_HASKELL_PATCHLEVEL1__" in
+  let g2 = ivName env "__GLASGOW_HASKELL_PATCHLEVEL2__" in
+    ivJoin false
+      (ivJoin false (ivArith false false BLt v g) (ivJoin true (ivArith false false BEq v g) (ivArith false false BLt p1 g1)))
+      (ivJoin true (ivJoin true (ivArith false false BEq v g) (ivArith false false BEq p1 g1)) (ivArith false false BLe p2 g2))
+  end let end let end let end let
+end function
+
+function ivMinGhc (env :: Env) (ma :: Iv) (mi :: Iv) (p1 :: Iv) (p2 :: Iv) -> Iv is
+  (if ivIsBad ma || ivIsBad mi || ivIsBad p1 || ivIsBad p2 then ivBad unitValue
+   else (if prelude.lookup "__GLASGOW_HASKELL__" env.names matches Present _ then ivGhc env ma mi p1 p2
+         else ivCall "__GLASGOW_HASKELL__" [ma, mi, p1, p2] end if) end if)
+  with uns = false ,
+       bk = ((first matching case of prelude.lookup "__GLASGOW_HASKELL__" env.names :
+                when Present (Defined g) then false
+                when Present Undefined then true
+                when Absent then env.complete
+              end case) || ma.bk || mi.bk || p1.bk || p2.bk)
+end function
+
+-- Next cycle 10 (O157): a minus sign (a unary one, or the subtraction's)
+-- put before a name whose given value is negative makes the preprocessor
+-- read `--`: the expression is no answer. The name that begins an
+-- expression is the first one met going down its left sides (and a
+-- conditional's test); "" where it begins with anything else.
+function ivLeadName (e :: CExpr) -> Text is
+  first matching case of e :
+    when Name n then n
+    when Bin b then ivLeadName b.left
+    when Cond k then ivLeadName k.test
+    otherwise ""
+  end case
+end function
+
+function ivNegName (env :: Env) (n :: Text) -> Bool is
+  first matching case of prelude.lookup n env.names :
+    when Present (Defined v) then v < 0
+    when Present Undefined then false
+    when Absent then false
+  end case
+end function
+
+function ivMinusBefore (env :: Env) (e :: CExpr) -> Bool is ivNegName env (ivLeadName e) end function
+
+function ivEval (env :: Env) (e :: CExpr) -> Iv is
+  first matching case of e :
+    when Lit n then (if n < 0 || n > 18446744073709551615 then ivBad unitValue else ivKnown (ivWrapInt n) end if)
+    when ULit n then (if n < 0 || n > 18446744073709551615 then ivBad unitValue else (ivKnown (ivWrapInt n)) with uns = true end if)
+    when Name n then ivName env n
+    when IsDefined n then ivDefined env n
+    when Un u then
+      (let r = ivUnary u.op (ivEval env u.arg) in
+        r with bk = (r.bk || (u.op = UMinus && ivMinusBefore env u.arg)) end let)
+    when Bin b then
+      (let r = ivBinary b.op (ivEval env b.left) (ivEval env b.right) in
+        r with bk = (r.bk || (b.op = BSub && ivMinusBefore env b.right)) end let)
+    when Cond k then ivCond (ivEval env k.test) (ivEval env k.yes) (ivEval env k.no)
+    when MinVersion m then ivMinVersion env m.pkg (ivEval env m.major1) (ivEval env m.major2) (ivEval env m.minor)
+    when MinGhc m then ivMinGhc env (ivEval env m.major1) (ivEval env m.major2) (ivEval env m.patch1) (ivEval env m.patch2)
+  end case
+end function
+
+function ivOutcome (i :: Iv) -> Outcome is
+  if i.bk || i.st = 2 then Bad
+  else (if i.st = 0 then Known (i.v + 0) else Unknown (OpenInfo record{ missing = wp.sorted i.miss , risky = i.risky}) end if) end if
+end function
+
+function evalWhen (env :: Env) (text :: Text) -> Outcome is
+  first matching case of parseWhen text :
+    when Absent then Bad
+    when Present e then ivOutcome (ivEval env e)
+  end case
+end function
+
+-- Binding lines (W2). A line is blank, a remark, `undef NAME`,
+-- `package P=X.Y.Z`, `NAME=V` or `NAME`.
+function trimFrom (t :: Text) (fuel :: Integer) -> Text is
+  if fuel <= 0 then t
+  else (if prelude.startsWith t " " || prelude.startsWith t "\t" || prelude.startsWith t "\r" then trimFrom (prelude.drop 1 t) (fuel - 1) else t end if) end if
+end function
+
+function trimTo (t :: Text) (fuel :: Integer) -> Text is
+  if fuel <= 0 then t
+  else (if prelude.endsWith t " " || prelude.endsWith t "\t" || prelude.endsWith t "\r" then trimTo (prelude.take (prelude.length t - 1) t) (fuel - 1) else t end if) end if
+end function
+
+function trimmed (t :: Text) -> Text is trimTo (trimFrom t (prelude.length t)) (prelude.length t) end function
+
+function eqIndex (t :: Text) (i :: Integer) (n :: Integer) -> Integer is
+  if i >= n then 0 - 1 else (if chAt t i = "=" then i else eqIndex t (i + 1) n end if) end if
+end function
+
+function dotIndex (t :: Text) (i :: Integer) (n :: Integer) -> Integer is
+  if i >= n then 0 - 1 else (if chAt t i = "." then i else dotIndex t (i + 1) n end if) end if
+end function
+
+-- A version `1.2.3`: its numbers.
+function versionParts (t :: Text) (fuel :: Integer) -> List Integer is
+  if fuel <= 0 || prelude.length t = 0 then []
+  else
+    (let d = dotIndex t 0 (prelude.length t) in
+      (if d < 0 then [numValue t 10 0 (prelude.length t) 0]
+       else [numValue t 10 0 d 0] ++ versionParts (prelude.drop (d + 1) t) (fuel - 1) end if)
+    end let)
+  end if
+end function
+
+function isName (t :: Text) -> Bool is
+  (t matches regex "[A-Za-z_][A-Za-z0-9_]*") && !(prelude.startsWith t "MIN_VERSION_") && t != "defined"
+end function
+
+-- The line less the carriage returns at its end (an error names it so).
+function stripCr (t :: Text) (fuel :: Integer) -> Text is
+  if fuel <= 0 then t
+  else (if prelude.endsWith t "\r" then stripCr (prelude.take (prelude.length t - 1) t) (fuel - 1) else t end if) end if
+end function
+
+-- A value: an optional `-`, then a decimal, 0x hexadecimal or leading-0
+-- octal integer, inside 64 bits.
+function valueIn (v :: Text) -> Maybe Integer is
+  let neg = prelude.startsWith v "-" in
+  let m = (if neg then prelude.drop 1 v else v end if) in
+  let n = prelude.length m in
+  let mag = (if m matches regex "0[xX][0-9a-fA-F]+" then Present (numValue m 16 2 n 0)
+             else (if m matches regex "[1-9][0-9]*" then Present (numValue m 10 0 n 0)
+             else (if m matches regex "0[0-7]*" then Present (numValue m 8 0 n 0) else Absent end if) end if) end if) in
+    (first matching case of mag :
+      when Absent then Absent
+      when Present x then
+        (if neg then (if x = 0 || x > 9223372036854775808 then Absent else Present (0 - x) end if)
+         else (if x <= 9223372036854775807 then Present x else Absent end if) end if)
+    end case)
+  end let end let end let end let
+end function
+
+function packageName (p :: Text) -> Bool is
+  p matches regex "[A-Za-z0-9]*[A-Za-z][A-Za-z0-9]*(-[A-Za-z0-9]*[A-Za-z][A-Za-z0-9]*)*"
+end function
+
+function readLine (raw :: Text) -> Maybe BindingLine is
+  let s = trimmed raw in
+    (if prelude.length s = 0 then Present Blank
+     else (if prelude.startsWith s "#" then Present (Remark (prelude.drop 1 s))
+     else (if prelude.startsWith s "undef " then
+       (let nm = prelude.drop 6 s in
+         (if prelude.startsWith nm "MIN_VERSION_" then
+            (let p = prelude.drop 12 nm in (if p matches regex "[A-Za-z0-9_]+" then Present (UnsetPackage p) else Absent end if) end let)
+          else (if isName nm then Present (UndefName nm) else Absent end if) end if) end let)
+     else (if prelude.startsWith s "package " then
+       (let rest = prelude.drop 8 s in let e = eqIndex rest 0 (prelude.length rest) in
+         (if e < 0 then Absent
+          else (let p = prelude.take e rest in let ver = prelude.drop (e + 1) rest in
+            (if packageName p && (ver matches regex "[0-9]+(\\.[0-9]+)*")
+              then Present (SetPackage record{ pkg = p , version = versionParts ver (prelude.length ver)})
+              else Absent end if) end let end let) end if)
+       end let end let)
+     else (if s = "undef" || s = "package" then Absent
+     else
+       (let e = eqIndex s 0 (prelude.length s) in
+         (if e < 0 then (if isName s then Present (FlagName s) else Absent end if)
+          else (let nm = prelude.take e s in
+            (if isName nm then
+              (first matching case of valueIn (prelude.drop (e + 1) s) :
+                when Absent then Absent
+                when Present x then Present (SetName record{ name = nm , value = x , form = 0})
+              end case)
+             else Absent end if) end let) end if)
+       end let) end if) end if) end if) end if) end if)
+  end let
+end function
+
+function readFrom (lines :: List Text) (k :: Integer) (acc :: List BindingLine) -> Either BindingError (List BindingLine) is
+  first matching case of lines :
+    when Nil then Right acc
+    when Cons l rest then
+      (first matching case of readLine l :
+        when Absent then Left (BindingError record{ line = k , text = stripCr l (prelude.length l)})
+        when Present b then readFrom rest (k + 1) (acc ++ [b])
+      end case)
+  end case
+end function
+
+-- Next cycle 10 (review 12, S2): what a binding line means, written on
+-- this side (rule I1: not `wp.envFrom`, not `wp.bound`). The key a line
+-- sets, what `package` clears and what an `undef` of a package says; a
+-- later line replaces an earlier one.
+function ivNameSet (env :: Env) (key :: Text) (b :: Binding) -> Env is
+  env with names = prelude.put key b env.names
+end function
+
+function ivApply (env :: Env) (b :: BindingLine) -> Env is
+  first matching case of b :
+    when Blank then env
+    when Remark t then env
+    when UndefName n then ivNameSet env n (wp.notDefined unitValue)
+    when FlagName n then ivNameSet env n (wp.definedAs 1)
+    when SetName n then ivNameSet env n.name (wp.definedAs n.value)
+    when UnsetPackage p then
+      ((ivNameSet env ("MIN_VERSION_" ++ p) (wp.notDefined unitValue)) with versions = prelude.delete p env.versions)
+    when SetPackage k then
+      (let key = wp.macroName k.pkg (prelude.length k.pkg) in
+        (env with names = prelude.delete ("MIN_VERSION_" ++ key) env.names) with versions = prelude.put key k.version env.versions end let)
+  end case
+end function
+
+function ivEnvOf (env :: Env) (bs :: List BindingLine) -> Env is
+  first matching case of bs : when Nil then env when Cons b rest then ivEnvOf (ivApply env b) rest end case
+end function
+
+function readBindings (lines :: List Text) -> Either BindingError Env is
+  first matching case of readFrom lines 1 [] :
+    when Left e then Left e
+    when Right bs then Right (ivEnvOf (wp.emptyEnv unitValue) bs)
+  end case
+end function
+
+-- Filtering (W5, W6). 1 holds, 0 fails, 2 neither.
+type Note is a record{
+  cond :: Text
+  out :: Outcome}
+end type
+
+function condOutcome (env :: Env) (cond :: Text) -> Outcome is
+  if prelude.length cond = 0 then Known 1 else evalCondition env cond end if
+end function
+
+function judged (o :: Outcome) -> Integer is
+  first matching case of o :
+    when Known v then (if v != 0 then 1 else 0 end if)
+    when Unknown u then 2
+    when Bad then 2
+  end case
+end function
+
+function edgesKept (env :: Env) (es :: List CallEdge) -> List CallEdge is
+  first matching case of es :
+    when Nil then []
+    when Cons e rest then
+      (first matching case of judged (condOutcome env e.condition) :
+        when 1 then [e with condition = ""]
+        when 0 then []
+        otherwise [e]
+      end case) ++ edgesKept env rest
+  end case
+end function
+
+function edgeNotes (env :: Env) (es :: List CallEdge) -> List Note is
+  first matching case of es :
+    when Nil then []
+    when Cons e rest then
+      (let o = condOutcome env e.condition in
+        (if judged o = 2 then [Note record{ cond = e.condition , out = o}] else [] end if) end let) ++ edgeNotes env rest
+  end case
+end function
+
+type Tally is a record{
+  edge :: CallEdge
+  count :: Integer}
+end type
+
+function tallied (es :: List CallEdge) (acc :: KeyVal EdgeKey Tally) -> KeyVal EdgeKey Tally is
+  first matching case of es :
+    when Nil then acc
+    when Cons e rest then
+      tallied rest (first matching case of prelude.lookup (edgeKey e) acc :
+        when Absent then prelude.put (edgeKey e) (Tally record{ edge = e , count = e.count}) acc
+        when Present seen then prelude.put (edgeKey e) (seen with count = seen.count + e.count) acc
+      end case)
+  end case
+end function
+
+function fromTallies (ts :: List (Entry EdgeKey Tally)) -> List CallEdge is
+  first matching case of ts :
+    when Nil then []
+    when Cons en rest then (first matching case of en : when Entry k v then [v.edge with count = v.count] ++ fromTallies rest end case)
+  end case
+end function
+
+-- One edge per identity, counts added, at the first one's place.
+function summedEdges (es :: List CallEdge) -> List CallEdge is fromTallies (prelude.entries (tallied es (prelude.keyValOf []))) end function
+
+function declKept (env :: Env) (d :: Decl) -> List Decl is
+  first matching case of judged (condOutcome env d.condition) :
+    when 1 then [d with condition = "" , calls = summedEdges (edgesKept env d.calls)]
+    when 0 then []
+    otherwise [d with calls = summedEdges (edgesKept env d.calls)]
+  end case
+end function
+
+function declsKept (env :: Env) (ds :: List Decl) -> List Decl is
+  first matching case of ds : when Nil then [] when Cons d rest then declKept env d ++ declsKept env rest end case
+end function
+
+function declNotes (env :: Env) (d :: Decl) -> List Note is
+  let o = condOutcome env d.condition in
+    (first matching case of judged o :
+      when 1 then edgeNotes env d.calls
+      when 0 then []
+      otherwise [Note record{ cond = d.condition , out = o}] ++ edgeNotes env d.calls
+    end case)
+  end let
+end function
+
+function declsNotes (env :: Env) (ds :: List Decl) -> List Note is
+  first matching case of ds : when Nil then [] when Cons d rest then declNotes env d ++ declsNotes env rest end case
+end function
+
+function packagesKept (env :: Env) (ps :: List Package) -> List Package is
+  first matching case of ps : when Nil then [] when Cons p rest then [p with symbols = declsKept env p.symbols] ++ packagesKept env rest end case
+end function
+
+function packagesNotes (env :: Env) (ps :: List Package) -> List Note is
+  first matching case of ps : when Nil then [] when Cons p rest then declsNotes env p.symbols ++ packagesNotes env rest end case
+end function
+
+function notesMissing (ns :: List Note) -> List Text is
+  first matching case of ns : when Nil then [] when Cons n rest then missingOf n.out ++ notesMissing rest end case
+end function
+
+function notesBad (ns :: List Note) -> List Text is
+  first matching case of ns :
+    when Nil then []
+    when Cons n rest then (if n.out matches Bad then [n.cond] else [] end if) ++ notesBad rest
+  end case
+end function
+
+function applyWhen (env :: Env) (ps :: List Package) -> Filtered is
+  Filtered record{ packages = packagesKept env ps ,
+                   missing = prelude.toList (prelude.sortedSetOf (notesMissing (packagesNotes env ps))) ,
+                   unreadable = prelude.toList (prelude.sortedSetOf (notesBad (packagesNotes env ps)))}
+end function
+
+-- The decisions file (next-cycle-3/design.md, sections 3 and 4). Two more
+-- definitions are ax's production code, and are STUBS here (laws first):
+--   listedNames    the names a decisions file lists as undecided
+--   decisionLines  the blocks to paste for the missing names not listed
+-- Every law that names one is red, or holds only emptily, until they are
+-- written (WHEN-13 to WHEN-19).
+
+-- The names of the undecided lines among a file's lines, in the file's
+-- order, each once. An undecided line is, blanks and tabs around it
+-- dropped, exactly `# NAME=` (NAME as in W2) or `# package P=` (P a Cabal
+-- package name); the second lists MIN_VERSION_p, p being P with each `-`
+-- written `_`.
+
+-- The lines to paste into a decisions file: a block (wp.blockOf) for
+-- every name that is missing under `env` in the manifest `ps` and is not
+-- in `listed`, in the order of the names. A use is a kept, undecided fact
+-- whose condition still needs the name; its place (wp.useAt) is its
+-- symbol's file and line.
+
+-- STUB (next cycle 4, next-cycle-4/design.md, section 4): a fact's
+-- condition, read as a path of directives. The implementer replaces the
+-- body, and has the filter (`condOutcome`) read every condition with it.
+--   The text is cut at each `||` that stands outside all parentheses, and
+--   each part at each `&&` that stands outside all parentheses (every
+--   character counts: a parenthesis in a comment or a quote too). Blanks
+--   around a part are dropped. A part `!(T)` whose first parenthesis closes
+--   at its last character is the term T, negated; a part `(T)` that closes
+--   so is the term T; any other part is itself the term. A term is
+--   evaluated by `evalWhen`, as one directive's expression. The parts
+--   combine as `wp.refCondition` says: from the left, a part that fails
+--   decides its cube before a later term is read, and a cube that holds
+--   decides the condition.
+-- S1.j next cycle 4: a SATISFIABILITY DRAFT of `evalCondition` (rules E1 to
+-- E5 of next-cycle-4/design.md, section 4). Not the implementation: it was
+-- put in place of the stub in a scratch project only
+-- (a scratch project of next cycle 4, by apply-draft.py), to see that
+-- the laws on a path of directives can all hold at once. The implementer
+-- may use it, change it or ignore it.
+
+-- The parts of `t` between the two-character operator `op`, cut only where
+-- the depth of parentheses is 0. The depth is the count of `(` less the
+-- count of `)` so far; every character counts.
+-- `fuel` is the text's length: each step takes one of it.
+-- Next cycle 8: the scan is done in chunks of 200 characters, each read
+-- from a text of its own, so that a condition of many thousand characters
+-- (a fact in a file of hundreds of builds) is not rescanned in full at
+-- every character. The cuts are the same.
+type EcScan is a record{
+  cuts :: List Integer
+  d :: Integer
+  skip :: Bool}
+end type
+
+-- The cuts of one chunk `c` (its first `lim` characters; one more is
+-- there so that an operator that starts at the last can be seen); `base`
+-- is the index of the chunk's start in the text.
+function ecScanChunk (c :: Text) (j :: Integer) (lim :: Integer) (base :: Integer) (d :: Integer) (skip :: Bool) (op :: Text) (fuel :: Integer) -> EcScan is
+  if fuel <= 0 || j >= lim then EcScan record{ cuts = [] , d = d , skip = skip}
+  else
+    (if skip then ecScanChunk c (j + 1) lim base d false op (fuel - 1)
+     else
+      (let two = prelude.take 2 (prelude.drop j c) in
+       let ch = prelude.take 1 two in
+         (if d = 0 && two = op then
+            (let r = ecScanChunk c (j + 1) lim base 0 true op (fuel - 1) in EcScan record{ cuts = [base + j] ++ r.cuts , d = r.d , skip = r.skip} end let)
+          else ecScanChunk c (j + 1) lim base (if ch = "(" then d + 1 else (if ch = ")" then d - 1 else d end if) end if) false op (fuel - 1) end if)
+       end let end let) end if)
+  end if
+end function
+
+function ecChunks (t :: Text) (k :: Integer) (n :: Integer) (d :: Integer) (skip :: Bool) (op :: Text) (fuel :: Integer) -> List Integer is
+  if fuel <= 0 || k >= n then []
+  else
+    (let lim = (if k + 200 < n then 200 else n - k end if) in
+     let c = prelude.take (lim + 1) (prelude.drop k t) in
+     let r = ecScanChunk c 0 lim k d skip op (lim + 2) in
+       r.cuts ++ ecChunks t (k + lim) n r.d r.skip op (fuel - 1)
+     end let end let end let)
+  end if
+end function
+
+function ecParts (t :: Text) (cuts :: List Integer) (start :: Integer) (n :: Integer) -> List Text is
+  first matching case of cuts :
+    when Nil then [prelude.take (n - start) (prelude.drop start t)]
+    when Cons c rest then [prelude.take (c - start) (prelude.drop start t)] ++ ecParts t rest (c + 2) n
+  end case
+end function
+
+-- The parts of `t` between the two-character operator `op`, cut only where
+-- the depth of parentheses is 0. The depth is the count of `(` less the
+-- count of `)` so far; every character counts.
+function ecCut (t :: Text) (i :: Integer) (n :: Integer) (d :: Integer) (start :: Integer) (op :: Text) (fuel :: Integer) -> List Text is
+  ecParts t (ecChunks t i n d false op (n + 1)) start n
+end function
+
+-- The first index from `i` at which the depth is back at 0; -1 for none.
+function ecCloses (t :: Text) (i :: Integer) (n :: Integer) (d :: Integer) -> Integer is
+  if i >= n then 0 - 1
+  else (let d2 = (if chAt t i = "(" then d + 1 else (if chAt t i = ")" then d - 1 else d end if) end if) in
+    (if d2 = 0 then i else ecCloses t (i + 1) n d2 end if) end let) end if
+end function
+
+-- Next cycle 9 (rule I1): the combining of a cube's literals and of a
+-- condition's cubes, on this side: `ecNot` and `ecBool` read a term's
+-- outcome as a literal, `ecMeet` joins two literals (and) or two cubes
+-- (or) as C evaluates `&&` and `||`.
+function ecBit (b :: Bool) -> Integer is if !b then 0 else 1 end if end function
+
+function ecNot (o :: Outcome) -> Outcome is
+  first matching case of o :
+    when Known a then Known (ecBit (a = 0))
+    when Unknown u then o
+    when Bad then Bad
+  end case
+end function
+
+function ecBool (o :: Outcome) -> Outcome is
+  first matching case of o :
+    when Known a then Known (ecBit (a != 0))
+    when Unknown u then o
+    when Bad then Bad
+  end case
+end function
+
+function ecMeet (isAnd :: Bool) (l :: Outcome) (r :: Outcome) -> Outcome is
+  first matching case of l :
+    when Bad then Bad
+    when Known a then
+      (if (if isAnd then a = 0 else a != 0 end if) then Known (ecBit (!isAnd))
+       else (first matching case of r :
+         when Known b then Known (ecBit (b != 0))
+         when Unknown v then r
+         when Bad then Bad
+       end case) end if)
+    when Unknown u then
+      (first matching case of r :
+        when Known b then (if (if isAnd then b = 0 else b != 0 end if) && !u.risky then Known (ecBit (!isAnd)) else l end if)
+        when Unknown v then Unknown (OpenInfo record{ missing = wp.sorted (u.missing ++ v.missing) , risky = u.risky || v.risky})
+        when Bad then Unknown (OpenInfo record{ missing = u.missing , risky = true})
+      end case)
+  end case
+end function
+
+function ecLit (env :: Env) (part :: Text) -> Outcome is
+  let p = trimmed part in let n = prelude.length p in
+    (if prelude.startsWith p "!(" && ecCloses p 1 n 0 = n - 1 then ecNot (evalWhen env (prelude.take (n - 3) (prelude.drop 2 p)))
+     else (if prelude.startsWith p "(" && ecCloses p 0 n 0 = n - 1 then ecBool (evalWhen env (prelude.take (n - 2) (prelude.drop 1 p)))
+     else ecBool (evalWhen env p) end if) end if)
+  end let end let
+end function
+
+function ecCube (env :: Env) (parts :: List Text) (acc :: Outcome) -> Outcome is
+  first matching case of parts :
+    when Nil then acc
+    when Cons p rest then (if acc = Known 0 then acc else ecCube env rest (ecMeet true acc (ecLit env p)) end if)
+  end case
+end function
+
+function ecCubes (env :: Env) (cubes :: List Text) (acc :: Outcome) -> Outcome is
+  first matching case of cubes :
+    when Nil then acc
+    when Cons k rest then
+      (if acc = Known 1 then acc
+       else ecCubes env rest (ecMeet false acc (ecCube env (ecCut k 0 (prelude.length k) 0 0 "&&" (prelude.length k)) (Known 1))) end if)
+  end case
+end function
+
+function evalCondition (env :: Env) (text :: Text) -> Outcome is
+  ecCubes env (ecCut text 0 (prelude.length text) 0 0 (barBarText unitValue) (prelude.length text)) (Known 0)
+end function
+
+-- DRAFT, NOT THE IMPLEMENTATION (next-cycle-3/design.md, section 9).
+-- Written by the specification's author only to show that laws WHEN-13 to
+-- WHEN-19 can all hold at once, and to see each of them fail under the
+-- stubs first. `apply-draft.py` puts it in place of the two stubs in a
+-- scratch copy of conditions.lawspec. An implementer may use it, change it
+-- or ignore it; the laws are the specification.
+
+function listedOne (raw :: Text) -> List Text is
+  let s = trimmed raw in
+    (if prelude.startsWith s "# package " then
+      (let p = prelude.take (prelude.length s - 11) (prelude.drop 10 s) in
+        (if prelude.endsWith s "=" && packageName p then ["MIN_VERSION_" ++ macroName p (prelude.length p)] else [] end if) end let)
+     else (if prelude.startsWith s "# " && prelude.endsWith s "=" then
+      (let nm = prelude.take (prelude.length s - 3) (prelude.drop 2 s) in (if isName nm then [nm] else [] end if) end let)
+     else [] end if) end if)
+  end let
+end function
+
+function listedAll (lines :: List Text) -> List Text is
+  first matching case of lines : when Nil then [] when Cons l rest then listedOne l ++ listedAll rest end case
+end function
+
+function listedNames (lines :: List Text) -> List Text is prelude.toList (prelude.setOf (listedAll lines)) end function
+
+type UseNote is a record{
+  place :: UsePlace
+  needs :: List Text}
+end type
+
+function edgeUses (env :: Env) (file :: Text) (line :: Integer) (es :: List CallEdge) -> List UseNote is
+  first matching case of es :
+    when Nil then []
+    when Cons e rest then
+      (let o = condOutcome env e.condition in
+        (if judged o = 2 then [UseNote record{ place = useAt file line e.condition , needs = missingOf o}] else [] end if) end let)
+        ++ edgeUses env file line rest
+  end case
+end function
+
+function declUses (env :: Env) (d :: Decl) -> List UseNote is
+  let o = condOutcome env d.condition in
+    (first matching case of judged o :
+      when 1 then edgeUses env d.location.file d.location.line d.calls
+      when 0 then []
+      otherwise [UseNote record{ place = useAt d.location.file d.location.line d.condition , needs = missingOf o}] ++ edgeUses env d.location.file d.location.line d.calls
+    end case)
+  end let
+end function
+
+function declsUses (env :: Env) (ds :: List Decl) -> List UseNote is
+  first matching case of ds : when Nil then [] when Cons d rest then declUses env d ++ declsUses env rest end case
+end function
+
+function packagesUses (env :: Env) (ps :: List Package) -> List UseNote is
+  first matching case of ps : when Nil then [] when Cons p rest then declsUses env p.symbols ++ packagesUses env rest end case
+end function
+
+function allNeeds (us :: List UseNote) -> List Text is
+  first matching case of us : when Nil then [] when Cons n rest then n.needs ++ allNeeds rest end case
+end function
+
+function usesFor (name :: Text) (us :: List UseNote) -> List UsePlace is
+  first matching case of us :
+    when Nil then []
+    when Cons n rest then (if n.needs contains name then [n.place] else [] end if) ++ usesFor name rest
+  end case
+end function
+
+function blocksFor (names :: List Text) (us :: List UseNote) -> List Text is
+  first matching case of names : when Nil then [] when Cons n rest then blockOf n (usesFor n us) ++ blocksFor rest us end case
+end function
+
+function decisionLines (env :: Env) (listed :: List Text) (ps :: List Package) -> List Text is
+  blocksFor (unlisted (allNeeds (packagesUses env ps)) listed) (packagesUses env ps)
+end function
+
+-- ===========================================================================
+-- SPECIFICATION. Not edited by an implementer.
+
+function setName (n :: Text) (v :: Integer) -> BindingLine is SetName record{ name = n , value = v , form = 0} end function
+function setPackage (p :: Text) (v :: List Integer) -> BindingLine is SetPackage record{ pkg = p , version = v} end function
+
+-- The complete table environment (gen-when-table.py passes the same to cpp).
+function tableFull (u :: Unit) -> Env is
+  completed (envFrom (emptyEnv unitValue)
+    [setName "A" 1, setName "B" 0, setName "V" 908, setName "N" (0 - 3), UndefName "U", setName "__GLASGOW_HASKELL__" 908,
+     setName "__GLASGOW_HASKELL_PATCHLEVEL1__" 2, setName "__GLASGOW_HASKELL_PATCHLEVEL2__" 0, setPackage "base" [4, 18, 1], setPackage "text" [2, 0]])
+end function
+
+-- The partial table environment.
+function tablePart (u :: Unit) -> Env is
+  envFrom (emptyEnv unitValue) [setName "A" 1, UndefName "U", setPackage "base" [4, 18, 1]]
+end function
+
+function tableGhc (u :: Unit) -> Env is envFrom (emptyEnv unitValue) [setName "__GLASGOW_HASKELL__" 908] end function
+
+function chosenEnv (se :: Integer) (full :: Bool) -> Env is if full then completed (envOf se) else envOf se end if end function
+
+law "|the evaluator equals the reference| is
+  id: "WHEN-1"
+  description :
+    "For any expression tree, written as C text in any style, and any
+    environment, complete or not: the evaluator's answer for the text is
+    the reference's answer for the tree. The answer includes the missing
+    names, exactly, and whether a build may be an error. Next cycle 9
+    (review 11, S1): this law holds an evaluator only where `evalWhen`
+    is one. It was `parseWhen` and then `refEval`, the right-hand side
+    itself, so the law held the parser and nothing of the arithmetic;
+    and the walk's `cxDecidedBy` and the filter's `evalCondition`
+    reached `refEval`, `unary`, `logical` and `asTruth` through it.
+    Rule I1 (next-cycle-9/design.md, section 6) now reads through
+    calls: nothing ax runs may reach a function of a reference, and
+    next-cycle-9/tools/independence.sh fails where it does. With an
+    evaluator of its own on the left, this law compares two
+    evaluators, on drawn trees; WHEN-2a to WHEN-2g hold the left side
+    against values measured with GCC."
+  end description
+  definition :
+    for all (se :: Integer) (sx :: Integer) (ss :: Integer) (full :: Bool) =>
+      evalWhen (chosenEnv se full) (showExpr (styleOf ss) (exprOf sx 4)) = refEval (chosenEnv se full) (exprOf sx 4)
+    end for all
+  end definition
+  references:
+    ref function wp.refEval
+    ref function wp.showExpr
+  end references
+end law
+
+law "|the evaluator answers as the C preprocessor does, rows 1| is
+  id: "WHEN-2a"
+  description :
+    "Literal conditions under the complete table environment. Every row was run through cpp, in standard and in traditional mode, by next-cycle-2/tools/gen-when-table.py before this text was printed: a value row as `#if (text) == value`, a Bad row as an `#if` that cpp must reject."
+  end description
+  definition :
+    evalWhen (tableFull unitValue) "1 + 2 * 3" = Known 7
+    && evalWhen (tableFull unitValue) "(1 + 2) * 3" = Known 9
+    && evalWhen (tableFull unitValue) "10 - 4 - 3" = Known 3
+    && evalWhen (tableFull unitValue) "2 * 3 % 4" = Known 2
+    && evalWhen (tableFull unitValue) "100 / 7 / 2" = Known 7
+    && evalWhen (tableFull unitValue) "-7 / 2" = Known (0 - 3)
+    && evalWhen (tableFull unitValue) "-7 % 2" = Known (0 - 1)
+    && evalWhen (tableFull unitValue) "7 % -2" = Known 1
+    && evalWhen (tableFull unitValue) "1 << 3 + 1" = Known 16
+    && evalWhen (tableFull unitValue) "256 >> 2 >> 1" = Known 32
+    && evalWhen (tableFull unitValue) "1 < 2 == 1" = Known 1
+    && evalWhen (tableFull unitValue) "3 > 2 > 1" = Known 0
+    && evalWhen (tableFull unitValue) "6 & 3 == 3" = Known 0
+    && evalWhen (tableFull unitValue) "1 | 2 ^ 3 & 4" = Known 3
+    && evalWhen (tableFull unitValue) "5 ^ 1 | 8" = Known 12
+    && evalWhen (tableFull unitValue) "0 || 1 && 0" = Known 0
+    && evalWhen (tableFull unitValue) "1 || 0 && 0" = Known 1
+    && evalWhen (tableFull unitValue) "2 && 3" = Known 1
+    && evalWhen (tableFull unitValue) "0 || 7" = Known 1
+    && evalWhen (tableFull unitValue) "1 ? 2 : 3 ? 4 : 5" = Known 2
+    && evalWhen (tableFull unitValue) "0 ? 1 : 0 ? 2 : 3" = Known 3
+    && evalWhen (tableFull unitValue) "1 ? 0 ? 6 : 7 : 8" = Known 7
+    && evalWhen (tableFull unitValue) "0 || 1 ? 4 : 5" = Known 4
+    && evalWhen (tableFull unitValue) "!0 + 1" = Known 2
+    && evalWhen (tableFull unitValue) "~0" = Known (0 - 1)
+    && evalWhen (tableFull unitValue) "~5 & 7" = Known 2
+    && evalWhen (tableFull unitValue) "- -1" = Known 1
+    && evalWhen (tableFull unitValue) "-(-1)" = Known 1
+    && evalWhen (tableFull unitValue) "+ +1" = Known 1
+    && evalWhen (tableFull unitValue) "!!5" = Known 1
+  end definition
+end law
+
+law "|the evaluator answers as the C preprocessor does, rows 2| is
+  id: "WHEN-2b"
+  description :
+    "Literal conditions under the complete table environment. Every row was run through cpp, in standard and in traditional mode, by next-cycle-2/tools/gen-when-table.py before this text was printed: a value row as `#if (text) == value`, a Bad row as an `#if` that cpp must reject."
+  end description
+  definition :
+    evalWhen (tableFull unitValue) "-!0" = Known (0 - 1)
+    && evalWhen (tableFull unitValue) "!-1" = Known 0
+    && evalWhen (tableFull unitValue) "~-1" = Known 0
+    && evalWhen (tableFull unitValue) "0x10 + 010 + 10" = Known 34
+    && evalWhen (tableFull unitValue) "0XfF" = Known 255
+    && evalWhen (tableFull unitValue) "1L + 2l + 3LL" = Known 6
+    && evalWhen (tableFull unitValue) "1 == 1L" = Known 1
+    && evalWhen (tableFull unitValue) "00" = Known 0
+    && evalWhen (tableFull unitValue) "9223372036854775807 + 1" = Known (0 - 9223372036854775808)
+    && evalWhen (tableFull unitValue) "1 << 63" = Known (0 - 9223372036854775808)
+    && evalWhen (tableFull unitValue) "1 << 64" = Known 0
+    && evalWhen (tableFull unitValue) "-1 >> 70" = Known (0 - 1)
+    && evalWhen (tableFull unitValue) "5 >> 70" = Known 0
+    && evalWhen (tableFull unitValue) "1 << -1" = Known 0
+    && evalWhen (tableFull unitValue) "8 >> -1" = Known 16
+    && evalWhen (tableFull unitValue) "-8 >> 1" = Known (0 - 4)
+    && evalWhen (tableFull unitValue) "-9 >> 1" = Known (0 - 5)
+    && evalWhen (tableFull unitValue) "-1 << 1" = Known (0 - 2)
+    && evalWhen (tableFull unitValue) "4611686018427387904 * 4" = Known 0
+    && evalWhen (tableFull unitValue) "-9223372036854775807 - 2" = Known 9223372036854775807
+    && evalWhen (tableFull unitValue) "0 && 1 / 0" = Known 0
+    && evalWhen (tableFull unitValue) "1 || 1 / 0" = Known 1
+    && evalWhen (tableFull unitValue) "0 ? 1 / 0 : 2" = Known 2
+    && evalWhen (tableFull unitValue) "1 ? 2 : 1 % 0" = Known 2
+    && evalWhen (tableFull unitValue) "A + V" = Known 909
+    && evalWhen (tableFull unitValue) "N * 2" = Known (0 - 6)
+    && evalWhen (tableFull unitValue) "U" = Known 0
+    && evalWhen (tableFull unitValue) "undefined_name" = Known 0
+    && evalWhen (tableFull unitValue) "B || N" = Known 1
+    && evalWhen (tableFull unitValue) "defined(A) && !defined(U) && !defined(nope)" = Known 1
+  end definition
+end law
+
+law "|the evaluator answers as the C preprocessor does, rows 3| is
+  id: "WHEN-2c"
+  description :
+    "Literal conditions under the complete table environment. Every row was run through cpp, in standard and in traditional mode, by next-cycle-2/tools/gen-when-table.py before this text was printed: a value row as `#if (text) == value`, a Bad row as an `#if` that cpp must reject."
+  end description
+  definition :
+    evalWhen (tableFull unitValue) "defined A + defined U" = Known 1
+    && evalWhen (tableFull unitValue) "defined ( B )" = Known 1
+    && evalWhen (tableFull unitValue) "defined(A)&&defined(B)" = Known 1
+    && evalWhen (tableFull unitValue) "defined A && V >= 900" = Known 1
+    && evalWhen (tableFull unitValue) "MIN_VERSION_base(4,18,1)" = Known 1
+    && evalWhen (tableFull unitValue) "MIN_VERSION_base(4,18,2)" = Known 0
+    && evalWhen (tableFull unitValue) "MIN_VERSION_base(4,19,0)" = Known 0
+    && evalWhen (tableFull unitValue) "MIN_VERSION_base(3,99,99)" = Known 1
+    && evalWhen (tableFull unitValue) "MIN_VERSION_base(5,0,0)" = Known 0
+    && evalWhen (tableFull unitValue) "MIN_VERSION_base(4,17,9)" = Known 1
+    && evalWhen (tableFull unitValue) "MIN_VERSION_text(2,0,0)" = Known 1
+    && evalWhen (tableFull unitValue) "MIN_VERSION_text(2,0,1)" = Known 0
+    && evalWhen (tableFull unitValue) "MIN_VERSION_text(1,9,9)" = Known 1
+    && evalWhen (tableFull unitValue) "!MIN_VERSION_base(4,8,0)" = Known 0
+    && evalWhen (tableFull unitValue) "MIN_VERSION_base(4, 2 + 6, A)" = Known 1
+    && evalWhen (tableFull unitValue) "MIN_VERSION_base( 4 , 18 , 1 ) && A" = Known 1
+    && evalWhen (tableFull unitValue) "defined(MIN_VERSION_base)" = Known 1
+    && evalWhen (tableFull unitValue) "defined(MIN_VERSION_nope)" = Known 0
+    && evalWhen (tableFull unitValue) "defined(MIN_VERSION_base) && MIN_VERSION_base(4,8,0)" = Known 1
+    && evalWhen (tableFull unitValue) "MIN_VERSION_base" = Known 0
+    && evalWhen (tableFull unitValue) "MIN_VERSION_base + 1" = Known 1
+    && evalWhen (tableFull unitValue) "MIN_VERSION_GLASGOW_HASKELL" = Known 0
+    && evalWhen (tableFull unitValue) "MIN_VERSION_GLASGOW_HASKELL(9,8,2,0)" = Known 1
+    && evalWhen (tableFull unitValue) "MIN_VERSION_GLASGOW_HASKELL(9,8,3,0)" = Known 0
+    && evalWhen (tableFull unitValue) "MIN_VERSION_GLASGOW_HASKELL(9,6,0,0)" = Known 1
+    && evalWhen (tableFull unitValue) "MIN_VERSION_GLASGOW_HASKELL(9,10,0,0)" = Known 0
+    && evalWhen (tableFull unitValue) "MIN_VERSION_GLASGOW_HASKELL(9,8,2,1)" = Known 0
+    && evalWhen (tableFull unitValue) "__GLASGOW_HASKELL__ >= 908" = Known 1
+    && evalWhen (tableFull unitValue) "defined(MIN_VERSION_GLASGOW_HASKELL)" = Known 1
+    && evalWhen (tableFull unitValue) "1 /* c */ + /* d */ 2" = Known 3
+  end definition
+end law
+
+law "|the evaluator answers as the C preprocessor does, rows 4| is
+  id: "WHEN-2d"
+  description :
+    "Literal conditions under the complete table environment. Every row was run through cpp, in standard and in traditional mode, by next-cycle-2/tools/gen-when-table.py before this text was printed: a value row as `#if (text) == value`, a Bad row as an `#if` that cpp must reject."
+  end description
+  definition :
+    evalWhen (tableFull unitValue) "/**/1" = Known 1
+    && evalWhen (tableFull unitValue) "\t1\t+\t2 " = Known 3
+    && evalWhen (tableFull unitValue) "  A  " = Known 1
+    && evalWhen (tableFull unitValue) "" = Bad
+    && evalWhen (tableFull unitValue) "   " = Bad
+    && evalWhen (tableFull unitValue) "1 +" = Bad
+    && evalWhen (tableFull unitValue) "(1" = Bad
+    && evalWhen (tableFull unitValue) "1)" = Bad
+    && evalWhen (tableFull unitValue) "1 2" = Bad
+    && evalWhen (tableFull unitValue) "A B" = Bad
+    && evalWhen (tableFull unitValue) "()" = Bad
+    && evalWhen (tableFull unitValue) "FOO(1)" = Bad
+    && evalWhen (tableFull unitValue) "A(1)" = Bad
+    && evalWhen (tableFull unitValue) "MIN_VERSION_nope(1,2,3)" = Bad
+    && evalWhen (tableFull unitValue) "0 && MIN_VERSION_nope(1,2,3)" = Bad
+    && evalWhen (tableFull unitValue) "MIN_VERSION_base(1,2)" = Bad
+    && evalWhen (tableFull unitValue) "MIN_VERSION_base(1,2,3,4)" = Bad
+    && evalWhen (tableFull unitValue) "MIN_VERSION_GLASGOW_HASKELL(9,8,2)" = Bad
+    && evalWhen (tableFull unitValue) "1 / 0" = Bad
+    && evalWhen (tableFull unitValue) "1 % 0" = Bad
+    && evalWhen (tableFull unitValue) "1 / (A - 1)" = Bad
+    && evalWhen (tableFull unitValue) "1 && 1 / 0" = Bad
+    && evalWhen (tableFull unitValue) "0 || 1 % 0" = Bad
+    && evalWhen (tableFull unitValue) "1 / 0 && 0" = Bad
+    && evalWhen (tableFull unitValue) "0x38e+1" = Bad
+    && evalWhen (tableFull unitValue) "1 ? 2" = Bad
+    && evalWhen (tableFull unitValue) "1 ? : 2" = Bad
+    && evalWhen (tableFull unitValue) "defined" = Bad
+    && evalWhen (tableFull unitValue) "defined(" = Bad
+    && evalWhen (tableFull unitValue) "defined(1)" = Bad
+  end definition
+end law
+
+law "|the evaluator answers as the C preprocessor does, rows 5| is
+  id: "WHEN-2e"
+  description :
+    "Literal conditions under the complete table environment. Every row was run through cpp, in standard and in traditional mode, by next-cycle-2/tools/gen-when-table.py before this text was printed: a value row as `#if (text) == value`, a Bad row as an `#if` that cpp must reject."
+  end description
+  definition :
+    evalWhen (tableFull unitValue) "defined()" = Bad
+    && evalWhen (tableFull unitValue) "08" = Bad
+    && evalWhen (tableFull unitValue) "0x" = Bad
+    && evalWhen (tableFull unitValue) "1.0" = Bad
+    && evalWhen (tableFull unitValue) "\"a\"" = Bad
+    && evalWhen (tableFull unitValue) "A = 1" = Bad
+    && evalWhen (tableFull unitValue) "1 ++ 2" = Bad
+    && evalWhen (tableFull unitValue) "&& 1" = Bad
+    && evalWhen (tableFull unitValue) "1 !" = Bad
+    && evalWhen (tableFull unitValue) "#" = Bad
+    && evalWhen (tableFull unitValue) "1 /* c" = Bad
+  end definition
+end law
+
+law "|the forms this evaluator does not read are Bad, unless C skips them| is
+  id: "WHEN-2x"
+  description :
+    "Changed in next cycle 7 (review 9, N2): unsigned literals, literals
+    up to 2^64 - 1, plain character constants and the comma operator are
+    now read (WHEN-2g). What is still not read, where the preprocessor
+    evaluates it: a character constant of several characters, with an
+    octal or hexadecimal escape, or with a prefix; and a literal past
+    2^64 - 1. Each is Bad where it is evaluated: a fact under it is kept,
+    undecided, with a warning. C does not evaluate the right side of a
+    decided `&&`, so such a form there does no harm. Next cycle 8 (review
+    10, N4): the README named fewer forms than the evaluator refuses
+    (GCC also evaluates an escape C does not define, with a warning,
+    and the prefixes `u`, `U` and `u8`). There is now one list,
+    `wp.notRead`, with examples: every example is Bad here, and the
+    sentence a user reads is `wp.notReadText`, to the letter. The six
+    simple escapes the review found refused are no longer in it: they
+    are evaluated (WHEN-2g)."
+  end description
+  definition :
+    evalWhen (tableFull unitValue) "'ab'" = Bad
+    && evalWhen (tableFull unitValue) "'\\101' == 65" = Bad
+    && evalWhen (tableFull unitValue) "'\\x41' == 65" = Bad
+    && evalWhen (tableFull unitValue) "L'a'" = Bad
+    && evalWhen (tableFull unitValue) "18446744073709551616" = Bad
+    && evalWhen (tableFull unitValue) "1lul" = Bad
+    && evalWhen (tableFull unitValue) "0 && 'ab'" = Known 0
+    && evalWhen (tableFull unitValue) "1 || 18446744073709551616" = Known 1
+    && prelude.all badWhereRead (wp.examplesOf (wp.notRead unitValue))
+    && prelude.length (wp.examplesOf (wp.notRead unitValue)) = 15
+    && wp.notReadText unitValue
+         = "Beyond errors the preprocessor would also report, ax does not read: a character constant of several characters; a character constant with an octal or hexadecimal escape (but '\\0'); a character constant with an escape C does not define; a character constant with a prefix (L, u, U, u8); an integer literal past 2^64 - 1; a call of a macro other than MIN_VERSION_<package> and MIN_VERSION_GLASGOW_HASKELL."
+  end definition
+end law
+
+-- Next cycle 8 (review 10, N4): an example of `wp.notRead` is Bad where it
+-- is evaluated.
+function badWhereRead (t :: Text) -> Bool is evalWhen (tableFull unitValue) t = Bad end function
+
+law "|unsigned literals, character constants and the comma are evaluated as the C preprocessor evaluates them| is
+  id: "WHEN-2g"
+  description :
+    "Review 9, N2. Each of these was Bad (`cannot evaluate`), and the
+    preprocessor has a value for it. A `u` suffix makes the literal
+    unsigned, with or before an `l` suffix; an operation with an
+    unsigned operand is unsigned (WHP-15 has the rules). A literal with
+    no suffix past 2^63 - 1 wraps, as `cpp -traditional` reads it. A
+    character constant of one plain ASCII character, or of one of the
+    escapes for a newline, a tab, a carriage return, a zero, a
+    backslash and the two quotes, is that character's code, a signed
+    value. Next cycle 8 (review 10, N4): so are the other simple
+    escapes, `\\a` 7, `\\b` 8, `\\f` 12, `\\v` 11, `\\?` 63, and GCC's
+    `\\e` 27, as `cpp -traditional` has them. The comma evaluates both sides and gives the right one; a
+    comma inside a version macro's argument list separates arguments.
+    Every row was run through `cpp -undef -traditional -nostdinc` (GCC
+    15.2) by next-cycle-7/tools/exprs.py before this text was printed."
+  end description
+  definition :
+    evalWhen (tableFull unitValue) "1u" = Known 1
+    && evalWhen (tableFull unitValue) "1U + 1" = Known 2
+    && evalWhen (tableFull unitValue) "1uL + 1LU + 1ull + 1llu" = Known 4
+    && evalWhen (tableFull unitValue) "-1 < 0u" = Known 0
+    && evalWhen (tableFull unitValue) "-1 < 0" = Known 1
+    && evalWhen (tableFull unitValue) "(0 ? 1u : -1) < 0" = Known 0
+    && evalWhen (tableFull unitValue) "-1 / 2u" = Known 9223372036854775807
+    && evalWhen (tableFull unitValue) "-1u >> 1" = Known 9223372036854775807
+    && evalWhen (tableFull unitValue) "-1 >> 1u" = Known (0 - 1)
+    && evalWhen (tableFull unitValue) "1 << 64u" = Known 0
+    && evalWhen (tableFull unitValue) "N < 0u" = Known 0
+    && evalWhen (tableFull unitValue) "0xffffffffffffffffU == -1" = Known 1
+    && evalWhen (tableFull unitValue) "18446744073709551615" = Known (0 - 1)
+    && evalWhen (tableFull unitValue) "18446744073709551615 > 0" = Known 0
+    && evalWhen (tableFull unitValue) "9223372036854775808" = Known (0 - 9223372036854775808)
+    && evalWhen (tableFull unitValue) "0xffffffffffffffff > 0" = Known 0
+    && evalWhen (tableFull unitValue) "'a'" = Known 97
+    && evalWhen (tableFull unitValue) "'a' == 97 && 'Z' - 'A' == 25" = Known 1
+    && evalWhen (tableFull unitValue) "' '" = Known 32
+    && evalWhen (tableFull unitValue) "'\\n'" = Known 10
+    && evalWhen (tableFull unitValue) "'\\t'" = Known 9
+    && evalWhen (tableFull unitValue) "'\\r'" = Known 13
+    && evalWhen (tableFull unitValue) "'\\0'" = Known 0
+    && evalWhen (tableFull unitValue) "'\\\\'" = Known 92
+    && evalWhen (tableFull unitValue) "'\\''" = Known 39
+    && evalWhen (tableFull unitValue) "'\\\"'" = Known 34
+    && evalWhen (tableFull unitValue) "'\\a'" = Known 7
+    && evalWhen (tableFull unitValue) "'\\b'" = Known 8
+    && evalWhen (tableFull unitValue) "'\\f'" = Known 12
+    && evalWhen (tableFull unitValue) "'\\v'" = Known 11
+    && evalWhen (tableFull unitValue) "'\\?'" = Known 63
+    && evalWhen (tableFull unitValue) "'\\e'" = Known 27
+    && evalWhen (tableFull unitValue) "'\\a' == 7 && '\\e' - '\\b' == 19" = Known 1
+    && evalWhen (tableFull unitValue) "'\"'" = Known 34
+    && evalWhen (tableFull unitValue) "-'a' < 0" = Known 1
+    && evalWhen (tableFull unitValue) "'a' - 98u < 0" = Known 0
+    && evalWhen (tableFull unitValue) "1, 2" = Known 2
+    && evalWhen (tableFull unitValue) "1, 0" = Known 0
+    && evalWhen (tableFull unitValue) "(1, 0) || (0, A)" = Known 1
+    && evalWhen (tableFull unitValue) "(1/0, 1)" = Bad
+    && evalWhen (tableFull unitValue) "1 ? 2, 0 : 3" = Known 0
+    && evalWhen (tableFull unitValue) "0 ? 1 : 2, 0" = Known 0
+    && evalWhen (tableFull unitValue) "(0u , -1) < 0" = Known 1
+    && evalWhen (tableFull unitValue) "MIN_VERSION_base((1, 4), 18, 0)" = Known 1
+    && evalWhen (tableFull unitValue) "MIN_VERSION_base(4, 18, 0, 0)" = Bad
+    && evalWhen (tablePart unitValue) "(Zq, 3) == 3" = Known 1
+    && evalWhen (tablePart unitValue) "(3, Zq)" = unknown ["Zq"] false
+  end definition
+end law
+
+law "|with names missing, the evaluator knows what the given names decide| is
+  id: "WHEN-3a"
+  description :
+    "Literal conditions under the partial table environment (A is 1, U is undefined, base is 4.18.1). Stated by hand from the reference rules."
+  end description
+  definition :
+    evalWhen (tablePart unitValue) "X" = unknown ["X"] false
+    && evalWhen (tablePart unitValue) "A || X" = Known 1
+    && evalWhen (tablePart unitValue) "X || A" = Known 1
+    && evalWhen (tablePart unitValue) "U && X" = Known 0
+    && evalWhen (tablePart unitValue) "X && U" = Known 0
+    && evalWhen (tablePart unitValue) "X && A" = unknown ["X"] false
+    && evalWhen (tablePart unitValue) "X || U" = unknown ["X"] false
+    && evalWhen (tablePart unitValue) "X + Y" = unknown ["X", "Y"] false
+    && evalWhen (tablePart unitValue) "Y + X * X" = unknown ["X", "Y"] false
+    && evalWhen (tablePart unitValue) "0 * X" = unknown ["X"] false
+    && evalWhen (tablePart unitValue) "X == X" = unknown ["X"] false
+    && evalWhen (tablePart unitValue) "1 / X" = unknown ["X"] true
+    && evalWhen (tablePart unitValue) "(1 / X) && U" = unknown ["X"] true
+    && evalWhen (tablePart unitValue) "(1 % X) || A" = unknown ["X"] true
+    && evalWhen (tablePart unitValue) "U && 1 / X" = Known 0
+    && evalWhen (tablePart unitValue) "X && 1 / 0" = unknown ["X"] true
+    && evalWhen (tablePart unitValue) "X || 1 / 0" = unknown ["X"] true
+    && evalWhen (tablePart unitValue) "X / 0" = Bad
+    && evalWhen (tablePart unitValue) "X + 1 / 0" = Bad
+    && evalWhen (tablePart unitValue) "defined(X) ? 1 : 1" = Known 1
+    && evalWhen (tablePart unitValue) "defined(X) ? 1 : 2" = unknown ["X"] false
+    && evalWhen (tablePart unitValue) "X ? Y : Z" = unknown ["X", "Y", "Z"] false
+    && evalWhen (tablePart unitValue) "A ? 5 : X" = Known 5
+    && evalWhen (tablePart unitValue) "U ? X : 6" = Known 6
+    && evalWhen (tablePart unitValue) "defined(X)" = unknown ["X"] false
+    && evalWhen (tablePart unitValue) "!defined(X) && defined(U)" = Known 0
+    && evalWhen (tablePart unitValue) "defined(A) && !defined(U)" = Known 1
+    && evalWhen (tablePart unitValue) "MIN_VERSION_base(4,8,0)" = Known 1
+    && evalWhen (tablePart unitValue) "MIN_VERSION_text(1,0,0)" = unknown ["MIN_VERSION_text"] false
+    && evalWhen (tablePart unitValue) "MIN_VERSION_text(1,0,0) || A" = Known 1
+    && evalWhen (tablePart unitValue) "MIN_VERSION_text(1,0,0) && U" = Known 0
+    && evalWhen (tablePart unitValue) "MIN_VERSION_text(X,0,0)" = unknown ["MIN_VERSION_text", "X"] false
+    && evalWhen (tablePart unitValue) "MIN_VERSION_text(1 / 0,0,0)" = Bad
+    && evalWhen (tablePart unitValue) "MIN_VERSION_base(X,0,0)" = unknown ["X"] false
+    && evalWhen (tablePart unitValue) "MIN_VERSION_base(4,X,0)" = unknown ["X"] false
+    && evalWhen (tablePart unitValue) "MIN_VERSION_base(3,X,0)" = Known 1
+    && evalWhen (tablePart unitValue) "MIN_VERSION_base(5,X,Y)" = Known 0
+    && evalWhen (tablePart unitValue) "defined(MIN_VERSION_text)" = unknown ["MIN_VERSION_text"] false
+    && evalWhen (tablePart unitValue) "defined(MIN_VERSION_base)" = Known 1
+    && evalWhen (tablePart unitValue) "MIN_VERSION_GLASGOW_HASKELL(9,0,0,0)" = unknown ["__GLASGOW_HASKELL__"] false
+    && evalWhen (tablePart unitValue) "defined(MIN_VERSION_GLASGOW_HASKELL)" = unknown ["__GLASGOW_HASKELL__"] false
+    && evalWhen (tablePart unitValue) "__GLASGOW_HASKELL__ >= 908 && mingw32_HOST_OS" = unknown ["__GLASGOW_HASKELL__", "mingw32_HOST_OS"] false
+    && evalWhen (tablePart unitValue) "!(X) && (A)" = unknown ["X"] false
+    && evalWhen (tablePart unitValue) "!(A) && (X)" = Known 0
+    && evalWhen (tablePart unitValue) "!(defined(X)) && !(Y > 3) && (A || B)" = unknown ["X", "Y"] false
+    && evalWhen (tablePart unitValue) "FOO(1)" = Bad
+    && evalWhen (tablePart unitValue) "X Y" = Bad
+    && evalWhen (tablePart unitValue) "" = Bad
+  end definition
+end law
+
+law "|the GHC version macro asks for the patch levels only when they decide| is
+  id: "WHEN-3b"
+  description :
+    "With __GLASGOW_HASKELL__ = 908 and no patch level given."
+  end description
+  definition :
+    evalWhen (tableGhc unitValue) "MIN_VERSION_GLASGOW_HASKELL(9,6,0,0)" = Known 1
+    && evalWhen (tableGhc unitValue) "MIN_VERSION_GLASGOW_HASKELL(9,10,0,0)" = Known 0
+    && evalWhen (tableGhc unitValue) "MIN_VERSION_GLASGOW_HASKELL(9,8,1,0)" = unknown ["__GLASGOW_HASKELL_PATCHLEVEL1__", "__GLASGOW_HASKELL_PATCHLEVEL2__"] false
+  end definition
+end law
+
+
+law "|a text that is not one expression is Bad| is
+  id: "WHEN-4"
+  description :
+    "Two expressions with no operator between them, an unclosed or an
+    unopened parenthesis, and an operator with no right side are not
+    expressions, under any environment."
+  end description
+  definition :
+    for all (se :: Integer) (sx :: Integer) (sy :: Integer) (full :: Bool) =>
+      (let a = showExpr (styleOf sx) (exprOf sx 3) in let b = showExpr (styleOf sy) (exprOf sy 3) in let env = chosenEnv se full in
+        evalWhen env ("(" ++ a ++ ") (" ++ b ++ ")") = Bad && evalWhen env ("(" ++ a) = Bad && evalWhen env (a ++ ")") = Bad
+          && evalWhen env ("(" ++ a ++ ") +") = Bad && evalWhen env ("(" ++ a ++ ") ? (" ++ b ++ ")") = Bad
+      end let end let end let)
+    end for all
+  end definition
+end law
+
+law "|more names never change what the evaluator knew| is
+  id: "WHEN-5"
+  description :
+    "Monotonicity, stated on the evaluator itself and for any text at all:
+    under an environment that keeps every binding and adds more, a Known
+    value is the same value, Bad is Bad, and the missing names are among
+    those missing before (GHC's two patch-level names may be asked for once
+    __GLASGOW_HASKELL__ has a value: WHEN-3b). Next cycle 4: a drawn
+    expression that the larger environment makes an error (`wp.broken`:
+    it gives a package whose VERSION_ macro the expression uses as a
+    value, or makes __GLASGOW_HASKELL__ undefined under the version macro)
+    is outside the law, as in WHP-1; the law failed on such a draw."
+  end description
+  definition :
+    for all (text :: Text) (se :: Integer) (sx :: Integer) (ss :: Integer) (more :: Integer) (drawn :: Bool) =>
+      (let t = (if drawn then showExpr (styleOf ss) (exprOf sx 4) else text end if) in
+       let env = envOf se in let later = extended env more in
+        (drawn && broken later (exprOf sx 4)) || (first matching case of evalWhen env t :
+          when Known v then evalWhen later t = Known v
+          when Bad then evalWhen later t = Bad
+          when Unknown u then prelude.all (stillMissing u.missing) (missingOf (evalWhen later t))
+        end case) end let end let end let)
+    end for all
+  end definition
+end law
+
+law "|a complete environment leaves no name missing| is
+  id: "WHEN-6"
+  description :
+    "With `--when-complete` an unsupplied name is undefined, as in C: no
+    text is Unknown."
+  end description
+  definition :
+    for all (text :: Text) (se :: Integer) (sx :: Integer) (ss :: Integer) (drawn :: Bool) =>
+      !(evalWhen (completed (envOf se)) (if drawn then showExpr (styleOf ss) (exprOf sx 4) else text end if) matches Unknown _)
+    end for all
+  end definition
+end law
+
+-- ---------------------------------------------------------------------------
+-- A fact's condition: a path of directives (next cycle 4).
+
+law "|the condition evaluator equals the reference| is
+  id: "WHEN-20"
+  description :
+    "For any condition in the written form (cubes of literals; each term an
+    expression in any style) and any environment, complete or not: the
+    answer for the text is the reference's answer for the cubes. The terms
+    are read back from the text; a term that fails decides its cube before
+    a later term is read, as the preprocessor skips what is inside a group
+    that fails (review 7, S1). Next cycle 9 (review 11, S1; rule I1):
+    `evalCondition` may not combine its terms with the reference's
+    `logical`, `unary` and `asTruth`, which are `refCondition`'s own."
+  end description
+  definition :
+    for all (se :: Integer) (sx :: Integer) (ss :: Integer) (full :: Bool) =>
+      evalCondition (chosenEnv se full) (conditionText (condOf (styleOf ss) sx)) = refCondition (chosenEnv se full) (condOf (styleOf ss) sx)
+    end for all
+  end definition
+  references:
+    ref function wp.refCondition
+    ref function wp.conditionText
+  end references
+end law
+
+-- The table environment with package `th` said absent, not complete.
+function tableNoTh (u :: Unit) -> Env is envFrom (emptyEnv unitValue) [setName "A" 1, UndefName "U", setPackage "base" [4, 18, 1], UnsetPackage "th"] end function
+
+law "|the evaluator answers as the C preprocessor does, rows 6: VERSION_p| is
+  id: "WHEN-2f"
+  description :
+    "Review 7, S2. Literal conditions under the complete table environment, whose two packages have their VERSION_ macro, a string, as Cabal defines it. Every row was run through cpp, in standard and in traditional mode, by next-cycle-4/tools/gen-cond-table.py before this text was printed. Used as a value the string is an error wherever it stands."
+  end description
+  definition :
+    evalWhen (tableFull unitValue) "defined(VERSION_text)" = Known 1
+    && evalWhen (tableFull unitValue) "defined(VERSION_base) && MIN_VERSION_base(4,8,0)" = Known 1
+    && evalWhen (tableFull unitValue) "defined VERSION_text" = Known 1
+    && evalWhen (tableFull unitValue) "defined(VERSION_nope)" = Known 0
+    && evalWhen (tableFull unitValue) "VERSION_nope" = Known 0
+    && evalWhen (tableFull unitValue) "!defined(VERSION_text)" = Known 0
+    && evalWhen (tableFull unitValue) "VERSION_text" = Bad
+    && evalWhen (tableFull unitValue) "0 && VERSION_text" = Bad
+    && evalWhen (tableFull unitValue) "1 || VERSION_base" = Bad
+    && evalWhen (tableFull unitValue) "VERSION_text == 2" = Bad
+  end definition
+end law
+
+law "|a path of directives is answered as the C preprocessor answers the nested directives| is
+  id: "WHEN-21"
+  description :
+    "Review 7, S1. Conditions in the written form under the complete table environment. Every row was given to cpp, in standard and in traditional mode, by next-cycle-4/tools/gen-cond-table.py as the nested directives it stands for (a literal is an `#if` on its term; a negated one has the rest in its `#else`); the cubes are tried from the left."
+  end description
+  definition :
+    evalCondition (tableFull unitValue) "A && B" = Known 0
+    && evalCondition (tableFull unitValue) "A && !(B)" = Known 1
+    && evalCondition (tableFull unitValue) "!(A) || A && (V >= 900)" = Known 1
+    && evalCondition (tableFull unitValue) "defined(MIN_VERSION_nope) && MIN_VERSION_nope(1,2,3)" = Known 0
+    && evalCondition (tableFull unitValue) "defined(MIN_VERSION_nope) && !(MIN_VERSION_nope(1,2,3))" = Known 0
+    && evalCondition (tableFull unitValue) "!(defined(MIN_VERSION_nope))" = Known 1
+    && evalCondition (tableFull unitValue) "defined(MIN_VERSION_base) && MIN_VERSION_base(4,8,0)" = Known 1
+    && evalCondition (tableFull unitValue) "defined(MIN_VERSION_base) && !(MIN_VERSION_base(4,19,0))" = Known 1
+    && evalCondition (tableFull unitValue) "(0 && MIN_VERSION_nope(1,2,3))" = Bad
+    && evalCondition (tableFull unitValue) "0 && MIN_VERSION_nope(1,2,3)" = Known 0
+    && evalCondition (tableFull unitValue) "(defined(MIN_VERSION_nope) && MIN_VERSION_nope(1,2,3))" = Bad
+    && evalCondition (tableFull unitValue) "B && FOO(1)" = Known 0
+    && evalCondition (tableFull unitValue) "A && FOO(1)" = Bad
+    && evalCondition (tableFull unitValue) "!(A) && (1 +)" = Known 0
+    && evalCondition (tableFull unitValue) "!(B) && (1 +)" = Bad
+    && evalCondition (tableFull unitValue) "B && (1 / 0)" = Known 0
+    && evalCondition (tableFull unitValue) "A && (1 / 0)" = Bad
+    && evalCondition (tableFull unitValue) "A && !(1 / 0)" = Bad
+    && evalCondition (tableFull unitValue) "U && !()" = Known 0
+    && evalCondition (tableFull unitValue) "defined(VERSION_text)" = Known 1
+    && evalCondition (tableFull unitValue) "defined(VERSION_nope) && VERSION_nope(1)" = Known 0
+    && evalCondition (tableFull unitValue) "!(defined(VERSION_text)) && VERSION_text" = Known 0
+    && evalCondition (tableFull unitValue) "!(defined(VERSION_text)) || defined(VERSION_text) && MIN_VERSION_text(2,0,0)" = Known 1
+    && evalCondition (tableFull unitValue) "B || U || A" = Known 1
+    && evalCondition (tableFull unitValue) "B || U" = Known 0
+    && evalCondition (tableFull unitValue) "A || FOO(1)" = Known 1
+    && evalCondition (tableFull unitValue) "B || FOO(1)" = Bad
+    && evalCondition (tableFull unitValue) "(defined(A) && V >= 900) && !(N > 0)" = Known 1
+    && evalCondition (tableFull unitValue) "!(defined(A) && V >= 900) || (!defined(U)) && (B || N)" = Known 1
+    && evalCondition (tableFull unitValue) "A && A && !(A)" = Known 0
+    && evalCondition (tableFull unitValue) "!(B) && (A /* c */ && V)" = Known 1
+    && evalCondition (tableFull unitValue) "(!B) && !(!A)" = Known 1
+    && evalCondition (tableFull unitValue) "MIN_VERSION_GLASGOW_HASKELL(9,8,2,0) && !(MIN_VERSION_GLASGOW_HASKELL(9,10,0,0))" = Known 1
+    && evalCondition (tableFull unitValue) "((A) && (B || f(1)))" = Bad
+    && evalCondition (tableFull unitValue) "B && ((A) && (B || f(1)))" = Known 0
+  end definition
+end law
+
+law "|a path of directives with names missing, with a package said absent, and texts in no written form| is
+  id: "WHEN-22"
+  description :
+    "Stated by hand from the rule (next-cycle-4/design.md, section 4). A part that is neither `!(T)` nor `(T)` is itself the term; blanks around a part are dropped; a C string (the text of a file not read in every build, and of a directive that cannot stand in a condition) cannot be evaluated."
+  end description
+  definition :
+    evalCondition (tablePart unitValue) "X && A" = unknown ["X"] false
+    && evalCondition (tablePart unitValue) "U && X" = Known 0
+    && evalCondition (tablePart unitValue) "X && U" = Known 0
+    && evalCondition (tablePart unitValue) "(1 / X) && U" = unknown ["X"] true
+    && evalCondition (tablePart unitValue) "X && FOO(1)" = unknown ["X"] true
+    && evalCondition (tablePart unitValue) "U && FOO(1)" = Known 0
+    && evalCondition (tablePart unitValue) "A && FOO(1)" = Bad
+    && evalCondition (tablePart unitValue) "X || A" = Known 1
+    && evalCondition (tablePart unitValue) "X || U" = unknown ["X"] false
+    && evalCondition (tablePart unitValue) "A || X" = Known 1
+    && evalCondition (tablePart unitValue) "U || X" = unknown ["X"] false
+    && evalCondition (tablePart unitValue) "X && Y || !(X) && Z" = unknown ["X", "Y", "Z"] false
+    && evalCondition (tablePart unitValue) "U && X || A && !(U)" = Known 1
+    && evalCondition (tablePart unitValue) "X && U || !(A)" = Known 0
+    && evalCondition (tablePart unitValue) "defined(MIN_VERSION_text) && MIN_VERSION_text(1,0,0)" = unknown ["MIN_VERSION_text"] false
+    && evalCondition (tablePart unitValue) "defined(MIN_VERSION_base) && !(MIN_VERSION_base(5,0,0)) && X" = unknown ["X"] false
+    && evalCondition (tablePart unitValue) "defined(VERSION_base)" = Known 1
+    && evalCondition (tablePart unitValue) "defined(VERSION_text)" = unknown ["VERSION_text"] false
+    && evalCondition (tablePart unitValue) "\"unread\"" = Bad
+    && evalCondition (tableNoTh unitValue) "defined(MIN_VERSION_th) && MIN_VERSION_th(2,16,0)" = Known 0
+    && evalCondition (tableNoTh unitValue) "defined(MIN_VERSION_th) && !(MIN_VERSION_th(2,16,0))" = Known 0
+    && evalCondition (tableNoTh unitValue) "!(defined(MIN_VERSION_th))" = Known 1
+    && evalCondition (tableNoTh unitValue) "MIN_VERSION_th(2,16,0)" = Bad
+    && evalCondition (tableNoTh unitValue) "(defined(MIN_VERSION_th) && MIN_VERSION_th(2,16,0))" = Bad
+    && evalCondition (tableNoTh unitValue) "defined(VERSION_th)" = Known 0
+    && evalCondition (tableNoTh unitValue) "X && MIN_VERSION_th(2,16,0)" = unknown ["X"] true
+    && evalCondition (tableFull unitValue) "\"unread\"" = Bad
+    && evalCondition (tableFull unitValue) "B && (\"unreadable #if at line 3\")" = Known 0
+    && evalCondition (tableFull unitValue) "A && (\"unreadable #if at line 3\")" = Bad
+    && evalCondition (tableFull unitValue) "A && !(\"unreadable #if at line 3\")" = Bad
+    && evalCondition (tableFull unitValue) "A && B + 1" = Known 1
+    && evalCondition (tableFull unitValue) "" = Bad
+    && evalCondition (tableFull unitValue) "A &&" = Bad
+    && evalCondition (tableFull unitValue) "(A" = Bad
+    && evalCondition (tableFull unitValue) " A  &&  !( B ) " = Known 1
+    && evalCondition (tableFull unitValue) "!(A) && (B)" = Known 0
+    && evalCondition (tableFull unitValue) "(A) || (B) && (FOO(1))" = Known 1
+    && evalCondition (tableFull unitValue) "!(A) || (B) && (FOO(1))" = Known 0
+    && evalCondition (tableFull unitValue) "!(B) && (A || U)" = Known 1
+    && evalCondition (tableFull unitValue) "((A) && (B))" = Known 0
+    && evalCondition (tableFull unitValue) "!(A) + 1" = Known 1
+    && evalCondition (tableFull unitValue) "A&&B" = Known 0
+    && evalCondition (tableFull unitValue) "A||FOO(1)" = Known 1
+  end definition
+end law
+
+function condDecl (id :: Text) (line :: Integer) (cond :: Text) -> Decl is (plainDecl id line) with condition = cond end function
+
+law "|the filter reads a condition as a path of directives| is
+  id: "WHEN-23"
+  description :
+    "Review 7, S1, on the filter. Without the package, in a complete
+    environment or with `undef MIN_VERSION_th`: a fact under
+    `#ifdef MIN_VERSION_th` and a nested `#if MIN_VERSION_th(2,16,0)` is
+    dropped and nothing is reported; its `#else` twin, whose path ends in
+    the negated inner term, is dropped too (the outer term fails first);
+    the fact under the outer group's `#else` is kept, unconditional. The
+    same text in one directive cannot be evaluated: the fact is kept and
+    the condition named. A file not read in every build keeps its facts
+    undecided whatever the names."
+  end description
+  definition :
+    applyWhen (completed (emptyEnv unitValue))
+        [packageWith [condDecl "a" 1 "defined(MIN_VERSION_th) && MIN_VERSION_th(2,16,0)", condDecl "b" 2 "defined(MIN_VERSION_th) && !(MIN_VERSION_th(2,16,0))",
+                      condDecl "c" 3 "!(defined(MIN_VERSION_th))"]]
+      = Filtered record{ packages = [packageWith [plainDecl "c" 3]] , missing = [] , unreadable = []}
+    && applyWhen (tableNoTh unitValue)
+        [packageWith [condDecl "a" 1 "defined(MIN_VERSION_th) && MIN_VERSION_th(2,16,0)", condDecl "c" 3 "!(defined(MIN_VERSION_th))"]]
+      = Filtered record{ packages = [packageWith [plainDecl "c" 3]] , missing = [] , unreadable = []}
+    && applyWhen (completed (emptyEnv unitValue)) [packageWith [condDecl "a" 1 "(defined(MIN_VERSION_th) && MIN_VERSION_th(2,16,0))"]]
+      = Filtered record{ packages = [packageWith [condDecl "a" 1 "(defined(MIN_VERSION_th) && MIN_VERSION_th(2,16,0))"]] , missing = [] ,
+                         unreadable = ["(defined(MIN_VERSION_th) && MIN_VERSION_th(2,16,0))"]}
+    && applyWhen (emptyEnv unitValue) [packageWith [condDecl "a" 1 "defined(MIN_VERSION_th) && MIN_VERSION_th(2,16,0)"]]
+      = Filtered record{ packages = [packageWith [condDecl "a" 1 "defined(MIN_VERSION_th) && MIN_VERSION_th(2,16,0)"]] , missing = ["MIN_VERSION_th"] , unreadable = []}
+    && applyWhen (envFrom (emptyEnv unitValue) [setPackage "text" [2, 0]])
+        [packageWith [condDecl "a" 1 "defined(VERSION_text)", condDecl "b" 2 "!(defined(VERSION_text))"]]
+      = Filtered record{ packages = [packageWith [plainDecl "a" 1]] , missing = [] , unreadable = []}
+    && applyWhen (tableFull unitValue) [packageWith [condDecl "a" 1 (unreadText unitValue)]]
+      = Filtered record{ packages = [packageWith [condDecl "a" 1 (unreadText unitValue)]] , missing = [] , unreadable = [unreadText unitValue]}
+    && warningsOf (applyWhen (tableFull unitValue) [packageWith [condDecl "a" 1 (unreadText unitValue)]])
+      = ["when: M.hs: more than 256 builds: one is read, and its facts are not decided"]
+  end definition
+end law
+
+law "|a call of a name that is no version macro cannot be evaluated, whatever the name's length| is
+  id: "WHEN-24"
+  description :
+    "The mutation pass of cycle 2 (`isMinVersionName`, `&&` turned to
+    `||`). A package's version macro is a name that starts with
+    MIN_VERSION_ and goes on after it. `MIN_VERSION_` alone names no
+    package, and a name of more than twelve characters that does not
+    start so is an ordinary name. A call of either is an error to the
+    preprocessor (cpp 15.2.0, both modes: missing binary operator before
+    the parenthesis), in every environment: it cannot be evaluated, and no
+    name is reported missing for it, least of all a package's macro made
+    of the name's tail. The filter keeps such a fact and names its
+    condition. Beside them the shortest version macro there is,
+    `MIN_VERSION_x`, is still one."
+  end description
+  definition :
+    evalWhen (emptyEnv unitValue) "MIN_VERSION_(1,2,3)" = Bad
+    && evalWhen (emptyEnv unitValue) "LONGERNAMEHERE_X(1,2,3)" = Bad
+    && evalWhen (emptyEnv unitValue) "ABCDEFGHIJKLM(1,2,3)" = Bad
+    && evalWhen (emptyEnv unitValue) "ABCDEFGHIJKL(1,2,3)" = Bad
+    && evalWhen (tablePart unitValue) "MIN_VERSION_(1,2,3)" = Bad
+    && evalWhen (tablePart unitValue) "LONGERNAMEHERE_X(1,2,3)" = Bad
+    && evalWhen (tablePart unitValue) "X && LONGERNAMEHERE_X(1,2,3)" = Bad
+    && evalWhen (tableFull unitValue) "MIN_VERSION_(1,2,3)" = Bad
+    && evalWhen (tableFull unitValue) "LONGERNAMEHERE_X(1,2,3)" = Bad
+    && evalWhen (emptyEnv unitValue) "MIN_VERSION_x(1,2,3)" = unknown ["MIN_VERSION_x"] false
+    && evalWhen (emptyEnv unitValue) "MIN_VERSION_base(4,8,0)" = unknown ["MIN_VERSION_base"] false
+    && evalCondition (emptyEnv unitValue) "MIN_VERSION_(1,2,3)" = Bad
+    && evalCondition (emptyEnv unitValue) "LONGERNAMEHERE_X(1,2,3)" = Bad
+    && evalCondition (emptyEnv unitValue) "!(LONGERNAMEHERE_X(1,2,3))" = Bad
+    && evalCondition (tableFull unitValue) "A && MIN_VERSION_(1,2,3)" = Bad
+    && applyWhen (emptyEnv unitValue) [packageWith [condDecl "a" 1 "MIN_VERSION_(1,2,3)", condDecl "b" 2 "LONGERNAMEHERE_X(1,2,3)"]]
+      = Filtered record{ packages = [packageWith [condDecl "a" 1 "MIN_VERSION_(1,2,3)", condDecl "b" 2 "LONGERNAMEHERE_X(1,2,3)"]] , missing = [] ,
+                         unreadable = ["LONGERNAMEHERE_X(1,2,3)", "MIN_VERSION_(1,2,3)"]}
+    && warningsOf (applyWhen (emptyEnv unitValue) [packageWith [condDecl "a" 1 "MIN_VERSION_(1,2,3)", condDecl "b" 2 "LONGERNAMEHERE_X(1,2,3)"]])
+      = ["when: cannot evaluate: LONGERNAMEHERE_X(1,2,3)", "when: cannot evaluate: MIN_VERSION_(1,2,3)"]
+  end definition
+  references:
+    "|mutation|: "mutation-cycle2.md, deferred: isMinVersionName (475ce49ef018f036); next-cycle-2/design.md, O34"
+  end references
+end law
+
+-- ---------------------------------------------------------------------------
+-- Bindings.
+
+function padded (ts :: List Text) (k :: Integer) -> List Text is
+  first matching case of ts :
+    when Nil then []
+    when Cons t rest then
+      [(if prelude.rem k 4 = 1 then "  " ++ t ++ " \t" else (if prelude.rem k 4 = 2 then "\t" ++ t else (if prelude.rem k 4 = 3 then t ++ " \r" else t end if) end if) end if)] ++ padded rest (k + 1)
+  end case
+end function
+
+law "|binding lines read as the reference says| is
+  id: "WHEN-7"
+  description :
+    "Any list of well-formed lines, in any of their spellings and with
+    blanks, tabs or a carriage return around them (a CRLF file's line; next
+    cycle 4, review 7, S3 and N3), `undef MIN_VERSION_p` among them, reads
+    to the environment the reference
+    builds from the same lines: later lines replace earlier ones, a remark
+    and a blank line change nothing, and the result is not complete.
+    Next cycle 10 (review 12, S2): until this cycle `readBindings` was
+    the reader followed by the reference's own `wp.envFrom`, so this
+    law held the reader and compared the lines' meaning with itself.
+    `wp.envFrom` and `wp.bound` are no longer in rule I1's vocabulary:
+    the meaning is written on the implementation's side, and this law
+    compares two witnesses. WHEN-28 writes the meaning out."
+  end description
+  definition :
+    for all (seed :: Integer) (n :: Int8) (k :: Int8) =>
+      (let ms = bindingLinesOf seed (if n < 0 then 0 - n else n + 0 end if) in
+        readBindings (padded (linesText ms) (if k < 0 then 0 - k else k + 0 end if)) = Right (envFrom (emptyEnv unitValue) ms) end let)
+    end for all
+  end definition
+end law
+
+function bindingFails (lines :: List Text) (line :: Integer) (text :: Text) -> Bool is
+  readBindings lines = Left (BindingError record{ line = line , text = text})
+end function
+
+function soleBad (t :: Text) -> Bool is bindingFails ["A=1", t, "also bad ="] 2 t end function
+
+law "|a line that is not a binding is an error, the first one, by number and text| is
+  id: "WHEN-8"
+  definition :
+    prelude.all soleBad
+      ["B = 2", "=1", "1A=1", "A=", "A=1x", "A=0x", "A=08", "A=1u", "A=1L", "A=+1", "A=--1", "A=1.0", "A=9223372036854775808", "A=-9223372036854775809",
+       "A B", "A-B=1", "A=1 2", "undef", "undef 1A", "undef A B", "undef  A", "undef A=1", "package", "package base", "package base=", "package base=1..2",
+       "package base=1.", "package base=.1", "package base=a", "package base=-1", "package -base=1", "package base-=1", "package ba_se=1", "package base =1",
+       "package 9=1", "MIN_VERSION_base=1", "MIN_VERSION_base", "A=1 # no trailing remark", "'A'=1",
+       "defined=1", "defined", "undef defined", "undef MIN_VERSION_", "undef MIN_VERSION_a-b", "undef MIN_VERSION_a b", "undef  MIN_VERSION_base", "A=1\rB=2", "A\r=1"]
+    && bindingFails ["A"] 0 "" = false
+    && bindingFails ["# c", "", "B=", "C="] 3 "B="
+    && readBindings [] = Right (emptyEnv unitValue)
+    && readBindings ["  A=1  ", "\tB", "N=-0x10", "O=010", "Z=-9223372036854775808", "M=9223372036854775807", "undef U", "A=2",
+                     "package unordered-containers=0.2.19.1", "package base=4", "package a1=01.2", "#A=5", "  # undef A", " "]
+       = Right (envFrom (emptyEnv unitValue)
+           [setName "A" 1, FlagName "B", setName "N" (0 - 16), setName "O" 8, setName "Z" (0 - 9223372036854775808), setName "M" 9223372036854775807,
+            UndefName "U", setName "A" 2, setPackage "unordered-containers" [0, 2, 19, 1], setPackage "base" [4], setPackage "a1" [1, 2]])
+    && readBindings ["undef MIN_VERSION_th", "undef MIN_VERSION_unordered_containers", "A=1\r", "\r", "  B \t\r", "package text=2.0\r\r", "# a remark\r", "VERSION_x=3", "undef VERSION_y"]
+         = Right (envFrom (emptyEnv unitValue)
+             [UnsetPackage "th", UnsetPackage "unordered_containers", setName "A" 1, FlagName "B", setPackage "text" [2, 0], setName "VERSION_x" 3, UndefName "VERSION_y"])
+    && bindingFails ["A=1\r", "B = 2\r", "C=\r"] 2 "B = 2"
+    && bindingFails ["A=1", "  B = 2 \r\r"] 2 "  B = 2 "
+  end definition
+  description :
+    "Next cycle 4 (review 7, S1, S3, N3): `undef MIN_VERSION_p` is a line
+    (the package is not a dependency), with p in the macro's spelling;
+    `defined` is no name, as C rejects it as a macro name; a carriage
+    return at a line's end is dropped like a blank, and a carriage return
+    inside a line is not; the error's text is the line less the carriage
+    returns at its end."
+  end description
+end law
+
+-- ---------------------------------------------------------------------------
+-- Filtering.
+
+law "|filtering keeps, clears and drops as the conditions say| is
+  id: "WHEN-9"
+  description :
+    "For any manifest of the model and any environment: a fact whose
+    condition holds is kept with the condition cleared; one whose condition
+    fails is dropped, a symbol with its edges; any other is kept as it is.
+    Edges left with one identity are one edge with the counts added. The
+    result names exactly the missing names of the kept, undecided facts,
+    and exactly their conditions that cannot be evaluated."
+  end description
+  definition :
+    for all (seed :: Integer) (se :: Integer) (full :: Bool) =>
+      applyWhen (chosenEnv se full) [modelPackage (factModelOf seed)] = expectedFiltered (chosenEnv se full) (factModelOf seed)
+    end for all
+  end definition
+  references:
+    ref function wp.expectedFiltered
+  end references
+end law
+
+law "|a complete environment gives no missing-name warning| is
+  id: "WHEN-10"
+  definition :
+    for all (seed :: Integer) (se :: Integer) =>
+      (applyWhen (completed (envOf se)) [modelPackage (factModelOf seed)]).missing = []
+    end for all
+  end definition
+end law
+
+law "|filtering in two steps is filtering once with all the names| is
+  id: "WHEN-11"
+  description :
+    "Monotonicity of the filter: what a smaller environment decided is what
+    the larger one decides. Filtering with some names and then with more
+    gives the manifest, the missing names and the unreadable conditions
+    that the larger environment gives at once. The second step is not a
+    complete one: a complete environment makes a call of an ungiven macro
+    an error (WHP-1). Next cycle 4: a manifest with a condition that the
+    larger environment makes an error in some term (`wp.modelBroken`) is
+    outside the law, for the same reason: the first step may have decided a
+    fact that the larger environment cannot evaluate at all. The law
+    failed on such draws (seen 2026-11-16, 41 cases in)."
+  end description
+  definition :
+    for all (seed :: Integer) (se :: Integer) (more :: Integer) =>
+      (let env = envOf se in let later = extended env more in let ps = [modelPackage (factModelOf seed)] in
+        wp.modelBroken later (factModelOf seed) || applyWhen later (applyWhen env ps).packages = applyWhen later ps end let end let end let)
+    end for all
+  end definition
+end law
+
+law "|an empty manifest, and a manifest with no conditions, pass unchanged| is
+  id: "WHEN-12"
+  definition :
+    for all (se :: Integer) (full :: Bool) (ps :: List Package) =>
+      applyWhen (chosenEnv se full) [] = Filtered record{ packages = [] , missing = [] , unreadable = []}
+        && (applyWhen (chosenEnv se full) (bare ps)).packages = bare ps
+    end for all
+  end definition
+end law
+
+function bareEdges (es :: List CallEdge) (seen :: List Text) -> List CallEdge is
+  first matching case of es :
+    when Nil then []
+    when Cons e rest then (if seen contains e.target then [] else [e with condition = ""] end if) ++ bareEdges rest ([e.target] ++ seen)
+  end case
+end function
+
+function bareDecls (ds :: List Decl) -> List Decl is
+  first matching case of ds :
+    when Nil then []
+    when Cons d rest then [d with condition = "" , calls = bareEdges d.calls []] ++ bareDecls rest
+  end case
+end function
+
+-- Any manifest, its conditions cleared and its edges one per target.
+function bare (ps :: List Package) -> List Package is
+  first matching case of ps : when Nil then [] when Cons p rest then [p with symbols = bareDecls p.symbols] ++ bare rest end case
+end function
+
+-- ---------------------------------------------------------------------------
+-- The decisions file (next-cycle-3/design.md).
+
+-- The file `ax when init` writes for a manifest: the header, then a block
+-- for every name the manifest depends on.
+function initLines (ps :: List Package) -> List Text is
+  decisionsHeader unitValue ++ decisionLines (emptyEnv unitValue) [] ps
+end function
+
+function readEnv (lines :: List Text) -> Env is
+  first matching case of readBindings lines : when Left e then emptyEnv unitValue when Right env then env end case
+end function
+
+function reads (lines :: List Text) -> Bool is readBindings lines matches Right _ end function
+
+function soleRead (t :: Text) -> Bool is reads ["A=1", t] end function
+
+law "|a value is not written as a minus sign before zero| is
+  id: "WHEN-29"
+  description :
+    "Next cycle 11 (review 13, B4). The preprocessor pastes a name's
+    value as text. With N given as -0, `2-N` is `2--0`, and `--` is
+    no token of a directive's expression: GCC 15.2 stops on `2-N`,
+    `-N`, `K-N`, `0 && -N` and `1 || -N` with N given as -0, -00 or
+    -0x0, exactly as with -3 (next-cycle-11/tools/measure.txt). ax
+    took the value for the integer 0 and decided the directive. The
+    rule of next cycle 10 (O164) asks whether the value is below
+    zero, and an environment keeps only the integer; so a value that
+    is zero is not written with a minus sign. `A=-0`, in any base and
+    with any number of zeros, is a line that is not a binding: a
+    usage error, as `A=+1` is. Every value read then begins with a
+    minus sign exactly when it is below zero, and the rule on the
+    integer is the rule on the text. Zero without the sign, and a
+    negative value in each base, are read as before."
+  end description
+  definition :
+    prelude.all soleBad ["A=-0", "A=-00", "A=-000", "A=-0x0", "A=-0X0", "A=-0x00", "N=-0", "VERSION_x=-0"]
+    && prelude.all soleRead ["B=0", "B=00", "B=0x0", "B=0X00", "B=-1", "B=-01", "B=-0x1", "B=-9223372036854775808"]
+    && bindingFails ["N=-0"] 1 "N=-0"
+    && bindingFails ["# c", "N=0", "N=-00"] 3 "N=-00"
+    && readBindings ["N=0", "M=00", "K=0x0", "J=-1", "I=-010", "H=-0x10"]
+         = Right (envFrom (emptyEnv unitValue) [setName "N" 0, setName "M" 0, setName "K" 0, setName "J" (0 - 1), setName "I" (0 - 8), setName "H" (0 - 16)])
+  end definition
+end law
+
+function patchLevel (n :: Text) -> Bool is n = "__GLASGOW_HASKELL_PATCHLEVEL1__" || n = "__GLASGOW_HASKELL_PATCHLEVEL2__" end function
+
+law "|the lines to paste are the reference's| is
+  id: "WHEN-13"
+  description :
+    "For any manifest of the model, any names given, complete or not, and
+    any names a file already lists: the lines to paste are a block for
+    every missing name that is not listed, in the warning's order; each
+    block names the places and conditions of the kept, undecided facts
+    that still need the name, and ends in the name's undecided line."
+  end description
+  definition :
+    for all (seed :: Integer) (se :: Integer) (sl :: Integer) (full :: Bool) =>
+      decisionLines (chosenEnv se full) (listedOf sl) [modelPackage (factModelOf seed)]
+        = expectedDecisionLines (chosenEnv se full) (listedOf sl) (factModelOf seed)
+    end for all
+  end definition
+  references:
+    ref function wp.expectedDecisionLines
+  end references
+end law
+
+law "|the starter file and the lines to paste, to the letter| is
+  id: "WHEN-14"
+  description :
+    "The exact text for a small manifest. With no name given: three
+    blocks, the package macro's with its `package` line, a use that an
+    edge repeats written once, the uses in the order of their lines, nothing for a condition that needs no name
+    or cannot be read. With X given and Y listed: X's facts are decided,
+    Y is not asked for again, and one block is left. With every name
+    given, and under a complete environment: nothing."
+  end description
+  definition :
+    initLines (sampleManifest unitValue)
+      = ["# ax decisions file (assayxport.when): one decision per line.",
+         "# ax reads it on every assay of this root; --when-file and --when replace its values.",
+         "# Decide a name by replacing its \"# NAME=\" line with one of",
+         "#   NAME=<integer>    NAME    undef NAME    package P=X.Y.Z",
+         "# Until every name below is decided, the facts that depend on an undecided",
+         "# name keep their condition, and the call graph is incomplete.",
+         "",
+         "# MIN_VERSION_unordered_containers is not decided. Facts that depend on it:",
+         "#   M.hs:3: MIN_VERSION_unordered_containers(0,2,0)",
+         "# package unordered-containers=",
+         "",
+         "# X is not decided. Facts that depend on it:",
+         "#   M.hs:3: defined(X) && Y > 1",
+         "#   M.hs:7: !(X)",
+         "# X=",
+         "",
+         "# Y is not decided. Facts that depend on it:",
+         "#   M.hs:3: defined(X) && Y > 1",
+         "# Y="]
+    && decisionLines (readEnv ["X"]) ["Y"] (sampleManifest unitValue)
+      = ["",
+         "# MIN_VERSION_unordered_containers is not decided. Facts that depend on it:",
+         "#   M.hs:3: MIN_VERSION_unordered_containers(0,2,0)",
+         "# package unordered-containers="]
+    && decisionLines (readEnv ["X"]) [] (sampleManifest unitValue)
+      = ["",
+         "# MIN_VERSION_unordered_containers is not decided. Facts that depend on it:",
+         "#   M.hs:3: MIN_VERSION_unordered_containers(0,2,0)",
+         "# package unordered-containers=",
+         "",
+         "# Y is not decided. Facts that depend on it:",
+         "#   M.hs:3: defined(X) && Y > 1",
+         "# Y="]
+    && decisionLines (readEnv ["undef X", "package unordered-containers=0.2.19"]) [] (sampleManifest unitValue) = []
+    && decisionLines (completed (emptyEnv unitValue)) [] (sampleManifest unitValue) = []
+    && decisionLines (emptyEnv unitValue) ["X", "Y", "MIN_VERSION_unordered_containers"] (sampleManifest unitValue) = []
+  end definition
+end law
+
+law "|the names a decisions file lists are those of its undecided lines| is
+  id: "WHEN-15"
+  description :
+    "What counts as an undecided line, row by row: `# NAME=` and
+    `# package P=` exactly, with blanks or tabs around; a name once, at
+    its first place. Not: a line with no blank after `#` or with more
+    than one, a commented decision, a decision, a use line, a block's
+    head, a MIN_VERSION_ name written as a name, a word that is no name
+    or no package name."
+  end description
+  definition :
+    listedNames ["# A=", "  # B=  ", "#C=", "#  D=", "# E =", "# F=1", "G=1", "# package base=", "\t# package unordered-containers=\t",
+                 "#   M.hs:3: H=", "# I is not decided. Facts that depend on it:", "# MIN_VERSION_x=", "# 1J=", "# A=", "# package =",
+                 "# package ba_se=", "# package  base=", "# package a-b=", "", "# _k9="]
+      = ["A", "B", "MIN_VERSION_base", "MIN_VERSION_unordered_containers", "MIN_VERSION_a_b", "_k9"]
+    && listedNames [] = []
+    && listedNames (decisionsHeader unitValue) = []
+  end definition
+end law
+
+law "|a starter file decides nothing, lists every name, and leaves nothing to add| is
+  id: "WHEN-16"
+  description :
+    "For any manifest of the model: the starter file reads as binding
+    lines and gives the empty environment (each of its lines is a remark
+    or empty); the names it lists are exactly the names the manifest
+    depends on; and with those names listed there is nothing to paste:
+    writing the starter file twice adds nothing."
+  end description
+  definition :
+    for all (seed :: Integer) =>
+      (let ps = [modelPackage (factModelOf seed)] in
+        readBindings (initLines ps) = Right (emptyEnv unitValue)
+          && listedNames (initLines ps) = (applyWhen (emptyEnv unitValue) ps).missing
+          && decisionLines (emptyEnv unitValue) (listedNames (initLines ps)) ps = []
+      end let)
+    end for all
+  end definition
+end law
+
+law "|a starter file with every line filled leaves no name missing, after the GHC patch levels' second round| is
+  id: "WHEN-17"
+  description :
+    "The round trip. Write the starter file, replace every undecided line
+    by a decision: the file reads, and the names still missing can only be
+    GHC's two patch-level names (the reference asks for them only once
+    __GLASGOW_HASKELL__ has a value: WHEN-3b). Paste the lines printed for
+    those and fill them too: now no name is missing and there is nothing
+    more to paste. Filling is deciding: the filled file's lines given as
+    one list are the environment that filters. Next cycle 5: a filling
+    that makes a term of the manifest an error is outside the three
+    conclusions about missing names (`wp.modelBroken`, as in WHEN-5 and
+    WHEN-11: it says `undef __GLASGOW_HASKELL__` under the version macro,
+    or gives a package whose VERSION_ macro is used as a value). A fact
+    that a later term had decided is then open again, as in C, and may
+    need a name that was never asked for; the law failed on such a draw.
+    That both files read is held for every filling."
+  end description
+  definition :
+    for all (seed :: Integer) (sf :: Integer) =>
+      (let ps = [modelPackage (factModelOf seed)] in
+       let first_ = filled sf (initLines ps) 0 in
+       let second_ = filled (sf + 1) (first_ ++ decisionLines (readEnv first_) (listedNames first_) ps) 0 in
+        reads first_
+          && reads second_
+          && (wp.modelBroken (readEnv first_) (factModelOf seed)
+              || (prelude.all patchLevel (applyWhen (readEnv first_) ps).missing
+                  && (wp.modelBroken (readEnv second_) (factModelOf seed)
+                      || ((applyWhen (readEnv second_) ps).missing = []
+                          && decisionLines (readEnv second_) (listedNames second_) ps = []))))
+      end let end let end let)
+    end for all
+  end definition
+end law
+
+law "|the lines to paste can be read off the filtered manifest| is
+  id: "WHEN-18"
+  description :
+    "Extraction runs once. The names to decide, their places and their
+    conditions are all in the manifest: the lines for the manifest as
+    extracted are the lines for the manifest as filtered by the same
+    names. So `ax when init` and the warning need no second parse, and a
+    manifest saved from an earlier run serves as well."
+  end description
+  definition :
+    for all (seed :: Integer) (se :: Integer) (sl :: Integer) (full :: Bool) =>
+      (let ps = [modelPackage (factModelOf seed)] in
+        decisionLines (chosenEnv se full) (listedOf sl) (applyWhen (chosenEnv se full) ps).packages
+          = decisionLines (chosenEnv se full) (listedOf sl) ps
+      end let)
+    end for all
+  end definition
+end law
+
+law "|there are lines to paste exactly when the warning says so| is
+  id: "WHEN-19"
+  description :
+    "For any manifest, names and listed names: the warning's third line
+    is there exactly when there are lines to paste, and the first line's
+    names less the listed ones are the names of the blocks."
+  end description
+  definition :
+    for all (seed :: Integer) (se :: Integer) (sl :: Integer) =>
+      (let ps = [modelPackage (factModelOf seed)] in let f = applyWhen (envOf se) ps in
+        listedNames (decisionLines (envOf se) (listedOf sl) ps) = unlisted f.missing (listedOf sl)
+          && (prelude.length (decisionLines (envOf se) (listedOf sl) ps) > 0)
+               = (prelude.length (warningsWith f (listedOf sl)) > prelude.length (warningsWith f f.missing))
+      end let end let)
+    end for all
+  end definition
+end law
+
+-- ---------------------------------------------------------------------------
+-- Next cycle 9, addendum (the mutation pass on cycle 8;
+-- next-cycle-9/design.md, section 18). The pass changed the arithmetic
+-- of the evaluator one operator at a time, in the copy of it that the
+-- extract unit's package holds, and 25 changes passed every law: WHEN-1
+-- compared the evaluator with a reference made of the same functions,
+-- and the rows of WHEN-2a to WHEN-2g and of WHP-15 did not hold the
+-- expressions that tell the changes apart. This table does: each row is
+-- an expression the pass found, or one beside it, with the answer under
+-- one of five environments. Every row with a known value under the
+-- complete table environment, and every row with no name in it, was put
+-- to GCC 15.2 (`#if (text) == value`; next-cycle-9/tools/rows-gcc.txt).
+-- The rows are held for the evaluator and for the reference, here and
+-- (HSC-20) in the extract unit, whose package is the one ax ships.
+
+type EvalRow is a record{
+  env :: Integer
+  text :: Text
+  want :: Outcome}
+end type
+
+function evalRow (env :: Integer) (text :: Text) (want :: Outcome) -> EvalRow is EvalRow record{ env = env , text = text , want = want} end function
+
+-- 0 no name given; 1 no name given, complete; 2 the table environment;
+-- 3 the partial one; 4 GHC's version alone.
+function rowEnv (k :: Integer) -> Env is
+  if k = 0 then emptyEnv unitValue
+  else (if k = 1 then completed (emptyEnv unitValue)
+  else (if k = 2 then tableFull unitValue
+  else (if k = 3 then tablePart unitValue else tableGhc unitValue end if) end if) end if) end if
+end function
+
+function measuredRows (u :: Unit) -> List EvalRow is
+  [
+   evalRow 0 "(0 - 1u) < 0" (Known 0),
+   evalRow 0 "-1 > 0u" (Known 1),
+   evalRow 0 "(-1) < 0u" (Known 0),
+   evalRow 0 "(-1u) < 0" (Known 0),
+   evalRow 0 "-1 / 2u" (Known 9223372036854775807),
+   evalRow 0 "-7 % 3" (Known (0 - 1)),
+   evalRow 0 "7 % -3" (Known 1),
+   evalRow 0 "-7 / 2" (Known (0 - 3)),
+   evalRow 0 "8 >> 8" (Known 0),
+   evalRow 0 "-1 >> 64" (Known (0 - 1)),
+   evalRow 0 "-1 >> 63" (Known (0 - 1)),
+   evalRow 0 "1 << 64" (Known 0),
+   evalRow 0 "1 << 63" (Known (0 - 9223372036854775808)),
+   evalRow 0 "(0 ? 1 : 1) > -1" (Known 1),
+   evalRow 0 "(1 < 1) > -1" (Known 1),
+   evalRow 0 "2 ? 3 : 8" (Known 3),
+   evalRow 0 "0 ? 3 : 8" (Known 8),
+   evalRow 0 "A, 8" (Known 8),
+   evalRow 1 "A, 8" (Known 8),
+   evalRow 2 "A, 8" (Known 8),
+   evalRow 3 "A, 8" (Known 8),
+   evalRow 4 "A, 8" (Known 8),
+   evalRow 0 "'ab'" (Bad),
+   evalRow 0 "' ' > A_ - 'a'" (unknown ["A_"] false),
+   evalRow 1 "' ' > A_ - 'a'" (Known 1),
+   evalRow 2 "' ' > A_ - 'a'" (Known 1),
+   evalRow 3 "' ' > A_ - 'a'" (unknown ["A_"] false),
+   evalRow 4 "' ' > A_ - 'a'" (unknown ["A_"] false),
+   evalRow 0 "VERSION_foo" (unknown ["VERSION_foo"] false),
+   evalRow 1 "VERSION_foo" (Known 0),
+   evalRow 2 "VERSION_foo" (Known 0),
+   evalRow 3 "VERSION_foo" (unknown ["VERSION_foo"] false),
+   evalRow 4 "VERSION_foo" (unknown ["VERSION_foo"] false),
+   evalRow 0 "VERSION_base" (unknown ["VERSION_base"] false),
+   evalRow 1 "VERSION_base" (Known 0),
+   evalRow 2 "VERSION_base" (Bad),
+   evalRow 3 "VERSION_base" (Bad),
+   evalRow 4 "VERSION_base" (unknown ["VERSION_base"] false),
+   evalRow 0 "MIN_VERSION_GLASGOW_HASKELL(1,6,1,1)" (unknown ["__GLASGOW_HASKELL__"] false),
+   evalRow 1 "MIN_VERSION_GLASGOW_HASKELL(1,6,1,1)" (Bad),
+   evalRow 2 "MIN_VERSION_GLASGOW_HASKELL(1,6,1,1)" (Known 1),
+   evalRow 3 "MIN_VERSION_GLASGOW_HASKELL(1,6,1,1)" (unknown ["__GLASGOW_HASKELL__"] false),
+   evalRow 4 "MIN_VERSION_GLASGOW_HASKELL(1,6,1,1)" (Known 1),
+   evalRow 0 "MIN_VERSION_GLASGOW_HASKELL(9,8,2,0)" (unknown ["__GLASGOW_HASKELL__"] false),
+   evalRow 1 "MIN_VERSION_GLASGOW_HASKELL(9,8,2,0)" (Bad),
+   evalRow 2 "MIN_VERSION_GLASGOW_HASKELL(9,8,2,0)" (Known 1),
+   evalRow 3 "MIN_VERSION_GLASGOW_HASKELL(9,8,2,0)" (unknown ["__GLASGOW_HASKELL__"] false),
+   evalRow 4 "MIN_VERSION_GLASGOW_HASKELL(9,8,2,0)" (unknown ["__GLASGOW_HASKELL_PATCHLEVEL1__", "__GLASGOW_HASKELL_PATCHLEVEL2__"] false),
+   evalRow 0 "MIN_VERSION_GLASGOW_HASKELL(9,8,3,0)" (unknown ["__GLASGOW_HASKELL__"] false),
+   evalRow 1 "MIN_VERSION_GLASGOW_HASKELL(9,8,3,0)" (Bad),
+   evalRow 2 "MIN_VERSION_GLASGOW_HASKELL(9,8,3,0)" (Known 0),
+   evalRow 3 "MIN_VERSION_GLASGOW_HASKELL(9,8,3,0)" (unknown ["__GLASGOW_HASKELL__"] false),
+   evalRow 4 "MIN_VERSION_GLASGOW_HASKELL(9,8,3,0)" (unknown ["__GLASGOW_HASKELL_PATCHLEVEL1__", "__GLASGOW_HASKELL_PATCHLEVEL2__"] false),
+   evalRow 0 "A % B" (unknown ["A", "B"] true),
+   evalRow 1 "A % B" (Bad),
+   evalRow 2 "A % B" (Bad),
+   evalRow 3 "A % B" (unknown ["B"] true),
+   evalRow 4 "A % B" (unknown ["A", "B"] true),
+   evalRow 0 "U % U" (unknown ["U"] true),
+   evalRow 1 "U % U" (Bad),
+   evalRow 2 "U % U" (Bad),
+   evalRow 3 "U % U" (Bad),
+   evalRow 4 "U % U" (unknown ["U"] true),
+   evalRow 0 "'\\'' == 39" (Known 1),
+   evalRow 0 "10 > 0x7FFFFFFFFFFFFFFF << 1ull" (Known 1),
+   evalRow 0 "(0 ? 1u : -1) < 0" (Known 0),
+   evalRow 0 "(1 ? -1 : 0u) > 0" (Known 1),
+   evalRow 0 "-1 / 2u > 1" (Known 1),
+   evalRow 0 "1u << 64" (Known 0),
+   evalRow 0 "-1u >> 1" (Known 9223372036854775807),
+   evalRow 0 "-1 >> 1" (Known (0 - 1)),
+   evalRow 0 "(1, 2u) > -1" (Known 0),
+   evalRow 0 "-1 < (0, 1u)" (Known 0),
+   evalRow 0 "!1u > -1" (Known 1),
+   evalRow 0 "(1u && 1) > -1" (Known 1),
+   evalRow 0 "~0u > 0" (Known 1),
+   evalRow 0 "N > 0u" (unknown ["N"] false),
+   evalRow 1 "N > 0u" (Known 0),
+   evalRow 2 "N > 0u" (Known 1),
+   evalRow 3 "N > 0u" (unknown ["N"] false),
+   evalRow 4 "N > 0u" (unknown ["N"] false),
+   evalRow 0 "A ? B : Q" (unknown ["A", "B", "Q"] false),
+   evalRow 1 "A ? B : Q" (Known 0),
+   evalRow 2 "A ? B : Q" (Known 0),
+   evalRow 3 "A ? B : Q" (unknown ["B"] false),
+   evalRow 4 "A ? B : Q" (unknown ["A", "B", "Q"] false),
+   evalRow 0 "Q, 1" (Known 1),
+   evalRow 1 "Q, 1" (Known 1),
+   evalRow 2 "Q, 1" (Known 1),
+   evalRow 3 "Q, 1" (Known 1),
+   evalRow 4 "Q, 1" (Known 1),
+   evalRow 0 "1, Q" (unknown ["Q"] false),
+   evalRow 1 "1, Q" (Known 0),
+   evalRow 2 "1, Q" (Known 0),
+   evalRow 3 "1, Q" (unknown ["Q"] false),
+   evalRow 4 "1, Q" (unknown ["Q"] false),
+   evalRow 0 "MIN_VERSION_base(4,18,1)" (unknown ["MIN_VERSION_base"] false),
+   evalRow 1 "MIN_VERSION_base(4,18,1)" (Bad),
+   evalRow 2 "MIN_VERSION_base(4,18,1)" (Known 1),
+   evalRow 3 "MIN_VERSION_base(4,18,1)" (Known 1),
+   evalRow 4 "MIN_VERSION_base(4,18,1)" (unknown ["MIN_VERSION_base"] false),
+   evalRow 0 "MIN_VERSION_base(4,18,2)" (unknown ["MIN_VERSION_base"] false),
+   evalRow 1 "MIN_VERSION_base(4,18,2)" (Bad),
+   evalRow 2 "MIN_VERSION_base(4,18,2)" (Known 0),
+   evalRow 3 "MIN_VERSION_base(4,18,2)" (Known 0),
+   evalRow 4 "MIN_VERSION_base(4,18,2)" (unknown ["MIN_VERSION_base"] false),
+   evalRow 0 "MIN_VERSION_th(1,0,0)" (unknown ["MIN_VERSION_th"] false),
+   evalRow 1 "MIN_VERSION_th(1,0,0)" (Bad),
+   evalRow 2 "MIN_VERSION_th(1,0,0)" (Bad),
+   evalRow 3 "MIN_VERSION_th(1,0,0)" (unknown ["MIN_VERSION_th"] false),
+   evalRow 4 "MIN_VERSION_th(1,0,0)" (unknown ["MIN_VERSION_th"] false)
+  ]
+end function
+
+-- The reference's answer for a text: the reference has no parser, so the
+-- text is read by `parseWhen` (WHEN-1 holds the parser on every drawn
+-- tree) and the tree is the reference's to evaluate.
+function refAnswer (env :: Env) (text :: Text) -> Outcome is
+  first matching case of parseWhen text :
+    when Present e then wp.refEval env e
+    when Absent then Bad
+  end case
+end function
+
+function answerOf (own :: Bool) (env :: Env) (text :: Text) -> Outcome is
+  if own then evalWhen env text else refAnswer env text end if
+end function
+
+-- The rows that are not answered as written: each as its environment's
+-- number and its text. `own`: the evaluator; otherwise the reference.
+function rowsWrong (own :: Bool) (rs :: List EvalRow) -> List Text is
+  first matching case of rs :
+    when Nil then []
+    when Cons r rest then
+      (if answerOf own (rowEnv r.env) r.text = r.want then [] else [prelude.textOf r.env ++ ": " ++ r.text] end if) ++ rowsWrong own rest
+  end case
+end function
+
+law "|the evaluator and the reference answer the mutation pass's expressions as measured| is
+  id: "WHEN-25"
+  description :
+    "Next cycle 9, addendum (the mutation pass on cycle 8: 25 changes
+    to the reference's arithmetic passed every law). Unsigned
+    operands: `(0 - 1u) < 0`, `-1 > 0u`, `(-1) < 0u`, `-1 / 2u`, an
+    unsigned arm of `?:` and an unsigned right side of the comma make
+    the whole unsigned, `!` and `&&` do not. Signed division and
+    remainder round toward zero: `-7 % 3` is -1. A shift by the width
+    or more: `1 << 64` and `8 >> 8` are 0, `-1 >> 64` is -1. `?:`
+    takes its second or its third operand, not a truth value. The
+    comma's left side is not asked for, its right side is. A
+    character constant of several characters is not read. A name of
+    the form VERSION_p with no package p given is a missing name, and
+    0 in a complete environment; with p given it is not a number.
+    MIN_VERSION_GLASGOW_HASKELL asks for GHC's version, then for the
+    patch levels only where they decide, and is an error where GHC is
+    said absent. A remainder by a missing name may be an error. Each
+    row is answered by the evaluator and by the reference as written;
+    the law's value is the rows that are not."
+  end description
+  definition :
+    rowsWrong true (measuredRows unitValue) = [] && rowsWrong false (measuredRows unitValue) = []
+  end definition
+  references:
+    ref function wp.refEval
+  end references
+end law
+
+-- ---------------------------------------------------------------------------
+-- Next cycle 10 (next-cycle-10/design.md, sections 8 and 9).
+
+-- O157: a minus sign pasted onto a negative value. Environment 2 is the
+-- table environment: N is -3, A is 1.
+function pasteRows (u :: Unit) -> List EvalRow is
+  [
+   evalRow 2 "-N" Bad,
+   evalRow 2 "2-N" Bad,
+   evalRow 2 "A-N" Bad,
+   evalRow 2 "2-N*3" Bad,
+   evalRow 2 "0 && -N" Bad,
+   evalRow 2 "1 || -N" Bad,
+   evalRow 2 "1 ? 2 : -N" Bad,
+   evalRow 2 "- -N" Bad,
+   evalRow 2 "-N == 3" Bad,
+   evalRow 2 "(-N)" Bad,
+   evalRow 2 "MIN_VERSION_base(4,-N,0)" Bad,
+   evalRow 2 "- N" Bad,
+   evalRow 2 "-(N)" Bad,
+   evalRow 2 "2 - N" Bad,
+   evalRow 2 "2-(N)" Bad,
+   evalRow 2 "-A" (Known (0 - 1)),
+   evalRow 2 "N-1" (Known (0 - 4)),
+   evalRow 2 "2+N" (Known (0 - 1)),
+   evalRow 2 "+N" (Known (0 - 3)),
+   evalRow 2 "~N" (Known 2),
+   evalRow 2 "!N" (Known 0),
+   evalRow 2 "-3" (Known (0 - 3)),
+   evalRow 0 "-N" (unknown ["N"] false),
+   evalRow 1 "-N" (Known 0)
+  ]
+end function
+
+law "|a minus sign before a name whose value is negative is not read, by the evaluator and by the reference| is
+  id: "WHEN-27"
+  description :
+    "Next cycle 10 (O157; WHP-16 has the rule). With N given as -3 the
+    preprocessor reads `-N` as `--3`: an error, wherever it stands.
+    Cycle 9 answered 3. Every row here was put to GCC 15.2
+    (next-cycle-10/tools/gcc-rows.txt, and the table in design.md,
+    section 9): the first eleven stop it; the next four (`- N`,
+    `-(N)`, `2 - N`, `2-(N)`) have a value there (3, 3, 5, 5) and are
+    not read here, since the expression's tree does not keep the blank
+    or the parentheses: declared, and never a wrong answer; the rest
+    are the preprocessor's values. Each row is answered by the
+    evaluator and by the reference as written; the law's value is the
+    rows that are not."
+  end description
+  definition :
+    rowsWrong true (pasteRows unitValue) = [] && rowsWrong false (pasteRows unitValue) = []
+  end definition
+  references:
+    ref function wp.refEval
+  end references
+end law
+
+-- S2 (review 12): what a binding line MEANS, written out. WHEN-7 holds
+-- the reader against `wp.envFrom` on drawn lines; since cycle 10 ax runs
+-- neither `wp.envFrom` nor `wp.bound` (rule I1), so that law compares two
+-- witnesses. These rows are the third: the environment as a value, with
+-- no function of either side in it.
+function namesEnv (ns :: KeyVal Text Binding) (vs :: KeyVal Text (List Integer)) -> Env is Env record{ names = ns , versions = vs , complete = false} end function
+
+function noNamesYet (u :: Unit) -> KeyVal Text Binding is prelude.keyValOf [] end function
+
+function noVersionsYet (u :: Unit) -> KeyVal Text (List Integer) is prelude.keyValOf [] end function
+
+function oneName (n :: Text) (b :: Binding) -> KeyVal Text Binding is prelude.put n b (noNamesYet unitValue) end function
+
+function oneVersion (p :: Text) (v :: List Integer) -> KeyVal Text (List Integer) is prelude.put p v (noVersionsYet unitValue) end function
+
+law "|what each binding line means, to the letter| is
+  id: "WHEN-28"
+  description :
+    "Next cycle 10 (review 12, S2). `NAME=V` defines NAME as V; `NAME`
+    defines it as 1; `undef NAME` says it is not defined; a later line
+    replaces an earlier one. `package P=X.Y.Z` gives the version of P
+    under its macro's spelling (each `-` an `_`) and takes back an
+    earlier `undef MIN_VERSION_P`; `undef MIN_VERSION_P` says the
+    package absent and takes back an earlier `package` line. A remark
+    and an empty line change nothing, and the result is not complete.
+    The environments are written out as values. And what they mean to
+    the evaluator: the version macro of a package given by a name with
+    a `-` is defined and compares; of one said absent, not defined."
+  end description
+  definition :
+    readBindings ["A=3"] = Right (namesEnv (oneName "A" (wp.definedAs 3)) (noVersionsYet unitValue))
+    && readBindings ["A"] = Right (namesEnv (oneName "A" (wp.definedAs 1)) (noVersionsYet unitValue))
+    && readBindings ["undef A"] = Right (namesEnv (oneName "A" (wp.notDefined unitValue)) (noVersionsYet unitValue))
+    && readBindings ["A=3", "undef A"] = Right (namesEnv (oneName "A" (wp.notDefined unitValue)) (noVersionsYet unitValue))
+    && readBindings ["undef A", "A=-2"] = Right (namesEnv (oneName "A" (wp.definedAs (0 - 2))) (noVersionsYet unitValue))
+    && readBindings ["A=3", "B", "# A=4", ""] = Right (namesEnv (prelude.put "B" (wp.definedAs 1) (oneName "A" (wp.definedAs 3))) (noVersionsYet unitValue))
+    && readBindings ["package foo-bar=1.2.3"] = Right (namesEnv (noNamesYet unitValue) (oneVersion "foo_bar" [1, 2, 3]))
+    && readBindings ["undef MIN_VERSION_foo_bar"] = Right (namesEnv (oneName "MIN_VERSION_foo_bar" (wp.notDefined unitValue)) (noVersionsYet unitValue))
+    && readBindings ["undef MIN_VERSION_foo_bar", "package foo-bar=2"] = Right (namesEnv (noNamesYet unitValue) (oneVersion "foo_bar" [2]))
+    && readBindings ["package foo-bar=2", "undef MIN_VERSION_foo_bar"] = Right (namesEnv (oneName "MIN_VERSION_foo_bar" (wp.notDefined unitValue)) (noVersionsYet unitValue))
+    && readBindings ["package base=4.18", "package base=4.19.1", "A=1"] = Right (namesEnv (oneName "A" (wp.definedAs 1)) (oneVersion "base" [4, 19, 1]))
+    && !((readEnv ["A=1"]).complete)
+    && evalWhen (readEnv ["package foo-bar=1.2.3"]) "MIN_VERSION_foo_bar(1,2,0)" = Known 1
+    && evalWhen (readEnv ["package foo-bar=1.2.3"]) "MIN_VERSION_foo_bar(1,3,0)" = Known 0
+    && evalWhen (readEnv ["package foo-bar=1.2.3"]) "defined(MIN_VERSION_foo_bar)" = Known 1
+    && evalWhen (readEnv ["undef MIN_VERSION_foo_bar"]) "defined(MIN_VERSION_foo_bar)" = Known 0
+    && evalWhen (readEnv ["package foo-bar=2", "undef MIN_VERSION_foo_bar"]) "defined(MIN_VERSION_foo_bar)" = Known 0
+    && evalWhen (readEnv ["undef MIN_VERSION_foo_bar", "package foo-bar=2"]) "MIN_VERSION_foo_bar(2,0,0)" = Known 1
+    && evalWhen (readEnv ["A=3", "undef A"]) "defined(A)" = Known 0
+    && evalWhen (readEnv ["undef A", "A"]) "A" = Known 1
+    && evalWhen (readEnv ["A=-2"]) "A + 5" = Known 3
+  end definition
+end law
+
+function shiftTexts (u :: Unit) -> List Text is
+  ["1u >> 9223372036854775807", "1 >> 9223372036854775807", "1u << 9223372036854775807", "1 << 9223372036854775807", "1u >> 100", "0xFFFFFFFFFFFFFFFFu >> 18446744073709551615u"]
+end function
+
+function allZero (own :: Bool) (ts :: List Text) -> Bool is
+  first matching case of ts :
+    when Nil then true
+    when Cons t rest then answerOf own (emptyEnv unitValue) t = Known 0 && allZero own rest
+  end case
+end function
+
+law "|a shift by any count is answered at once| is
+  id: "WHEN-26"
+  description :
+    "Next cycle 9, addendum (mutant 66379e1 of the pass on cycle 8).
+    With the test `n >= 64` of the unsigned right shift turned round,
+    `#if 1u >> 9223372036854775807` never returned: the shift halved
+    its operand once for each step of the count, and a battery run was
+    stopped after five hours. No law failed, because no law shifts by
+    a large count. A shift by any count, of either sign, in either
+    direction, is answered without a step for each unit of the count:
+    the evaluator and the reference answer these in the harness's ten
+    seconds, and `-1 >> 9223372036854775807` is -1."
+  end description
+  definition :
+    allZero true (shiftTexts unitValue) && allZero false (shiftTexts unitValue)
+    && evalWhen (emptyEnv unitValue) "-1 >> 9223372036854775807" = Known (0 - 1)
+    && refAnswer (emptyEnv unitValue) "-1 >> 9223372036854775807" = Known (0 - 1)
+  end definition
+end law
+
+harness assayxport.conditions.testing for assayxport.conditions is
+tags conditions
+parallel
+order random
+timeout 2 min
+
+-- Next cycle 8: three floors of this unit failed about one run in six
+-- (they were set before cycle 7 widened the drawn expressions). They are
+-- reset from the shares measured over 100 cases a run, five runs
+-- (next-cycle-8/design.md, section 9): a known value 13% to 20%;
+-- something to paste 23% to 29%; a listed name missing 4% to 13%. The
+-- generators are as they were.
+for law "|the evaluator equals the reference|
+classify (refEval (chosenEnv se full) (exprOf sx 4) matches Known _) as "known"
+classify (refEval (chosenEnv se full) (exprOf sx 4) matches Unknown _) as "unknown"
+classify (refEval (chosenEnv se full) (exprOf sx 4) matches Bad) as "bad"
+cover 6% "a known value" when refEval (chosenEnv se full) (exprOf sx 4) matches Known _
+cover 10% "missing names" when refEval (chosenEnv se full) (exprOf sx 4) matches Unknown _
+end for law
+
+-- Next cycle 9, addendum: a shift that takes a step for each unit of its
+-- count does not end; ten seconds is the bound.
+for law "|a shift by any count is answered at once|
+timeout 10 s
+end for law
+
+for law "|the condition evaluator equals the reference|
+classify (refCondition (chosenEnv se full) (condOf (styleOf ss) sx) matches Known _) as "known"
+classify (refCondition (chosenEnv se full) (condOf (styleOf ss) sx) matches Unknown _) as "unknown"
+classify (refCondition (chosenEnv se full) (condOf (styleOf ss) sx) matches Bad) as "bad"
+cover 15% "a known value" when refCondition (chosenEnv se full) (condOf (styleOf ss) sx) matches Known _
+cover 10% "missing names" when refCondition (chosenEnv se full) (condOf (styleOf ss) sx) matches Unknown _
+end for law
+
+for law "|the lines to paste are the reference's|
+cover 12% "something to paste" when prelude.length (expectedDecisionLines (chosenEnv se full) (listedOf sl) (factModelOf seed)) > 0
+cover 1% "a listed name is missing" when prelude.length (unlisted (expectedFiltered (chosenEnv se full) (factModelOf seed)).missing (listedOf sl)) < prelude.length (expectedFiltered (chosenEnv se full) (factModelOf seed)).missing
+end for law
+
+for law "|a starter file with every line filled leaves no name missing, after the GHC patch levels' second round|
+cover 50% "a filling that makes no term an error" when !(wp.modelBroken (readEnv (filled sf (initLines [modelPackage (factModelOf seed)]) 0)) (factModelOf seed))
+cover 40% "a name to fill" when prelude.length (expectedDecisionLines (emptyEnv unitValue) [] (factModelOf seed)) > 0
+end for law
+
+end harness
+
+end unit

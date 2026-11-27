@@ -1,0 +1,640 @@
+unit assayxport.contract
+-- ref:DR-0035 ref:DR-0040 (LawSpec is the law surface and writes our software; decisions live in docs/decisions)
+
+import lawspec.host
+
+-- S1.j (Artist Vision): what EVERY ax extractor owes, as generic laws, plus
+-- the full typed projection of ax's manifest schema v2. No adapters live
+-- here: each language unit binds its extractor as an ability and applies
+-- these laws. Calibration: docs/contributions/S1.j/calibration.md.
+
+-- ---------------------------------------------------------------------------
+-- Identity (internal/schema/identity.gp): non-empty, no '#'. Stated as a
+-- predicate inside the well-formedness law, not as wrappers: a reference
+-- definition builds ids from computed text, and a wrapper's constraint on
+-- computed text cannot be proved at compile time (v0.31.3).
+
+function validId (t :: Text) -> Bool is prelude.length t > 0 && !(t contains "#") end function
+
+
+-- ---------------------------------------------------------------------------
+-- Schema v2's closed vocabularies (internal/schema/semantic.gp), plus
+-- `instance` (S1.j R22 Q1) and `haddock`. A value outside them decodes as
+-- *Other, so the well-formedness law fails on it instead of an adapter
+-- crashing.
+
+type SymbolKind is one of
+  | KindType | KindFunction | KindFunc | KindMethod | KindConstructor | KindField
+  | KindVariable | KindVar | KindConst | KindProperty | KindClass | KindEnumConstant
+  | KindInstance
+  | KindOther of type Text
+end type
+
+type Visibility is one of
+  | Exported | Unexported | Public | Protected | Private | PackagePrivate
+  | VisibilityOther of type Text
+end type
+
+type VisibilityIdiom is one of
+  | Capitalized | Underscore | AccessModifier | ExportList
+  | IdiomOther of type Text
+end type
+
+type DocFormat is one of
+  | NoDoc | GoDoc | Docstring | JavaDoc | TSDoc | Haddock
+  | DocOther of type Text
+end type
+
+type CallKind is one of
+  | Internal | External | Builtin | Dynamic | Unresolved
+  | CallOther of type Text
+end type
+
+type ComplexityMethod is one of
+  | Deferred | LoopNesting | Recursive
+  | MethodOther of type Text
+end type
+
+-- ---------------------------------------------------------------------------
+-- The manifest: every field of schema.Package and schema.Symbol
+-- (internal/schema/schema.gp), so a value an extractor should not emit is
+-- seen too. Empty text, an empty list or Absent stand for an omitted field.
+
+type Invocation is a record{
+  kind :: Text
+  how :: Text}
+end type
+
+type Param is a record{
+  name :: Text
+  typeText :: Text
+  annotations :: List Text
+  nameSynthetic :: Bool}
+end type
+
+type TypeParam is a record{
+  name :: Text
+  constraint :: Text}
+end type
+
+type Signature is a record{
+  params :: List Param
+  returns :: List Param
+  typeParams :: List TypeParam
+  receiver :: Maybe Param
+  variadic :: Bool
+  modifiers :: List Text
+  descriptor :: Text
+  throws :: List Text}
+end type
+
+type Complexity is a record{
+  time :: Maybe Text
+  space :: Maybe Text
+  method :: ComplexityMethod}
+end type
+
+type CallEdge is a record{
+  kind :: CallKind
+  target :: Text
+  ref :: Maybe Text
+  arity :: Maybe Integer
+  argTypes :: List (Maybe Text)
+  count :: Integer
+  -- schema.Call `when` (proposed, optional; S1.j next cycle 2): the build
+  -- condition under which this edge exists, a C preprocessor expression.
+  -- "" stands for the omitted field: the edge is unconditional. (`when` is
+  -- a reserved word in LawSpec, so the field is named `condition`.)
+  condition :: Text}
+end type
+
+type Location is a record{
+  file :: Text
+  line :: Integer
+  col :: Integer
+  endLine :: Integer}
+end type
+
+-- One symbol (schema.Symbol; `Symbol` is a reserved name in LawSpec). Every
+-- field of schema.Symbol is here, grouped into records of at most a dozen
+-- fields: LawSpec v0.31.3's `check` takes time exponential in the number
+-- of fields of one record construction (16 fields 2 s, 20 fields 21 s;
+-- reported, S1.j).
+
+type DocText is a record{
+  raw :: Text
+  format :: DocFormat}
+end type
+
+type EntryPoint is a record{
+  isEntrypoint :: Bool
+  invocation :: Maybe Invocation}
+end type
+
+-- Facts compiled artifacts expose (Java classfiles): empty for source
+-- languages, compared all the same.
+type Binary is a record{
+  binaryName :: Text
+  extends :: List Text
+  implements :: List Text
+  permits :: List Text
+  constant :: Text
+  constantKind :: Text
+  descriptor :: Text
+  modifiers :: List Text
+  defaultValue :: Text
+  annotations :: List Text}
+end type
+
+type Detail is a record{
+  complexity :: Complexity
+  signature :: Maybe Signature
+  typeKind :: Text
+  underlying :: Text
+  typeText :: Text
+  inAll :: Maybe Bool
+  decorators :: List Text
+  concerns :: List Text
+  binary :: Binary}
+end type
+
+type Decl is a record{
+  id :: Text
+  name :: Text
+  kind :: SymbolKind
+  visibility :: Visibility
+  idiom :: VisibilityIdiom
+  location :: Location
+  owner :: Text
+  doc :: DocText
+  entry :: EntryPoint
+  detail :: Detail
+  calls :: List CallEdge
+  -- schema.Symbol `when` (proposed, optional): as CallEdge.condition.
+  condition :: Text}
+end type
+
+type Package is a record{
+  id :: Text
+  language :: Text
+  path :: Text
+  name :: Text
+  doc :: Text
+  level :: Text
+  members :: List Text
+  isEntrypoint :: Bool
+  invocation :: Maybe Invocation
+  symbols :: List Decl}
+end type
+
+-- ---------------------------------------------------------------------------
+-- Writing trees. Since LawSpec 0.32.0 lawspec.host's FileSystem has
+-- `createDirectories` (S1.j LawSpec issue 11); `writeBytes` still makes no
+-- parents. `writeFile` makes them and writes, held to law C-W1 against
+-- `readBytes`.
+
+-- The directory part of a path ("" when it has no `/`).
+function lastSlash (t :: Text) (i :: Integer) -> Integer is
+  if i <= 0 then 0 - 1 else (if prelude.take 1 (prelude.drop (i - 1) t) = "/" then i - 1 else lastSlash t (i - 1) end if) end if
+end function
+function parentOf (t :: Text) -> Text is
+  let k = lastSlash t (prelude.length t) in (if k <= 0 then "" else prelude.take k t end if) end let
+end function
+
+procedure writeFile (path :: Text) (content :: Bytes) -> Unit uses FileSystem is
+  createDirectories (parentOf path); writeBytes path content
+end procedure
+
+ability Workspace is
+  -- Make a file or directory unreadable (mode 000), and readable again.
+  -- lawspec.host has no permission operation; the unreadable-input law
+  -- needs one. Runs as a non-root user (root reads through any mode).
+  revoke :: Text -> Unit
+  restore :: Text -> Unit
+end ability
+
+law "|a written file reads back, its parents made| for dir :: TemporaryDirectory is
+  id: "C-W1"
+  definition :
+    for all (content :: Bytes) =>
+      (writeFile (directoryPath dir ++ "/a/b/c.txt") content; readBytes (directoryPath dir ++ "/a/b/c.txt")) = Present content
+    end for all
+  end definition
+  description :
+    "In a fresh directory each case, so parents a run left behind cannot make
+    the law pass without the mkdir it is about."
+  end description
+  references:
+    "|lawspec.host|: "createDirectories (0.32.0; S1.j LawSpec issue 11); writeBytes makes no parents"
+  end references
+end law
+
+law "|a revoked path cannot be read, and reads back once restored| for dir :: TemporaryDirectory is
+  id: "C-W2"
+  definition :
+    for all (content :: Bytes) (whole :: Bool) =>
+      (writeFile (directoryPath dir ++ "/a/b.txt") content;
+       revoke (revokeTarget (directoryPath dir) "a" "b.txt" whole);
+       let gone = readBytes (directoryPath dir ++ "/a/b.txt") in
+       restore (revokeTarget (directoryPath dir) "a" "b.txt" whole);
+       gone = Absent && readBytes (directoryPath dir ++ "/a/b.txt") = Present content end let)
+    end for all
+  end definition
+  description :
+    "Revoking the file itself, or its directory (`whole`), makes the file
+    unreadable; restoring makes it read back unchanged."
+  end description
+  references:
+    "|lawspec.host|: "FileSystem has no permission operation; readBytes gives Absent for an unreadable file"
+  end references
+end law
+
+-- What is revoked for the file `name` in directory `sub` of `root`: the
+-- file, or (whole) the directory.
+function revokeTarget (root :: Text) (sub :: Text) (name :: Text) (whole :: Bool) -> Text is
+  if whole then root ++ "/" ++ sub else root ++ "/" ++ sub ++ "/" ++ name end if
+end function
+
+-- An extraction that could not complete. ax reports it on the CLI as one
+-- line, `ax: <language>: <cause>`; the message is that line's cause.
+type ExtractFailure is one of
+  | ExtractionFailed of type record{ message :: Text}
+end type
+
+-- The failure says which path made it.
+function failureNames (r :: Either ExtractFailure (List Package)) (path :: Text) -> Bool is
+  first matching case of r :
+    when Left (ExtractionFailed f) then f.message contains path
+    when Right _ then false
+  end case
+end function
+
+type Extension is one of | HaskellFile | PythonFile | GoFile | TextFile end type
+
+-- An arbitrary file for the any-input laws: a slot, a language, any text.
+-- slot is a plain Int8, folded into 0..20 by rawPath: a refined field
+-- anywhere in a unit's schema disables `any` in every harness strategy of
+-- the unit (LawSpec v0.31.3; reported, S1.j LawSpec issue 2).
+type RawFile is a record{
+  slot :: Int8
+  extension :: Extension
+  content :: Text}
+end type
+
+-- A file at a path, for model-rendered trees.
+type SourceFile is a record{
+  path :: Text
+  content :: Text}
+end type
+
+function suffix (e :: Extension) -> Text is
+  first matching case of e :
+    when HaskellFile then ".hs"
+    when PythonFile then ".py"
+    when GoFile then ".go"
+    when TextFile then ".txt"
+  end case
+end function
+
+function rawPath (f :: RawFile) -> Text is
+  "m" ++ prelude.textOf (if f.slot < 0 then 0 - prelude.rem f.slot 21 else prelude.rem f.slot 21 end if) ++ suffix f.extension
+end function
+
+procedure writeRaw (root :: Text) (tree :: List RawFile) -> Unit uses FileSystem is
+  first matching case of tree :
+    when Nil then unitValue
+    when Cons f rest then writeFile (root ++ "/" ++ rawPath f) (prelude.utf8 f.content); writeRaw root rest
+  end case
+end procedure
+
+procedure writeSources (root :: Text) (files :: List SourceFile) -> Unit uses FileSystem is
+  first matching case of files :
+    when Nil then unitValue
+    when Cons f rest then writeFile (root ++ "/" ++ f.path) (prelude.utf8 f.content); writeSources root rest
+  end case
+end procedure
+
+function keepOnly (owned :: List Extension) (tree :: List RawFile) -> List RawFile is
+  first matching case of tree :
+    when Nil then []
+    when Cons f rest then (if owned contains f.extension then [f] else [] end if) ++ keepOnly owned rest
+  end case
+end function
+
+function fileHas (e :: Extension) (f :: RawFile) -> Bool is f.extension = e end function
+function hasExtension (e :: Extension) (tree :: List RawFile) -> Bool is prelude.any (fileHas e) tree end function
+
+-- ---------------------------------------------------------------------------
+-- Shared by every language's policy: text layout, the empty binary detail,
+-- and ax's edge merging (schema.DedupeCalls: one edge per callee, a count of
+-- sites, in ax's order; the same callee under two build conditions is two
+-- edges, since 0.3.0). Moved here from the Python policy so the Haskell
+-- policy uses the same definitions (no duplicated meaning).
+
+function spaces (n :: Integer) -> Text is if n <= 0 then "" else " " ++ spaces (n - 1) end if end function
+
+function indented (n :: Integer) (ts :: List Text) -> List Text is
+  first matching case of ts :
+    when Nil then []
+    when Cons t rest then [spaces n ++ t] ++ indented n rest
+  end case
+end function
+
+function at (file :: Text) (line :: Integer) (col :: Integer) (endLine :: Integer) -> Location is
+  Location record{ file = file , line = line , col = col , endLine = endLine}
+end function
+
+function noBinary (u :: Unit) -> Binary is
+  Binary record{ binaryName = "" , extends = [] , implements = [] , permits = [] , constant = "" , constantKind = "" ,
+    descriptor = "" , modifiers = [] , defaultValue = "" , annotations = []}
+end function
+
+function edge (k :: CallKind) (target :: Text) (ref :: Maybe Text) -> CallEdge is
+  CallEdge record{ kind = k , target = target , ref = ref , arity = Absent , argTypes = [] , count = 1 , condition = ""}
+end function
+
+-- An edge that exists under a build condition.
+function edgeIf (k :: CallKind) (target :: Text) (ref :: Maybe Text) (condition :: Text) -> CallEdge is
+  (edge k target ref) with condition = condition
+end function
+
+type EdgeKey is a record{
+  target :: Text
+  kindName :: Text
+  refText :: Text
+  condition :: Text}
+end type
+
+type Counted is a record{
+  edge :: CallEdge
+  count :: Integer}
+end type
+
+function kindName (k :: CallKind) -> Text is
+  first matching case of k :
+    when Internal then "internal"
+    when External then "external"
+    when Builtin then "builtin"
+    when Dynamic then "dynamic"
+    when Unresolved then "unresolved"
+    when CallOther t then t
+  end case
+end function
+
+function edgeKey (e :: CallEdge) -> EdgeKey is
+  EdgeKey record{ target = e.target , kindName = kindName e.kind ,
+                  refText = (first matching case of e.ref : when Absent then "" when Present r then r end case) ,
+                  condition = e.condition}
+end function
+
+function countEdges (es :: List CallEdge) (acc :: KeyVal EdgeKey Counted) -> KeyVal EdgeKey Counted is
+  first matching case of es :
+    when Nil then acc
+    when Cons e rest then
+      let k = edgeKey e in
+      let n = (first matching case of prelude.lookup k acc : when Absent then 0 when Present seen then seen.count end case) in
+      countEdges rest (prelude.put k (Counted record{ edge = e , count = n + 1}) acc) end let end let
+  end case
+end function
+
+function withCounts (es :: List (Entry EdgeKey Counted)) -> List CallEdge is
+  first matching case of es :
+    when Nil then []
+    when Cons en rest then
+      (first matching case of en : when Entry k v then [v.edge with count = v.count] ++ withCounts rest end case)
+  end case
+end function
+
+function merged (es :: List CallEdge) -> List CallEdge is
+  withCounts (prelude.entries (countEdges es (prelude.keyValOf [])))
+end function
+
+-- ---------------------------------------------------------------------------
+-- Normal form. ax's emit orders packages (id, path) and symbols (file,
+-- line, name) itself, so order is emit's property, not the extractor's.
+-- Comparisons normalize through LawSpec's SortedSet.
+
+function normalPackage (p :: Package) -> Package is
+  p with symbols = prelude.toList (prelude.sortedSetOf p.symbols)
+end function
+
+function normalPackages (ps :: List Package) -> List Package is
+  first matching case of ps :
+    when Nil then []
+    when Cons p rest then [normalPackage p] ++ normalPackages rest
+  end case
+end function
+
+-- A SortedSet drops repeats, so the normal form also counts: equal sets
+-- with equal counts rule out a repeated package or symbol on either side
+-- whose other side has none (LawSpec authoring guide: "set equality
+-- silently allow[s] a duplicate to disappear").
+type Observed is a record{
+  form :: List Package
+  packages :: Integer
+  symbols :: Integer}
+end type
+
+function symbolTotal (ps :: List Package) -> Integer is
+  first matching case of ps :
+    when Nil then 0
+    when Cons p rest then prelude.length p.symbols + symbolTotal rest
+  end case
+end function
+
+function normalForm (ps :: List Package) -> Observed is
+  Observed record{ form = prelude.toList (prelude.sortedSetOf (normalPackages ps)) , packages = prelude.length ps , symbols = symbolTotal ps}
+end function
+
+-- No package and no symbol occurs twice.
+function distinct (ps :: List Package) -> Bool is
+  (normalForm ps).packages = prelude.length (normalForm ps).form && distinctSymbols ps
+end function
+
+function distinctSymbols (ps :: List Package) -> Bool is
+  first matching case of ps :
+    when Nil then true
+    when Cons p rest then prelude.length (prelude.toList (prelude.sortedSetOf p.symbols)) = prelude.length p.symbols && distinctSymbols rest
+  end case
+end function
+
+-- ---------------------------------------------------------------------------
+-- Well-formedness on any input.
+
+function refOf (p :: Package) (d :: Decl) -> Text is p.id ++ "#" ++ d.id end function
+
+function refsIn (p :: Package) (ds :: List Decl) -> List Text is
+  first matching case of ds :
+    when Nil then []
+    when Cons d rest then [refOf p d] ++ refsIn p rest
+  end case
+end function
+
+function allRefs (ps :: List Package) -> List Text is
+  first matching case of ps :
+    when Nil then []
+    when Cons p rest then refsIn p p.symbols ++ allRefs rest
+  end case
+end function
+
+function noRef (e :: CallEdge) -> Bool is
+  first matching case of e.ref :
+    when Absent then true
+    when Present r then false
+  end case
+end function
+
+-- schema.Call: an internal edge's ref names a symbol of the manifest; no
+-- other edge has a ref (semantic.gp rejects an external ref); every count
+-- is at least one; a kind outside the vocabulary is never well-formed.
+function edgeBad (refs :: List Text) (e :: CallEdge) -> Bool is
+  e.count < 1 ||
+  (first matching case of e.kind :
+    when Internal then
+      (first matching case of e.ref :
+        when Present r then !(refs contains r)
+        when Absent then true
+      end case)
+    when External then !(noRef e)
+    when Builtin then !(noRef e)
+    when Dynamic then !(noRef e)
+    when Unresolved then !(noRef e)
+    when CallOther k then true
+  end case)
+end function
+
+function edgeIdentity (e :: CallEdge) -> CallEdge is e with count = 1 end function
+
+function identities (es :: List CallEdge) -> List CallEdge is
+  first matching case of es :
+    when Nil then []
+    when Cons e rest then [edgeIdentity e] ++ identities rest
+  end case
+end function
+
+-- schema.DedupeCalls: no two edges of a symbol share their identity.
+function edgesRepeat (es :: List CallEdge) -> Bool is
+  prelude.size (prelude.setOf (identities es)) != prelude.length es
+end function
+
+function kindOther (k :: SymbolKind) -> Bool is k matches KindOther _ end function
+function visibilityOther (v :: Visibility) -> Bool is v matches VisibilityOther _ end function
+function idiomOther (i :: VisibilityIdiom) -> Bool is i matches IdiomOther _ end function
+function docOther (f :: DocFormat) -> Bool is f matches DocOther _ end function
+function methodOther (m :: ComplexityMethod) -> Bool is m matches MethodOther _ end function
+
+-- LawSpec's prelude has `any` but no `all` (v0.31.3): "every item is
+-- well-formed" is written "no item is bad".
+function declBad (refs :: List Text) (d :: Decl) -> Bool is
+  !(validId d.id) || kindOther d.kind || visibilityOther d.visibility || idiomOther d.idiom
+    || docOther d.doc.format || methodOther d.detail.complexity.method
+    || d.location.line < 1 || d.location.col < 1 || d.location.endLine < d.location.line
+    || prelude.any (edgeBad refs) d.calls || edgesRepeat d.calls
+end function
+
+function packageBad (refs :: List Text) (p :: Package) -> Bool is !(validId p.id) || prelude.any (declBad refs) p.symbols end function
+
+function wellFormed (ps :: List Package) -> Bool is !(prelude.any (packageBad (allRefs ps)) ps) end function
+
+-- ---------------------------------------------------------------------------
+-- The generic laws. Each takes the extractor under test as a function from
+-- a tree to its packages; a language unit passes its ability's operation,
+-- partially applied to a TemporaryDirectory.
+
+law "|matches its reference model|
+  (extract :: List SourceFile -> List Package)
+  (render :: m -> List SourceFile)
+  (expected :: m -> List Package)
+  is
+  id: "C-1"
+  definition :
+    apply law "|equivalent| (normalForm . extract . render) (normalForm . expected)
+  end definition
+  description :
+    "For every model of a source tree, the extractor reports exactly what
+    the language's reference definition `expected` says: every package and
+    symbol, every field, every edge, and nothing else. Order is emit's and
+    is normalized away."
+  end description
+  references:
+    "|discovery|: "discovery-python.md, observations O1-O16"
+  end references
+end law
+
+law "|well-formed on any input|
+  (extract :: List RawFile -> List Package)
+  is
+  id: "C-2"
+  definition :
+    apply law "|satisfies| (wellFormed . extract)
+  end definition
+  description :
+    "Over arbitrary files, parseable or not: extraction completes, every
+    value is in schema v2's vocabulary, locations are 1-based and ordered,
+    every internal edge resolves, no other edge carries a ref, and edges are
+    canonical."
+  end description
+  references:
+    "|R2|: "internal/schema/schema.gp, Call and DedupeCalls"
+    "|R3|: "internal/schema/semantic.gp, CallResolutionOf"
+    "|R4|: "internal/schema/identity.gp"
+    "|R5|: "internal/schema/semantic.gp:51-343, closed vocabularies"
+  end references
+end law
+
+law "|other languages' files are ignored|
+  (extract :: List RawFile -> List Package)
+  (extractElsewhere :: List RawFile -> List Package)
+  (owned :: List Extension)
+  is
+  id: "C-3"
+  definition :
+    apply law "|equivalent| extract (extractElsewhere . keepOnly owned)
+  end definition
+  description :
+    "An extractor reads only its own files. The two functions are the same
+    extractor over two fresh directories, so one call's files cannot reach
+    the other."
+  end description
+  references:
+    "|O1|: "internal/extract/python/discover.gp:38, .py files only"
+  end references
+end law
+
+law "|an unreadable file fails the extraction, and says which|
+  (extractRevoking :: List RawFile -> RawFile -> Bool -> Either ExtractFailure (List Package))
+  (root :: Text)
+  (owned :: Extension)
+  is
+  id: "C-4"
+  definition :
+    for all (tree :: List RawFile) (slot :: Int8) (content :: Text) (whole :: Bool) =>
+      failureNames
+        (extractRevoking tree (RawFile record{ slot = slot , extension = owned , content = content}) whole)
+        (revokeTarget root "d" (rawPath (RawFile record{ slot = slot , extension = owned , content = content})) whole)
+    end for all
+  end definition
+  description :
+    "`extractRevoking tree victim whole` writes `tree` under `root`, then the
+    victim (one of the language's own files) at `d/`, makes the victim
+    unreadable (or, `whole`, its directory `d`), extracts, and restores it.
+    The extraction fails, naming the unreadable path: an input the
+    extractor cannot read is never silently left out of its packages."
+  end description
+  references:
+    "|O17|: "internal/extract/python/python.gp:34-37 and discover.gp:29-31; registry.gp:113-150"
+    "|Q6|: "ax-maker-report.md, one unreadable file (open question)"
+  end references
+end law
+
+harness assayxport.contract.testing for assayxport.contract is
+-- The Workspace laws call the bound native handler: tagged native, run in
+-- parallel (each case has its own TemporaryDirectory) in a seeded random
+-- order, and stopped by name past 2 minutes.
+tags native
+parallel
+order random
+timeout 2 min
+end harness
+
+end unit

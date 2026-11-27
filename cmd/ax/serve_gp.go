@@ -31,6 +31,8 @@ import (
 	"time"
 
 	"goforge.dev/assayxport/internal/explorer"
+	"goforge.dev/assayxport/internal/extract/haskell"
+	"goforge.dev/assayxport/internal/schema"
 )
 
 // watchInterval is how often the poller re-walks the tree, and settleDelay
@@ -44,7 +46,7 @@ const (
 // watchExts are the file extensions whose changes trigger a re-assay,
 // mirroring the extractors' inputs.
 var watchExts = map[string]bool{
-	".go": true, ".py": true, ".java": true,
+	".go": true, ".py": true, ".java": true, ".hs": true,
 	".ts": true, ".tsx": true, ".mts": true, ".cts": true,
 	".js": true, ".jsx": true, ".mjs": true, ".cjs": true,
 }
@@ -61,10 +63,31 @@ var skipDirs = map[string]bool{
 	"target": true, "vendor": true,
 }
 
+// underSkipped says whether a directory of skipDirs stands above the file at
+// rel, a slash path relative to the root.
+func underSkipped(rel string) bool {
+	parts := strings.Split(rel, "/")
+	for _, d := range parts[:len(parts)-1] {
+		if skipDirs[d] {
+			return true
+		}
+	}
+	return false
+}
+
 // digest hashes the identity of every watched file under root. Two trees
 // with the same watched files, sizes, and mtimes produce the same digest.
 func digest(root string) uint64 {
 	h := fnv.New64a()
+	// A root that is a symbolic link to a directory is watched as that
+	// directory (HSX-50): WalkDir does not follow a link at its root.
+	if resolved, rerr := filepath.EvalSymlinks(root); rerr == nil {
+		root = resolved
+	}
+	// The decisions file is a watched input: a change to it starts a pass (D5).
+	if info, err := os.Stat(decisionsFile(root)); err == nil {
+		fmt.Fprintf(h, "when|%d|%d\n", info.Size(), info.ModTime().UnixNano())
+	}
 	// filepath.WalkDir visits entries in lexical order, so the fold over
 	// (path, size, mtime) is deterministic without collecting and sorting.
 	_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -73,13 +96,27 @@ func digest(root string) uint64 {
 		}
 		name := d.Name()
 		if d.IsDir() {
-			if skipDirs[name] || (len(name) > 1 && strings.HasPrefix(name, ".")) {
+			// A dot-directory is skipped for every language. The other
+			// skipped names are skipped for every language but Haskell, whose
+			// walk reads a .hs file under vendor/ and the like (HSX-45): they
+			// are walked, and only a .hs file under them counts.
+			if len(name) > 1 && strings.HasPrefix(name, ".") {
 				return fs.SkipDir
 			}
 			return nil
 		}
 		if !watchExts[filepath.Ext(name)] && !watchFiles[name] {
 			return nil
+		}
+		if rel, rerr := filepath.Rel(root, path); rerr == nil && filepath.Ext(name) != ".hs" && underSkipped(filepath.ToSlash(rel)) {
+			return nil
+		}
+		// A Haskell file counts exactly when the Haskell extractor reads it
+		// (N3): the watcher and the walk have one answer.
+		if filepath.Ext(name) == ".hs" {
+			if rel, rerr := filepath.Rel(root, path); rerr != nil || haskell.SkippedPath(filepath.ToSlash(rel)) {
+				return nil
+			}
 		}
 		info, err := d.Info()
 		if err != nil {
@@ -165,12 +202,31 @@ func (c *current) get() *snapshot {
 	return c.snap
 }
 
+// assayPass is one pass of `ax serve` (without the lazy shards) and of `ax
+// watch`: the decisions file is read again, so that one edited while they run
+// is read at the next pass (D5), and the tree is assayed in memory.
+func assayPass(path string, langs stringsFlag, quiet, noDiscovery bool) (schema.Index, map[string]schema.Shard, error) {
+	if err := refreshWhen(path, noDiscovery); err != nil {
+		return schema.Index{}, nil, err
+	}
+	return assayOnce(path, langs, quiet)
+}
+
+// assayPassToDir is `ax serve`'s lazy pass: assayPass, streamed into dir.
+func assayPassToDir(path string, langs stringsFlag, quiet, noDiscovery bool, dir string) (schema.Index, error) {
+	if err := refreshWhen(path, noDiscovery); err != nil {
+		return schema.Index{}, err
+	}
+	return assayToDir(path, langs, quiet, dir)
+}
+
 func runServeCmd(args []string) error {
 	fs2 := flag.NewFlagSet("ax serve", flag.ContinueOnError)
 	port := fs2.Int("port", 7979, "port to listen on")
 	noWatch := fs2.Bool("no-watch", false, "serve a single assay; do not re-assay on save")
 	noWasm := fs2.Bool("no-wasm", false, "serve the whole manifest inline instead of the lazy WASM explorer")
 	quiet := fs2.Bool("quiet", false, "suppress progress on stderr")
+	noDiscovery := fs2.Bool("when-no-discovery", false, "do not read <path>/assayxport.when")
 	var langs stringsFlag
 	fs2.Var(&langs, "lang", "language to assay (repeatable; default: all)")
 	fs2.Usage = func() {
@@ -183,6 +239,12 @@ func runServeCmd(args []string) error {
 	}
 	if fs2.NArg() > 0 {
 		path = fs2.Arg(0)
+	}
+	// A decisions file that is there and cannot be read ends the command
+	// here, in every mode, as it does `ax assay` (N2, D3): nothing is
+	// listening and nothing is written to stdout.
+	if err := refreshWhen(path, *noDiscovery); err != nil {
+		return err
 	}
 	watch := !*noWatch
 	// Lazy (WASM) mode is the default: the page fetches the index up front and
@@ -222,7 +284,7 @@ func runServeCmd(args []string) error {
 	// return is the generation dir (empty in --no-wasm) for delayed cleanup.
 	build := func() (*snapshot, string, error) {
 		if !lazy {
-			idx, shards, err := assayOnce(path, langs, *quiet)
+			idx, shards, err := assayPass(path, langs, *quiet, *noDiscovery)
 			if err != nil {
 				return nil, "", err
 			}
@@ -233,7 +295,7 @@ func runServeCmd(args []string) error {
 		// whole symbol graph is never held in RAM at once.
 		g := atomic.AddUint64(&gen, 1)
 		dir := filepath.Join(tmpRoot, fmt.Sprintf("gen-%d", g))
-		idx, err := assayToDir(path, langs, *quiet, dir)
+		idx, err := assayPassToDir(path, langs, *quiet, *noDiscovery, dir)
 		if err != nil {
 			return nil, "", err
 		}
@@ -271,7 +333,7 @@ func runServeCmd(args []string) error {
 			if lazy && first {
 				g := atomic.AddUint64(&gen, 1)
 				dir := filepath.Join(tmpRoot, fmt.Sprintf("gen-%d", g))
-				err := runProgressive(path, langs, *quiet, dir, cur, fr)
+				err := runProgressive(path, langs, *quiet, *noDiscovery, dir, cur, fr)
 				if err != nil {
 					fmt.Fprintln(os.Stderr, "ax: assay failed:", err)
 					if !watch {
@@ -558,6 +620,7 @@ func runWatchCmd(args []string) error {
 	out := fs2.String("out", "", "output directory (default: assay path)")
 	quiet := fs2.Bool("quiet", false, "suppress progress on stderr")
 	noHTML := fs2.Bool("no-html", false, "skip writing assayxport.html")
+	noDiscovery := fs2.Bool("when-no-discovery", false, "do not read <path>/assayxport.when")
 	var langs stringsFlag
 	fs2.Var(&langs, "lang", "language to assay (repeatable; default: all)")
 	fs2.Usage = func() {
@@ -578,7 +641,7 @@ func runWatchCmd(args []string) error {
 
 	once := func() {
 		start := time.Now()
-		idx, shards, err := assayOnce(path, langs, *quiet)
+		idx, shards, err := assayPass(path, langs, *quiet, *noDiscovery)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "ax: assay failed (artifacts unchanged):", err)
 			return

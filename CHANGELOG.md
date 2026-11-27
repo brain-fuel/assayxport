@@ -1,5 +1,38 @@
 # Changelog
 
+## Unreleased
+
+- Add a Haskell extractor (`--lang haskell`, alias `hs`): one package per `.hs`
+  module; functions, constants, operators, data and newtype types with their
+  constructors and record fields, type synonyms, classes with methods and
+  superclasses, and instances (new symbol kind `instance`); export lists for
+  visibility, Haddock docs (new doc format `haddock`), `Main` entrypoints, and
+  call edges by the same honesty ladder as the other syntactic extractors.
+  Skips dot-directories, `dist-newstyle/` and `dist/`; `.lhs` and `.hs-boot` are
+  not read.
+- Haskell CPP: a preprocessed source is read in every build, and each fact
+  carries a `when` condition naming the builds that see it (the grammar is in
+  the README). The rule is "decide, or mark": ax decides as the preprocessor
+  does where its rule is short and measured against GCC (the file's own
+  `#define`/`#undef`, object-like macros in code, `#elifdef`/`#elifndef`,
+  comments and line joins, `-traditional` arithmetic), and otherwise marks the
+  build with a condition nothing decides (calls of function-like macros, the
+  values of the preprocessor's own names, a header GHC may read differently, a
+  carriage return alone). Past 256 builds a file says `"unread"`.
+- `ax assay --when`, `--when-file` and `--when-complete` fix names and package
+  versions; `assayxport.when` in the assayed directory (written by
+  `ax when init`) is read by `assay`, `watch`, `serve` and `diff` unless
+  `--when-no-discovery`.
+- The extractor's logic is specified in LawSpec (205 laws) under
+  `internal/extract/haskell/law/spec/`, with a README of exact commands, and
+  generated into `internal/extract/haskell/law/`.
+- gotreesitter comes from a fork (`replace` in `go.mod`,
+  `github.com/mlaine1/gotreesitter`, tag `s1j-haskell-v4`): upstream v0.57.0
+  plus later upstream commits, plus Haskell grammar fixes and parser-runtime
+  fixes found here (among them a JavaScript regression since v0.21, truncated
+  trees, empty roots that hid errors), until they are upstream. Every language
+  is at parity or better on valid source.
+
 ## v0.27.0
 
 - `ax publish` gains target flags `--npm --mvn --pypi --go` (and `--cargo`,
